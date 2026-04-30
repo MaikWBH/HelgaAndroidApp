@@ -1,0 +1,8 @@
+.env
+data/recipes.db
+data/images/
+data/backups/
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
