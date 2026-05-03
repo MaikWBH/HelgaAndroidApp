@@ -1,0 +1,372 @@
+package com.helga.android.ui.recipes
+
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.helga.android.R
+import com.helga.android.data.local.entity.IngredientEntity
+import com.helga.android.data.local.entity.InstructionEntity
+import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.local.entity.TagEntity
+
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun RecipeDetailScreen(
+    onBack: () -> Unit,
+    onEdit: (id: String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    viewModel: RecipeDetailViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
+    val recipe = uiState.recipe
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.recipe_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.recipe_delete_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    viewModel.deleteRecipe(onBack)
+                }) {
+                    Text(stringResource(R.string.recipe_delete_confirm_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.recipe_delete_confirm_cancel))
+                }
+            },
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(recipe?.name ?: "") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.recipe_detail_back),
+                        )
+                    }
+                },
+                actions = {
+                    recipe?.let {
+                        IconButton(onClick = { onEdit(it.id) }) {
+                            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.recipe_edit))
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
+                        }
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        if (recipe == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
+                item {
+                    HeroImage(
+                        recipe = recipe,
+                        serverUrl = serverUrl,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    )
+                }
+                item {
+                    RatingSection(
+                        rating = recipe.rating,
+                        onRatingChange = viewModel::setRating,
+                    )
+                }
+                if (uiState.tags.isNotEmpty()) {
+                    item { TagsSection(tags = uiState.tags) }
+                }
+                item { MetadataSection(recipe = recipe) }
+                if (recipe.description.isNotBlank()) {
+                    item { DescriptionSection(description = recipe.description) }
+                }
+                if (uiState.ingredients.isNotEmpty()) {
+                    item {
+                        SectionHeader(stringResource(R.string.recipe_detail_ingredients))
+                    }
+                    items(uiState.ingredients, key = { it.id }) { ingredient ->
+                        IngredientRow(ingredient = ingredient)
+                    }
+                }
+                if (uiState.instructions.isNotEmpty()) {
+                    item {
+                        SectionHeader(stringResource(R.string.recipe_detail_instructions))
+                    }
+                    items(uiState.instructions, key = { it.id }) { instruction ->
+                        InstructionRow(instruction = instruction)
+                    }
+                }
+                item { Spacer(Modifier.height(32.dp)) }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun HeroImage(
+    recipe: RecipeEntity,
+    serverUrl: String,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+) {
+    val imageUrl = if (recipe.imagePath.isNotBlank() && serverUrl.isNotBlank())
+        "${serverUrl.trimEnd('/')}/api/images/${recipe.imagePath}"
+    else null
+
+    with(sharedTransitionScope) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .sharedElement(
+                    state = rememberSharedContentState(key = "image-${recipe.id}"),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                ),
+        ) {
+            if (imageUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageUrl)
+                        .placeholderMemoryCacheKey("recipe-${recipe.id}")
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = recipe.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Restaurant,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RatingSection(rating: Int, onRatingChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        for (i in 1..5) {
+            IconButton(
+                onClick = { onRatingChange(if (i == rating) 0 else i) },
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    imageVector = if (i <= rating) Icons.Filled.Star else Icons.Outlined.Star,
+                    contentDescription = null,
+                    tint = if (i <= rating) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagsSection(tags: List<TagEntity>) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        tags.forEach { tag ->
+            AssistChip(
+                onClick = {},
+                label = { Text(tag.name, style = MaterialTheme.typography.labelMedium) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MetadataSection(recipe: RecipeEntity) {
+    val items = buildList {
+        if (recipe.recipeYield.isNotBlank()) add(stringResource(R.string.recipe_detail_yield) to recipe.recipeYield)
+        if (recipe.totalTime.isNotBlank()) add(stringResource(R.string.recipe_detail_total_time) to recipe.totalTime)
+        if (recipe.prepTime.isNotBlank()) add(stringResource(R.string.recipe_detail_prep_time) to recipe.prepTime)
+        if (recipe.cookTime.isNotBlank()) add(stringResource(R.string.recipe_detail_cook_time) to recipe.cookTime)
+        if (recipe.cuisine.isNotBlank()) add(stringResource(R.string.recipe_detail_cuisine) to recipe.cuisine)
+        if (recipe.mealType.isNotBlank()) add(stringResource(R.string.recipe_detail_meal_type) to recipe.mealType)
+        if (recipe.effort.isNotBlank()) add(stringResource(R.string.recipe_detail_effort) to recipe.effort)
+    }
+    if (items.isEmpty()) return
+
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        items.forEach { (label, value) ->
+            SuggestionChip(
+                onClick = {},
+                label = { Text("$label: $value", style = MaterialTheme.typography.bodySmall) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DescriptionSection(description: String) {
+    Text(
+        text = description,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+        )
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    }
+}
+
+@Composable
+private fun IngredientRow(ingredient: IngredientEntity) {
+    Text(
+        text = ingredient.displayText(),
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+    )
+}
+
+@Composable
+private fun InstructionRow(instruction: InstructionEntity) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = "${instruction.position}.",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 1.dp),
+        )
+        Text(
+            text = instruction.text,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+private fun IngredientEntity.displayText(): String = buildString {
+    if (quantity > 0.0) {
+        val q = if (quantity % 1.0 == 0.0) "${quantity.toInt()}" else "$quantity"
+        append(q)
+        if (unit.isNotBlank()) append(" $unit")
+        append(" ")
+    }
+    append(food)
+    if (note.isNotBlank()) append(" ($note)")
+}

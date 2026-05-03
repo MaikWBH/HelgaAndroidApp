@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Helga</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Willkommen bei Helga</string>
+    <string name="onboarding_subtitle">Verbinde dich mit deinem Helga-Server</string>
+    <string name="onboarding_server_url">Server-URL</string>
+    <string name="onboarding_server_url_hint">http://192.168.1.x:8000</string>
+    <string name="onboarding_api_key">API-Schlüssel</string>
+    <string name="onboarding_test_connection">Verbindung testen</string>
+    <string name="onboarding_continue">Fortfahren</string>
+    <string name="onboarding_testing">Teste Verbindung…</string>
+    <string name="onboarding_success">Verbindung erfolgreich</string>
+    <string name="onboarding_error_invalid_url">URL ist ungültig</string>
+    <string name="onboarding_error_unreachable">Server nicht erreichbar</string>
+    <string name="onboarding_error_unauthorized">API-Schlüssel ungültig</string>
+
+    <!-- Rezeptliste -->
+    <string name="recipes_title">Rezepte</string>
+    <string name="recipes_empty">Noch keine Rezepte</string>
+    <string name="recipes_empty_hint">Sync ausführen oder Rezept anlegen</string>
+    <string name="recipes_loading">Lade Rezepte…</string>
+    <string name="recipes_filter_all">Alle</string>
+    <string name="recipes_sort">Sortierung</string>
+    <string name="recipes_sort_name">Name</string>
+    <string name="recipes_sort_rating">Bewertung</string>
+    <string name="recipes_sort_updated">Zuletzt geändert</string>
+
+    <!-- Rezept-Detail -->
+    <string name="recipe_detail_back">Zurück</string>
+    <string name="recipe_detail_ingredients">Zutaten</string>
+    <string name="recipe_detail_instructions">Zubereitung</string>
+    <string name="recipe_detail_yield">Portionen</string>
+    <string name="recipe_detail_prep_time">Vorbereitung</string>
+    <string name="recipe_detail_cook_time">Kochzeit</string>
+    <string name="recipe_detail_total_time">Gesamt</string>
+    <string name="recipe_detail_cuisine">Küche</string>
+    <string name="recipe_detail_meal_type">Mahlzeit</string>
+    <string name="recipe_detail_effort">Aufwand</string>
+
+    <!-- Sync -->
+    <string name="sync_idle">Sync bereit</string>
+    <string name="sync_syncing">Synchronisiere…</string>
+    <string name="sync_ok">Sync erfolgreich</string>
+    <string name="sync_offline">Offline</string>
+    <string name="sync_error">Sync-Fehler</string>
+    <string name="sync_pull_to_refresh">Zum Aktualisieren ziehen</string>
+    <string name="sync_now">Jetzt synchronisieren</string>
+
+    <!-- Rezept-Formular -->
+    <string name="recipe_form_new_title">Neues Rezept</string>
+    <string name="recipe_form_edit_title">Rezept bearbeiten</string>
+    <string name="recipe_form_name">Name</string>
+    <string name="recipe_form_description">Beschreibung</string>
+    <string name="recipe_form_times">Zeiten &amp; Metadaten</string>
+    <string name="recipe_form_tags">Tags</string>
+    <string name="recipe_form_tag_input">Tag hinzufügen</string>
+    <string name="recipe_form_source_url">Quell-URL</string>
+    <string name="recipe_form_protein_type">Protein-Typ</string>
+    <string name="recipe_form_season_fit">Saison</string>
+    <string name="recipe_form_quantity">Menge</string>
+    <string name="recipe_form_unit">Einheit</string>
+    <string name="recipe_form_food">Zutat</string>
+    <string name="recipe_form_step">Schritt</string>
+    <string name="recipe_form_add_ingredient">Zutat hinzufügen</string>
+    <string name="recipe_form_add_step">Schritt hinzufügen</string>
+    <string name="recipe_form_pick_image">Bild auswählen</string>
+    <string name="recipe_form_save">Speichern</string>
+
+    <!-- Rezept löschen -->
+    <string name="recipe_edit">Bearbeiten</string>
+    <string name="recipe_delete">Löschen</string>
+    <string name="recipe_delete_confirm_title">Rezept löschen?</string>
+    <string name="recipe_delete_confirm_text">Das Rezept wird lokal gelöscht und beim nächsten Sync auch vom Server entfernt.</string>
+    <string name="recipe_delete_confirm_ok">Löschen</string>
+    <string name="recipe_delete_confirm_cancel">Abbrechen</string>
+
+    <!-- Einstellungen -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_server_section">Server</string>
+    <string name="settings_sync_section">Synchronisation</string>
+    <string name="settings_account_section">Konto</string>
+    <string name="settings_save_and_test">Speichern &amp; Verbindung testen</string>
+    <string name="settings_last_sync">Letzter Sync: %1$s</string>
+    <string name="settings_last_sync_never">Noch nie</string>
+    <string name="settings_logout">Abmelden</string>
+    <string name="settings_logout_confirm_title">Abmelden?</string>
+    <string name="settings_logout_confirm_text">Server-URL und API-Schlüssel werden entfernt. Lokale Rezepte bleiben erhalten.</string>
+    <string name="settings_logout_confirm_ok">Abmelden</string>
+
+    <!-- Allgemein -->
+    <string name="action_retry">Erneut versuchen</string>
+    <string name="action_settings">Einstellungen</string>
+</resources>

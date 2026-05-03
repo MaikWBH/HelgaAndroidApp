@@ -1,6 +1,6 @@
 # ── Konfiguration (einmalig anpassen) ─────────────────────────────────────────
-# Beispiel: SERVER_HOST = maik@192.168.1.100
-SERVER_HOST = casaos@192.168.1.x
+# Beispiel: SERVER_HOST = maik@192.168.178.68
+SERVER_HOST = maik@192.168.178.68
 SERVER_PATH = /DATA/AppData/helga-sync
 COMPOSE     = docker compose -f docker-compose.prod.yml
 # ─────────────────────────────────────────────────────────────────────────────
