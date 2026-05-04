@@ -5,7 +5,10 @@ from typing import AsyncIterator
 import httpx
 from dotenv import load_dotenv
 
-from .models import AiGenerateRequest, AiRemixRequest, AiClassifyRequest
+from .models import (
+    AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiUrlImportRequest,
+    AiImportResponse, ImportedIngredient, ImportedInstruction,
+)
 
 load_dotenv()
 
@@ -156,6 +159,66 @@ async def classify(req: AiClassifyRequest) -> dict:
         for k, v in data.items()
         if k in CLASSIFY_VALUES
     }
+
+
+def _mins_to_iso(mins) -> str:
+    try:
+        m = int(mins)
+    except (TypeError, ValueError):
+        return ""
+    if m <= 0:
+        return ""
+    h, rem = divmod(m, 60)
+    if h and rem:
+        return f"PT{h}H{rem}M"
+    elif h:
+        return f"PT{h}H"
+    return f"PT{rem}M"
+
+
+def _safe(scraper, method: str, default=""):
+    try:
+        return getattr(scraper, method)() or default
+    except Exception:
+        return default
+
+
+async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
+    from recipe_scrapers import scrape_html
+
+    async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+        resp = await client.get(req.url, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+
+    scraper = scrape_html(resp.text, org_url=req.url)
+
+    raw_ingredients = _safe(scraper, "ingredients", [])
+    ingredients = [ImportedIngredient(food=s) for s in raw_ingredients if s.strip()]
+
+    raw_instructions = _safe(scraper, "instructions_list", [])
+    if not raw_instructions:
+        full = _safe(scraper, "instructions", "")
+        raw_instructions = [s.strip() for s in full.split("\n") if s.strip()] if full else []
+    instructions = [ImportedInstruction(text=s) for s in raw_instructions if s.strip()]
+
+    raw_tags = _safe(scraper, "keywords", [])
+    if isinstance(raw_tags, str):
+        raw_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+
+    return AiImportResponse(
+        name=_safe(scraper, "title"),
+        description=_safe(scraper, "description"),
+        recipe_yield=_safe(scraper, "yields"),
+        prep_time=_mins_to_iso(_safe(scraper, "prep_time", 0)),
+        cook_time=_mins_to_iso(_safe(scraper, "cook_time", 0)),
+        total_time=_mins_to_iso(_safe(scraper, "total_time", 0)),
+        cuisine=_safe(scraper, "cuisine"),
+        source_url=req.url,
+        image_url=_safe(scraper, "image"),
+        ingredients=ingredients,
+        instructions=instructions,
+        tags=raw_tags[:20],
+    )
 
 
 # ── Low-level streaming ──────────────────────────────────────────────────────

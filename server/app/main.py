@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 from .db import init_db, get_db, now_ms
 from .models import (
-    AiClassifyRequest, AiGenerateRequest, AiRemixRequest,
+    AiClassifyRequest, AiGenerateRequest, AiRemixRequest, AiUrlImportRequest,
     SyncPullResponse, SyncPushRequest,
 )
 from .sync import pull_since, push_records
@@ -90,6 +90,11 @@ async def ai_remix(req: AiRemixRequest):
 async def ai_classify(req: AiClassifyRequest):
     result = await ai_module.classify(req)
     return result
+
+
+@app.post("/api/ai/import-url", dependencies=[Depends(require_auth)])
+async def ai_import_url(req: AiUrlImportRequest):
+    return await ai_module.import_url(req)
 
 
 # ── Bilder ────────────────────────────────────────────────────────────────────

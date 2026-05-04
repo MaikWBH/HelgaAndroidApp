@@ -1,9 +1,14 @@
 package com.helga.android.data.remote
 
+import com.helga.android.data.remote.dto.AiClassifyRequest
+import com.helga.android.data.remote.dto.AiClassifyResponse
 import com.helga.android.data.remote.dto.HealthResponse
 import com.helga.android.data.remote.dto.ImageUploadResponse
+import com.helga.android.data.remote.dto.ImportedRecipeDto
+import com.helga.android.data.remote.dto.SuggestionsResponse
 import com.helga.android.data.remote.dto.SyncPullResponse
 import com.helga.android.data.remote.dto.SyncPushRequest
+import com.helga.android.data.remote.dto.UrlImportRequest
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -26,4 +31,13 @@ interface SyncApi {
     @Multipart
     @POST("api/images/upload")
     suspend fun uploadImage(@Part image: MultipartBody.Part): ImageUploadResponse
+
+    @POST("api/ai/import-url")
+    suspend fun importFromUrl(@Body req: UrlImportRequest): ImportedRecipeDto
+
+    @POST("api/ai/classify")
+    suspend fun classifyRecipe(@Body req: AiClassifyRequest): AiClassifyResponse
+
+    @GET("api/suggestions/items")
+    suspend fun suggestItems(@Query("q") q: String): SuggestionsResponse
 }

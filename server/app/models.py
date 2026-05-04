@@ -201,3 +201,33 @@ class AiClassifyRequest(BaseModel):
 
 class AiUrlImportRequest(BaseModel):
     url: str
+
+
+class ImportedIngredient(BaseModel):
+    food: str = ""
+    quantity: float = 0.0
+    unit: str = ""
+    note: str = ""
+
+
+class ImportedInstruction(BaseModel):
+    text: str = ""
+
+
+class AiImportResponse(BaseModel):
+    name: str = ""
+    description: str = ""
+    recipe_yield: str = ""
+    prep_time: str = ""
+    cook_time: str = ""
+    total_time: str = ""
+    cuisine: str = ""
+    meal_type: str = ""
+    effort: str = ""
+    protein_type: str = ""
+    season_fit: str = ""
+    source_url: str = ""
+    image_url: str = ""
+    ingredients: List[ImportedIngredient] = []
+    instructions: List[ImportedInstruction] = []
+    tags: List[str] = []

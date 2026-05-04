@@ -46,6 +46,7 @@ import java.util.Date
 fun SettingsScreen(
     onBack: () -> Unit,
     onLoggedOut: () -> Unit,
+    onStoresClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -159,6 +160,22 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.sync_now))
+            }
+
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = stringResource(R.string.settings_shopping_section),
+                style = MaterialTheme.typography.titleMedium,
+            )
+
+            OutlinedButton(
+                onClick = onStoresClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_manage_stores))
             }
 
             Spacer(Modifier.height(8.dp))

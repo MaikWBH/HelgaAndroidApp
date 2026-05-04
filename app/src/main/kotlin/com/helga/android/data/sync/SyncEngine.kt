@@ -1,19 +1,36 @@
 package com.helga.android.data.sync
 
 import com.helga.android.data.local.AppDatabase
+import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.local.dao.ShoppingDao
+import com.helga.android.data.local.dao.StoreDao
 import com.helga.android.data.local.dao.SyncDao
+import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
+import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.local.entity.ShoppingItemEntity
+import com.helga.android.data.local.entity.ShoppingListEntity
+import com.helga.android.data.local.entity.ShoppingListStapleEntity
+import com.helga.android.data.local.entity.StoreAisleEntity
+import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
+import com.helga.android.data.remote.dto.AisleProductDto
 import com.helga.android.data.remote.dto.CategoryDto
 import com.helga.android.data.remote.dto.IngredientDto
 import com.helga.android.data.remote.dto.InstructionDto
+import com.helga.android.data.remote.dto.QuickEmojiDto
 import com.helga.android.data.remote.dto.RecipeDto
+import com.helga.android.data.remote.dto.ShoppingItemDto
+import com.helga.android.data.remote.dto.ShoppingListDto
+import com.helga.android.data.remote.dto.ShoppingListStapleDto
+import com.helga.android.data.remote.dto.StoreAisleDto
+import com.helga.android.data.remote.dto.StoreDto
 import com.helga.android.data.remote.dto.SyncPullResponse
 import com.helga.android.data.remote.dto.SyncPushRequest
 import com.helga.android.data.remote.dto.TagDto
@@ -21,21 +38,14 @@ import androidx.room.withTransaction
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Bidirektionaler LWW-Sync.
- *
- * Pull → vergleicht Server-`updated_at` gegen lokale Werte; nur Server-Wins
- * werden in Room geschrieben (in einer Transaktion).
- *
- * Push → sendet alle `dirty = 1` Records. Server liefert Konflikte zurück
- * (Server-Wins), die ebenfalls in Room geschrieben werden. Dirty-Flags werden
- * nur für Records gelöscht, die nicht durch Server-Wins überschrieben wurden.
- */
 @Singleton
 class SyncEngine @Inject constructor(
     private val database: AppDatabase,
     private val recipeDao: RecipeDao,
     private val syncDao: SyncDao,
+    private val shoppingDao: ShoppingDao,
+    private val storeDao: StoreDao,
+    private val quickEmojiDao: QuickEmojiDao,
     private val apiFactory: SyncApiFactory,
     private val preferences: AppPreferences,
 ) {
@@ -68,9 +78,19 @@ class SyncEngine @Inject constructor(
         val instructionWinners = filterServerWins(response.recipeInstructions, syncDao.instructionTimestamps()) { it.id to it.updatedAt }
         val tagWinners = filterServerWins(response.recipeTags, syncDao.tagTimestamps()) { it.id to it.updatedAt }
         val categoryWinners = filterServerWins(response.recipeCategories, syncDao.categoryTimestamps()) { it.id to it.updatedAt }
+        val listWinners = filterServerWins(response.shoppingLists, syncDao.shoppingListTimestamps()) { it.id to it.updatedAt }
+        val itemWinners = filterServerWins(response.shoppingItems, syncDao.shoppingItemTimestamps()) { it.id to it.updatedAt }
+        val storeWinners = filterServerWins(response.stores, syncDao.storeTimestamps()) { it.id to it.updatedAt }
+        val aisleWinners = filterServerWins(response.storeAisles, syncDao.storeAisleTimestamps()) { it.id to it.updatedAt }
+        val aisleProductWinners = filterServerWins(response.aisleProducts, syncDao.aisleProductTimestamps()) { it.id to it.updatedAt }
+        val stapleWinners = filterServerWins(response.shoppingListStaples, syncDao.stapleTimestamps()) { it.id to it.updatedAt }
+        val emojiWinners = filterServerWins(response.quickEmojis, syncDao.quickEmojiTimestamps()) { it.id to it.updatedAt }
 
         if (recipeWinners.isEmpty() && ingredientWinners.isEmpty() &&
-            instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty()
+            instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty() &&
+            listWinners.isEmpty() && itemWinners.isEmpty() &&
+            storeWinners.isEmpty() && aisleWinners.isEmpty() && aisleProductWinners.isEmpty() &&
+            stapleWinners.isEmpty() && emojiWinners.isEmpty()
         ) return
 
         database.withTransaction {
@@ -79,6 +99,13 @@ class SyncEngine @Inject constructor(
             if (instructionWinners.isNotEmpty()) recipeDao.upsertInstructions(instructionWinners.map { it.toEntity() })
             if (tagWinners.isNotEmpty()) recipeDao.upsertTags(tagWinners.map { it.toEntity() })
             if (categoryWinners.isNotEmpty()) recipeDao.upsertCategories(categoryWinners.map { it.toEntity() })
+            if (listWinners.isNotEmpty()) shoppingDao.upsertLists(listWinners.map { it.toEntity() })
+            if (itemWinners.isNotEmpty()) shoppingDao.upsertItems(itemWinners.map { it.toEntity() })
+            if (storeWinners.isNotEmpty()) storeDao.upsertStores(storeWinners.map { it.toEntity() })
+            if (aisleWinners.isNotEmpty()) storeDao.upsertAisles(aisleWinners.map { it.toEntity() })
+            if (aisleProductWinners.isNotEmpty()) storeDao.upsertAisleProducts(aisleProductWinners.map { it.toEntity() })
+            if (stapleWinners.isNotEmpty()) storeDao.upsertStaples(stapleWinners.map { it.toEntity() })
+            if (emojiWinners.isNotEmpty()) quickEmojiDao.upsertEmojis(emojiWinners.map { it.toEntity() })
         }
     }
 
@@ -89,6 +116,13 @@ class SyncEngine @Inject constructor(
         recipeInstructions = recipeDao.dirtyInstructions().map { it.toDto() },
         recipeTags = recipeDao.dirtyTags().map { it.toDto() },
         recipeCategories = recipeDao.dirtyCategories().map { it.toDto() },
+        shoppingLists = shoppingDao.dirtyLists().map { it.toDto() },
+        shoppingItems = shoppingDao.dirtyItems().map { it.toDto() },
+        stores = storeDao.dirtyStores().map { it.toDto() },
+        storeAisles = storeDao.dirtyAisles().map { it.toDto() },
+        aisleProducts = storeDao.dirtyAisleProducts().map { it.toDto() },
+        shoppingListStaples = storeDao.dirtyStaples().map { it.toDto() },
+        quickEmojis = quickEmojiDao.dirtyEmojis().map { it.toDto() },
     )
 
     private suspend fun clearDirtyFlagsExcept(
@@ -100,10 +134,13 @@ class SyncEngine @Inject constructor(
         val insIds = pushed.recipeInstructions.map { it.id } - serverWins.recipeInstructions.map { it.id }.toSet()
         val tagIds = pushed.recipeTags.map { it.id } - serverWins.recipeTags.map { it.id }.toSet()
         val catIds = pushed.recipeCategories.map { it.id } - serverWins.recipeCategories.map { it.id }.toSet()
-
-        if (recipeIds.isEmpty() && ingIds.isEmpty() && insIds.isEmpty() &&
-            tagIds.isEmpty() && catIds.isEmpty()
-        ) return
+        val listIds = pushed.shoppingLists.map { it.id } - serverWins.shoppingLists.map { it.id }.toSet()
+        val itemIds = pushed.shoppingItems.map { it.id } - serverWins.shoppingItems.map { it.id }.toSet()
+        val storeIds = pushed.stores.map { it.id } - serverWins.stores.map { it.id }.toSet()
+        val aisleIds = pushed.storeAisles.map { it.id } - serverWins.storeAisles.map { it.id }.toSet()
+        val aisleProductIds = pushed.aisleProducts.map { it.id } - serverWins.aisleProducts.map { it.id }.toSet()
+        val stapleIds = pushed.shoppingListStaples.map { it.id } - serverWins.shoppingListStaples.map { it.id }.toSet()
+        val emojiIds = pushed.quickEmojis.map { it.id } - serverWins.quickEmojis.map { it.id }.toSet()
 
         database.withTransaction {
             if (recipeIds.isNotEmpty()) recipeDao.clearRecipeDirty(recipeIds)
@@ -111,13 +148,16 @@ class SyncEngine @Inject constructor(
             if (insIds.isNotEmpty()) recipeDao.clearInstructionDirty(insIds)
             if (tagIds.isNotEmpty()) recipeDao.clearTagDirty(tagIds)
             if (catIds.isNotEmpty()) recipeDao.clearCategoryDirty(catIds)
+            if (listIds.isNotEmpty()) shoppingDao.clearListDirty(listIds)
+            if (itemIds.isNotEmpty()) shoppingDao.clearItemDirty(itemIds)
+            if (storeIds.isNotEmpty()) storeDao.clearStoreDirty(storeIds)
+            if (aisleIds.isNotEmpty()) storeDao.clearAisleDirty(aisleIds)
+            if (aisleProductIds.isNotEmpty()) storeDao.clearAisleProductDirty(aisleProductIds)
+            if (stapleIds.isNotEmpty()) storeDao.clearStapleDirty(stapleIds)
+            if (emojiIds.isNotEmpty()) quickEmojiDao.clearEmojiDirty(emojiIds)
         }
     }
 
-    /**
-     * Behält nur Records, deren Server-`updated_at` echt neuer ist als der lokale.
-     * Nicht-existierende lokale Records gewinnen automatisch (lokal = 0).
-     */
     private inline fun <T> filterServerWins(
         remote: List<T>,
         local: List<com.helga.android.data.local.dao.TimestampRow>,
@@ -137,124 +177,126 @@ data class SyncOutcome(val pulled: Int, val pushed: Int, val serverTs: Long)
 // ── Mapper: Entity ↔ DTO ────────────────────────────────────────────────────
 
 private fun RecipeDto.toEntity(): RecipeEntity = RecipeEntity(
-    id = id,
-    slug = slug,
-    name = name,
-    description = description,
-    recipeYield = recipeYield,
-    prepTime = prepTime,
-    cookTime = cookTime,
-    totalTime = totalTime,
-    imagePath = imagePath,
-    sourceUrl = sourceUrl,
-    rating = rating,
-    proteinType = proteinType,
-    effort = effort,
-    cuisine = cuisine,
-    mealType = mealType,
-    seasonFit = seasonFit,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    dirty = 0,
+    id = id, slug = slug, name = name, description = description,
+    recipeYield = recipeYield, prepTime = prepTime, cookTime = cookTime,
+    totalTime = totalTime, imagePath = imagePath, sourceUrl = sourceUrl,
+    rating = rating, proteinType = proteinType, effort = effort,
+    cuisine = cuisine, mealType = mealType, seasonFit = seasonFit,
+    createdAt = createdAt, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun IngredientDto.toEntity(): IngredientEntity = IngredientEntity(
-    id = id,
-    recipeId = recipeId,
-    position = position,
-    quantity = quantity,
-    unit = unit,
-    food = food,
-    note = note,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    dirty = 0,
+    id = id, recipeId = recipeId, position = position, quantity = quantity,
+    unit = unit, food = food, note = note, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun InstructionDto.toEntity(): InstructionEntity = InstructionEntity(
-    id = id,
-    recipeId = recipeId,
-    position = position,
-    text = text,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    dirty = 0,
+    id = id, recipeId = recipeId, position = position, text = text,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun TagDto.toEntity(): TagEntity = TagEntity(
-    id = id,
-    recipeId = recipeId,
-    name = name,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    dirty = 0,
+    id = id, recipeId = recipeId, name = name, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun CategoryDto.toEntity(): CategoryEntity = CategoryEntity(
-    id = id,
-    recipeId = recipeId,
-    name = name,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    dirty = 0,
+    id = id, recipeId = recipeId, name = name, updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun ShoppingListDto.toEntity(): ShoppingListEntity = ShoppingListEntity(
+    id = id, name = name, isActive = isActive,
+    isDefaultWeekplan = isDefaultWeekplan, isDefaultRecipe = isDefaultRecipe,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun ShoppingItemDto.toEntity(): ShoppingItemEntity = ShoppingItemEntity(
+    id = id, listId = listId, name = name, quantity = quantity, unit = unit,
+    aisle = aisle, source = source, isChecked = isChecked, sortOrder = sortOrder,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun StoreDto.toEntity(): StoreEntity = StoreEntity(
+    id = id, name = name, isActive = isActive, updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun StoreAisleDto.toEntity(): StoreAisleEntity = StoreAisleEntity(
+    id = id, storeId = storeId, aisleName = aisleName, sortOrder = sortOrder,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun AisleProductDto.toEntity(): AisleProductEntity = AisleProductEntity(
+    id = id, aisleName = aisleName, productName = productName, storeId = storeId,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun ShoppingListStapleDto.toEntity(): ShoppingListStapleEntity = ShoppingListStapleEntity(
+    id = id, listId = listId, name = name, quantity = quantity, sortOrder = sortOrder,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun QuickEmojiDto.toEntity(): QuickEmojiEntity = QuickEmojiEntity(
+    id = id, emoji = emoji, food = food, quantity = quantity, unit = unit,
+    sortOrder = sortOrder, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun RecipeEntity.toDto(): RecipeDto = RecipeDto(
-    id = id,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    slug = slug,
-    name = name,
-    description = description,
-    recipeYield = recipeYield,
-    prepTime = prepTime,
-    cookTime = cookTime,
-    totalTime = totalTime,
-    imagePath = imagePath,
-    sourceUrl = sourceUrl,
-    rating = rating,
-    proteinType = proteinType,
-    effort = effort,
-    cuisine = cuisine,
-    mealType = mealType,
-    seasonFit = seasonFit,
+    id = id, updatedAt = updatedAt, deleted = deleted, slug = slug, name = name,
+    description = description, recipeYield = recipeYield, prepTime = prepTime,
+    cookTime = cookTime, totalTime = totalTime, imagePath = imagePath,
+    sourceUrl = sourceUrl, rating = rating, proteinType = proteinType,
+    effort = effort, cuisine = cuisine, mealType = mealType, seasonFit = seasonFit,
     createdAt = createdAt,
 )
 
 private fun IngredientEntity.toDto(): IngredientDto = IngredientDto(
-    id = id,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    recipeId = recipeId,
-    position = position,
-    quantity = quantity,
-    unit = unit,
-    food = food,
-    note = note,
+    id = id, updatedAt = updatedAt, deleted = deleted, recipeId = recipeId,
+    position = position, quantity = quantity, unit = unit, food = food, note = note,
 )
 
 private fun InstructionEntity.toDto(): InstructionDto = InstructionDto(
-    id = id,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    recipeId = recipeId,
-    position = position,
-    text = text,
+    id = id, updatedAt = updatedAt, deleted = deleted, recipeId = recipeId,
+    position = position, text = text,
 )
 
 private fun TagEntity.toDto(): TagDto = TagDto(
-    id = id,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    recipeId = recipeId,
-    name = name,
+    id = id, updatedAt = updatedAt, deleted = deleted, recipeId = recipeId, name = name,
 )
 
 private fun CategoryEntity.toDto(): CategoryDto = CategoryDto(
-    id = id,
-    updatedAt = updatedAt,
-    deleted = deleted,
-    recipeId = recipeId,
-    name = name,
+    id = id, updatedAt = updatedAt, deleted = deleted, recipeId = recipeId, name = name,
+)
+
+private fun ShoppingListEntity.toDto(): ShoppingListDto = ShoppingListDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, name = name,
+    isActive = isActive, isDefaultWeekplan = isDefaultWeekplan, isDefaultRecipe = isDefaultRecipe,
+)
+
+private fun ShoppingItemEntity.toDto(): ShoppingItemDto = ShoppingItemDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, listId = listId, name = name,
+    quantity = quantity, unit = unit, aisle = aisle, source = source,
+    isChecked = isChecked, sortOrder = sortOrder,
+)
+
+private fun StoreEntity.toDto(): StoreDto = StoreDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, name = name, isActive = isActive,
+)
+
+private fun StoreAisleEntity.toDto(): StoreAisleDto = StoreAisleDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, storeId = storeId,
+    aisleName = aisleName, sortOrder = sortOrder,
+)
+
+private fun AisleProductEntity.toDto(): AisleProductDto = AisleProductDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, aisleName = aisleName,
+    productName = productName, storeId = storeId,
+)
+
+private fun ShoppingListStapleEntity.toDto(): ShoppingListStapleDto = ShoppingListStapleDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, listId = listId,
+    name = name, quantity = quantity, sortOrder = sortOrder,
+)
+
+private fun QuickEmojiEntity.toDto(): QuickEmojiDto = QuickEmojiDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, emoji = emoji,
+    food = food, quantity = quantity, unit = unit, sortOrder = sortOrder,
 )

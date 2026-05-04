@@ -72,11 +72,87 @@ data class CategoryDto(
     val name: String = "",
 )
 
-/**
- * Pull-Antwort. Andere Tabellen (foods, units, stores, …) sind in späteren Phasen
- * relevant; bis dahin werden ihre Listen einfach ignoriert (Felder defaulten auf
- * `emptyList()`).
- */
+@JsonClass(generateAdapter = true)
+data class ShoppingListDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    val name: String = "",
+    @Json(name = "is_active") val isActive: Int = 0,
+    @Json(name = "is_default_weekplan") val isDefaultWeekplan: Int = 0,
+    @Json(name = "is_default_recipe") val isDefaultRecipe: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class ShoppingItemDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "list_id") val listId: String,
+    val name: String = "",
+    val quantity: Double = 1.0,
+    val unit: String = "",
+    val aisle: String = "",
+    val source: String = "manual",
+    @Json(name = "is_checked") val isChecked: Int = 0,
+    @Json(name = "sort_order") val sortOrder: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class StoreDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    val name: String = "",
+    @Json(name = "is_active") val isActive: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class StoreAisleDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "store_id") val storeId: String,
+    @Json(name = "aisle_name") val aisleName: String = "",
+    @Json(name = "sort_order") val sortOrder: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class AisleProductDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "aisle_name") val aisleName: String = "",
+    @Json(name = "product_name") val productName: String = "",
+    @Json(name = "store_id") val storeId: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class ShoppingListStapleDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "list_id") val listId: String,
+    val name: String = "",
+    val quantity: Double = 1.0,
+    @Json(name = "sort_order") val sortOrder: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class QuickEmojiDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    val emoji: String = "",
+    val food: String = "",
+    val quantity: Double = 1.0,
+    val unit: String = "",
+    @Json(name = "sort_order") val sortOrder: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class SuggestionsResponse(val suggestions: List<String> = emptyList())
+
 @JsonClass(generateAdapter = true)
 data class SyncPullResponse(
     @Json(name = "server_ts") val serverTs: Long,
@@ -85,6 +161,13 @@ data class SyncPullResponse(
     @Json(name = "recipe_instructions") val recipeInstructions: List<InstructionDto> = emptyList(),
     @Json(name = "recipe_tags") val recipeTags: List<TagDto> = emptyList(),
     @Json(name = "recipe_categories") val recipeCategories: List<CategoryDto> = emptyList(),
+    @Json(name = "shopping_lists") val shoppingLists: List<ShoppingListDto> = emptyList(),
+    @Json(name = "shopping_items") val shoppingItems: List<ShoppingItemDto> = emptyList(),
+    val stores: List<StoreDto> = emptyList(),
+    @Json(name = "store_aisles") val storeAisles: List<StoreAisleDto> = emptyList(),
+    @Json(name = "aisle_products") val aisleProducts: List<AisleProductDto> = emptyList(),
+    @Json(name = "shopping_list_staples") val shoppingListStaples: List<ShoppingListStapleDto> = emptyList(),
+    @Json(name = "quick_emojis") val quickEmojis: List<QuickEmojiDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -95,6 +178,13 @@ data class SyncPushRequest(
     @Json(name = "recipe_instructions") val recipeInstructions: List<InstructionDto> = emptyList(),
     @Json(name = "recipe_tags") val recipeTags: List<TagDto> = emptyList(),
     @Json(name = "recipe_categories") val recipeCategories: List<CategoryDto> = emptyList(),
+    @Json(name = "shopping_lists") val shoppingLists: List<ShoppingListDto> = emptyList(),
+    @Json(name = "shopping_items") val shoppingItems: List<ShoppingItemDto> = emptyList(),
+    val stores: List<StoreDto> = emptyList(),
+    @Json(name = "store_aisles") val storeAisles: List<StoreAisleDto> = emptyList(),
+    @Json(name = "aisle_products") val aisleProducts: List<AisleProductDto> = emptyList(),
+    @Json(name = "shopping_list_staples") val shoppingListStaples: List<ShoppingListStapleDto> = emptyList(),
+    @Json(name = "quick_emojis") val quickEmojis: List<QuickEmojiDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -106,4 +196,72 @@ data class HealthResponse(
 data class ImageUploadResponse(
     val uuid: String = "",
     val filename: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class UrlImportRequest(val url: String)
+
+@JsonClass(generateAdapter = true)
+data class AiGenerateRequest(
+    val prompt: String,
+    @Json(name = "custom_instructions") val customInstructions: String = "",
+    @Json(name = "available_tags") val availableTags: List<String> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class AiRemixRequest(
+    @Json(name = "recipe_name") val recipeName: String,
+    @Json(name = "recipe_description") val recipeDescription: String = "",
+    @Json(name = "recipe_ingredients") val recipeIngredients: List<String> = emptyList(),
+    @Json(name = "recipe_instructions") val recipeInstructions: List<String> = emptyList(),
+    @Json(name = "remix_prompt") val remixPrompt: String,
+    @Json(name = "available_tags") val availableTags: List<String> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class AiClassifyRequest(
+    val name: String,
+    val description: String = "",
+    val tags: List<String> = emptyList(),
+    val ingredients: List<String> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class AiClassifyResponse(
+    @Json(name = "protein_type") val proteinType: String = "",
+    val effort: String = "",
+    val cuisine: String = "",
+    @Json(name = "meal_type") val mealType: String = "",
+    @Json(name = "season_fit") val seasonFit: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class ImportedIngredientDto(
+    val food: String = "",
+    val quantity: Double = 0.0,
+    val unit: String = "",
+    val note: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class ImportedInstructionDto(val text: String = "")
+
+@JsonClass(generateAdapter = true)
+data class ImportedRecipeDto(
+    val name: String = "",
+    val description: String = "",
+    @Json(name = "recipe_yield") val recipeYield: String = "",
+    @Json(name = "prep_time") val prepTime: String = "",
+    @Json(name = "cook_time") val cookTime: String = "",
+    @Json(name = "total_time") val totalTime: String = "",
+    val cuisine: String = "",
+    @Json(name = "meal_type") val mealType: String = "",
+    val effort: String = "",
+    @Json(name = "protein_type") val proteinType: String = "",
+    @Json(name = "season_fit") val seasonFit: String = "",
+    @Json(name = "source_url") val sourceUrl: String = "",
+    @Json(name = "image_url") val imageUrl: String = "",
+    val ingredients: List<ImportedIngredientDto> = emptyList(),
+    val instructions: List<ImportedInstructionDto> = emptyList(),
+    val tags: List<String> = emptyList(),
 )

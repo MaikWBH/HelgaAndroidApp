@@ -2,7 +2,10 @@ package com.helga.android.di
 
 import android.content.Context
 import com.helga.android.data.local.AppDatabase
+import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.local.dao.ShoppingDao
+import com.helga.android.data.local.dao.StoreDao
 import com.helga.android.data.local.dao.SyncDao
 import dagger.Module
 import dagger.Provides
@@ -25,4 +28,13 @@ object DatabaseModule {
 
     @Provides
     fun provideSyncDao(db: AppDatabase): SyncDao = db.syncDao()
+
+    @Provides
+    fun provideShoppingDao(db: AppDatabase): ShoppingDao = db.shoppingDao()
+
+    @Provides
+    fun provideStoreDao(db: AppDatabase): StoreDao = db.storeDao()
+
+    @Provides
+    fun provideQuickEmojiDao(db: AppDatabase): QuickEmojiDao = db.quickEmojiDao()
 }

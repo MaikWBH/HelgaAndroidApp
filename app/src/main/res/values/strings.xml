@@ -76,6 +76,22 @@
     <string name="recipe_delete_confirm_ok">Löschen</string>
     <string name="recipe_delete_confirm_cancel">Abbrechen</string>
 
+    <!-- URL-Import -->
+    <string name="import_url_title">Von URL importieren</string>
+    <string name="import_url_label">Rezept-URL</string>
+    <string name="import_url_action">Importieren</string>
+    <string name="import_url_preview">Vorschau</string>
+    <string name="import_url_ingredients">%1$d Zutaten</string>
+    <string name="import_url_steps">%1$d Schritte</string>
+
+    <!-- Kochansicht -->
+    <string name="recipe_cook">Kochen</string>
+    <string name="cook_step_of">Schritt %1$d von %2$d</string>
+    <string name="cook_next">Nächster Schritt</string>
+    <string name="cook_prev">Vorheriger Schritt</string>
+    <string name="cook_done">Fertig!</string>
+    <string name="cook_no_steps">Keine Zubereitungsschritte vorhanden.</string>
+
     <!-- Einstellungen -->
     <string name="settings_title">Einstellungen</string>
     <string name="settings_server_section">Server</string>
@@ -92,4 +108,61 @@
     <!-- Allgemein -->
     <string name="action_retry">Erneut versuchen</string>
     <string name="action_settings">Einstellungen</string>
+
+    <!-- FAB Speed-Dial -->
+    <string name="fab_create">Erstellen</string>
+    <string name="fab_new_recipe">Neues Rezept</string>
+    <string name="fab_ai_generate">KI erstellen</string>
+    <string name="fab_url_import">URL importieren</string>
+    <string name="fab_remix">Rezept remixen</string>
+
+    <!-- KI-Erstellung -->
+    <string name="ai_generate_title">KI Rezept erstellen</string>
+    <string name="ai_generate_prompt_label">Was soll die KI kochen?</string>
+    <string name="ai_generate_prompt_hint">z.B. „Veganes Curry mit Kichererbsen und Kokosmilch"</string>
+    <string name="ai_generate_button">Rezept generieren</string>
+    <string name="ai_generating">KI arbeitet…</string>
+    <string name="ai_generate_save">Rezept speichern</string>
+    <string name="ai_generate_new_prompt">Neuen Prompt eingeben</string>
+
+    <!-- KI-Remix -->
+    <string name="ai_remix_title">Rezept remixen</string>
+    <string name="ai_remix_title_with_name">Remix: %1$s</string>
+    <string name="ai_remix_original_label">Original: %1$s</string>
+    <string name="ai_remix_prompt_label">Was soll geändert werden?</string>
+    <string name="ai_remix_prompt_hint">z.B. „Mache es vegan" oder „Ersetze Pasta durch Reis"</string>
+    <string name="ai_remix_button">Remix generieren</string>
+    <string name="ai_remix_new_prompt">Anderen Remix versuchen</string>
+
+    <!-- KI-Klassifikation -->
+    <string name="recipe_classify">KI klassifizieren</string>
+
+    <!-- Einkaufsliste -->
+    <string name="shopping_title">Einkaufsliste</string>
+    <string name="shopping_new_list">Neue Liste</string>
+    <string name="shopping_list_name">Listenname</string>
+    <string name="shopping_create">Erstellen</string>
+    <string name="shopping_no_lists">Keine Einkaufslisten</string>
+    <string name="shopping_empty">Noch keine Einträge</string>
+    <string name="shopping_add_hint">Artikel hinzufügen…</string>
+    <string name="shopping_delete_checked">Erledigte löschen</string>
+    <string name="shopping_no_aisle">Ohne Gang</string>
+    <string name="shopping_assign_aisle">Gang zuweisen</string>
+    <string name="shopping_staples">Vorratsstapel</string>
+    <string name="shopping_staples_add_all">Alle hinzufügen</string>
+    <string name="shopping_staples_empty">Keine Vorratsstapel konfiguriert</string>
+    <string name="shopping_staple_hint">Artikel eingeben…</string>
+
+    <!-- Märkte -->
+    <string name="stores_title">Märkte</string>
+    <string name="stores_new">Neuer Markt</string>
+    <string name="stores_name_label">Marktname</string>
+    <string name="stores_empty">Noch keine Märkte</string>
+    <string name="stores_edit_aisles">Gänge bearbeiten</string>
+    <string name="stores_aisles_for">Gänge für %1$s</string>
+    <string name="stores_aisle_hint">Gangname eingeben…</string>
+
+    <!-- Einstellungen – Einkaufen -->
+    <string name="settings_shopping_section">Einkaufen</string>
+    <string name="settings_manage_stores">Märkte verwalten</string>
 </resources>

@@ -25,6 +25,27 @@ interface SyncDao {
 
     @Query("SELECT id, updatedAt FROM recipe_categories")
     suspend fun categoryTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM shopping_lists")
+    suspend fun shoppingListTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM shopping_items")
+    suspend fun shoppingItemTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM stores")
+    suspend fun storeTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM store_aisles")
+    suspend fun storeAisleTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM aisle_products")
+    suspend fun aisleProductTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM shopping_list_staples")
+    suspend fun stapleTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM quick_emojis")
+    suspend fun quickEmojiTimestamps(): List<TimestampRow>
 }
 
 data class TimestampRow(val id: String, val updatedAt: Long)

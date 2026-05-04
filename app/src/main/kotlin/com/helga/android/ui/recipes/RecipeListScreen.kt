@@ -20,9 +20,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Star
@@ -31,7 +31,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +55,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.ui.components.CreateFab
 import com.helga.android.ui.components.SyncStatusIcon
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
@@ -63,7 +63,10 @@ import com.helga.android.ui.components.SyncStatusIcon
 fun RecipeListScreen(
     onRecipeClick: (id: String) -> Unit,
     onCreateClick: () -> Unit,
+    onImportClick: () -> Unit,
+    onAiGenerateClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onShoppingClick: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: RecipeListViewModel = hiltViewModel(),
@@ -83,6 +86,12 @@ fun RecipeListScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         SyncStatusIcon(syncStatus)
                     }
+                    IconButton(onClick = onShoppingClick) {
+                        Icon(
+                            imageVector = Icons.Filled.ShoppingCart,
+                            contentDescription = stringResource(R.string.shopping_title),
+                        )
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
@@ -93,9 +102,11 @@ fun RecipeListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreateClick) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.recipe_form_new_title))
-            }
+            CreateFab(
+                onNewRecipe = onCreateClick,
+                onAiGenerate = onAiGenerateClick,
+                onUrlImport = onImportClick,
+            )
         },
     ) { padding ->
         Column(
