@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -67,6 +68,7 @@ fun RecipeListScreen(
     onAiGenerateClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onShoppingClick: () -> Unit,
+    onWeekplanClick: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: RecipeListViewModel = hiltViewModel(),
@@ -85,6 +87,12 @@ fun RecipeListScreen(
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
                         SyncStatusIcon(syncStatus)
+                    }
+                    IconButton(onClick = onWeekplanClick) {
+                        Icon(
+                            imageVector = Icons.Filled.CalendarMonth,
+                            contentDescription = stringResource(R.string.weekplan_title),
+                        )
                     }
                     IconButton(onClick = onShoppingClick) {
                         Icon(

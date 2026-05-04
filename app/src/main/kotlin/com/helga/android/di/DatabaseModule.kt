@@ -7,6 +7,7 @@ import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.StoreDao
 import com.helga.android.data.local.dao.SyncDao
+import com.helga.android.data.local.dao.WeekplanDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,4 +38,7 @@ object DatabaseModule {
 
     @Provides
     fun provideQuickEmojiDao(db: AppDatabase): QuickEmojiDao = db.quickEmojiDao()
+
+    @Provides
+    fun provideWeekplanDao(db: AppDatabase): WeekplanDao = db.weekplanDao()
 }

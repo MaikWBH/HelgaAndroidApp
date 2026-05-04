@@ -151,6 +151,35 @@ data class QuickEmojiDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class WeekplanDayDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "plan_date") val planDate: String = "",
+    val note: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class WeekplanRecipeDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "weekplan_day_id") val weekplanDayId: String,
+    @Json(name = "recipe_id") val recipeId: String,
+    val position: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class WeekplanExtraDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "weekplan_day_id") val weekplanDayId: String,
+    @Json(name = "item_text") val itemText: String = "",
+    val position: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
@@ -168,6 +197,9 @@ data class SyncPullResponse(
     @Json(name = "aisle_products") val aisleProducts: List<AisleProductDto> = emptyList(),
     @Json(name = "shopping_list_staples") val shoppingListStaples: List<ShoppingListStapleDto> = emptyList(),
     @Json(name = "quick_emojis") val quickEmojis: List<QuickEmojiDto> = emptyList(),
+    @Json(name = "weekplan_days") val weekplanDays: List<WeekplanDayDto> = emptyList(),
+    @Json(name = "weekplan_recipes") val weekplanRecipes: List<WeekplanRecipeDto> = emptyList(),
+    @Json(name = "weekplan_extras") val weekplanExtras: List<WeekplanExtraDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -185,6 +217,9 @@ data class SyncPushRequest(
     @Json(name = "aisle_products") val aisleProducts: List<AisleProductDto> = emptyList(),
     @Json(name = "shopping_list_staples") val shoppingListStaples: List<ShoppingListStapleDto> = emptyList(),
     @Json(name = "quick_emojis") val quickEmojis: List<QuickEmojiDto> = emptyList(),
+    @Json(name = "weekplan_days") val weekplanDays: List<WeekplanDayDto> = emptyList(),
+    @Json(name = "weekplan_recipes") val weekplanRecipes: List<WeekplanRecipeDto> = emptyList(),
+    @Json(name = "weekplan_extras") val weekplanExtras: List<WeekplanExtraDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

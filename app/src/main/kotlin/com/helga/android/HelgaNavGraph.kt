@@ -22,12 +22,14 @@ import com.helga.android.ui.recipes.UrlImportScreen
 import com.helga.android.ui.settings.SettingsScreen
 import com.helga.android.ui.shopping.ShoppingListScreen
 import com.helga.android.ui.stores.StoreListScreen
+import com.helga.android.ui.weekplan.WeekplanScreen
 import kotlinx.coroutines.flow.first
 
 internal const val ROUTE_ONBOARDING = "onboarding"
 internal const val ROUTE_RECIPES = "recipes"
 internal const val ROUTE_SHOPPING = "shopping"
 internal const val ROUTE_STORES = "stores"
+internal const val ROUTE_WEEKPLAN = "weekplan"
 internal const val ROUTE_RECIPE_DETAIL = "recipe/{recipeId}"
 internal const val ROUTE_RECIPE_CREATE = "recipe/new"
 internal const val ROUTE_RECIPE_EDIT = "recipe/{recipeId}/edit"
@@ -76,6 +78,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                     onAiGenerateClick = { navController.navigate(ROUTE_AI_GENERATE) },
                     onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
                     onShoppingClick = { navController.navigate(ROUTE_SHOPPING) },
+                    onWeekplanClick = { navController.navigate(ROUTE_WEEKPLAN) },
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this,
                 )
@@ -112,6 +115,9 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
             }
             composable(ROUTE_STORES) {
                 StoreListScreen(onBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_WEEKPLAN) {
+                WeekplanScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 route = ROUTE_RECIPE_DETAIL,

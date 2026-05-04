@@ -11,6 +11,7 @@ import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.StoreDao
 import com.helga.android.data.local.dao.SyncDao
+import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -23,9 +24,12 @@ import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.local.entity.TagEntity
+import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanExtraEntity
+import com.helga.android.data.local.entity.WeekplanRecipeEntity
 
 @Database(
-    version = 4,
+    version = 5,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -40,6 +44,9 @@ import com.helga.android.data.local.entity.TagEntity
         AisleProductEntity::class,
         ShoppingListStapleEntity::class,
         QuickEmojiEntity::class,
+        WeekplanDayEntity::class,
+        WeekplanRecipeEntity::class,
+        WeekplanExtraEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -49,6 +56,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun shoppingDao(): ShoppingDao
     abstract fun storeDao(): StoreDao
     abstract fun quickEmojiDao(): QuickEmojiDao
+    abstract fun weekplanDao(): WeekplanDao
 
     companion object {
         const val NAME = "helga.db"
@@ -187,10 +195,63 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_days (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        planDate TEXT NOT NULL DEFAULT '',
+                        note TEXT NOT NULL DEFAULT '',
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_recipes (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        weekplanDayId TEXT NOT NULL,
+                        recipeId TEXT NOT NULL,
+                        position INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_extras (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        weekplanDayId TEXT NOT NULL,
+                        itemText TEXT NOT NULL DEFAULT '',
+                        position INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_days_planDate ON weekplan_days(planDate)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_days_updatedAt ON weekplan_days(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_days_deleted ON weekplan_days(deleted)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_recipes_weekplanDayId ON weekplan_recipes(weekplanDayId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_recipes_recipeId ON weekplan_recipes(recipeId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_recipes_updatedAt ON weekplan_recipes(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_recipes_deleted ON weekplan_recipes(deleted)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_extras_weekplanDayId ON weekplan_extras(weekplanDayId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_extras_updatedAt ON weekplan_extras(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_extras_deleted ON weekplan_extras(deleted)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
     }
 }

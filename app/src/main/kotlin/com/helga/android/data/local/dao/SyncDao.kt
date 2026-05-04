@@ -46,6 +46,15 @@ interface SyncDao {
 
     @Query("SELECT id, updatedAt FROM quick_emojis")
     suspend fun quickEmojiTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM weekplan_days")
+    suspend fun weekplanDayTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM weekplan_recipes")
+    suspend fun weekplanRecipeTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM weekplan_extras")
+    suspend fun weekplanExtraTimestamps(): List<TimestampRow>
 }
 
 data class TimestampRow(val id: String, val updatedAt: Long)

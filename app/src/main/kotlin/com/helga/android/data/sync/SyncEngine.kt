@@ -6,6 +6,7 @@ import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.StoreDao
 import com.helga.android.data.local.dao.SyncDao
+import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -18,6 +19,9 @@ import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.local.entity.TagEntity
+import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanExtraEntity
+import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AisleProductDto
@@ -34,6 +38,9 @@ import com.helga.android.data.remote.dto.StoreDto
 import com.helga.android.data.remote.dto.SyncPullResponse
 import com.helga.android.data.remote.dto.SyncPushRequest
 import com.helga.android.data.remote.dto.TagDto
+import com.helga.android.data.remote.dto.WeekplanDayDto
+import com.helga.android.data.remote.dto.WeekplanExtraDto
+import com.helga.android.data.remote.dto.WeekplanRecipeDto
 import androidx.room.withTransaction
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -46,6 +53,7 @@ class SyncEngine @Inject constructor(
     private val shoppingDao: ShoppingDao,
     private val storeDao: StoreDao,
     private val quickEmojiDao: QuickEmojiDao,
+    private val weekplanDao: WeekplanDao,
     private val apiFactory: SyncApiFactory,
     private val preferences: AppPreferences,
 ) {
@@ -85,12 +93,16 @@ class SyncEngine @Inject constructor(
         val aisleProductWinners = filterServerWins(response.aisleProducts, syncDao.aisleProductTimestamps()) { it.id to it.updatedAt }
         val stapleWinners = filterServerWins(response.shoppingListStaples, syncDao.stapleTimestamps()) { it.id to it.updatedAt }
         val emojiWinners = filterServerWins(response.quickEmojis, syncDao.quickEmojiTimestamps()) { it.id to it.updatedAt }
+        val wpDayWinners = filterServerWins(response.weekplanDays, syncDao.weekplanDayTimestamps()) { it.id to it.updatedAt }
+        val wpRecipeWinners = filterServerWins(response.weekplanRecipes, syncDao.weekplanRecipeTimestamps()) { it.id to it.updatedAt }
+        val wpExtraWinners = filterServerWins(response.weekplanExtras, syncDao.weekplanExtraTimestamps()) { it.id to it.updatedAt }
 
         if (recipeWinners.isEmpty() && ingredientWinners.isEmpty() &&
             instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty() &&
             listWinners.isEmpty() && itemWinners.isEmpty() &&
             storeWinners.isEmpty() && aisleWinners.isEmpty() && aisleProductWinners.isEmpty() &&
-            stapleWinners.isEmpty() && emojiWinners.isEmpty()
+            stapleWinners.isEmpty() && emojiWinners.isEmpty() &&
+            wpDayWinners.isEmpty() && wpRecipeWinners.isEmpty() && wpExtraWinners.isEmpty()
         ) return
 
         database.withTransaction {
@@ -106,6 +118,9 @@ class SyncEngine @Inject constructor(
             if (aisleProductWinners.isNotEmpty()) storeDao.upsertAisleProducts(aisleProductWinners.map { it.toEntity() })
             if (stapleWinners.isNotEmpty()) storeDao.upsertStaples(stapleWinners.map { it.toEntity() })
             if (emojiWinners.isNotEmpty()) quickEmojiDao.upsertEmojis(emojiWinners.map { it.toEntity() })
+            if (wpDayWinners.isNotEmpty()) weekplanDao.upsertDays(wpDayWinners.map { it.toEntity() })
+            if (wpRecipeWinners.isNotEmpty()) weekplanDao.upsertWeekplanRecipes(wpRecipeWinners.map { it.toEntity() })
+            if (wpExtraWinners.isNotEmpty()) weekplanDao.upsertExtras(wpExtraWinners.map { it.toEntity() })
         }
     }
 
@@ -123,6 +138,9 @@ class SyncEngine @Inject constructor(
         aisleProducts = storeDao.dirtyAisleProducts().map { it.toDto() },
         shoppingListStaples = storeDao.dirtyStaples().map { it.toDto() },
         quickEmojis = quickEmojiDao.dirtyEmojis().map { it.toDto() },
+        weekplanDays = weekplanDao.dirtyDays().map { it.toDto() },
+        weekplanRecipes = weekplanDao.dirtyWeekplanRecipes().map { it.toDto() },
+        weekplanExtras = weekplanDao.dirtyExtras().map { it.toDto() },
     )
 
     private suspend fun clearDirtyFlagsExcept(
@@ -141,6 +159,9 @@ class SyncEngine @Inject constructor(
         val aisleProductIds = pushed.aisleProducts.map { it.id } - serverWins.aisleProducts.map { it.id }.toSet()
         val stapleIds = pushed.shoppingListStaples.map { it.id } - serverWins.shoppingListStaples.map { it.id }.toSet()
         val emojiIds = pushed.quickEmojis.map { it.id } - serverWins.quickEmojis.map { it.id }.toSet()
+        val wpDayIds = pushed.weekplanDays.map { it.id } - serverWins.weekplanDays.map { it.id }.toSet()
+        val wpRecipeIds = pushed.weekplanRecipes.map { it.id } - serverWins.weekplanRecipes.map { it.id }.toSet()
+        val wpExtraIds = pushed.weekplanExtras.map { it.id } - serverWins.weekplanExtras.map { it.id }.toSet()
 
         database.withTransaction {
             if (recipeIds.isNotEmpty()) recipeDao.clearRecipeDirty(recipeIds)
@@ -155,6 +176,9 @@ class SyncEngine @Inject constructor(
             if (aisleProductIds.isNotEmpty()) storeDao.clearAisleProductDirty(aisleProductIds)
             if (stapleIds.isNotEmpty()) storeDao.clearStapleDirty(stapleIds)
             if (emojiIds.isNotEmpty()) quickEmojiDao.clearEmojiDirty(emojiIds)
+            if (wpDayIds.isNotEmpty()) weekplanDao.clearDayDirty(wpDayIds)
+            if (wpRecipeIds.isNotEmpty()) weekplanDao.clearWeekplanRecipeDirty(wpRecipeIds)
+            if (wpExtraIds.isNotEmpty()) weekplanDao.clearExtraDirty(wpExtraIds)
         }
     }
 
@@ -299,4 +323,32 @@ private fun ShoppingListStapleEntity.toDto(): ShoppingListStapleDto = ShoppingLi
 private fun QuickEmojiEntity.toDto(): QuickEmojiDto = QuickEmojiDto(
     id = id, updatedAt = updatedAt, deleted = deleted, emoji = emoji,
     food = food, quantity = quantity, unit = unit, sortOrder = sortOrder,
+)
+
+private fun WeekplanDayDto.toEntity(): WeekplanDayEntity = WeekplanDayEntity(
+    id = id, planDate = planDate, note = note, updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun WeekplanRecipeDto.toEntity(): WeekplanRecipeEntity = WeekplanRecipeEntity(
+    id = id, weekplanDayId = weekplanDayId, recipeId = recipeId, position = position,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun WeekplanExtraDto.toEntity(): WeekplanExtraEntity = WeekplanExtraEntity(
+    id = id, weekplanDayId = weekplanDayId, itemText = itemText, position = position,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun WeekplanDayEntity.toDto(): WeekplanDayDto = WeekplanDayDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, planDate = planDate, note = note,
+)
+
+private fun WeekplanRecipeEntity.toDto(): WeekplanRecipeDto = WeekplanRecipeDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, weekplanDayId = weekplanDayId,
+    recipeId = recipeId, position = position,
+)
+
+private fun WeekplanExtraEntity.toDto(): WeekplanExtraDto = WeekplanExtraDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, weekplanDayId = weekplanDayId,
+    itemText = itemText, position = position,
 )
