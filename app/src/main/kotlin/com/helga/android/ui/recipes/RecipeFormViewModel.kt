@@ -54,7 +54,7 @@ data class RecipeFormState(
     val imagePath: String = "",
     val localImageUri: String = "",
     val rating: Int = 0,
-    val isFavorite: Boolean = false,
+    val isFavorite: Int = 0,
     val createdAt: Long = 0L,
     val ingredients: List<IngredientFormItem> = emptyList(),
     val instructions: List<InstructionFormItem> = emptyList(),
