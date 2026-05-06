@@ -9,6 +9,8 @@ import com.helga.android.data.remote.dto.SuggestionsResponse
 import com.helga.android.data.remote.dto.SyncPullResponse
 import com.helga.android.data.remote.dto.SyncPushRequest
 import com.helga.android.data.remote.dto.UrlImportRequest
+import com.helga.android.data.remote.dto.WeekplanGenerateRequest
+import com.helga.android.data.remote.dto.WeekplanGenerateResponse
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -40,4 +42,7 @@ interface SyncApi {
 
     @GET("api/suggestions/items")
     suspend fun suggestItems(@Query("q") q: String): SuggestionsResponse
+
+    @POST("api/weekplan/generate")
+    suspend fun generateWeekplan(@Body req: WeekplanGenerateRequest): WeekplanGenerateResponse
 }

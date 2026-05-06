@@ -73,6 +73,10 @@ class AiRemixViewModel @Inject constructor(
 
     fun setRemixPrompt(p: String) = _state.update { it.copy(remixPrompt = p, status = AiRemixStatus.Idle) }
 
+    fun discardPreview() {
+        _state.update { it.copy(status = AiRemixStatus.Idle, isSaving = false) }
+    }
+
     fun remix() {
         val remixPrompt = _state.value.remixPrompt.trim()
         if (remixPrompt.isBlank()) return

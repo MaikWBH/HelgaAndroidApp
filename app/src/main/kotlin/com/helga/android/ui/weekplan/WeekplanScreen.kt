@@ -728,6 +728,7 @@ private fun ProposalSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TemplatesSheet(
     templates: List<WeekplanTemplateEntity>,

@@ -18,6 +18,10 @@ workManager = "2.9.1"
 datastore = "1.1.1"
 coroutines = "1.9.0"
 timber = "5.0.1"
+leakcanary = "2.14"
+junit4 = "4.13.2"
+mockk = "1.13.12"
+turbine = "1.1.0"
 macrobenchmark = "1.3.3"
 profileinstaller = "1.4.0"
 androidxTestRunner = "1.6.2"
@@ -64,6 +68,13 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
+
+junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 benchmark-macro = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "macrobenchmark" }

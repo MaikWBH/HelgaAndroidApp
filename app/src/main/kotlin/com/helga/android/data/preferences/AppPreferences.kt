@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -37,6 +38,17 @@ class AppPreferences @Inject constructor(
     }
 
     val lastSyncTs: Flow<Long> = ds.data.map { it[KEY_LAST_SYNC_TS] ?: 0L }
+    val weekplanDays: Flow<Int> = ds.data.map { prefs ->
+        val raw = prefs[KEY_WEEKPLAN_DAYS] ?: 7
+        if (raw in setOf(7, 10, 14)) raw else 7
+    }
+    val shoppingDay: Flow<Int> = ds.data.map { prefs ->
+        val raw = prefs[KEY_SHOPPING_DAY] ?: 0
+        raw.coerceIn(0, 6)
+    }
+    val defaultShoppingListId: Flow<String> = ds.data.map { it[KEY_DEFAULT_SHOPPING_LIST_ID].orEmpty() }
+    val themeMode: Flow<String> = ds.data.map { it[KEY_THEME_MODE] ?: "system" }
+    val accentColor: Flow<Int> = ds.data.map { it[KEY_ACCENT_COLOR] ?: 0 }
 
     suspend fun currentConnection(): HelgaConnection = connection.first()
     suspend fun currentLastSyncTs(): Long = lastSyncTs.first()
@@ -52,11 +64,36 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_LAST_SYNC_TS] = ts }
     }
 
+    suspend fun saveWeekplanDays(days: Int) {
+        val valid = if (days in setOf(7, 10, 14)) days else 7
+        ds.edit { it[KEY_WEEKPLAN_DAYS] = valid }
+    }
+
+    suspend fun saveShoppingDay(day: Int) {
+        ds.edit { it[KEY_SHOPPING_DAY] = day.coerceIn(0, 6) }
+    }
+
+    suspend fun saveDefaultShoppingListId(listId: String) {
+        ds.edit {
+            if (listId.isBlank()) it.remove(KEY_DEFAULT_SHOPPING_LIST_ID)
+            else it[KEY_DEFAULT_SHOPPING_LIST_ID] = listId
+        }
+    }
+
+    suspend fun saveThemeMode(mode: String) {
+        ds.edit { it[KEY_THEME_MODE] = mode }
+    }
+
+    suspend fun saveAccentColor(index: Int) {
+        ds.edit { it[KEY_ACCENT_COLOR] = index.coerceIn(0, 5) }
+    }
+
     suspend fun clearConnection() {
         ds.edit {
             it.remove(KEY_SERVER_URL)
             it.remove(KEY_API_KEY)
             it.remove(KEY_LAST_SYNC_TS)
+            it.remove(KEY_DEFAULT_SHOPPING_LIST_ID)
         }
     }
 
@@ -64,5 +101,10 @@ class AppPreferences @Inject constructor(
         val KEY_SERVER_URL = stringPreferencesKey("server_url")
         val KEY_API_KEY = stringPreferencesKey("api_key")
         val KEY_LAST_SYNC_TS = longPreferencesKey("last_sync_ts")
+        val KEY_WEEKPLAN_DAYS = intPreferencesKey("weekplan_days")
+        val KEY_SHOPPING_DAY = intPreferencesKey("shopping_day")
+        val KEY_DEFAULT_SHOPPING_LIST_ID = stringPreferencesKey("default_shopping_list_id")
+        val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
     }
 }

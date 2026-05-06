@@ -73,6 +73,7 @@ fun AiRemixScreen(
                 isSaving = state.isSaving,
                 onSave = { viewModel.save(status.recipe) { id -> onSaved(id) } },
                 onNewPrompt = { viewModel.setRemixPrompt(state.remixPrompt) },
+                onDiscard = viewModel::discardPreview,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
@@ -147,6 +148,7 @@ private fun AiPreviewContent(
     isSaving: Boolean,
     onSave: () -> Unit,
     onNewPrompt: () -> Unit,
+    onDiscard: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -215,6 +217,11 @@ private fun AiPreviewContent(
         item {
             TextButton(onClick = onNewPrompt, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.ai_remix_new_prompt))
+            }
+        }
+        item {
+            TextButton(onClick = onDiscard, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.ai_preview_discard))
             }
         }
         item { Spacer(Modifier.height(32.dp)) }

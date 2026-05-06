@@ -142,6 +142,17 @@ class AppSettingRecord(SyncRecord):
     value: str = ""
 
 
+class WeekplanSettingsRecord(SyncRecord):
+    plan_days: int = 7
+    shopping_day: int = 0
+
+
+class WeekplanConstraintsRecord(SyncRecord):
+    max_meat_per_week: int = 3
+    min_vegetarian_per_week: int = 2
+    max_repeat_days: int = 14
+
+
 # ── Sync-Payload ────────────────────────────────────────────────────────────
 
 class SyncPayload(BaseModel):
@@ -165,6 +176,8 @@ class SyncPayload(BaseModel):
     recipe_history: List[RecipeHistoryRecord] = []
     quick_emojis: List[QuickEmojiRecord] = []
     app_settings: List[AppSettingRecord] = []
+    weekplan_settings: List[WeekplanSettingsRecord] = []
+    weekplan_constraints: List[WeekplanConstraintsRecord] = []
 
 
 class SyncPullResponse(SyncPayload):
@@ -231,3 +244,21 @@ class AiImportResponse(BaseModel):
     ingredients: List[ImportedIngredient] = []
     instructions: List[ImportedInstruction] = []
     tags: List[str] = []
+
+
+class WeekplanGenerateRequest(BaseModel):
+    start_date: str
+    plan_days: int = 7
+    max_meat_per_week: int = 3
+    min_vegetarian_per_week: int = 2
+    max_repeat_days: int = 14
+
+
+class WeekplanAssignmentDto(BaseModel):
+    date: str
+    recipe_id: str
+    recipe_name: str = ""
+
+
+class WeekplanGenerateResponse(BaseModel):
+    assignments: List[WeekplanAssignmentDto] = []

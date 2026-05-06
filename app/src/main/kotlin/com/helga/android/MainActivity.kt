@@ -5,8 +5,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.ui.theme.HelgaTheme
+import com.helga.android.ui.theme.ThemeMode
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -20,7 +23,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val sharedUrl = resolveSharedUrl(intent)
         setContent {
-            HelgaTheme {
+            val themeModeStr by preferences.themeMode.collectAsState(initial = "system")
+            val accentColor by preferences.accentColor.collectAsState(initial = 0)
+            HelgaTheme(
+                themeMode = ThemeMode.fromString(themeModeStr),
+                accentColorIndex = accentColor,
+            ) {
                 HelgaNavGraph(preferences = preferences, initialImportUrl = sharedUrl)
             }
         }

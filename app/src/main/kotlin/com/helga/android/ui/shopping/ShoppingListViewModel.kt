@@ -9,6 +9,7 @@ import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.StoreRepository
@@ -34,6 +35,7 @@ class ShoppingListViewModel @Inject constructor(
     private val quickEmojiDao: QuickEmojiDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
+    private val preferences: AppPreferences,
 ) : ViewModel() {
 
     private val _activeListId = MutableStateFlow<String?>(null)
@@ -41,8 +43,12 @@ class ShoppingListViewModel @Inject constructor(
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val activeListId: StateFlow<String?> = combine(lists, _activeListId) { lists, selected ->
-        selected ?: lists.firstOrNull()?.id
+    val activeListId: StateFlow<String?> = combine(
+        lists,
+        _activeListId,
+        preferences.defaultShoppingListId,
+    ) { lists, selected, defaultId ->
+        selected ?: lists.firstOrNull { it.id == defaultId }?.id ?: lists.firstOrNull()?.id
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val itemsByAisle: StateFlow<Map<String, List<ShoppingItemEntity>>> = activeListId
@@ -179,6 +185,13 @@ class ShoppingListViewModel @Inject constructor(
     fun deleteItem(item: ShoppingItemEntity) {
         viewModelScope.launch {
             repository.softDeleteItem(item)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun updateItem(id: String, quantity: Double, unit: String, name: String) {
+        viewModelScope.launch {
+            repository.updateItem(id = id, quantity = quantity, unit = unit, name = name)
             syncScheduler.triggerOneShot()
         }
     }

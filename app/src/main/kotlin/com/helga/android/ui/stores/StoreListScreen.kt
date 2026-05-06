@@ -198,7 +198,7 @@ private fun AisleEditorSheet(
     onMoveUp: (StoreAisleEntity) -> Unit,
     onMoveDown: (StoreAisleEntity) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartialExpansion = true)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var newAisleName by remember { mutableStateOf("") }
 
     ModalBottomSheet(

@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from .db import init_db, get_db, now_ms
 from .models import (
     AiClassifyRequest, AiGenerateRequest, AiRemixRequest, AiUrlImportRequest,
-    SyncPullResponse, SyncPushRequest,
+    SyncPullResponse, SyncPushRequest, WeekplanGenerateRequest,
 )
 from .sync import pull_since, push_records
 from . import ai as ai_module
@@ -95,6 +95,11 @@ async def ai_classify(req: AiClassifyRequest):
 @app.post("/api/ai/import-url", dependencies=[Depends(require_auth)])
 async def ai_import_url(req: AiUrlImportRequest):
     return await ai_module.import_url(req)
+
+
+@app.post("/api/weekplan/generate", dependencies=[Depends(require_auth)])
+async def weekplan_generate(req: WeekplanGenerateRequest):
+    return await ai_module.generate_weekplan(req)
 
 
 # ── Bilder ────────────────────────────────────────────────────────────────────

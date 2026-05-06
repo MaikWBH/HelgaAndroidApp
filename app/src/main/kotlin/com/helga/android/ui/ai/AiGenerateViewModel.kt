@@ -48,6 +48,10 @@ class AiGenerateViewModel @Inject constructor(
 
     fun setPrompt(p: String) = _state.update { it.copy(prompt = p, status = AiGenerateStatus.Idle) }
 
+    fun discardPreview() {
+        _state.update { it.copy(status = AiGenerateStatus.Idle, isSaving = false) }
+    }
+
     fun generate() {
         val prompt = _state.value.prompt.trim()
         if (prompt.isBlank()) return

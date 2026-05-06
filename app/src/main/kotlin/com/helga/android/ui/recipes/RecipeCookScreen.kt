@@ -43,7 +43,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableBooleanStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -133,10 +132,10 @@ fun RecipeCookScreen(
     val ingredients = uiState.ingredients
     val checkedIds = uiState.checkedIngredientIds
     var stepIndex by remember { mutableIntStateOf(0) }
-    var ingredientsExpanded by remember { mutableBooleanStateOf(false) }
+    var ingredientsExpanded by remember { mutableStateOf(false) }
     var activeTimer by remember { mutableStateOf<DetectedTimer?>(null) }
     var timerSeconds by remember { mutableIntStateOf(0) }
-    var timerRunning by remember { mutableBooleanStateOf(false) }
+    var timerRunning by remember { mutableStateOf(false) }
 
     LaunchedEffect(timerRunning) {
         while (timerRunning && timerSeconds > 0) {

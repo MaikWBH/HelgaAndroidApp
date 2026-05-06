@@ -34,6 +34,8 @@ SYNC_TABLES = [
     "recipe_history",
     "quick_emojis",
     "app_settings",
+    "weekplan_settings",
+    "weekplan_constraints",
 ]
 
 SCHEMA = """
@@ -234,6 +236,23 @@ CREATE TABLE IF NOT EXISTS app_settings (
     updated_at  INTEGER NOT NULL DEFAULT 0,
     deleted     INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS weekplan_settings (
+    id           TEXT PRIMARY KEY,
+    plan_days    INTEGER NOT NULL DEFAULT 7,
+    shopping_day INTEGER NOT NULL DEFAULT 0,
+    updated_at   INTEGER NOT NULL DEFAULT 0,
+    deleted      INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS weekplan_constraints (
+    id                       TEXT PRIMARY KEY,
+    max_meat_per_week        INTEGER NOT NULL DEFAULT 3,
+    min_vegetarian_per_week  INTEGER NOT NULL DEFAULT 2,
+    max_repeat_days          INTEGER NOT NULL DEFAULT 14,
+    updated_at               INTEGER NOT NULL DEFAULT 0,
+    deleted                  INTEGER NOT NULL DEFAULT 0
+);
 """
 
 INDICES = [
@@ -251,6 +270,8 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_weekplan_recipes_day ON weekplan_recipes(weekplan_day_id)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_extras_day ON weekplan_extras(weekplan_day_id)",
     "CREATE INDEX IF NOT EXISTS idx_recipe_history_recipe ON recipe_history(recipe_id)",
+    "CREATE INDEX IF NOT EXISTS idx_weekplan_settings_updated ON weekplan_settings(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_weekplan_constraints_updated ON weekplan_constraints(updated_at)",
 ]
 
 

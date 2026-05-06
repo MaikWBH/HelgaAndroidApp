@@ -6,6 +6,11 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+val gitCommitCount: Int = providers
+    .exec { commandLine("git", "rev-list", "--count", "HEAD") }
+    .standardOutput.asText.map { it.trim().toIntOrNull() ?: 1 }
+    .get()
+
 android {
     namespace = "com.helga.android"
     compileSdk = 35
@@ -14,7 +19,7 @@ android {
         applicationId = "com.helga.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        versionCode = gitCommitCount
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -112,6 +117,13 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.timber)
+
+    debugImplementation(libs.leakcanary.android)
+
+    testImplementation(libs.junit4)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
 
     implementation(libs.androidx.profileinstaller)
 }

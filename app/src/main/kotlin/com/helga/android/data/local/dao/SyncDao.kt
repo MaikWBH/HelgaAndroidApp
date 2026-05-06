@@ -55,6 +55,12 @@ interface SyncDao {
 
     @Query("SELECT id, updatedAt FROM weekplan_extras")
     suspend fun weekplanExtraTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM weekplan_settings")
+    suspend fun weekplanSettingsTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM weekplan_constraints")
+    suspend fun weekplanConstraintsTimestamps(): List<TimestampRow>
 }
 
 data class TimestampRow(val id: String, val updatedAt: Long)

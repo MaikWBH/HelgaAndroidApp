@@ -6,7 +6,9 @@ import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.StoreDao
 import com.helga.android.data.local.dao.SyncDao
+import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
+import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -20,8 +22,10 @@ import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
+import com.helga.android.data.local.entity.WeekplanSettingsEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AisleProductDto
@@ -38,9 +42,11 @@ import com.helga.android.data.remote.dto.StoreDto
 import com.helga.android.data.remote.dto.SyncPullResponse
 import com.helga.android.data.remote.dto.SyncPushRequest
 import com.helga.android.data.remote.dto.TagDto
+import com.helga.android.data.remote.dto.WeekplanConstraintsDto
 import com.helga.android.data.remote.dto.WeekplanDayDto
 import com.helga.android.data.remote.dto.WeekplanExtraDto
 import com.helga.android.data.remote.dto.WeekplanRecipeDto
+import com.helga.android.data.remote.dto.WeekplanSettingsDto
 import androidx.room.withTransaction
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,6 +60,8 @@ class SyncEngine @Inject constructor(
     private val storeDao: StoreDao,
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanDao: WeekplanDao,
+    private val weekplanSettingsDao: WeekplanSettingsDao,
+    private val weekplanConstraintsDao: WeekplanConstraintsDao,
     private val apiFactory: SyncApiFactory,
     private val preferences: AppPreferences,
 ) {
@@ -96,13 +104,16 @@ class SyncEngine @Inject constructor(
         val wpDayWinners = filterServerWins(response.weekplanDays, syncDao.weekplanDayTimestamps()) { it.id to it.updatedAt }
         val wpRecipeWinners = filterServerWins(response.weekplanRecipes, syncDao.weekplanRecipeTimestamps()) { it.id to it.updatedAt }
         val wpExtraWinners = filterServerWins(response.weekplanExtras, syncDao.weekplanExtraTimestamps()) { it.id to it.updatedAt }
+        val wpSettingsWinners = filterServerWins(response.weekplanSettings, syncDao.weekplanSettingsTimestamps()) { it.id to it.updatedAt }
+        val wpConstraintsWinners = filterServerWins(response.weekplanConstraints, syncDao.weekplanConstraintsTimestamps()) { it.id to it.updatedAt }
 
         if (recipeWinners.isEmpty() && ingredientWinners.isEmpty() &&
             instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty() &&
             listWinners.isEmpty() && itemWinners.isEmpty() &&
             storeWinners.isEmpty() && aisleWinners.isEmpty() && aisleProductWinners.isEmpty() &&
             stapleWinners.isEmpty() && emojiWinners.isEmpty() &&
-            wpDayWinners.isEmpty() && wpRecipeWinners.isEmpty() && wpExtraWinners.isEmpty()
+            wpDayWinners.isEmpty() && wpRecipeWinners.isEmpty() && wpExtraWinners.isEmpty() &&
+            wpSettingsWinners.isEmpty() && wpConstraintsWinners.isEmpty()
         ) return
 
         database.withTransaction {
@@ -121,6 +132,8 @@ class SyncEngine @Inject constructor(
             if (wpDayWinners.isNotEmpty()) weekplanDao.upsertDays(wpDayWinners.map { it.toEntity() })
             if (wpRecipeWinners.isNotEmpty()) weekplanDao.upsertWeekplanRecipes(wpRecipeWinners.map { it.toEntity() })
             if (wpExtraWinners.isNotEmpty()) weekplanDao.upsertExtras(wpExtraWinners.map { it.toEntity() })
+            if (wpSettingsWinners.isNotEmpty()) weekplanSettingsDao.upsert(wpSettingsWinners.first().toEntity())
+            if (wpConstraintsWinners.isNotEmpty()) weekplanConstraintsDao.upsert(wpConstraintsWinners.first().toEntity())
         }
     }
 
@@ -141,6 +154,8 @@ class SyncEngine @Inject constructor(
         weekplanDays = weekplanDao.dirtyDays().map { it.toDto() },
         weekplanRecipes = weekplanDao.dirtyWeekplanRecipes().map { it.toDto() },
         weekplanExtras = weekplanDao.dirtyExtras().map { it.toDto() },
+        weekplanSettings = weekplanSettingsDao.dirty().map { it.toDto() },
+        weekplanConstraints = weekplanConstraintsDao.dirty().map { it.toDto() },
     )
 
     private suspend fun clearDirtyFlagsExcept(
@@ -162,6 +177,8 @@ class SyncEngine @Inject constructor(
         val wpDayIds = pushed.weekplanDays.map { it.id } - serverWins.weekplanDays.map { it.id }.toSet()
         val wpRecipeIds = pushed.weekplanRecipes.map { it.id } - serverWins.weekplanRecipes.map { it.id }.toSet()
         val wpExtraIds = pushed.weekplanExtras.map { it.id } - serverWins.weekplanExtras.map { it.id }.toSet()
+        val wpSettingsIds = pushed.weekplanSettings.map { it.id } - serverWins.weekplanSettings.map { it.id }.toSet()
+        val wpConstraintsIds = pushed.weekplanConstraints.map { it.id } - serverWins.weekplanConstraints.map { it.id }.toSet()
 
         database.withTransaction {
             if (recipeIds.isNotEmpty()) recipeDao.clearRecipeDirty(recipeIds)
@@ -179,6 +196,8 @@ class SyncEngine @Inject constructor(
             if (wpDayIds.isNotEmpty()) weekplanDao.clearDayDirty(wpDayIds)
             if (wpRecipeIds.isNotEmpty()) weekplanDao.clearWeekplanRecipeDirty(wpRecipeIds)
             if (wpExtraIds.isNotEmpty()) weekplanDao.clearExtraDirty(wpExtraIds)
+            if (wpSettingsIds.isNotEmpty()) weekplanSettingsDao.clearDirty(wpSettingsIds.toList())
+            if (wpConstraintsIds.isNotEmpty()) weekplanConstraintsDao.clearDirty(wpConstraintsIds.toList())
         }
     }
 
@@ -351,4 +370,40 @@ private fun WeekplanRecipeEntity.toDto(): WeekplanRecipeDto = WeekplanRecipeDto(
 private fun WeekplanExtraEntity.toDto(): WeekplanExtraDto = WeekplanExtraDto(
     id = id, updatedAt = updatedAt, deleted = deleted, weekplanDayId = weekplanDayId,
     itemText = itemText, position = position,
+)
+
+private fun WeekplanSettingsDto.toEntity(): WeekplanSettingsEntity = WeekplanSettingsEntity(
+    id = id,
+    planDays = planDays,
+    shoppingDay = shoppingDay,
+    updatedAt = updatedAt,
+    deleted = deleted,
+    dirty = 0,
+)
+
+private fun WeekplanSettingsEntity.toDto(): WeekplanSettingsDto = WeekplanSettingsDto(
+    id = id,
+    updatedAt = updatedAt,
+    deleted = deleted,
+    planDays = planDays,
+    shoppingDay = shoppingDay,
+)
+
+private fun WeekplanConstraintsDto.toEntity(): WeekplanConstraintsEntity = WeekplanConstraintsEntity(
+    id = id,
+    maxMeatPerWeek = maxMeatPerWeek,
+    minVegetarianPerWeek = minVegetarianPerWeek,
+    maxRepeatDays = maxRepeatDays,
+    updatedAt = updatedAt,
+    deleted = deleted,
+    dirty = 0,
+)
+
+private fun WeekplanConstraintsEntity.toDto(): WeekplanConstraintsDto = WeekplanConstraintsDto(
+    id = id,
+    maxMeatPerWeek = maxMeatPerWeek,
+    minVegetarianPerWeek = minVegetarianPerWeek,
+    maxRepeatDays = maxRepeatDays,
+    updatedAt = updatedAt,
+    deleted = deleted,
 )

@@ -180,6 +180,25 @@ data class WeekplanExtraDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class WeekplanSettingsDto(
+    val id: String = "global",
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "plan_days") val planDays: Int = 7,
+    @Json(name = "shopping_day") val shoppingDay: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class WeekplanConstraintsDto(
+    val id: String = "global",
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "max_meat_per_week") val maxMeatPerWeek: Int = 3,
+    @Json(name = "min_vegetarian_per_week") val minVegetarianPerWeek: Int = 2,
+    @Json(name = "max_repeat_days") val maxRepeatDays: Int = 14,
+)
+
+@JsonClass(generateAdapter = true)
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
@@ -200,6 +219,8 @@ data class SyncPullResponse(
     @Json(name = "weekplan_days") val weekplanDays: List<WeekplanDayDto> = emptyList(),
     @Json(name = "weekplan_recipes") val weekplanRecipes: List<WeekplanRecipeDto> = emptyList(),
     @Json(name = "weekplan_extras") val weekplanExtras: List<WeekplanExtraDto> = emptyList(),
+    @Json(name = "weekplan_settings") val weekplanSettings: List<WeekplanSettingsDto> = emptyList(),
+    @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -220,6 +241,8 @@ data class SyncPushRequest(
     @Json(name = "weekplan_days") val weekplanDays: List<WeekplanDayDto> = emptyList(),
     @Json(name = "weekplan_recipes") val weekplanRecipes: List<WeekplanRecipeDto> = emptyList(),
     @Json(name = "weekplan_extras") val weekplanExtras: List<WeekplanExtraDto> = emptyList(),
+    @Json(name = "weekplan_settings") val weekplanSettings: List<WeekplanSettingsDto> = emptyList(),
+    @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -280,6 +303,27 @@ data class ImportedIngredientDto(
 
 @JsonClass(generateAdapter = true)
 data class ImportedInstructionDto(val text: String = "")
+
+@JsonClass(generateAdapter = true)
+data class WeekplanGenerateRequest(
+    @Json(name = "start_date") val startDate: String,
+    @Json(name = "plan_days") val planDays: Int = 7,
+    @Json(name = "max_meat_per_week") val maxMeatPerWeek: Int = 3,
+    @Json(name = "min_vegetarian_per_week") val minVegetarianPerWeek: Int = 2,
+    @Json(name = "max_repeat_days") val maxRepeatDays: Int = 14,
+)
+
+@JsonClass(generateAdapter = true)
+data class WeekplanAssignmentDto(
+    val date: String = "",
+    @Json(name = "recipe_id") val recipeId: String = "",
+    @Json(name = "recipe_name") val recipeName: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class WeekplanGenerateResponse(
+    val assignments: List<WeekplanAssignmentDto> = emptyList(),
+)
 
 @JsonClass(generateAdapter = true)
 data class ImportedRecipeDto(
