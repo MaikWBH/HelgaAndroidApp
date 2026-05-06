@@ -17,6 +17,9 @@ interface WeekplanDao {
     @Query("SELECT * FROM weekplan_days WHERE deleted = 0 ORDER BY planDate ASC")
     fun observeDays(): Flow<List<WeekplanDayEntity>>
 
+    @Query("SELECT * FROM weekplan_days WHERE deleted = 0 AND planDate >= :startDate AND planDate <= :endDate ORDER BY planDate ASC")
+    fun observeDaysBetween(startDate: String, endDate: String): Flow<List<WeekplanDayEntity>>
+
     @Query("SELECT * FROM weekplan_recipes WHERE weekplanDayId = :dayId AND deleted = 0 ORDER BY position ASC")
     fun observeRecipesForDay(dayId: String): Flow<List<WeekplanRecipeEntity>>
 

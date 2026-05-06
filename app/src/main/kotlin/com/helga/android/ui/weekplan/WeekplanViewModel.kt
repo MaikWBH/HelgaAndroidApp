@@ -24,6 +24,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -31,8 +32,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.WeekFields
+import java.util.Locale
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -59,9 +63,28 @@ class WeekplanViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _selectedDayId = MutableStateFlow<String?>(null)
+    private val _weekOffset = MutableStateFlow(0)
+    val weekOffset: StateFlow<Int> = _weekOffset.asStateFlow()
 
-    val days: StateFlow<List<WeekplanDayEntity>> = repository.observeDays()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private fun mondayForOffset(offset: Int): LocalDate =
+        LocalDate.now().with(DayOfWeek.MONDAY).plusWeeks(offset.toLong())
+
+    val weekLabel: StateFlow<String> = _weekOffset.map { offset ->
+        val monday = mondayForOffset(offset)
+        val sunday = monday.plusDays(6)
+        val kw = monday.get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear())
+        val fmt = DateTimeFormatter.ofPattern("dd.MM.")
+        "KW $kw · ${monday.format(fmt)}–${sunday.format(fmt)}"
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    val days: StateFlow<List<WeekplanDayEntity>> = _weekOffset.flatMapLatest { offset ->
+        val monday = mondayForOffset(offset)
+        val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+        repository.observeDaysBetween(
+            startDate = monday.format(fmt),
+            endDate = monday.plusDays(6).format(fmt),
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val weekplanRecipes: StateFlow<List<WeekplanRecipeEntity>> = _selectedDayId
         .flatMapLatest { id ->
@@ -115,11 +138,25 @@ class WeekplanViewModel @Inject constructor(
         _selectedDayId.value = id
     }
 
+    fun nextWeek() {
+        _weekOffset.value++
+        _selectedDayId.value = null
+    }
+
+    fun prevWeek() {
+        _weekOffset.value--
+        _selectedDayId.value = null
+    }
+
+    fun goToCurrentWeek() {
+        _weekOffset.value = 0
+        _selectedDayId.value = null
+    }
+
     fun ensureWeek() {
         viewModelScope.launch {
             val dayCount = preferences.weekplanDays.first()
-            val today = LocalDate.now()
-            val monday = today.with(java.time.DayOfWeek.MONDAY)
+            val monday = mondayForOffset(_weekOffset.value)
             val fmt = DateTimeFormatter.ISO_LOCAL_DATE
             (0 until dayCount).forEach { offset ->
                 repository.getOrCreateDay(monday.plusDays(offset.toLong()).format(fmt))

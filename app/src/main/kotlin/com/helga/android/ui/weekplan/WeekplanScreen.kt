@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
@@ -60,6 +62,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -98,6 +101,8 @@ fun WeekplanScreen(
     val constraints by viewModel.constraints.collectAsStateWithLifecycle()
     val generateStatus by viewModel.generateStatus.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
+    val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
+    val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
 
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
@@ -109,7 +114,7 @@ fun WeekplanScreen(
             ?: LocalDate.now().with(DayOfWeek.MONDAY).format(DateTimeFormatter.ISO_LOCAL_DATE)
     }
 
-    LaunchedEffect(Unit) { viewModel.ensureWeek() }
+    LaunchedEffect(weekOffset) { viewModel.ensureWeek() }
 
     if (exportPicker != null) {
         ShoppingListPickerDialog(
@@ -201,9 +206,41 @@ fun WeekplanScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp + bottomPadding),
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp + bottomPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item(key = "week_nav") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = viewModel::prevWeek) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.weekplan_prev_week),
+                        )
+                    }
+                    Text(
+                        text = weekLabel,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall,
+                        textAlign = TextAlign.Center,
+                    )
+                    if (weekOffset != 0) {
+                        TextButton(onClick = viewModel::goToCurrentWeek) {
+                            Text(stringResource(R.string.weekplan_today))
+                        }
+                    }
+                    IconButton(onClick = viewModel::nextWeek) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = stringResource(R.string.weekplan_next_week),
+                        )
+                    }
+                }
+            }
             items(days, key = { it.id }) { day ->
                 val isSelected = day.id == selectedDayId
                 val dayRecipes = if (isSelected) weekplanRecipes else emptyList()

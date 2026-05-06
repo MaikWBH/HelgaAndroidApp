@@ -210,6 +210,9 @@
     <string name="weekplan_proposal_discard">Verwerfen</string>
     <string name="weekplan_constraints_save">Constraints speichern</string>
     <string name="weekplan_no_recipes_error">Keine passenden Rezepte gefunden</string>
+    <string name="weekplan_prev_week">Vorherige Woche</string>
+    <string name="weekplan_next_week">Nächste Woche</string>
+    <string name="weekplan_today">Heute</string>
 
     <!-- Bottom Navigation -->
     <string name="nav_shopping">Einkaufen</string>

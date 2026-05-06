@@ -18,6 +18,9 @@ class WeekplanRepository @Inject constructor(
 
     fun observeDays(): Flow<List<WeekplanDayEntity>> = weekplanDao.observeDays()
 
+    fun observeDaysBetween(startDate: String, endDate: String): Flow<List<WeekplanDayEntity>> =
+        weekplanDao.observeDaysBetween(startDate, endDate)
+
     fun observeRecipesForDay(dayId: String): Flow<List<WeekplanRecipeEntity>> =
         weekplanDao.observeRecipesForDay(dayId)
 
