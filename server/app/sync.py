@@ -63,6 +63,11 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "updated_at", "deleted",
     ],
     "app_settings": ["id", "value", "updated_at", "deleted"],
+    "weekplan_settings": ["id", "plan_days", "shopping_day", "updated_at", "deleted"],
+    "weekplan_constraints": [
+        "id", "max_meat_per_week", "min_vegetarian_per_week", "max_repeat_days",
+        "updated_at", "deleted",
+    ],
 }
 
 # Mapping Tabellenname → Feldname im SyncPayload
@@ -87,6 +92,8 @@ PAYLOAD_FIELD = {
     "recipe_history": "recipe_history",
     "quick_emojis": "quick_emojis",
     "app_settings": "app_settings",
+    "weekplan_settings": "weekplan_settings",
+    "weekplan_constraints": "weekplan_constraints",
 }
 
 
@@ -104,7 +111,10 @@ async def pull_since(since_ts: int) -> SyncPullResponse:
                 (since_ts,),
             ) as cursor:
                 rows = await cursor.fetchall()
-                result[table] = [dict(zip(cols, row)) for row in rows]
+                result[table] = [
+                    {k: v for k, v in zip(cols, row) if v is not None}
+                    for row in rows
+                ]
 
     return SyncPullResponse(server_ts=server_ts, **result)
 
@@ -136,7 +146,7 @@ async def push_records(payload: SyncPushRequest) -> SyncPullResponse:
                 ) as cursor:
                     existing = await cursor.fetchone()
 
-                if existing and existing[0] > rec_dict["updated_at"]:
+                if existing and (existing[0] or 0) > rec_dict["updated_at"]:
                     # Server ist neuer → client muss den Server-Stand übernehmen
                     async with db.execute(
                         f"SELECT {', '.join(cols)} FROM {table} WHERE id = ?",
