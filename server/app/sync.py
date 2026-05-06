@@ -102,7 +102,7 @@ async def pull_since(since_ts: int) -> SyncPullResponse:
     server_ts = now_ms()
     result: Dict[str, List[Dict]] = {t: [] for t in SYNC_TABLES}
 
-    async with await get_db() as db:
+    async with get_db() as db:
         for table in SYNC_TABLES:
             cols = TABLE_COLUMNS[table]
             col_list = ", ".join(cols)
@@ -127,7 +127,7 @@ async def push_records(payload: SyncPushRequest) -> SyncPullResponse:
     server_ts = now_ms()
     server_wins: Dict[str, List[Dict]] = {t: [] for t in SYNC_TABLES}
 
-    async with await get_db() as db:
+    async with get_db() as db:
         for table in SYNC_TABLES:
             field = PAYLOAD_FIELD[table]
             client_records: List[Any] = getattr(payload, field, [])

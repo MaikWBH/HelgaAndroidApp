@@ -136,7 +136,7 @@ async def suggest_items(q: str = Query(default="")):
         return {"suggestions": []}
     pattern = f"%{q}%"
     results = []
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute(
             "SELECT DISTINCT food FROM recipe_ingredients WHERE food LIKE ? AND deleted = 0 "
             "UNION "
@@ -153,7 +153,7 @@ async def suggest_items(q: str = Query(default="")):
 async def suggest_aisle(item: str = Query(default="")):
     if not item:
         return {"aisle": ""}
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute(
             "SELECT aisle_name FROM aisle_products WHERE product_name = ? AND deleted = 0 LIMIT 1",
             (item,),
@@ -166,7 +166,7 @@ async def suggest_aisle(item: str = Query(default="")):
 async def suggest_units(item: str = Query(default="")):
     if not item:
         return {"units": []}
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute(
             "SELECT unit_name FROM product_units WHERE product_name = ? AND deleted = 0 "
             "ORDER BY sort_order LIMIT 5",
