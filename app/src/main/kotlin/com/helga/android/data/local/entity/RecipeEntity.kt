@@ -1,6 +1,7 @@
 package com.helga.android.data.local.entity
 
 import androidx.compose.runtime.Immutable
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -36,4 +37,6 @@ data class RecipeEntity(
     val deleted: Int = 0,
     val dirty: Int = 0,
     val localImageUri: String = "",
+    @ColumnInfo(name = "is_favorite", defaultValue = "0")
+    val isFavorite: Int = 0,
 )

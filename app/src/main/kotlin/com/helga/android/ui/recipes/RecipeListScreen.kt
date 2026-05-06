@@ -20,10 +20,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Star
@@ -35,6 +35,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -43,12 +44,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -67,8 +73,7 @@ fun RecipeListScreen(
     onImportClick: () -> Unit,
     onAiGenerateClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onShoppingClick: () -> Unit,
-    onWeekplanClick: () -> Unit,
+    bottomPadding: Dp = 0.dp,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: RecipeListViewModel = hiltViewModel(),
@@ -79,6 +84,8 @@ fun RecipeListScreen(
     val selectedTag by viewModel.selectedTag.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -87,18 +94,6 @@ fun RecipeListScreen(
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
                         SyncStatusIcon(syncStatus)
-                    }
-                    IconButton(onClick = onWeekplanClick) {
-                        Icon(
-                            imageVector = Icons.Filled.CalendarMonth,
-                            contentDescription = stringResource(R.string.weekplan_title),
-                        )
-                    }
-                    IconButton(onClick = onShoppingClick) {
-                        Icon(
-                            imageVector = Icons.Filled.ShoppingCart,
-                            contentDescription = stringResource(R.string.shopping_title),
-                        )
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
@@ -117,24 +112,46 @@ fun RecipeListScreen(
             )
         },
     ) { padding ->
+        val focusManager = LocalFocusManager.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = viewModel::setSearchQuery,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                placeholder = { Text(stringResource(R.string.recipes_search_hint)) },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                            Icon(Icons.Filled.Close, contentDescription = null)
+                        }
+                    }
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+            )
             FilterBar(
                 allTags = allTagNames,
                 selectedTag = selectedTag,
                 sortOrder = sortOrder,
+                showFavoritesOnly = showFavoritesOnly,
                 onTagSelect = viewModel::selectTag,
                 onSortSelect = viewModel::setSortOrder,
+                onToggleFavorites = viewModel::toggleFavoritesFilter,
             )
             if (recipes.isEmpty()) {
                 EmptyState(modifier = Modifier.weight(1f))
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + bottomPadding),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(recipes, key = { it.id }) { recipe ->
@@ -157,8 +174,10 @@ private fun FilterBar(
     allTags: List<String>,
     selectedTag: String?,
     sortOrder: SortOrder,
+    showFavoritesOnly: Boolean,
     onTagSelect: (String?) -> Unit,
     onSortSelect: (SortOrder) -> Unit,
+    onToggleFavorites: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -171,9 +190,23 @@ private fun FilterBar(
         ) {
             item {
                 FilterChip(
-                    selected = selectedTag == null,
-                    onClick = { onTagSelect(null) },
+                    selected = selectedTag == null && !showFavoritesOnly,
+                    onClick = { onTagSelect(null); if (showFavoritesOnly) onToggleFavorites() },
                     label = { Text(stringResource(R.string.recipes_filter_all)) },
+                )
+            }
+            item {
+                FilterChip(
+                    selected = showFavoritesOnly,
+                    onClick = onToggleFavorites,
+                    label = { Text(stringResource(R.string.recipes_filter_favorites)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    },
                 )
             }
             items(allTags) { tag ->

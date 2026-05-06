@@ -22,6 +22,8 @@
     <string name="recipes_empty_hint">Sync ausführen oder Rezept anlegen</string>
     <string name="recipes_loading">Lade Rezepte…</string>
     <string name="recipes_filter_all">Alle</string>
+    <string name="recipes_filter_favorites">Favoriten</string>
+    <string name="recipes_search_hint">Rezepte suchen…</string>
     <string name="recipes_sort">Sortierung</string>
     <string name="recipes_sort_name">Name</string>
     <string name="recipes_sort_rating">Bewertung</string>
@@ -139,6 +141,7 @@
 
     <!-- KI-Klassifikation -->
     <string name="recipe_classify">KI klassifizieren</string>
+    <string name="recipe_favorite">Favorit</string>
     <string name="recipe_add_to_shopping">Zu Einkaufsliste hinzufügen</string>
 
     <!-- Einkaufsliste -->

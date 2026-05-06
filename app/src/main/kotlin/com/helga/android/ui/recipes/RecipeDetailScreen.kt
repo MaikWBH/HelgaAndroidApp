@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
@@ -65,6 +66,7 @@ import com.helga.android.R
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.ui.components.CreateFab
 
@@ -88,6 +90,8 @@ fun RecipeDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showOverflow by remember { mutableStateOf(false) }
+    var shoppingTargetDialog by remember { mutableStateOf(false) }
+    val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.classifyError) {
         uiState.classifyError?.let { snackbarHostState.showSnackbar(it) }
@@ -114,6 +118,17 @@ fun RecipeDetailScreen(
         )
     }
 
+    if (shoppingTargetDialog) {
+        ShoppingListSelectDialog(
+            lists = shoppingLists,
+            onDismiss = { shoppingTargetDialog = false },
+            onPick = { list ->
+                shoppingTargetDialog = false
+                viewModel.exportToShoppingList(list.id)
+            },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -128,6 +143,14 @@ fun RecipeDetailScreen(
                 },
                 actions = {
                     recipe?.let {
+                        IconButton(onClick = { viewModel.toggleFavorite() }) {
+                            Icon(
+                                imageVector = if (it.isFavorite == 1) Icons.Filled.Star else Icons.Outlined.Star,
+                                contentDescription = stringResource(R.string.recipe_favorite),
+                                tint = if (it.isFavorite == 1) MaterialTheme.colorScheme.primary
+                                       else androidx.compose.ui.graphics.Color.Unspecified,
+                            )
+                        }
                         if (uiState.instructions.isNotEmpty()) {
                             IconButton(onClick = { onCook(it.id) }) {
                                 Icon(Icons.Filled.MenuBook, contentDescription = stringResource(R.string.recipe_cook))
@@ -147,6 +170,15 @@ fun RecipeDetailScreen(
                                 expanded = showOverflow,
                                 onDismissRequest = { showOverflow = false },
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.recipe_add_to_shopping)) },
+                                    leadingIcon = { Icon(Icons.Filled.ShoppingCart, contentDescription = null) },
+                                    onClick = {
+                                        showOverflow = false
+                                        shoppingTargetDialog = true
+                                    },
+                                    enabled = shoppingLists.isNotEmpty(),
+                                )
                                 DropdownMenuItem(
                                     text = {
                                         if (uiState.isClassifying) {
@@ -430,4 +462,35 @@ private fun IngredientEntity.displayText(): String = buildString {
     }
     append(food)
     if (note.isNotBlank()) append(" ($note)")
+}
+
+@Composable
+private fun ShoppingListSelectDialog(
+    lists: List<ShoppingListEntity>,
+    onDismiss: () -> Unit,
+    onPick: (ShoppingListEntity) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.weekplan_pick_list)) },
+        text = {
+            if (lists.isEmpty()) {
+                Text(stringResource(R.string.weekplan_no_lists))
+            } else {
+                LazyColumn {
+                    items(lists, key = { it.id }) { list ->
+                        TextButton(onClick = { onPick(list) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(list.name)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.recipe_delete_confirm_cancel))
+            }
+        },
+    )
 }

@@ -33,6 +33,9 @@ interface RecipeDao {
     @Query("UPDATE recipes SET rating = :rating, updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
     suspend fun updateRating(id: String, rating: Int, updatedAt: Long)
 
+    @Query("UPDATE recipes SET is_favorite = :isFavorite, updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
+    suspend fun updateFavorite(id: String, isFavorite: Int, updatedAt: Long)
+
     @Query("SELECT * FROM recipes WHERE dirty = 1")
     suspend fun dirtyRecipes(): List<RecipeEntity>
 

@@ -11,7 +11,9 @@ import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.StoreDao
 import com.helga.android.data.local.dao.SyncDao
+import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
+import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -25,11 +27,13 @@ import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
+import com.helga.android.data.local.entity.WeekplanSettingsEntity
 
 @Database(
-    version = 5,
+    version = 8,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -47,6 +51,8 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
         WeekplanDayEntity::class,
         WeekplanRecipeEntity::class,
         WeekplanExtraEntity::class,
+        WeekplanSettingsEntity::class,
+        WeekplanConstraintsEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -57,6 +63,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun storeDao(): StoreDao
     abstract fun quickEmojiDao(): QuickEmojiDao
     abstract fun weekplanDao(): WeekplanDao
+    abstract fun weekplanSettingsDao(): WeekplanSettingsDao
+    abstract fun weekplanConstraintsDao(): WeekplanConstraintsDao
 
     companion object {
         const val NAME = "helga.db"
@@ -248,10 +256,67 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_settings (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        planDays INTEGER NOT NULL DEFAULT 7,
+                        shoppingDay INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_settings_updatedAt ON weekplan_settings(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_settings_deleted ON weekplan_settings(deleted)")
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO weekplan_settings (id, planDays, shoppingDay, updatedAt, deleted, dirty)
+                    VALUES ('global', 7, 0, 0, 0, 0)
+                    """.trimIndent()
+                )
+            }
+        }
+
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_constraints (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        maxMeatPerWeek INTEGER NOT NULL DEFAULT 3,
+                        minVegetarianPerWeek INTEGER NOT NULL DEFAULT 2,
+                        maxRepeatDays INTEGER NOT NULL DEFAULT 14,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_constraints_updatedAt ON weekplan_constraints(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_constraints_deleted ON weekplan_constraints(deleted)")
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO weekplan_constraints (id, maxMeatPerWeek, minVegetarianPerWeek, maxRepeatDays, updatedAt, deleted, dirty)
+                    VALUES ('global', 3, 2, 14, 0, 0, 0)
+                    """.trimIndent()
+                )
+            }
+        }
+
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE recipes ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                 .build()
     }
 }

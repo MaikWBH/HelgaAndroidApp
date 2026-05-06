@@ -31,6 +31,8 @@ class RecipeListViewModel @Inject constructor(
 
     val selectedTag = MutableStateFlow<String?>(null)
     val sortOrder = MutableStateFlow(SortOrder.NAME)
+    val searchQuery = MutableStateFlow("")
+    val showFavoritesOnly = MutableStateFlow(false)
 
     val allTagNames: StateFlow<List<String>> = repository.observeAllTagNames()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -53,11 +55,21 @@ class RecipeListViewModel @Inject constructor(
             SortOrder.RATING -> filtered.sortedByDescending { it.rating }
             SortOrder.UPDATED -> filtered.sortedByDescending { it.updatedAt }
         }
+    }.combine(searchQuery) { recipes, query ->
+        if (query.isBlank()) recipes
+        else recipes.filter {
+            it.name.contains(query, ignoreCase = true) ||
+            it.description.contains(query, ignoreCase = true)
+        }
+    }.combine(showFavoritesOnly) { recipes, favOnly ->
+        if (favOnly) recipes.filter { it.isFavorite == 1 } else recipes
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val syncStatus: StateFlow<SyncStatus> = syncStatusHolder.status
 
     fun selectTag(tag: String?) { selectedTag.value = tag }
     fun setSortOrder(order: SortOrder) { sortOrder.value = order }
+    fun setSearchQuery(q: String) { searchQuery.value = q }
+    fun toggleFavoritesFilter() { showFavoritesOnly.value = !showFavoritesOnly.value }
     fun refresh() = syncScheduler.triggerOneShot()
 }

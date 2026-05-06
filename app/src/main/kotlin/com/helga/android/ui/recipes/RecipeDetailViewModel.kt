@@ -6,11 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -37,8 +40,9 @@ data class RecipeDetailUiState(
 class RecipeDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: RecipeRepository,
+    private val shoppingRepository: ShoppingRepository,
     private val apiFactory: SyncApiFactory,
-    preferences: AppPreferences,
+    private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
 ) : ViewModel() {
 
@@ -60,9 +64,20 @@ class RecipeDetailViewModel @Inject constructor(
         .map { it.serverUrl }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
 
+    val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingRepository.observeLists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun setRating(rating: Int) {
         viewModelScope.launch {
             repository.updateRating(recipeId, rating)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun toggleFavorite() {
+        val recipe = uiState.value.recipe ?: return
+        viewModelScope.launch {
+            repository.toggleFavorite(recipe)
             syncScheduler.triggerOneShot()
         }
     }
@@ -105,5 +120,18 @@ class RecipeDetailViewModel @Inject constructor(
                 _classifyState.update { false to (e.message ?: "Klassifikation fehlgeschlagen") }
             }
         }
+    }
+
+    fun exportToShoppingList(listId: String) {
+        viewModelScope.launch {
+            repository.exportToShoppingList(recipeId, listId)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    suspend fun defaultShoppingListId(): String? {
+        val preferred: String = preferences.defaultShoppingListId.first()
+        if (preferred.isNotBlank()) return preferred
+        return shoppingLists.value.firstOrNull()?.id
     }
 }

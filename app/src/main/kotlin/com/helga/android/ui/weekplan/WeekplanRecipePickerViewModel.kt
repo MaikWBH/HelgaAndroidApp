@@ -36,6 +36,7 @@ class WeekplanRecipePickerViewModel @Inject constructor(
 
     val selectedTag = MutableStateFlow<String?>(null)
     val sortOrder = MutableStateFlow(SortOrder.NAME)
+    val searchQuery = MutableStateFlow("")
 
     val allTagNames: StateFlow<List<String>> = recipeRepository.observeAllTagNames()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -58,6 +59,12 @@ class WeekplanRecipePickerViewModel @Inject constructor(
             SortOrder.RATING -> filtered.sortedByDescending { it.rating }
             SortOrder.UPDATED -> filtered.sortedByDescending { it.updatedAt }
         }
+    }.combine(searchQuery) { recipes, query ->
+        if (query.isBlank()) recipes
+        else recipes.filter {
+            it.name.contains(query, ignoreCase = true) ||
+            it.description.contains(query, ignoreCase = true)
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun addRecipe(recipeId: String) {
@@ -69,4 +76,5 @@ class WeekplanRecipePickerViewModel @Inject constructor(
 
     fun selectTag(tag: String?) { selectedTag.value = tag }
     fun setSortOrder(order: SortOrder) { sortOrder.value = order }
+    fun setSearchQuery(q: String) { searchQuery.value = q }
 }
