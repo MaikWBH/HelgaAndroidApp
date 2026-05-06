@@ -24,7 +24,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
@@ -76,6 +79,7 @@ import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
+import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -103,9 +107,11 @@ fun WeekplanScreen(
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
     val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
+    val templates by viewModel.templates.collectAsStateWithLifecycle()
 
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
+    var templatesSheetVisible by remember { mutableStateOf(false) }
 
     val recipeById: (String) -> RecipeEntity? = { id -> allRecipes.find { it.id == id } }
 
@@ -137,6 +143,22 @@ fun WeekplanScreen(
                 constraintsEditorVisible = false
             },
             onDismiss = { constraintsEditorVisible = false },
+        )
+    }
+
+    if (templatesSheetVisible) {
+        TemplatesSheet(
+            templates = templates,
+            onSave = { name ->
+                viewModel.saveCurrentWeekAsTemplate(name)
+                templatesSheetVisible = false
+            },
+            onApply = { templateId ->
+                viewModel.applyTemplate(templateId)
+                templatesSheetVisible = false
+            },
+            onDelete = viewModel::deleteTemplate,
+            onDismiss = { templatesSheetVisible = false },
         )
     }
 
@@ -177,6 +199,12 @@ fun WeekplanScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.weekplan_title)) },
                 actions = {
+                    IconButton(onClick = { templatesSheetVisible = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.Bookmark,
+                            contentDescription = stringResource(R.string.weekplan_templates),
+                        )
+                    }
                     IconButton(onClick = { constraintsEditorVisible = true }) {
                         Icon(
                             imageVector = Icons.Filled.Tune,
@@ -696,6 +724,86 @@ private fun ProposalSheet(
                 }
             }
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun TemplatesSheet(
+    templates: List<WeekplanTemplateEntity>,
+    onSave: (name: String) -> Unit,
+    onApply: (templateId: String) -> Unit,
+    onDelete: (templateId: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var templateName by remember { mutableStateOf("") }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                text = stringResource(R.string.weekplan_templates),
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // Aktuelle Woche als Vorlage speichern
+            Text(
+                text = stringResource(R.string.weekplan_template_save_section),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = templateName,
+                    onValueChange = { templateName = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text(stringResource(R.string.weekplan_template_name_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        if (templateName.isNotBlank()) onSave(templateName)
+                    }),
+                )
+                IconButton(
+                    onClick = { if (templateName.isNotBlank()) onSave(templateName) },
+                    enabled = templateName.isNotBlank(),
+                ) {
+                    Icon(Icons.Filled.BookmarkAdd, contentDescription = stringResource(R.string.weekplan_template_save))
+                }
+            }
+
+            if (templates.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.weekplan_template_load_section),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                templates.forEach { template ->
+                    ListItem(
+                        headlineContent = { Text(template.name) },
+                        trailingContent = {
+                            Row {
+                                TextButton(onClick = { onApply(template.id) }) {
+                                    Text(stringResource(R.string.weekplan_template_apply))
+                                }
+                                IconButton(onClick = { onDelete(template.id) }) {
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = stringResource(R.string.weekplan_template_delete),
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+            Spacer(Modifier.height(32.dp))
         }
     }
 }

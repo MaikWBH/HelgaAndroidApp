@@ -14,6 +14,7 @@ import com.helga.android.data.local.dao.SyncDao
 import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
+import com.helga.android.data.local.dao.WeekplanTemplateDao
 import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -31,9 +32,11 @@ import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
+import com.helga.android.data.local.entity.WeekplanTemplateEntity
+import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 
 @Database(
-    version = 8,
+    version = 9,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -53,6 +56,8 @@ import com.helga.android.data.local.entity.WeekplanSettingsEntity
         WeekplanExtraEntity::class,
         WeekplanSettingsEntity::class,
         WeekplanConstraintsEntity::class,
+        WeekplanTemplateEntity::class,
+        WeekplanTemplateEntryEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -65,6 +70,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun weekplanDao(): WeekplanDao
     abstract fun weekplanSettingsDao(): WeekplanSettingsDao
     abstract fun weekplanConstraintsDao(): WeekplanConstraintsDao
+    abstract fun weekplanTemplateDao(): WeekplanTemplateDao
 
     companion object {
         const val NAME = "helga.db"
@@ -313,10 +319,36 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_templates (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL DEFAULT '',
+                        createdAt INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_template_entries (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        templateId TEXT NOT NULL DEFAULT '',
+                        dayOffset INTEGER NOT NULL DEFAULT 0,
+                        recipeId TEXT NOT NULL DEFAULT '',
+                        position INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_template_entries_templateId ON weekplan_template_entries(templateId)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                 .build()
     }
 }
