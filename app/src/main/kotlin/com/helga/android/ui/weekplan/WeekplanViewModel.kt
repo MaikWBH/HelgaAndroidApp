@@ -4,13 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
+import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
+import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
+import com.helga.android.data.local.dao.WeekplanSettingsDao
+import com.helga.android.data.remote.SyncApiFactory
+import com.helga.android.data.remote.dto.WeekplanAssignmentDto
+import com.helga.android.data.remote.dto.WeekplanGenerateRequest
 import com.helga.android.data.repository.WeekplanRepository
+import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -30,13 +38,24 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 data class DaySummary(val recipeCount: Int, val extraCount: Int)
 
+sealed interface WeekplanGenerateStatus {
+    data object Idle : WeekplanGenerateStatus
+    data object Loading : WeekplanGenerateStatus
+    data class Proposal(val assignments: List<WeekplanAssignmentDto>) : WeekplanGenerateStatus
+    data class Error(val message: String) : WeekplanGenerateStatus
+}
+
 @HiltViewModel
 class WeekplanViewModel @Inject constructor(
     private val repository: WeekplanRepository,
     private val recipeDao: RecipeDao,
     private val shoppingDao: ShoppingDao,
     private val weekplanDao: WeekplanDao,
+    private val weekplanSettingsDao: WeekplanSettingsDao,
+    private val weekplanConstraintsDao: WeekplanConstraintsDao,
+    private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
+    private val apiFactory: SyncApiFactory,
 ) : ViewModel() {
 
     private val _selectedDayId = MutableStateFlow<String?>(null)
@@ -76,10 +95,21 @@ class WeekplanViewModel @Inject constructor(
     val allRecipes: StateFlow<List<RecipeEntity>> = recipeDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val serverUrl: StateFlow<String> = preferences.connection
+        .map { it.serverUrl }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
     val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingDao.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val selectedDayId: StateFlow<String?> = _selectedDayId
+
+    val constraints: StateFlow<WeekplanConstraintsEntity> = weekplanConstraintsDao.observe()
+        .map { it ?: WeekplanConstraintsEntity() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekplanConstraintsEntity())
+
+    private val _generateStatus = MutableStateFlow<WeekplanGenerateStatus>(WeekplanGenerateStatus.Idle)
+    val generateStatus: StateFlow<WeekplanGenerateStatus> = _generateStatus
 
     fun selectDay(id: String) {
         _selectedDayId.value = id
@@ -87,12 +117,33 @@ class WeekplanViewModel @Inject constructor(
 
     fun ensureWeek() {
         viewModelScope.launch {
+            val dayCount = preferences.weekplanDays.first()
             val today = LocalDate.now()
             val monday = today.with(java.time.DayOfWeek.MONDAY)
             val fmt = DateTimeFormatter.ISO_LOCAL_DATE
-            (0..6).forEach { offset ->
+            (0 until dayCount).forEach { offset ->
                 repository.getOrCreateDay(monday.plusDays(offset.toLong()).format(fmt))
             }
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun saveWeekplanSettings(planDays: Int, shoppingDay: Int) {
+        viewModelScope.launch {
+            val validDays = if (planDays in setOf(7, 10, 14)) planDays else 7
+            val validShoppingDay = shoppingDay.coerceIn(0, 6)
+            val now = System.currentTimeMillis()
+            preferences.saveWeekplanDays(validDays)
+            preferences.saveShoppingDay(validShoppingDay)
+            weekplanSettingsDao.upsert(
+                com.helga.android.data.local.entity.WeekplanSettingsEntity(
+                    id = "global",
+                    planDays = validDays,
+                    shoppingDay = validShoppingDay,
+                    updatedAt = now,
+                    dirty = 1,
+                )
+            )
             syncScheduler.triggerOneShot()
         }
     }
@@ -153,5 +204,68 @@ class WeekplanViewModel @Inject constructor(
             repository.exportToShoppingList(dayIds, shoppingListId)
             syncScheduler.triggerOneShot()
         }
+    }
+
+    fun saveConstraints(maxMeat: Int, minVeg: Int, maxRepeat: Int) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            weekplanConstraintsDao.upsert(
+                WeekplanConstraintsEntity(
+                    id = "global",
+                    maxMeatPerWeek = maxMeat,
+                    minVegetarianPerWeek = minVeg,
+                    maxRepeatDays = maxRepeat,
+                    updatedAt = now,
+                    dirty = 1,
+                )
+            )
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun generateWeekplan(startDate: String) {
+        val c = constraints.value
+        _generateStatus.value = WeekplanGenerateStatus.Loading
+        viewModelScope.launch {
+            try {
+                val dayCount = preferences.weekplanDays.first()
+                val api = apiFactory.api()
+                val response = api.generateWeekplan(
+                    WeekplanGenerateRequest(
+                        startDate = startDate,
+                        planDays = dayCount,
+                        maxMeatPerWeek = c.maxMeatPerWeek,
+                        minVegetarianPerWeek = c.minVegetarianPerWeek,
+                        maxRepeatDays = c.maxRepeatDays,
+                    )
+                )
+                if (response.assignments.isEmpty()) {
+                    _generateStatus.value = WeekplanGenerateStatus.Error("Keine passenden Rezepte gefunden")
+                } else {
+                    _generateStatus.value = WeekplanGenerateStatus.Proposal(response.assignments)
+                }
+            } catch (e: Exception) {
+                _generateStatus.value = WeekplanGenerateStatus.Error(e.message ?: "Fehler bei der Generierung")
+            }
+        }
+    }
+
+    fun applyProposal(assignments: List<WeekplanAssignmentDto>) {
+        viewModelScope.launch {
+            assignments.forEach { assignment ->
+                val day = days.value.find { it.planDate == assignment.date } ?: return@forEach
+                val existing = repository.observeRecipesForDay(day.id).first()
+                existing.forEach { entry ->
+                    repository.removeRecipe(entry)
+                }
+                repository.addRecipe(day.id, assignment.recipeId)
+            }
+            _generateStatus.value = WeekplanGenerateStatus.Idle
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun discardProposal() {
+        _generateStatus.value = WeekplanGenerateStatus.Idle
     }
 }
