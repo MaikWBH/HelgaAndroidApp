@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +21,8 @@ import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,27 +33,61 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableBooleanStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
 import com.helga.android.data.local.entity.IngredientEntity
+import kotlinx.coroutines.delay
+
+data class DetectedTimer(val label: String, val totalSeconds: Int)
+
+private val TIMER_REGEX = Regex(
+    """(\d+)\s*(Stunden?|Std\.?|Minuten?|Min\.?|min|Sekunden?|Sek\.?)""",
+    RegexOption.IGNORE_CASE,
+)
+
+fun extractTimers(text: String): List<DetectedTimer> =
+    TIMER_REGEX.findAll(text).map { match ->
+        val value = match.groupValues[1].toInt()
+        val unit = match.groupValues[2].lowercase().trimEnd('.')
+        val seconds = when {
+            unit.startsWith("stund") || unit == "std" -> value * 3600
+            unit.startsWith("sek") -> value
+            else -> value * 60  // Minuten / Min / min
+        }
+        DetectedTimer(label = match.value, totalSeconds = seconds)
+    }.filter { it.totalSeconds > 0 }.distinctBy { it.totalSeconds }.toList()
+
+private fun formatTimer(seconds: Int): String {
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    val s = seconds % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
+}
 
 @Composable
 private fun IngredientCheckRow(
@@ -96,6 +134,29 @@ fun RecipeCookScreen(
     val checkedIds = uiState.checkedIngredientIds
     var stepIndex by remember { mutableIntStateOf(0) }
     var ingredientsExpanded by remember { mutableBooleanStateOf(false) }
+    var activeTimer by remember { mutableStateOf<DetectedTimer?>(null) }
+    var timerSeconds by remember { mutableIntStateOf(0) }
+    var timerRunning by remember { mutableBooleanStateOf(false) }
+
+    LaunchedEffect(timerRunning) {
+        while (timerRunning && timerSeconds > 0) {
+            delay(1_000L)
+            timerSeconds--
+        }
+        if (timerSeconds == 0) timerRunning = false
+    }
+
+    if (activeTimer != null) {
+        TimerDialog(
+            label = activeTimer!!.label,
+            totalSeconds = activeTimer!!.totalSeconds,
+            remainingSeconds = timerSeconds,
+            running = timerRunning,
+            onToggle = { timerRunning = !timerRunning },
+            onReset = { timerSeconds = activeTimer!!.totalSeconds; timerRunning = false },
+            onDismiss = { activeTimer = null; timerRunning = false },
+        )
+    }
 
     // Bildschirm während der Kochansicht eingeschaltet lassen
     val view = LocalView.current
@@ -203,12 +264,45 @@ fun RecipeCookScreen(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = currentStep?.text ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(vertical = 24.dp),
-                )
+                val stepText = currentStep?.text ?: ""
+                val timers = remember(stepText) { extractTimers(stepText) }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = stepText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 16.dp),
+                    )
+                    if (timers.isNotEmpty()) {
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            timers.forEach { timer ->
+                                SuggestionChip(
+                                    onClick = {
+                                        activeTimer = timer
+                                        timerSeconds = timer.totalSeconds
+                                        timerRunning = false
+                                    },
+                                    label = { Text(timer.label) },
+                                    icon = {
+                                        Icon(
+                                            Icons.Filled.Timer,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SuggestionChipDefaults.IconSize),
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -243,4 +337,66 @@ fun RecipeCookScreen(
             }
         }
     }
+}
+
+@Composable
+private fun TimerDialog(
+    label: String,
+    totalSeconds: Int,
+    remainingSeconds: Int,
+    running: Boolean,
+    onToggle: () -> Unit,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val finished = remainingSeconds == 0
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.Timer, contentDescription = null)
+                Text(label)
+            }
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = if (finished) stringResource(R.string.cook_timer_done)
+                           else formatTimer(remainingSeconds),
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (finished) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary,
+                )
+                if (!finished) {
+                    Spacer(Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { remainingSeconds.toFloat() / totalSeconds },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (!finished) {
+                Button(onClick = onToggle) {
+                    Text(
+                        stringResource(
+                            if (running) R.string.cook_timer_pause else R.string.cook_timer_start
+                        )
+                    )
+                }
+            } else {
+                Button(onClick = onDismiss) { Text(stringResource(R.string.cook_done)) }
+            }
+        },
+        dismissButton = {
+            if (!finished) {
+                OutlinedButton(onClick = onReset) { Text(stringResource(R.string.cook_timer_reset)) }
+            }
+        },
+    )
 }
