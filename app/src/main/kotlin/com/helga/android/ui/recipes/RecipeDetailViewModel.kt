@@ -164,7 +164,7 @@ class RecipeDetailViewModel @Inject constructor(
             val listId = resolveDefaultListId() ?: return@launch
             repository.exportToShoppingList(recipeId, listId)
             syncScheduler.triggerOneShot()
-            _snackbarMessage.tryEmit("Zur „$listName" hinzugefügt")
+            _snackbarMessage.tryEmit("Zur „$listName” hinzugefügt")
         }
     }
 
