@@ -77,10 +77,10 @@ class StoreListViewModel @Inject constructor(
     }
 
     fun moveAisleUp(aisle: StoreAisleEntity) {
-        viewModelScope.launch { repository.moveAisleUp(aisle) }
+        viewModelScope.launch { repository.moveAisleUp(aisle); syncScheduler.triggerOneShot() }
     }
 
     fun moveAisleDown(aisle: StoreAisleEntity) {
-        viewModelScope.launch { repository.moveAisleDown(aisle) }
+        viewModelScope.launch { repository.moveAisleDown(aisle); syncScheduler.triggerOneShot() }
     }
 }

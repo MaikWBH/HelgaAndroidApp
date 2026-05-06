@@ -51,7 +51,11 @@ data class RecipeFormState(
     val proteinType: String = "",
     val seasonFit: String = "",
     val sourceUrl: String = "",
+    val imagePath: String = "",
     val localImageUri: String = "",
+    val rating: Int = 0,
+    val isFavorite: Boolean = false,
+    val createdAt: Long = 0L,
     val ingredients: List<IngredientFormItem> = emptyList(),
     val instructions: List<InstructionFormItem> = emptyList(),
     val tags: List<String> = emptyList(),
@@ -99,7 +103,11 @@ class RecipeFormViewModel @Inject constructor(
                     proteinType = recipe.proteinType,
                     seasonFit = recipe.seasonFit,
                     sourceUrl = recipe.sourceUrl,
+                    imagePath = recipe.imagePath,
                     localImageUri = recipe.localImageUri,
+                    rating = recipe.rating,
+                    isFavorite = recipe.isFavorite,
+                    createdAt = recipe.createdAt,
                     ingredients = ingredients.map { ing ->
                         IngredientFormItem(
                             id = ing.id,
@@ -215,8 +223,11 @@ class RecipeFormViewModel @Inject constructor(
                 proteinType = s.proteinType.trim(),
                 seasonFit = s.seasonFit.trim(),
                 sourceUrl = s.sourceUrl.trim(),
+                imagePath = s.imagePath,
                 localImageUri = s.localImageUri,
-                createdAt = System.currentTimeMillis(),
+                rating = s.rating,
+                isFavorite = s.isFavorite,
+                createdAt = if (s.createdAt > 0L) s.createdAt else System.currentTimeMillis(),
             )
             val ingredients = s.ingredients.mapIndexed { idx, item ->
                 IngredientEntity(
