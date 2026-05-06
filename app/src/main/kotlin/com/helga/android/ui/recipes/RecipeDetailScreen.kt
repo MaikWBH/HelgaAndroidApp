@@ -16,14 +16,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -43,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -57,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -92,6 +97,9 @@ fun RecipeDetailScreen(
     var showOverflow by remember { mutableStateOf(false) }
     var shoppingTargetDialog by remember { mutableStateOf(false) }
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
+    val servings by viewModel.servings.collectAsStateWithLifecycle()
+    val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
+    val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.classifyError) {
         uiState.classifyError?.let { snackbarHostState.showSnackbar(it) }
@@ -280,8 +288,17 @@ fun RecipeDetailScreen(
                     item {
                         SectionHeader(stringResource(R.string.recipe_detail_ingredients))
                     }
+                    if (baseServings > 0) {
+                        item {
+                            ServingsStepper(
+                                servings = servings,
+                                onDecrease = { viewModel.setServings(servings - 1) },
+                                onIncrease = { viewModel.setServings(servings + 1) },
+                            )
+                        }
+                    }
                     items(uiState.ingredients, key = { it.id }) { ingredient ->
-                        IngredientRow(ingredient = ingredient)
+                        IngredientRow(ingredient = ingredient, scaleFactor = scaleFactor)
                     }
                 }
                 if (uiState.instructions.isNotEmpty()) {
@@ -449,9 +466,45 @@ private fun SectionHeader(title: String) {
 }
 
 @Composable
-private fun IngredientRow(ingredient: IngredientEntity) {
+private fun ServingsStepper(servings: Int, onDecrease: () -> Unit, onIncrease: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.recipe_detail_yield),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                IconButton(onClick = onDecrease, enabled = servings > 1) {
+                    Icon(Icons.Filled.Remove, contentDescription = null)
+                }
+                Text(
+                    text = "$servings",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.widthIn(min = 28.dp),
+                    textAlign = TextAlign.Center,
+                )
+                IconButton(onClick = onIncrease, enabled = servings < 99) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IngredientRow(ingredient: IngredientEntity, scaleFactor: Float = 1f) {
     Text(
-        text = ingredient.displayText(),
+        text = ingredient.displayText(scaleFactor),
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier
             .fillMaxWidth()
@@ -481,9 +534,12 @@ private fun InstructionRow(instruction: InstructionEntity) {
     }
 }
 
-private fun IngredientEntity.displayText(): String = buildString {
+private fun IngredientEntity.displayText(scaleFactor: Float = 1f): String = buildString {
     if (quantity > 0.0) {
-        val q = if (quantity % 1.0 == 0.0) "${quantity.toInt()}" else "$quantity"
+        val scaled = quantity * scaleFactor
+        val q = if (scaled % 1.0 < 0.01) "${scaled.toInt()}"
+                else String.format(java.util.Locale.getDefault(), "%.1f", scaled)
+                    .trimEnd('0').trimEnd(',').trimEnd('.')
         append(q)
         if (unit.isNotBlank()) append(" $unit")
         append(" ")

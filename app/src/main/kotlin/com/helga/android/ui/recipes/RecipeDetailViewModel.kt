@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -54,6 +55,14 @@ class RecipeDetailViewModel @Inject constructor(
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage = _snackbarMessage.asSharedFlow()
 
+    private val _baseServings = MutableStateFlow(0)
+    private val _servings = MutableStateFlow(0)
+    val servings: StateFlow<Int> = _servings.asStateFlow()
+    val baseServings: StateFlow<Int> = _baseServings.asStateFlow()
+    val scaleFactor: StateFlow<Float> = combine(_servings, _baseServings) { s, base ->
+        if (base > 0 && s > 0) s.toFloat() / base.toFloat() else 1f
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1f)
+
     val uiState: StateFlow<RecipeDetailUiState> = combine(
         repository.observeById(recipeId),
         repository.observeIngredients(recipeId),
@@ -70,6 +79,23 @@ class RecipeDetailViewModel @Inject constructor(
 
     val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingRepository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    init {
+        viewModelScope.launch {
+            uiState.filter { it.recipe != null }.first().recipe?.let { recipe ->
+                val base = parseServings(recipe.recipeYield)
+                if (base > 0) {
+                    _baseServings.value = base
+                    _servings.value = base
+                }
+            }
+        }
+    }
+
+    private fun parseServings(yieldStr: String): Int =
+        Regex("""\d+""").find(yieldStr)?.value?.toIntOrNull() ?: 0
+
+    fun setServings(n: Int) { _servings.value = n.coerceIn(1, 99) }
 
     fun setRating(rating: Int) {
         viewModelScope.launch {
