@@ -143,6 +143,8 @@
     <string name="recipe_classify">KI klassifizieren</string>
     <string name="recipe_favorite">Favorit</string>
     <string name="recipe_add_to_shopping">Zu Einkaufsliste hinzufügen</string>
+    <string name="recipe_add_to_list">Zur „%1$s" hinzufügen</string>
+    <string name="recipe_add_to_shopping_pick">Andere Liste wählen…</string>
 
     <!-- Einkaufsliste -->
     <string name="shopping_title">Einkaufsliste</string>

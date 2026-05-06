@@ -1,14 +1,11 @@
 package com.helga.android.data.repository
 
 import com.helga.android.data.local.dao.RecipeDao
-import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.WeekplanDao
-import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import kotlinx.coroutines.flow.Flow
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,7 +13,7 @@ import javax.inject.Singleton
 class WeekplanRepository @Inject constructor(
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
-    private val shoppingDao: ShoppingDao,
+    private val shoppingRepository: ShoppingRepository,
 ) {
 
     fun observeDays(): Flow<List<WeekplanDayEntity>> = weekplanDao.observeDays()
@@ -88,25 +85,17 @@ class WeekplanRepository @Inject constructor(
     }
 
     suspend fun exportToShoppingList(dayIds: List<String>, shoppingListId: String) {
-        val ts = System.currentTimeMillis()
-        var sortOrder = 0
         dayIds.forEach { dayId ->
             weekplanDao.recipesForDay(dayId).forEach { entry ->
                 val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
                 ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
-                    val name = ingredient.food.ifBlank { return@forEach }
-                    val item = ShoppingItemEntity(
-                        id = UUID.randomUUID().toString(),
+                    shoppingRepository.addOrMergeItem(
                         listId = shoppingListId,
-                        name = name,
+                        name = ingredient.food,
                         quantity = ingredient.quantity,
                         unit = ingredient.unit,
                         source = "weekplan",
-                        sortOrder = sortOrder++,
-                        updatedAt = ts,
-                        dirty = 1,
                     )
-                    shoppingDao.upsertItem(item)
                 }
             }
         }

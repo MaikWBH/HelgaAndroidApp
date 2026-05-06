@@ -27,6 +27,27 @@ class ShoppingRepository @Inject constructor(
         return id
     }
 
+    suspend fun setDefaultList(listId: String) {
+        val now = System.currentTimeMillis()
+        val lists = shoppingDao.lists()
+        val updated = lists.map { list ->
+            val isTarget = if (list.id == listId) 1 else 0
+            if (list.isDefaultRecipe == isTarget && list.isActive == isTarget) list
+            else list.copy(
+                isDefaultRecipe = isTarget,
+                isActive = isTarget,
+                updatedAt = now,
+                dirty = 1,
+            )
+        }
+        if (updated.isNotEmpty()) shoppingDao.upsertLists(updated)
+    }
+
+    suspend fun deleteList(list: ShoppingListEntity) {
+        val now = System.currentTimeMillis()
+        shoppingDao.upsertList(list.copy(deleted = 1, updatedAt = now, dirty = 1, isActive = 0))
+    }
+
     suspend fun addItem(
         listId: String,
         name: String,
@@ -71,11 +92,59 @@ class ShoppingRepository @Inject constructor(
         shoppingDao.upsertItem(item.copy(aisle = aisle, updatedAt = System.currentTimeMillis(), dirty = 1))
     }
 
+    suspend fun updateItem(id: String, quantity: Double, unit: String, name: String) {
+        val existing = shoppingDao.findItemById(id) ?: return
+        shoppingDao.upsertItem(
+            existing.copy(
+                quantity = quantity,
+                unit = unit.trim(),
+                name = name.trim(),
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
+        )
+    }
+
     suspend fun deleteCheckedItems(listId: String) {
         val now = System.currentTimeMillis()
         val checked = shoppingDao.checkedItems(listId)
         if (checked.isNotEmpty()) {
             shoppingDao.upsertItems(checked.map { it.copy(deleted = 1, updatedAt = now, dirty = 1) })
+        }
+    }
+
+    /**
+     * Adds an ingredient to the list. If an unchecked item with the same name+unit already exists,
+     * its quantity is summed instead of adding a duplicate entry.
+     */
+    suspend fun addOrMergeItem(
+        listId: String,
+        name: String,
+        quantity: Double,
+        unit: String,
+        aisle: String = "",
+        source: String = "recipe",
+    ) {
+        val norm = name.trim()
+        if (norm.isBlank()) return
+        val existing = shoppingDao.findUncheckedItemByNameUnit(listId, norm, unit.trim())
+        val now = System.currentTimeMillis()
+        if (existing != null) {
+            shoppingDao.upsertItem(existing.copy(quantity = existing.quantity + quantity, updatedAt = now, dirty = 1))
+        } else {
+            shoppingDao.upsertItem(
+                ShoppingItemEntity(
+                    id = UUID.randomUUID().toString(),
+                    listId = listId,
+                    name = norm,
+                    quantity = quantity,
+                    unit = unit.trim(),
+                    aisle = aisle,
+                    source = source,
+                    updatedAt = now,
+                    dirty = 1,
+                )
+            )
         }
     }
 }

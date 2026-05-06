@@ -15,9 +15,11 @@ import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -49,6 +51,8 @@ class RecipeDetailViewModel @Inject constructor(
     val recipeId: String = checkNotNull(savedStateHandle["recipeId"])
 
     private val _classifyState = MutableStateFlow(false to (null as String?))
+    private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val snackbarMessage = _snackbarMessage.asSharedFlow()
 
     val uiState: StateFlow<RecipeDetailUiState> = combine(
         repository.observeById(recipeId),
@@ -129,9 +133,17 @@ class RecipeDetailViewModel @Inject constructor(
         }
     }
 
-    suspend fun defaultShoppingListId(): String? {
-        val preferred: String = preferences.defaultShoppingListId.first()
-        if (preferred.isNotBlank()) return preferred
-        return shoppingLists.value.firstOrNull()?.id
+    fun addToDefaultShoppingList(listName: String) {
+        viewModelScope.launch {
+            val listId = resolveDefaultListId() ?: return@launch
+            repository.exportToShoppingList(recipeId, listId)
+            syncScheduler.triggerOneShot()
+            _snackbarMessage.tryEmit("Zur „$listName" hinzugefügt")
+        }
+    }
+
+    fun resolveDefaultListId(): String? {
+        val preferred = shoppingLists.value.firstOrNull { it.isDefaultRecipe == 1 }
+        return preferred?.id ?: shoppingLists.value.firstOrNull()?.id
     }
 }

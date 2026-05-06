@@ -20,6 +20,9 @@ interface ShoppingDao {
     @Query("SELECT * FROM shopping_lists WHERE id = :id LIMIT 1")
     suspend fun findListById(id: String): ShoppingListEntity?
 
+    @Query("SELECT * FROM shopping_lists WHERE deleted = 0 ORDER BY name COLLATE NOCASE ASC")
+    suspend fun lists(): List<ShoppingListEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertList(list: ShoppingListEntity)
 
@@ -46,4 +49,10 @@ interface ShoppingDao {
 
     @Query("SELECT * FROM shopping_items WHERE listId = :listId AND isChecked = 1 AND deleted = 0")
     suspend fun checkedItems(listId: String): List<ShoppingItemEntity>
+
+    @Query("SELECT * FROM shopping_items WHERE id = :id LIMIT 1")
+    suspend fun findItemById(id: String): ShoppingItemEntity?
+
+    @Query("SELECT * FROM shopping_items WHERE listId = :listId AND name = :name COLLATE NOCASE AND unit = :unit COLLATE NOCASE AND isChecked = 0 AND deleted = 0 LIMIT 1")
+    suspend fun findUncheckedItemByNameUnit(listId: String, name: String, unit: String): ShoppingItemEntity?
 }

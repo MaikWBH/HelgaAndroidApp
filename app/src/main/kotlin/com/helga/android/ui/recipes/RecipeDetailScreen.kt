@@ -96,6 +96,9 @@ fun RecipeDetailScreen(
     LaunchedEffect(uiState.classifyError) {
         uiState.classifyError?.let { snackbarHostState.showSnackbar(it) }
     }
+    LaunchedEffect(Unit) {
+        viewModel.snackbarMessage.collect { snackbarHostState.showSnackbar(it) }
+    }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -171,14 +174,39 @@ fun RecipeDetailScreen(
                                 onDismissRequest = { showOverflow = false },
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.recipe_add_to_shopping)) },
+                                    text = {
+                                        val defaultList = shoppingLists.firstOrNull { it.isDefaultRecipe == 1 }
+                                            ?: shoppingLists.firstOrNull()
+                                        Text(
+                                            if (defaultList != null)
+                                                stringResource(R.string.recipe_add_to_list, defaultList.name)
+                                            else
+                                                stringResource(R.string.recipe_add_to_shopping)
+                                        )
+                                    },
                                     leadingIcon = { Icon(Icons.Filled.ShoppingCart, contentDescription = null) },
                                     onClick = {
                                         showOverflow = false
-                                        shoppingTargetDialog = true
+                                        val defaultList = shoppingLists.firstOrNull { it.isDefaultRecipe == 1 }
+                                            ?: shoppingLists.firstOrNull()
+                                        if (defaultList != null) {
+                                            viewModel.addToDefaultShoppingList(defaultList.name)
+                                        } else {
+                                            shoppingTargetDialog = true
+                                        }
                                     },
                                     enabled = shoppingLists.isNotEmpty(),
                                 )
+                                if (shoppingLists.size > 1) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.recipe_add_to_shopping_pick)) },
+                                        leadingIcon = { Icon(Icons.Filled.ShoppingCart, contentDescription = null) },
+                                        onClick = {
+                                            showOverflow = false
+                                            shoppingTargetDialog = true
+                                        },
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = {
                                         if (uiState.isClassifying) {

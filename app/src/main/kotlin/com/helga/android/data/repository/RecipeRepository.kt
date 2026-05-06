@@ -1,22 +1,19 @@
 package com.helga.android.data.repository
 
 import com.helga.android.data.local.dao.RecipeDao
-import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
-import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.TagEntity
 import kotlinx.coroutines.flow.Flow
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class RecipeRepository @Inject constructor(
     private val recipeDao: RecipeDao,
-    private val shoppingDao: ShoppingDao,
+    private val shoppingRepository: ShoppingRepository,
 ) {
     fun observeAll(): Flow<List<RecipeEntity>> = recipeDao.observeAll()
     fun observeById(id: String): Flow<RecipeEntity?> = recipeDao.observeById(id)
@@ -92,23 +89,14 @@ class RecipeRepository @Inject constructor(
 
     suspend fun exportToShoppingList(recipeId: String, listId: String) {
         val ingredients = recipeDao.ingredientsByRecipeId(recipeId).filter { it.deleted == 0 }
-        if (ingredients.isEmpty()) return
-        val now = System.currentTimeMillis()
-        val items = ingredients.mapIndexedNotNull { index, ingredient ->
-            val food = ingredient.food.trim()
-            if (food.isBlank()) null
-            else ShoppingItemEntity(
-                id = UUID.randomUUID().toString(),
+        ingredients.forEach { ingredient ->
+            shoppingRepository.addOrMergeItem(
                 listId = listId,
-                name = food,
+                name = ingredient.food,
                 quantity = ingredient.quantity,
                 unit = ingredient.unit,
                 source = "recipe",
-                sortOrder = index,
-                updatedAt = now,
-                dirty = 1,
             )
         }
-        if (items.isNotEmpty()) shoppingDao.upsertItems(items)
     }
 }

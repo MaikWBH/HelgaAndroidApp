@@ -12,17 +12,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocalOffer
@@ -41,6 +45,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -54,12 +59,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
@@ -72,7 +81,7 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShoppingListScreen(
-    onBack: () -> Unit,
+    bottomPadding: Dp = 0.dp,
     viewModel: ShoppingListViewModel = hiltViewModel(),
 ) {
     val lists by viewModel.lists.collectAsStateWithLifecycle()
@@ -89,6 +98,7 @@ fun ShoppingListScreen(
     var showNewListDialog by remember { mutableStateOf(false) }
     var aislePickerItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
     var showStaplesSheet by remember { mutableStateOf(false) }
+    var editItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
 
     if (showNewListDialog) {
         NewListDialog(
@@ -121,6 +131,17 @@ fun ShoppingListScreen(
             },
             onAddStaple = viewModel::addStaple,
             onDeleteStaple = viewModel::deleteStaple,
+        )
+    }
+
+    editItem?.let { item ->
+        EditItemDialog(
+            item = item,
+            onDismiss = { editItem = null },
+            onSave = { quantity, unit, name ->
+                viewModel.updateItem(item.id, quantity, unit, name)
+                editItem = null
+            },
         )
     }
 
@@ -163,14 +184,6 @@ fun ShoppingListScreen(
                         }
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.recipe_detail_back),
-                        )
-                    }
-                },
                 actions = {
                     Box {
                         IconButton(onClick = { showOverflow = true }) {
@@ -201,59 +214,60 @@ fun ShoppingListScreen(
                 },
             )
         },
-        bottomBar = {
+    ) { scaffoldPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(scaffoldPadding),
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                when {
+                    lists.isEmpty() -> EmptyListsState(
+                        modifier = Modifier.fillMaxSize(),
+                        onCreateList = { showNewListDialog = true },
+                    )
+                    itemsByAisle.isEmpty() -> EmptyItemsState(modifier = Modifier.fillMaxSize())
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 8.dp),
+                        ) {
+                            val sortedAisles = itemsByAisle.keys.sortedWith(
+                                compareBy {
+                                    aisleSortMap[it] ?: if (it.isBlank()) Int.MAX_VALUE else Int.MAX_VALUE - 1
+                                }
+                            )
+                            sortedAisles.forEach { aisle ->
+                                val items = itemsByAisle[aisle] ?: return@forEach
+                                if (aisle.isNotBlank()) {
+                                    item(key = "header_$aisle") {
+                                        AisleHeader(aisle = aisle)
+                                    }
+                                }
+                                items(items, key = { it.id }) { item ->
+                                    SwipeableShoppingItem(
+                                        item = item,
+                                        showAisleButton = item.aisle.isBlank() && storeAisles.isNotEmpty(),
+                                        onToggle = { viewModel.toggleChecked(item) },
+                                        onDelete = { viewModel.deleteItem(item) },
+                                        onAssignAisle = { aislePickerItem = item },
+                                        onEdit = { editItem = item },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             QuickAddBar(
                 activeListId = activeListId,
                 quickEmojis = quickEmojis,
                 onAdd = viewModel::addItem,
                 onSuggest = viewModel::suggestItems,
                 onEmojiClick = viewModel::addEmojiItem,
+                bottomPadding = bottomPadding,
             )
-        },
-    ) { padding ->
-        when {
-            lists.isEmpty() -> EmptyListsState(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                onCreateList = { showNewListDialog = true },
-            )
-            itemsByAisle.isEmpty() -> EmptyItemsState(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            )
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentPadding = PaddingValues(bottom = 8.dp),
-                ) {
-                    val sortedAisles = itemsByAisle.keys.sortedWith(
-                        compareBy {
-                            aisleSortMap[it] ?: if (it.isBlank()) Int.MAX_VALUE else Int.MAX_VALUE - 1
-                        }
-                    )
-                    sortedAisles.forEach { aisle ->
-                        val items = itemsByAisle[aisle] ?: return@forEach
-                        if (aisle.isNotBlank()) {
-                            item(key = "header_$aisle") {
-                                AisleHeader(aisle = aisle)
-                            }
-                        }
-                        items(items, key = { it.id }) { item ->
-                            SwipeableShoppingItem(
-                                item = item,
-                                showAisleButton = item.aisle.isBlank() && storeAisles.isNotEmpty(),
-                                onToggle = { viewModel.toggleChecked(item) },
-                                onDelete = { viewModel.deleteItem(item) },
-                                onAssignAisle = { aislePickerItem = item },
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -266,14 +280,16 @@ private fun SwipeableShoppingItem(
     onToggle: () -> Unit,
     onDelete: () -> Unit,
     onAssignAisle: () -> Unit,
+    onEdit: () -> Unit,
 ) {
     var dismissed by remember { mutableStateOf(false) }
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                dismissed = true
-                true
-            } else false
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> { onToggle(); false }
+                SwipeToDismissBoxValue.EndToStart -> { dismissed = true; true }
+                else -> false
+            }
         },
         positionalThreshold = { totalDistance -> totalDistance * 0.4f },
     )
@@ -292,27 +308,33 @@ private fun SwipeableShoppingItem(
         SwipeToDismissBox(
             state = dismissState,
             backgroundContent = {
+                val isCheckSwipe = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.error)
-                        .padding(end = 20.dp),
-                    contentAlignment = Alignment.CenterEnd,
+                        .background(
+                            if (isCheckSwipe) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.error
+                        )
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = if (isCheckSwipe) Alignment.CenterStart else Alignment.CenterEnd,
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Delete,
+                        imageVector = if (isCheckSwipe) Icons.Filled.Check else Icons.Filled.Delete,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onError,
+                        tint = if (isCheckSwipe) MaterialTheme.colorScheme.onPrimaryContainer
+                               else MaterialTheme.colorScheme.onError,
                     )
                 }
             },
-            enableDismissFromStartToEnd = false,
+            enableDismissFromStartToEnd = true,
         ) {
             ShoppingItemRow(
                 item = item,
                 showAisleButton = showAisleButton,
                 onToggle = onToggle,
                 onAssignAisle = onAssignAisle,
+                onEdit = onEdit,
             )
         }
     }
@@ -324,6 +346,7 @@ private fun ShoppingItemRow(
     showAisleButton: Boolean,
     onToggle: () -> Unit,
     onAssignAisle: () -> Unit,
+    onEdit: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -337,7 +360,11 @@ private fun ShoppingItemRow(
             checked = item.isChecked == 1,
             onCheckedChange = { onToggle() },
         )
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onEdit)
+        ) {
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.bodyLarge,
@@ -369,6 +396,61 @@ private fun ShoppingItemRow(
             }
         }
     }
+}
+
+@Composable
+private fun EditItemDialog(
+    item: ShoppingItemEntity,
+    onDismiss: () -> Unit,
+    onSave: (quantity: Double, unit: String, name: String) -> Unit,
+) {
+    var quantityText by remember(item.id) { mutableStateOf(item.quantity.toString()) }
+    var unit by remember(item.id) { mutableStateOf(item.unit) }
+    var name by remember(item.id) { mutableStateOf(item.name) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.shopping_edit_item_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.recipe_form_food)) },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = quantityText,
+                    onValueChange = { quantityText = it },
+                    label = { Text(stringResource(R.string.recipe_form_quantity)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = unit,
+                    onValueChange = { unit = it },
+                    label = { Text(stringResource(R.string.recipe_form_unit)) },
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val quantity = quantityText.replace(',', '.').toDoubleOrNull() ?: item.quantity
+                    onSave(quantity, unit.trim(), name.trim())
+                },
+                enabled = name.isNotBlank(),
+            ) {
+                Text(stringResource(R.string.recipe_form_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.recipe_delete_confirm_cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -423,7 +505,7 @@ private fun StaplesSheet(
     onAddStaple: (String) -> Unit,
     onDeleteStaple: (ShoppingListStapleEntity) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartialExpansion = false)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var newName by remember { mutableStateOf("") }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -513,12 +595,37 @@ private fun StaplesSheet(
 }
 
 @Composable
+private fun EmojiQuickButton(emoji: QuickEmojiEntity, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.widthIn(min = 56.dp),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+        ) {
+            Text(text = emoji.emoji, fontSize = 24.sp)
+            Text(
+                text = emoji.food,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
 private fun QuickAddBar(
     activeListId: String?,
     quickEmojis: List<QuickEmojiEntity>,
     onAdd: (String) -> Unit,
     onSuggest: suspend (String) -> List<String>,
     onEmojiClick: (QuickEmojiEntity) -> Unit,
+    bottomPadding: Dp = 0.dp,
 ) {
     var text by remember { mutableStateOf("") }
     var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -539,14 +646,11 @@ private fun QuickAddBar(
     ) {
         if (quickEmojis.isNotEmpty()) {
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(quickEmojis) { emoji ->
-                    SuggestionChip(
-                        onClick = { onEmojiClick(emoji) },
-                        label = { Text("${emoji.emoji} ${emoji.food}") },
-                    )
+                items(quickEmojis, key = { it.id }) { emoji ->
+                    EmojiQuickButton(emoji = emoji, onClick = { onEmojiClick(emoji) })
                 }
             }
         }
@@ -600,6 +704,9 @@ private fun QuickAddBar(
                 }
             },
         )
+        if (bottomPadding > 0.dp) {
+            Spacer(Modifier.height(bottomPadding))
+        }
     }
 }
 
