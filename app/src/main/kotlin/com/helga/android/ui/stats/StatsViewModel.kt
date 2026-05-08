@@ -58,15 +58,10 @@ class StatsViewModel @Inject constructor(
                 }
             }
 
-            // First-timers: recipes that appear in history for the first time this month
-            val allHistoryBefore = historyDao.getRecentRecipeIds(
-                LocalDate.of(2020, 1, 1).format(DateTimeFormatter.ISO_LOCAL_DATE)
-            )
-            val beforeThisMonth = allHistoryBefore.filter { id ->
-                history.none { it.recipeId == id }
-            }.toSet()
+            // First-timers: recipes cooked this month that were never cooked before
+            val previousRecipeIds = historyDao.getRecipeIdsBefore(sinceDate).toSet()
             val firstTimers = recipeIds.distinct()
-                .filter { it !in beforeThisMonth || history.count { h -> h.recipeId == it } == allHistoryBefore.count { h -> h == it } }
+                .filter { it !in previousRecipeIds }
                 .take(5)
                 .mapNotNull { recipes[it]?.name }
 

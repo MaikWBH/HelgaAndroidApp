@@ -54,6 +54,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -253,8 +254,8 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = stringResource(R.string.settings_notify_shopping),
-                style = MaterialTheme.typography.bodyMedium,
+                text = stringResource(R.string.settings_notify_section),
+                style = MaterialTheme.typography.titleMedium,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),

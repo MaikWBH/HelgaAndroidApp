@@ -24,4 +24,7 @@ interface RecipeHistoryDao {
 
     @Query("SELECT DISTINCT recipeId FROM recipe_history WHERE deleted = 0 AND plannedDate >= :since")
     suspend fun getRecentRecipeIds(since: String): List<String>
+
+    @Query("SELECT DISTINCT recipeId FROM recipe_history WHERE deleted = 0 AND plannedDate < :before")
+    suspend fun getRecipeIdsBefore(before: String): List<String>
 }

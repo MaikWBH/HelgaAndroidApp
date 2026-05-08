@@ -287,6 +287,7 @@
     <string name="settings_notify_cook">Koch-Erinnerung</string>
 
     <!-- Benachrichtigungen -->
+    <string name="settings_notify_section">Benachrichtigungen</string>
     <string name="notify_channel_name">Erinnerungen</string>
     <string name="notify_shopping_title">Heute ist Einkaufstag 🛒</string>
     <string name="notify_shopping_text">%1$d Artikel auf der Einkaufsliste</string>
