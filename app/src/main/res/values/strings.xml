@@ -33,6 +33,7 @@
     <string name="recipes_sort_name">Name</string>
     <string name="recipes_sort_rating">Bewertung</string>
     <string name="recipes_sort_updated">Zuletzt geändert</string>
+    <string name="recipes_today_cook">Heute kochen</string>
 
     <!-- Rezept-Detail -->
     <string name="recipe_detail_back">Zurück</string>
@@ -229,6 +230,11 @@
     <string name="weekplan_export_day">Tag auf Einkaufsliste</string>
     <string name="weekplan_export_week">Woche auf Einkaufsliste</string>
     <string name="weekplan_regenerate_day">Tag neu generieren</string>
+    <string name="weekplan_more">Mehr</string>
+    <string name="weekplan_repeat_last_week">Letzte Woche übernehmen</string>
+    <string name="weekplan_no_templates">Keine Vorlagen gespeichert</string>
+    <string name="weekplan_save_template">Aktuelle Woche als Vorlage speichern</string>
+    <string name="weekplan_template_name">Vorlagenname</string>
     <string name="weekplan_ai_generate">KI-Wochenplan erstellen</string>
     <string name="weekplan_ai_generating">KI erstellt Wochenplan…</string>
     <string name="weekplan_constraints_title">Planungs-Constraints</string>
