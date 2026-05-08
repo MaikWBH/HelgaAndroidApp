@@ -1,5 +1,6 @@
 package com.helga.android.ui.settings
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -46,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +57,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -75,6 +79,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLoggedOut: () -> Unit,
     onStoresClick: () -> Unit = {},
+    onPantryClick: () -> Unit = {},
+    onStatsClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -82,10 +88,24 @@ fun SettingsScreen(
     val syncError by viewModel.syncError.collectAsStateWithLifecycle()
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
     val quickEmojis by viewModel.quickEmojis.collectAsStateWithLifecycle()
+    val exportJson by viewModel.exportJson.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var showLogoutDialog by remember { mutableStateOf(false) }
     var deleteList by remember { mutableStateOf<ShoppingListEntity?>(null) }
     var editEmoji by remember { mutableStateOf<QuickEmojiEntity?>(null) }
     var showAddEmoji by remember { mutableStateOf(false) }
+
+    LaunchedEffect(exportJson) {
+        exportJson?.let { json ->
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_TEXT, json)
+                putExtra(Intent.EXTRA_SUBJECT, "Helga Export")
+            }
+            context.startActivity(Intent.createChooser(intent, "Export"))
+            viewModel.clearExport()
+        }
+    }
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -233,6 +253,43 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
 
             Text(
+                text = stringResource(R.string.settings_notify_shopping),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_notify_shopping),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Switch(
+                    checked = state.notifyShoppingDay,
+                    onCheckedChange = { viewModel.setNotifyShoppingDay(it) },
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_notify_cook),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Switch(
+                    checked = state.notifyCookReminder,
+                    onCheckedChange = { viewModel.setNotifyCookReminder(it) },
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(8.dp))
+
+            Text(
                 text = stringResource(R.string.settings_server_section),
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -319,6 +376,27 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.settings_manage_stores))
+            }
+
+            OutlinedButton(
+                onClick = onPantryClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.pantry_title))
+            }
+
+            OutlinedButton(
+                onClick = onStatsClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.stats_title))
+            }
+
+            OutlinedButton(
+                onClick = { viewModel.exportAllData() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_export_data))
             }
 
             SettingsPlanDaysDropdown(

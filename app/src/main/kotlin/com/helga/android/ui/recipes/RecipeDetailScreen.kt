@@ -5,6 +5,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
@@ -160,6 +162,8 @@ fun RecipeDetailScreen(
         )
     }
 
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -281,6 +285,15 @@ fun RecipeDetailScreen(
                                         showWeekplanPicker = true
                                     },
                                 )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.recipe_share)) },
+                                    leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
+                                    onClick = {
+                                        showOverflow = false
+                                        viewModel.shareRecipe(context)
+                                    },
+                                )
                             }
                         }
                     }
@@ -359,6 +372,12 @@ fun RecipeDetailScreen(
                     items(uiState.instructions, key = { it.id }) { instruction ->
                         InstructionRow(instruction = instruction)
                     }
+                }
+                item {
+                    PersonalNotesSection(
+                        notes = recipe.personalNotes,
+                        onSave = { viewModel.savePersonalNotes(it) },
+                    )
                 }
                 item { Spacer(Modifier.height(32.dp)) }
             }
@@ -505,6 +524,59 @@ private fun DescriptionSection(description: String) {
             .padding(horizontal = 16.dp, vertical = 8.dp),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+@Composable
+private fun PersonalNotesSection(notes: String, onSave: (String) -> Unit) {
+    var editing by remember { mutableStateOf(false) }
+    var draft by remember(notes) { mutableStateOf(notes) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        SectionHeader(stringResource(R.string.recipe_personal_notes))
+        if (editing) {
+            androidx.compose.material3.OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                placeholder = { Text(stringResource(R.string.recipe_personal_notes_hint)) },
+                minLines = 2,
+                maxLines = 6,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = { draft = notes; editing = false }) {
+                    Text(stringResource(R.string.recipe_delete_confirm_cancel))
+                }
+                TextButton(onClick = { onSave(draft); editing = false }) {
+                    Text(stringResource(R.string.recipe_personal_notes_save))
+                }
+            }
+        } else {
+            if (notes.isNotBlank()) {
+                Text(
+                    text = notes,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { editing = true }
+                        .padding(vertical = 8.dp),
+                )
+            } else {
+                TextButton(onClick = { editing = true }) {
+                    Text(stringResource(R.string.recipe_personal_notes_add))
+                }
+            }
+        }
+    }
 }
 
 @Composable

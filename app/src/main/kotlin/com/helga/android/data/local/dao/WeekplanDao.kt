@@ -46,6 +46,9 @@ interface WeekplanDao {
     @Query("SELECT * FROM weekplan_recipes WHERE weekplanDayId = :dayId AND deleted = 0 ORDER BY position ASC")
     suspend fun recipesForDay(dayId: String): List<WeekplanRecipeEntity>
 
+    @Query("SELECT r.name FROM recipes r WHERE r.id = :recipeId AND r.deleted = 0 LIMIT 1")
+    suspend fun recipeName(recipeId: String): String?
+
     @Query("SELECT * FROM weekplan_extras WHERE weekplanDayId = :dayId AND deleted = 0 ORDER BY position ASC")
     suspend fun extrasForDay(dayId: String): List<WeekplanExtraEntity>
 

@@ -9,6 +9,7 @@ import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.repository.ShoppingRepository
+import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
@@ -22,6 +23,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import retrofit2.HttpException
 import timber.log.Timber
 import java.io.IOException
@@ -33,6 +36,7 @@ class SettingsViewModel @Inject constructor(
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
     private val shoppingRepository: ShoppingRepository,
+    private val recipeRepository: RecipeRepository,
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanSettingsDao: WeekplanSettingsDao,
     private val syncStatusHolder: SyncStatusHolder,
@@ -63,6 +67,8 @@ class SettingsViewModel @Inject constructor(
             val themeMode = preferences.themeMode.first()
             val accentColor = preferences.accentColor.first()
             val checkMode = preferences.checkMode.first()
+            val notifyShopping = preferences.notifyShoppingDay.first()
+            val notifyCook = preferences.notifyCookReminder.first()
             _state.update {
                 it.copy(
                     serverUrl = conn.serverUrl,
@@ -73,6 +79,8 @@ class SettingsViewModel @Inject constructor(
                     themeMode = themeMode,
                     accentColor = accentColor,
                     checkMode = checkMode,
+                    notifyShoppingDay = notifyShopping,
+                    notifyCookReminder = notifyCook,
                     loaded = true,
                 )
             }
@@ -106,6 +114,16 @@ class SettingsViewModel @Inject constructor(
     fun setCheckMode(mode: String) {
         _state.update { it.copy(checkMode = mode) }
         viewModelScope.launch { preferences.saveCheckMode(mode) }
+    }
+
+    fun setNotifyShoppingDay(enabled: Boolean) {
+        _state.update { it.copy(notifyShoppingDay = enabled) }
+        viewModelScope.launch { preferences.saveNotifyShoppingDay(enabled) }
+    }
+
+    fun setNotifyCookReminder(enabled: Boolean) {
+        _state.update { it.copy(notifyCookReminder = enabled) }
+        viewModelScope.launch { preferences.saveNotifyCookReminder(enabled) }
     }
 
     fun testAndSave() {
@@ -235,6 +253,64 @@ class SettingsViewModel @Inject constructor(
             onLoggedOut()
         }
     }
+
+    private val _exportJson = MutableStateFlow<String?>(null)
+    val exportJson: StateFlow<String?> = _exportJson.asStateFlow()
+
+    fun exportAllData() {
+        viewModelScope.launch {
+            try {
+                val recipes = recipeRepository.allRecipes()
+                val json = JSONObject()
+                val recipesArray = JSONArray()
+                recipes.forEach { recipe ->
+                    val obj = JSONObject().apply {
+                        put("id", recipe.id)
+                        put("name", recipe.name)
+                        put("description", recipe.description)
+                        put("recipeYield", recipe.recipeYield)
+                        put("prepTime", recipe.prepTime)
+                        put("cookTime", recipe.cookTime)
+                        put("totalTime", recipe.totalTime)
+                        put("sourceUrl", recipe.sourceUrl)
+                        put("rating", recipe.rating)
+                        put("proteinType", recipe.proteinType)
+                        put("effort", recipe.effort)
+                        put("cuisine", recipe.cuisine)
+                        put("mealType", recipe.mealType)
+                        put("personalNotes", recipe.personalNotes)
+                    }
+                    val ingredients = recipeRepository.ingredientsForRecipe(recipe.id)
+                    val ingArray = JSONArray()
+                    ingredients.forEach { ing ->
+                        ingArray.put(JSONObject().apply {
+                            put("quantity", ing.quantity)
+                            put("unit", ing.unit)
+                            put("food", ing.food)
+                            put("note", ing.note)
+                        })
+                    }
+                    obj.put("ingredients", ingArray)
+
+                    val instructions = recipeRepository.instructionsForRecipe(recipe.id)
+                    val stepsArray = JSONArray()
+                    instructions.sortedBy { it.position }.forEach { step ->
+                        stepsArray.put(step.text)
+                    }
+                    obj.put("instructions", stepsArray)
+                    recipesArray.put(obj)
+                }
+                json.put("recipes", recipesArray)
+                json.put("exportDate", System.currentTimeMillis())
+                json.put("recipeCount", recipes.size)
+                _exportJson.value = json.toString(2)
+            } catch (e: Exception) {
+                Timber.e(e, "Export failed")
+            }
+        }
+    }
+
+    fun clearExport() { _exportJson.value = null }
 }
 
 data class SettingsState(
@@ -246,6 +322,8 @@ data class SettingsState(
     val themeMode: String = "system",
     val accentColor: Int = 0,
     val checkMode: String = "keep",
+    val notifyShoppingDay: Boolean = false,
+    val notifyCookReminder: Boolean = false,
     val loaded: Boolean = false,
     val validation: SettingsValidation = SettingsValidation.Idle,
 )

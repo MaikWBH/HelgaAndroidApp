@@ -39,4 +39,6 @@ data class RecipeEntity(
     val localImageUri: String = "",
     @ColumnInfo(name = "is_favorite", defaultValue = "0")
     val isFavorite: Int = 0,
+    @ColumnInfo(defaultValue = "")
+    val personalNotes: String = "",
 )

@@ -13,8 +13,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class RecipeCookUiState(
@@ -35,6 +38,14 @@ class RecipeCookViewModel @Inject constructor(
     private val _completedSteps = MutableStateFlow<Set<Int>>(emptySet())
     val completedSteps: StateFlow<Set<Int>> = _completedSteps.asStateFlow()
 
+    private val _baseServings = MutableStateFlow(0)
+    private val _servings = MutableStateFlow(0)
+    val servings: StateFlow<Int> = _servings.asStateFlow()
+    val baseServings: StateFlow<Int> = _baseServings.asStateFlow()
+    val scaleFactor: StateFlow<Float> = combine(_servings, _baseServings) { s, base ->
+        if (base > 0 && s > 0) s.toFloat() / base.toFloat() else 1f
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1f)
+
     val uiState: StateFlow<RecipeCookUiState> = combine(
         repository.observeById(recipeId),
         repository.observeInstructions(recipeId),
@@ -48,6 +59,20 @@ class RecipeCookViewModel @Inject constructor(
             checkedIngredientIds = checked,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RecipeCookUiState())
+
+    init {
+        viewModelScope.launch {
+            uiState.filter { it.recipe != null }.first().recipe?.let { recipe ->
+                val base = Regex("""\d+""").find(recipe.recipeYield)?.value?.toIntOrNull() ?: 0
+                if (base > 0) {
+                    _baseServings.value = base
+                    _servings.value = base
+                }
+            }
+        }
+    }
+
+    fun setServings(n: Int) { _servings.value = n.coerceIn(1, 99) }
 
     fun toggleIngredient(id: String) {
         _checkedIds.value = _checkedIds.value.let {

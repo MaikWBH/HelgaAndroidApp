@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -50,6 +51,8 @@ class AppPreferences @Inject constructor(
     val themeMode: Flow<String> = ds.data.map { it[KEY_THEME_MODE] ?: "system" }
     val accentColor: Flow<Int> = ds.data.map { it[KEY_ACCENT_COLOR] ?: 0 }
     val checkMode: Flow<String> = ds.data.map { it[KEY_CHECK_MODE] ?: "keep" }
+    val notifyShoppingDay: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_SHOPPING] ?: false }
+    val notifyCookReminder: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_COOK] ?: false }
 
     suspend fun currentConnection(): HelgaConnection = connection.first()
     suspend fun currentLastSyncTs(): Long = lastSyncTs.first()
@@ -93,6 +96,14 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_CHECK_MODE] = mode }
     }
 
+    suspend fun saveNotifyShoppingDay(enabled: Boolean) {
+        ds.edit { it[KEY_NOTIFY_SHOPPING] = enabled }
+    }
+
+    suspend fun saveNotifyCookReminder(enabled: Boolean) {
+        ds.edit { it[KEY_NOTIFY_COOK] = enabled }
+    }
+
     suspend fun clearConnection() {
         ds.edit {
             it.remove(KEY_SERVER_URL)
@@ -112,5 +123,7 @@ class AppPreferences @Inject constructor(
         val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
         val KEY_CHECK_MODE = stringPreferencesKey("check_mode")
+        val KEY_NOTIFY_SHOPPING = booleanPreferencesKey("notify_shopping_day")
+        val KEY_NOTIFY_COOK = booleanPreferencesKey("notify_cook_reminder")
     }
 }

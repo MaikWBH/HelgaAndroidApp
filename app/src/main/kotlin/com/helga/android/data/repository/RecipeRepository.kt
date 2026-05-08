@@ -25,6 +25,9 @@ class RecipeRepository @Inject constructor(
     fun observeRecipeIdsByTags(tags: List<String>): Flow<List<String>> = recipeDao.observeRecipeIdsByTags(tags)
 
     suspend fun findById(id: String): RecipeEntity? = recipeDao.findById(id)
+    suspend fun allRecipes(): List<RecipeEntity> = recipeDao.allActive()
+    suspend fun ingredientsForRecipe(id: String): List<IngredientEntity> = recipeDao.ingredientsByRecipeId(id)
+    suspend fun instructionsForRecipe(id: String): List<InstructionEntity> = recipeDao.instructionsByRecipeId(id)
 
     /** Schreibt einen Datensatz lokal mit `dirty = 1`, damit er beim nächsten Sync hochgeht. */
     suspend fun upsertLocal(recipe: RecipeEntity) {
@@ -35,6 +38,10 @@ class RecipeRepository @Inject constructor(
 
     suspend fun updateRating(id: String, rating: Int) {
         recipeDao.updateRating(id, rating, System.currentTimeMillis())
+    }
+
+    suspend fun updatePersonalNotes(id: String, notes: String) {
+        recipeDao.updatePersonalNotes(id, notes, System.currentTimeMillis())
     }
 
     suspend fun toggleFavorite(recipe: RecipeEntity) {

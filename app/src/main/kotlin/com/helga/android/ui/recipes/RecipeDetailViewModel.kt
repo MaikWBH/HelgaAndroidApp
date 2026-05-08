@@ -1,5 +1,7 @@
 package com.helga.android.ui.recipes
 
+import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -107,6 +109,13 @@ class RecipeDetailViewModel @Inject constructor(
         Regex("""\d+""").find(yieldStr)?.value?.toIntOrNull() ?: 0
 
     fun setServings(n: Int) { _servings.value = n.coerceIn(1, 99) }
+
+    fun savePersonalNotes(notes: String) {
+        viewModelScope.launch {
+            repository.updatePersonalNotes(recipeId, notes)
+            syncScheduler.triggerOneShot()
+        }
+    }
 
     fun setRating(rating: Int) {
         viewModelScope.launch {
@@ -220,5 +229,48 @@ class RecipeDetailViewModel @Inject constructor(
             val recipe = uiState.value.recipe
             _snackbarMessage.tryEmit("Zum Wochenplan hinzugefügt")
         }
+    }
+
+    fun shareRecipe(context: Context) {
+        val state = uiState.value
+        val recipe = state.recipe ?: return
+        val text = buildString {
+            appendLine("🍽️ ${recipe.name}")
+            appendLine()
+            if (recipe.description.isNotBlank()) {
+                appendLine(recipe.description)
+                appendLine()
+            }
+            if (state.ingredients.isNotEmpty()) {
+                appendLine("📝 Zutaten:")
+                state.ingredients.filter { it.deleted == 0 }.forEach { ing ->
+                    append("• ")
+                    if (ing.quantity > 0) {
+                        val q = ing.quantity
+                        append(if (q % 1.0 < 0.01) q.toInt().toString() else q.toString())
+                        append(" ")
+                    }
+                    if (ing.unit.isNotBlank()) { append(ing.unit); append(" ") }
+                    appendLine(ing.food)
+                }
+                appendLine()
+            }
+            if (state.instructions.isNotEmpty()) {
+                appendLine("👨‍🍳 Zubereitung:")
+                state.instructions.sortedBy { it.position }.forEachIndexed { i, step ->
+                    appendLine("${i + 1}. ${step.text}")
+                }
+            }
+            if (recipe.sourceUrl.isNotBlank()) {
+                appendLine()
+                appendLine("🔗 ${recipe.sourceUrl}")
+            }
+        }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, recipe.name)
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        context.startActivity(Intent.createChooser(intent, null))
     }
 }

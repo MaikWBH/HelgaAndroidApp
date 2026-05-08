@@ -5,6 +5,7 @@ import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.helga.android.data.sync.NetworkObserver
+import com.helga.android.data.sync.NotificationScheduler
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
@@ -28,6 +29,7 @@ class HelgaApp : Application(), Configuration.Provider {
             enableStrictMode()
         }
         networkObserver.start()
+        NotificationScheduler.schedule(this)
     }
 
     private fun enableStrictMode() {

@@ -95,6 +95,10 @@
 
     <!-- Kochansicht -->
     <string name="recipe_cook">Kochen</string>
+    <string name="recipe_personal_notes">Meine Notizen</string>
+    <string name="recipe_personal_notes_hint">z.B. weniger Salz, 10 Min länger backen…</string>
+    <string name="recipe_personal_notes_add">Notiz hinzufügen</string>
+    <string name="recipe_personal_notes_save">Speichern</string>
     <string name="cook_step_of">Schritt %1$d von %2$d</string>
     <string name="cook_next">Nächster Schritt</string>
     <string name="cook_prev">Vorheriger Schritt</string>
@@ -243,6 +247,7 @@
     <string name="weekplan_min_veg">Min. Vegetarische Tage</string>
 
     <string name="recipe_add_to_weekplan">Zum Wochenplan hinzufügen</string>
+    <string name="recipe_share">Rezept teilen</string>
     <string name="recipe_weekplan_no_days">Keine Tage in der aktuellen Woche vorhanden</string>
     <string name="weekplan_max_repeat">Wiederholungssperre (Tage)</string>
     <string name="weekplan_proposal_title">KI-Vorschlag</string>
@@ -278,4 +283,34 @@
     <string name="settings_theme_light">Hell</string>
     <string name="settings_theme_dark">Dunkel</string>
     <string name="settings_accent_color">Akzentfarbe</string>
+    <string name="settings_notify_shopping">Einkaufstag-Erinnerung</string>
+    <string name="settings_notify_cook">Koch-Erinnerung</string>
+
+    <!-- Benachrichtigungen -->
+    <string name="notify_channel_name">Erinnerungen</string>
+    <string name="notify_shopping_title">Heute ist Einkaufstag 🛒</string>
+    <string name="notify_shopping_text">%1$d Artikel auf der Einkaufsliste</string>
+    <string name="notify_cook_title">Heute kochen 🍳</string>
+    <string name="notify_cook_text">Heute: %1$s</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Zeigt das heutige Rezept aus dem Wochenplan</string>
+
+    <!-- Vorrat -->
+    <string name="pantry_title">Vorrat</string>
+    <string name="pantry_add">Artikel hinzufügen</string>
+    <string name="pantry_empty">Noch keine Vorrats-Artikel</string>
+    <string name="pantry_name">Artikelname</string>
+    <string name="pantry_quantity">Menge</string>
+    <string name="pantry_unit">Einheit</string>
+    <string name="pantry_category">Kategorie</string>
+
+    <!-- Statistik -->
+    <string name="stats_title">Monats-Report</string>
+    <string name="stats_cooked">%1$d Rezepte gekocht</string>
+    <string name="stats_top_recipes">Top-Rezepte</string>
+    <string name="stats_first_timers">Entdeckungen</string>
+
+    <!-- Export -->
+    <string name="settings_export_data">Alle Daten exportieren</string>
 </resources>

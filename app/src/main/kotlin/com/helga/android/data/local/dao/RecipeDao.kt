@@ -21,6 +21,9 @@ interface RecipeDao {
     @Query("SELECT * FROM recipes WHERE id = :id LIMIT 1")
     suspend fun findById(id: String): RecipeEntity?
 
+    @Query("SELECT * FROM recipes WHERE deleted = 0 ORDER BY name COLLATE NOCASE ASC")
+    suspend fun allActive(): List<RecipeEntity>
+
     @Query("SELECT * FROM recipes WHERE id = :id AND deleted = 0 LIMIT 1")
     fun observeById(id: String): Flow<RecipeEntity?>
 
@@ -38,6 +41,9 @@ interface RecipeDao {
 
     @Query("UPDATE recipes SET is_favorite = :isFavorite, updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
     suspend fun updateFavorite(id: String, isFavorite: Int, updatedAt: Long)
+
+    @Query("UPDATE recipes SET personalNotes = :notes, updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
+    suspend fun updatePersonalNotes(id: String, notes: String, updatedAt: Long)
 
     @Query("SELECT * FROM recipes WHERE dirty = 1")
     suspend fun dirtyRecipes(): List<RecipeEntity>

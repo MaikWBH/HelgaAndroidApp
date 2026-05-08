@@ -38,9 +38,10 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
+import com.helga.android.data.local.entity.PantryItemEntity
 
 @Database(
-    version = 13,
+    version = 15,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -64,6 +65,7 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
         WeekplanTemplateEntryEntity::class,
         RecipeHistoryEntity::class,
         RecipeFeedbackEntity::class,
+        PantryItemEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -79,6 +81,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun weekplanTemplateDao(): WeekplanTemplateDao
     abstract fun recipeHistoryDao(): RecipeHistoryDao
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
+    abstract fun pantryDao(): PantryDao
 
     companion object {
         const val NAME = "helga.db"
@@ -407,10 +410,37 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE recipes ADD COLUMN personalNotes TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS pantry_items (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL DEFAULT '',
+                        quantity REAL NOT NULL DEFAULT 0.0,
+                        unit TEXT NOT NULL DEFAULT '',
+                        category TEXT NOT NULL DEFAULT '',
+                        expiresAt TEXT NOT NULL DEFAULT '',
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_pantry_items_updatedAt ON pantry_items(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_pantry_items_deleted ON pantry_items(deleted)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_pantry_items_dirty ON pantry_items(dirty)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
                 .build()
     }
 }

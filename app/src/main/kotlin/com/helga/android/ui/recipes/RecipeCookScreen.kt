@@ -13,14 +13,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -93,6 +96,7 @@ private fun IngredientCheckRow(
     ingredient: IngredientEntity,
     checked: Boolean,
     onToggle: () -> Unit,
+    scaleFactor: Float = 1f,
 ) {
     Row(
         modifier = Modifier
@@ -104,8 +108,8 @@ private fun IngredientCheckRow(
         Checkbox(checked = checked, onCheckedChange = { onToggle() })
         val label = buildString {
             if (ingredient.quantity > 0) {
-                val q = ingredient.quantity
-                append(if (q % 1.0 < 0.01) q.toInt().toString() else q.toString())
+                val q = ingredient.quantity * scaleFactor
+                append(if (q % 1.0 < 0.01) q.toInt().toString() else "%.1f".format(q))
                 append(" ")
             }
             if (ingredient.unit.isNotBlank()) { append(ingredient.unit); append(" ") }
@@ -132,6 +136,9 @@ fun RecipeCookScreen(
     val ingredients = uiState.ingredients
     val checkedIds = uiState.checkedIngredientIds
     val completedSteps by viewModel.completedSteps.collectAsStateWithLifecycle()
+    val servings by viewModel.servings.collectAsStateWithLifecycle()
+    val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
+    val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
     var ingredientsExpanded by remember { mutableStateOf(false) }
     var activeTimer by remember { mutableStateOf<DetectedTimer?>(null) }
     var timerSeconds by remember { mutableIntStateOf(0) }
@@ -204,6 +211,31 @@ fun RecipeCookScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp),
         ) {
+            val personalNotes = uiState.recipe?.personalNotes.orEmpty()
+            if (personalNotes.isNotBlank()) {
+                item(key = "personal_notes") {
+                    androidx.compose.material3.Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        ),
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "📝 ${stringResource(R.string.recipe_personal_notes)}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = personalNotes,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
             if (ingredients.isNotEmpty()) {
                 item(key = "ingredients_header") {
                     Row(
@@ -233,12 +265,40 @@ fun RecipeCookScreen(
                     }
                     HorizontalDivider()
                 }
+                if (ingredientsExpanded && baseServings > 0) {
+                    item(key = "servings_control") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            IconButton(
+                                onClick = { viewModel.setServings(servings - 1) },
+                                enabled = servings > 1,
+                            ) {
+                                Icon(Icons.Filled.Remove, contentDescription = null)
+                            }
+                            Text(
+                                text = "$servings ${stringResource(R.string.recipe_detail_yield)}",
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.widthIn(min = 100.dp),
+                            )
+                            IconButton(onClick = { viewModel.setServings(servings + 1) }) {
+                                Icon(Icons.Filled.Add, contentDescription = null)
+                            }
+                        }
+                    }
+                }
                 if (ingredientsExpanded) {
                     items(ingredients, key = { it.id }) { ingredient ->
                         IngredientCheckRow(
                             ingredient = ingredient,
                             checked = ingredient.id in checkedIds,
                             onToggle = { viewModel.toggleIngredient(ingredient.id) },
+                            scaleFactor = scaleFactor,
                         )
                     }
                 }
