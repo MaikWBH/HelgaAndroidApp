@@ -23,6 +23,11 @@
     <string name="recipes_loading">Lade Rezepte…</string>
     <string name="recipes_filter_all">Alle</string>
     <string name="recipes_filter_favorites">Favoriten</string>
+    <string name="recipes_filter_tags">Tags</string>
+    <string name="recipes_filter_tags_title">Nach Tags filtern</string>
+    <string name="recipes_filter_no_tags">Keine Tags vorhanden</string>
+    <string name="recipes_filter_done">Fertig</string>
+    <string name="recipes_filter_clear">Alle abwählen</string>
     <string name="recipes_search_hint">Rezepte suchen…</string>
     <string name="recipes_sort">Sortierung</string>
     <string name="recipes_sort_name">Name</string>
@@ -178,6 +183,7 @@
     <string name="shopping_staples_empty">Keine Vorratsstapel konfiguriert</string>
     <string name="shopping_staple_hint">Artikel eingeben…</string>
     <string name="shopping_edit_item_title">Einkaufsartikel bearbeiten</string>
+    <string name="shopping_no_store">Kein Markt</string>
 
     <!-- Märkte -->
     <string name="stores_title">Märkte</string>
@@ -220,11 +226,16 @@
     <string name="weekplan_no_lists">Keine Einkaufslisten vorhanden</string>
     <string name="weekplan_export_day">Tag auf Einkaufsliste</string>
     <string name="weekplan_export_week">Woche auf Einkaufsliste</string>
+    <string name="weekplan_regenerate_day">Tag neu generieren</string>
     <string name="weekplan_ai_generate">KI-Wochenplan erstellen</string>
     <string name="weekplan_ai_generating">KI erstellt Wochenplan…</string>
     <string name="weekplan_constraints_title">Planungs-Constraints</string>
     <string name="weekplan_max_meat">Max. Fleisch-Tage</string>
+    <string name="weekplan_max_fish">Max. Fisch-Tage</string>
     <string name="weekplan_min_veg">Min. Vegetarische Tage</string>
+
+    <string name="recipe_add_to_weekplan">Zum Wochenplan hinzufügen</string>
+    <string name="recipe_weekplan_no_days">Keine Tage in der aktuellen Woche vorhanden</string>
     <string name="weekplan_max_repeat">Wiederholungssperre (Tage)</string>
     <string name="weekplan_proposal_title">KI-Vorschlag</string>
     <string name="weekplan_proposal_accept">Annehmen</string>

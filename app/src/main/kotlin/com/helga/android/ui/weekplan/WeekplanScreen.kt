@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
@@ -44,6 +45,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -104,22 +109,28 @@ fun WeekplanScreen(
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
     val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
-    val showAnchorPicker by viewModel.showAnchorPicker.collectAsStateWithLifecycle()
-    val anchorCandidates by viewModel.anchorCandidates.collectAsStateWithLifecycle()
-    val selectedAnchors by viewModel.selectedAnchors.collectAsStateWithLifecycle()
     val generateStatus by viewModel.generateStatus.collectAsStateWithLifecycle()
     val feedbackMap by viewModel.feedbackForSelectedDay.collectAsStateWithLifecycle()
+    val weekBalance by viewModel.weekBalance.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val recipeById: (String) -> RecipeEntity? = { id -> allRecipes[id] }
 
-    val startDate = remember(days) {
-        days.firstOrNull()?.planDate
-            ?: LocalDate.now().with(DayOfWeek.MONDAY).format(DateTimeFormatter.ISO_LOCAL_DATE)
-    }
-
     LaunchedEffect(weekOffset) { viewModel.ensureWeek() }
+
+    LaunchedEffect(Unit) {
+        viewModel.exportEvent.collect {
+            val result = snackbarHostState.showSnackbar(
+                message = "Wochenplan erstellt",
+                actionLabel = "Zur Einkaufsliste",
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                exportPicker = "all"
+            }
+        }
+    }
 
     if (exportPicker != null) {
         ShoppingListPickerDialog(
@@ -137,26 +148,11 @@ fun WeekplanScreen(
     if (constraintsEditorVisible) {
         ConstraintsEditorSheet(
             constraints = constraints,
-            onSave = { maxMeat, minVeg, maxRepeat ->
-                viewModel.saveConstraints(maxMeat, minVeg, maxRepeat)
+            onSave = { maxMeat, maxFish, minVeg, maxRepeat ->
+                viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat)
                 constraintsEditorVisible = false
             },
             onDismiss = { constraintsEditorVisible = false },
-        )
-    }
-
-    if (showAnchorPicker) {
-        AnchorPickerSheet(
-            candidates = anchorCandidates,
-            selectedIds = selectedAnchors,
-            serverUrl = serverUrl,
-            onToggle = viewModel::toggleAnchor,
-            onSkip = {
-                viewModel.dismissAnchorPicker()
-                viewModel.generateWithAnchors(startDate)
-            },
-            onGenerate = { viewModel.generateWithAnchors(startDate) },
-            onDismiss = viewModel::dismissAnchorPicker,
         )
     }
 
@@ -164,6 +160,8 @@ fun WeekplanScreen(
     if (proposalAssignments != null) {
         ProposalSheet(
             assignments = proposalAssignments,
+            allRecipes = allRecipes,
+            serverUrl = serverUrl,
             onAccept = { viewModel.applyProposal(proposalAssignments) },
             onDismiss = viewModel::discardProposal,
         )
@@ -174,7 +172,7 @@ fun WeekplanScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.weekplan_title)) },
                 actions = {
-                    IconButton(onClick = { viewModel.openAnchorPicker() }) {
+                    IconButton(onClick = { viewModel.generateWeekplan() }) {
                         Icon(
                             imageVector = Icons.Filled.Restaurant,
                             contentDescription = stringResource(R.string.weekplan_generate),
@@ -195,6 +193,7 @@ fun WeekplanScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
@@ -236,6 +235,25 @@ fun WeekplanScreen(
                         }
                     }
                 }
+                item(key = "week_balance") {
+                    val total = weekBalance.meat + weekBalance.fish + weekBalance.veg + weekBalance.other
+                    if (total > 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("🥩 ${weekBalance.meat}", style = MaterialTheme.typography.labelMedium)
+                            Text("🐟 ${weekBalance.fish}", style = MaterialTheme.typography.labelMedium)
+                            Text("🥬 ${weekBalance.veg}", style = MaterialTheme.typography.labelMedium)
+                            if (weekBalance.other > 0) {
+                                Text("❓ ${weekBalance.other}", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                }
                 items(days, key = { it.id }) { day ->
                     val isSelected = day.id == selectedDayId
                     val dayRecipes = if (isSelected) weekplanRecipes else emptyList()
@@ -262,6 +280,7 @@ fun WeekplanScreen(
                         onNavigateToRecipe = onNavigateToRecipe,
                         onToggleQuick = { viewModel.toggleQuickDay(day) },
                         onToggleGuest = { viewModel.toggleGuestDay(day) },
+                        onRegenerateDay = { viewModel.regenerateDay(day.id) },
                         feedbackMap = feedbackMap,
                         onFeedback = { recipeId, liked -> viewModel.setFeedback(recipeId, day.planDate, liked) },
                     )
@@ -314,6 +333,7 @@ private fun DayCard(
     onNavigateToRecipe: (String) -> Unit,
     onToggleQuick: () -> Unit,
     onToggleGuest: () -> Unit,
+    onRegenerateDay: () -> Unit,
     feedbackMap: Map<String, Int>,
     onFeedback: (recipeId: String, liked: Int) -> Unit,
 ) {
@@ -380,6 +400,13 @@ private fun DayCard(
                         Icon(
                             imageVector = Icons.Filled.ShoppingCart,
                             contentDescription = stringResource(R.string.weekplan_export_day),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    IconButton(onClick = onRegenerateDay) {
+                        Icon(
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = stringResource(R.string.weekplan_regenerate_day),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -684,11 +711,12 @@ private fun ShoppingListPickerDialog(
 @Composable
 private fun ConstraintsEditorSheet(
     constraints: WeekplanConstraintsEntity,
-    onSave: (maxMeat: Int, minVeg: Int, maxRepeat: Int) -> Unit,
+    onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var maxMeat by remember(constraints.maxMeatPerWeek) { mutableFloatStateOf(constraints.maxMeatPerWeek.toFloat()) }
+    var maxFish by remember(constraints.maxFishPerWeek) { mutableFloatStateOf(constraints.maxFishPerWeek.toFloat()) }
     var minVeg by remember(constraints.minVegetarianPerWeek) { mutableFloatStateOf(constraints.minVegetarianPerWeek.toFloat()) }
     var maxRepeat by remember(constraints.maxRepeatDays) { mutableFloatStateOf(constraints.maxRepeatDays.toFloat()) }
 
@@ -714,6 +742,19 @@ private fun ConstraintsEditorSheet(
             Slider(
                 value = maxMeat,
                 onValueChange = { maxMeat = it },
+                valueRange = 0f..7f,
+                steps = 6,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "${stringResource(R.string.weekplan_max_fish)}: ${maxFish.toInt()}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = maxFish,
+                onValueChange = { maxFish = it },
                 valueRange = 0f..7f,
                 steps = 6,
                 modifier = Modifier.fillMaxWidth(),
@@ -747,7 +788,7 @@ private fun ConstraintsEditorSheet(
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = { onSave(maxMeat.toInt(), minVeg.toInt(), maxRepeat.toInt()) },
+                onClick = { onSave(maxMeat.toInt(), maxFish.toInt(), minVeg.toInt(), maxRepeat.toInt()) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.weekplan_constraints_save))
@@ -759,105 +800,10 @@ private fun ConstraintsEditorSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AnchorPickerSheet(
-    candidates: List<RecipeEntity>,
-    selectedIds: Set<String>,
-    serverUrl: String,
-    onToggle: (String) -> Unit,
-    onSkip: () -> Unit,
-    onGenerate: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.weekplan_anchor_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(R.string.weekplan_anchor_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(12.dp))
-
-            candidates.forEach { recipe ->
-                val selected = recipe.id in selectedIds
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onToggle(recipe.id) }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(
-                        checked = selected,
-                        onCheckedChange = { onToggle(recipe.id) },
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    val imageUrl = when {
-                        recipe.localImageUri.isNotBlank() -> recipe.localImageUri
-                        recipe.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
-                            "${serverUrl.trimEnd('/')}/images/${recipe.imagePath}"
-                        else -> null
-                    }
-                    if (imageUrl != null) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(imageUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = recipe.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Text(
-                        text = recipe.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                TextButton(onClick = {
-                    onSkip()
-                }) {
-                    Text(stringResource(R.string.weekplan_anchor_skip))
-                }
-                Button(
-                    onClick = onGenerate,
-                    enabled = selectedIds.isNotEmpty(),
-                ) {
-                    Text(stringResource(R.string.weekplan_anchor_generate))
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private fun ProposalSheet(
     assignments: List<WeekplanAssignmentDto>,
+    allRecipes: Map<String, RecipeEntity>,
+    serverUrl: String,
     onAccept: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -879,22 +825,68 @@ private fun ProposalSheet(
             Spacer(Modifier.height(12.dp))
 
             assignments.forEach { assignment ->
+                val recipe = allRecipes[assignment.recipeId]
+                val imageUrl = remember(recipe?.localImageUri, recipe?.imagePath, serverUrl) {
+                    val localUri = recipe?.localImageUri.orEmpty()
+                    val path = recipe?.imagePath.orEmpty()
+                    when {
+                        localUri.isNotBlank() -> localUri
+                        path.isNotBlank() && serverUrl.isNotBlank() ->
+                            "${serverUrl.trimEnd('/')}/api/images/$path"
+                        else -> null
+                    }
+                }
+                val proteinEmoji = when (recipe?.proteinType?.lowercase()) {
+                    in listOf("fleisch", "meat", "geflügel", "poultry", "rind", "schwein") -> "🥩"
+                    in listOf("fisch", "fish", "meeresfrüchte", "seafood") -> "🐟"
+                    in listOf("vegetarisch", "vegetarian", "vegan") -> "🥬"
+                    else -> ""
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = assignment.date,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.width(90.dp),
-                    )
-                    Text(
-                        text = assignment.recipeName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
+                    if (imageUrl != null) {
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(6.dp)),
+                            contentScale = ContentScale.Crop,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = assignment.recipeName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = assignment.date,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (proteinEmoji.isNotBlank()) {
+                                Text(proteinEmoji, style = MaterialTheme.typography.labelSmall)
+                            }
+                            if (recipe != null && recipe.totalTime.isNotBlank()) {
+                                Text(
+                                    text = recipe.totalTime,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

@@ -29,7 +29,7 @@ class RecipeListViewModel @Inject constructor(
     preferences: AppPreferences,
 ) : ViewModel() {
 
-    val selectedTag = MutableStateFlow<String?>(null)
+    val selectedTags = MutableStateFlow<Set<String>>(emptySet())
     val sortOrder = MutableStateFlow(SortOrder.NAME)
     val searchQuery = MutableStateFlow("")
     val showFavoritesOnly = MutableStateFlow(false)
@@ -43,9 +43,9 @@ class RecipeListViewModel @Inject constructor(
 
     val recipes: StateFlow<List<RecipeEntity>> = combine(
         repository.observeAll(),
-        selectedTag.flatMapLatest { tag ->
-            if (tag == null) flowOf(null)
-            else repository.observeRecipeIdsByTag(tag).map { it.toSet() }
+        selectedTags.flatMapLatest { tags ->
+            if (tags.isEmpty()) flowOf(null)
+            else repository.observeRecipeIdsByTags(tags.toList()).map { it.toSet() }
         },
         sortOrder,
     ) { all, tagFilter, sort ->
@@ -67,7 +67,15 @@ class RecipeListViewModel @Inject constructor(
 
     val syncStatus: StateFlow<SyncStatus> = syncStatusHolder.status
 
-    fun selectTag(tag: String?) { selectedTag.value = tag }
+    fun toggleTag(tag: String) {
+        selectedTags.update { current ->
+            if (tag in current) current - tag else current + tag
+        }
+    }
+    fun clearTags() { selectedTags.value = emptySet() }
+    fun selectTag(tag: String?) {
+        selectedTags.value = if (tag == null) emptySet() else setOf(tag)
+    }
     fun setSortOrder(order: SortOrder) { sortOrder.value = order }
     fun setSearchQuery(q: String) { searchQuery.value = q }
     fun toggleFavoritesFilter() { showFavoritesOnly.value = !showFavoritesOnly.value }

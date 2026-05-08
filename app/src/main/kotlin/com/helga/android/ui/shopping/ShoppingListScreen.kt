@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -76,6 +77,7 @@ import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
+import com.helga.android.data.local.entity.StoreEntity
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,6 +94,8 @@ fun ShoppingListScreen(
     val aisleSortMap by viewModel.aisleSortMap.collectAsStateWithLifecycle()
     val staples by viewModel.staples.collectAsStateWithLifecycle()
     val checkMode by viewModel.checkMode.collectAsStateWithLifecycle()
+    val activeStore by viewModel.activeStore.collectAsStateWithLifecycle()
+    val allStores by viewModel.allStores.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
     var showListDropdown by remember { mutableStateOf(false) }
@@ -100,6 +104,7 @@ fun ShoppingListScreen(
     var aislePickerItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
     var showStaplesSheet by remember { mutableStateOf(false) }
     var editItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
+    var showStoreDropdown by remember { mutableStateOf(false) }
 
     if (showNewListDialog) {
         NewListDialog(
@@ -241,6 +246,71 @@ fun ShoppingListScreen(
                 .fillMaxSize()
                 .padding(scaffoldPadding),
         ) {
+            if (allStores.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Store,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.widthIn(min = 6.dp))
+                    Box {
+                        Row(
+                            modifier = Modifier.clickable { showStoreDropdown = true },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = activeStore?.name
+                                    ?: stringResource(R.string.shopping_no_store),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (activeStore != null)
+                                    MaterialTheme.colorScheme.onSurface
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Icon(
+                                imageVector = Icons.Filled.ExpandMore,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showStoreDropdown,
+                            onDismissRequest = { showStoreDropdown = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.shopping_no_store)) },
+                                onClick = {
+                                    viewModel.selectStore(null)
+                                    showStoreDropdown = false
+                                },
+                                leadingIcon = if (activeStore == null) {
+                                    { Icon(Icons.Filled.Check, contentDescription = null) }
+                                } else null,
+                            )
+                            HorizontalDivider()
+                            allStores.forEach { store ->
+                                DropdownMenuItem(
+                                    text = { Text(store.name) },
+                                    onClick = {
+                                        viewModel.selectStore(store.id)
+                                        showStoreDropdown = false
+                                    },
+                                    leadingIcon = if (store.id == activeStore?.id) {
+                                        { Icon(Icons.Filled.Check, contentDescription = null) }
+                                    } else null,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
             Box(modifier = Modifier.weight(1f)) {
                 when {
                     lists.isEmpty() -> EmptyListsState(

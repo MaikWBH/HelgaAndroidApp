@@ -30,6 +30,9 @@ interface RecipeDao {
     @Query("SELECT DISTINCT recipeId FROM recipe_tags WHERE name = :tag AND deleted = 0")
     fun observeRecipeIdsByTag(tag: String): Flow<List<String>>
 
+    @Query("SELECT DISTINCT recipeId FROM recipe_tags WHERE name IN (:tags) AND deleted = 0")
+    fun observeRecipeIdsByTags(tags: List<String>): Flow<List<String>>
+
     @Query("UPDATE recipes SET rating = :rating, updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
     suspend fun updateRating(id: String, rating: Int, updatedAt: Long)
 

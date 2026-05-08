@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -63,6 +64,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,6 +77,10 @@ import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.ui.components.CreateFab
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +103,9 @@ fun RecipeDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showOverflow by remember { mutableStateOf(false) }
     var shoppingTargetDialog by remember { mutableStateOf(false) }
+    var showWeekplanPicker by remember { mutableStateOf(false) }
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
+    val weekplanDays by viewModel.weekplanDays.collectAsStateWithLifecycle()
     val servings by viewModel.servings.collectAsStateWithLifecycle()
     val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
@@ -137,6 +145,17 @@ fun RecipeDetailScreen(
             onPick = { list ->
                 shoppingTargetDialog = false
                 viewModel.exportToShoppingList(list.id)
+            },
+        )
+    }
+
+    if (showWeekplanPicker) {
+        WeekplanDayPickerDialog(
+            days = weekplanDays,
+            onDismiss = { showWeekplanPicker = false },
+            onPick = { dayId ->
+                showWeekplanPicker = false
+                viewModel.addToWeekplanDay(dayId)
             },
         )
     }
@@ -251,6 +270,16 @@ fun RecipeDetailScreen(
                                         viewModel.classify()
                                     },
                                     enabled = !uiState.isClassifying && !alreadyClassified,
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.recipe_add_to_weekplan)) },
+                                    leadingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
+                                    onClick = {
+                                        showOverflow = false
+                                        viewModel.loadWeekplanDays()
+                                        showWeekplanPicker = true
+                                    },
                                 )
                             }
                         }
@@ -618,6 +647,73 @@ private fun ShoppingListSelectDialog(
                     items(lists, key = { it.id }) { list ->
                         TextButton(onClick = { onPick(list) }, modifier = Modifier.fillMaxWidth()) {
                             Text(list.name)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.recipe_delete_confirm_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun WeekplanDayPickerDialog(
+    days: List<RecipeDetailViewModel.WeekplanDayWithRecipes>,
+    onDismiss: () -> Unit,
+    onPick: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.recipe_add_to_weekplan)) },
+        text = {
+            if (days.isEmpty()) {
+                Text(stringResource(R.string.recipe_weekplan_no_days))
+            } else {
+                LazyColumn {
+                    items(days, key = { it.day.id }) { dayWithRecipes ->
+                        val date = runCatching {
+                            LocalDate.parse(dayWithRecipes.day.planDate, DateTimeFormatter.ISO_LOCAL_DATE)
+                        }.getOrNull()
+                        val dayLabel = date?.dayOfWeek
+                            ?.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                            ?.replaceFirstChar { it.uppercase() }
+                            ?: dayWithRecipes.day.planDate
+                        val dateLabel = date?.format(DateTimeFormatter.ofPattern("dd.MM.")) ?: ""
+
+                        TextButton(
+                            onClick = { onPick(dayWithRecipes.day.id) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row {
+                                    Text(
+                                        text = dayLabel,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                    if (dateLabel.isNotBlank()) {
+                                        Spacer(Modifier.widthIn(min = 8.dp))
+                                        Text(
+                                            text = dateLabel,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                if (dayWithRecipes.recipeNames.isNotEmpty()) {
+                                    Text(
+                                        text = dayWithRecipes.recipeNames.joinToString(", "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                         }
                     }
                 }

@@ -63,6 +63,9 @@ class ShoppingListViewModel @Inject constructor(
     val activeStore: StateFlow<StoreEntity?> = storeRepository.observeActiveStore()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val allStores: StateFlow<List<StoreEntity>> = storeRepository.observeStores()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val storeAisles: StateFlow<List<StoreAisleEntity>> = activeStore
         .flatMapLatest { store ->
             if (store == null) flowOf(emptyList())
@@ -89,6 +92,17 @@ class ShoppingListViewModel @Inject constructor(
 
     fun selectList(id: String) {
         _activeListId.value = id
+    }
+
+    fun selectStore(storeId: String?) {
+        viewModelScope.launch {
+            if (storeId == null) {
+                storeRepository.deactivateAll()
+            } else {
+                storeRepository.setActiveStore(storeId)
+            }
+            syncScheduler.triggerOneShot()
+        }
     }
 
     fun createList(name: String) {

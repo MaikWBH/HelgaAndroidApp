@@ -39,6 +39,10 @@ class StoreRepository @Inject constructor(
         storeDao.activateStore(storeId, ts)
     }
 
+    suspend fun deactivateAll() {
+        storeDao.deactivateAllStores(now())
+    }
+
     suspend fun deleteStore(store: StoreEntity) {
         storeDao.upsertStore(store.copy(deleted = 1, updatedAt = now(), dirty = 1))
     }

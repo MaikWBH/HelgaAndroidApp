@@ -196,6 +196,7 @@ data class WeekplanConstraintsDto(
     @Json(name = "updated_at") val updatedAt: Long,
     val deleted: Int = 0,
     @Json(name = "max_meat_per_week") val maxMeatPerWeek: Int = 3,
+    @Json(name = "max_fish_per_week") val maxFishPerWeek: Int = 2,
     @Json(name = "min_vegetarian_per_week") val minVegetarianPerWeek: Int = 2,
     @Json(name = "max_repeat_days") val maxRepeatDays: Int = 14,
 )
@@ -334,6 +335,7 @@ data class WeekplanGenerateRequest(
     @Json(name = "start_date") val startDate: String,
     @Json(name = "plan_days") val planDays: Int = 7,
     @Json(name = "max_meat_per_week") val maxMeatPerWeek: Int = 3,
+    @Json(name = "max_fish_per_week") val maxFishPerWeek: Int = 2,
     @Json(name = "min_vegetarian_per_week") val minVegetarianPerWeek: Int = 2,
     @Json(name = "max_repeat_days") val maxRepeatDays: Int = 14,
     @Json(name = "anchor_ids") val anchorIds: List<String> = emptyList(),

@@ -22,12 +22,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,12 +42,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.Alignment
@@ -81,11 +88,23 @@ fun RecipeListScreen(
     val recipes by viewModel.recipes.collectAsStateWithLifecycle()
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val allTagNames by viewModel.allTagNames.collectAsStateWithLifecycle()
-    val selectedTag by viewModel.selectedTag.collectAsStateWithLifecycle()
+    val selectedTags by viewModel.selectedTags.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsStateWithLifecycle()
+
+    var showTagFilter by remember { mutableStateOf(false) }
+
+    if (showTagFilter) {
+        TagFilterDialog(
+            allTags = allTagNames,
+            selectedTags = selectedTags,
+            onToggleTag = viewModel::toggleTag,
+            onClearAll = viewModel::clearTags,
+            onDismiss = { showTagFilter = false },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -138,13 +157,14 @@ fun RecipeListScreen(
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             )
             FilterBar(
-                allTags = allTagNames,
-                selectedTag = selectedTag,
+                selectedTags = selectedTags,
+                tagCount = allTagNames.size,
                 sortOrder = sortOrder,
                 showFavoritesOnly = showFavoritesOnly,
-                onTagSelect = viewModel::selectTag,
+                onOpenTagFilter = { showTagFilter = true },
                 onSortSelect = viewModel::setSortOrder,
                 onToggleFavorites = viewModel::toggleFavoritesFilter,
+                onClearFilter = { viewModel.clearTags(); if (showFavoritesOnly) viewModel.toggleFavoritesFilter() },
             )
             if (recipes.isEmpty()) {
                 EmptyState(modifier = Modifier.weight(1f))
@@ -171,50 +191,64 @@ fun RecipeListScreen(
 
 @Composable
 private fun FilterBar(
-    allTags: List<String>,
-    selectedTag: String?,
+    selectedTags: Set<String>,
+    tagCount: Int,
     sortOrder: SortOrder,
     showFavoritesOnly: Boolean,
-    onTagSelect: (String?) -> Unit,
+    onOpenTagFilter: () -> Unit,
     onSortSelect: (SortOrder) -> Unit,
     onToggleFavorites: () -> Unit,
+    onClearFilter: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LazyRow(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            item {
-                FilterChip(
-                    selected = selectedTag == null && !showFavoritesOnly,
-                    onClick = { onTagSelect(null); if (showFavoritesOnly) onToggleFavorites() },
-                    label = { Text(stringResource(R.string.recipes_filter_all)) },
-                )
-            }
-            item {
-                FilterChip(
-                    selected = showFavoritesOnly,
-                    onClick = onToggleFavorites,
-                    label = { Text(stringResource(R.string.recipes_filter_favorites)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Star,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
+            FilterChip(
+                selected = selectedTags.isEmpty() && !showFavoritesOnly,
+                onClick = onClearFilter,
+                label = { Text(stringResource(R.string.recipes_filter_all)) },
+            )
+            FilterChip(
+                selected = showFavoritesOnly,
+                onClick = onToggleFavorites,
+                label = { Text(stringResource(R.string.recipes_filter_favorites)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                },
+            )
+            if (tagCount > 0) {
+                BadgedBox(
+                    badge = {
+                        if (selectedTags.isNotEmpty()) {
+                            Badge { Text(selectedTags.size.toString()) }
+                        }
                     },
-                )
-            }
-            items(allTags) { tag ->
-                FilterChip(
-                    selected = tag == selectedTag,
-                    onClick = { onTagSelect(if (tag == selectedTag) null else tag) },
-                    label = { Text(tag) },
-                )
+                ) {
+                    FilterChip(
+                        selected = selectedTags.isNotEmpty(),
+                        onClick = onOpenTagFilter,
+                        label = { Text(stringResource(R.string.recipes_filter_tags)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.FilterList,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        },
+                    )
+                }
             }
         }
         SortButton(sortOrder = sortOrder, onSortSelect = onSortSelect)
@@ -381,4 +415,57 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             )
         }
     }
+}
+
+@Composable
+private fun TagFilterDialog(
+    allTags: List<String>,
+    selectedTags: Set<String>,
+    onToggleTag: (String) -> Unit,
+    onClearAll: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.recipes_filter_tags_title)) },
+        text = {
+            if (allTags.isEmpty()) {
+                Text(stringResource(R.string.recipes_filter_no_tags))
+            } else {
+                LazyColumn {
+                    items(allTags) { tag ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggleTag(tag) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = tag in selectedTags,
+                                onCheckedChange = { onToggleTag(tag) },
+                            )
+                            Text(
+                                text = tag,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.recipes_filter_done))
+            }
+        },
+        dismissButton = {
+            if (selectedTags.isNotEmpty()) {
+                TextButton(onClick = onClearAll) {
+                    Text(stringResource(R.string.recipes_filter_clear))
+                }
+            }
+        },
+    )
 }

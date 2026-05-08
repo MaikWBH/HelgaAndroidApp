@@ -13,6 +13,7 @@ import androidx.room.PrimaryKey
 data class WeekplanConstraintsEntity(
     @PrimaryKey val id: String = "global",
     val maxMeatPerWeek: Int = 3,
+    val maxFishPerWeek: Int = 2,
     val minVegetarianPerWeek: Int = 2,
     val maxRepeatDays: Int = 14,
     val updatedAt: Long = 0L,
