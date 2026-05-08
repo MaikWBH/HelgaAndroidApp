@@ -23,7 +23,7 @@ interface ShoppingDao {
     @Query("SELECT * FROM shopping_lists WHERE deleted = 0 ORDER BY name COLLATE NOCASE ASC")
     suspend fun lists(): List<ShoppingListEntity>
 
-    @Query("SELECT COUNT(*) FROM shopping_items WHERE listId = :listId AND deleted = 0 AND checked = 0")
+    @Query("SELECT COUNT(*) FROM shopping_items WHERE listId = :listId AND deleted = 0 AND isChecked = 0")
     suspend fun uncheckedItemCount(listId: String): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
