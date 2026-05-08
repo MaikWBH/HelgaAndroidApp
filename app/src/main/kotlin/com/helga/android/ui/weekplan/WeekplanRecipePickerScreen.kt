@@ -141,10 +141,13 @@ fun WeekplanRecipePickerScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(recipes, key = { it.id }) { recipe ->
-                        val imageUrl = remember(recipe.imagePath, serverUrl) {
-                            if (recipe.imagePath.isNotBlank() && serverUrl.isNotBlank())
-                                "${serverUrl.trimEnd('/')}/api/images/${recipe.imagePath}"
-                            else null
+                        val imageUrl = remember(recipe.localImageUri, recipe.imagePath, serverUrl) {
+                            when {
+                                recipe.localImageUri.isNotBlank() -> recipe.localImageUri
+                                recipe.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
+                                    "${serverUrl.trimEnd('/')}/api/images/${recipe.imagePath}"
+                                else -> null
+                            }
                         }
                         PickerRecipeCard(
                             recipe = recipe,

@@ -334,6 +334,29 @@ fun SettingsScreen(
                 selectedId = state.defaultShoppingListId,
                 onSelected = viewModel::setDefaultShoppingListId,
             )
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.settings_check_mode),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val checkModes = listOf("keep", "move")
+            val checkModeLabels = listOf(
+                stringResource(R.string.settings_check_mode_keep),
+                stringResource(R.string.settings_check_mode_move),
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                checkModes.forEachIndexed { index, mode ->
+                    SegmentedButton(
+                        selected = state.checkMode == mode,
+                        onClick = { viewModel.setCheckMode(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(index, checkModes.size),
+                        label = { Text(checkModeLabels[index]) },
+                    )
+                }
+            }
+
             OutlinedButton(
                 onClick = viewModel::saveFeatureSettings,
                 modifier = Modifier.fillMaxWidth(),

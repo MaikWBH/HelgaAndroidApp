@@ -131,7 +131,7 @@ fun RecipeCookScreen(
     val instructions = uiState.instructions
     val ingredients = uiState.ingredients
     val checkedIds = uiState.checkedIngredientIds
-    var stepIndex by remember { mutableIntStateOf(0) }
+    val completedSteps by viewModel.completedSteps.collectAsStateWithLifecycle()
     var ingredientsExpanded by remember { mutableStateOf(false) }
     var activeTimer by remember { mutableStateOf<DetectedTimer?>(null) }
     var timerSeconds by remember { mutableIntStateOf(0) }
@@ -194,31 +194,18 @@ fun RecipeCookScreen(
             return@Scaffold
         }
 
-        val currentStep = instructions.getOrNull(stepIndex)
         val total = instructions.size
-        val progress = (stepIndex + 1).toFloat() / total
 
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = stringResource(R.string.cook_step_of, stepIndex + 1, total),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
             if (ingredients.isNotEmpty()) {
-                Column {
+                item(key = "ingredients_header") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -245,42 +232,63 @@ fun RecipeCookScreen(
                         )
                     }
                     HorizontalDivider()
-                    if (ingredientsExpanded) {
-                        LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-                            items(ingredients, key = { it.id }) { ingredient ->
-                                IngredientCheckRow(
-                                    ingredient = ingredient,
-                                    checked = ingredient.id in checkedIds,
-                                    onToggle = { viewModel.toggleIngredient(ingredient.id) },
-                                )
-                            }
-                        }
+                }
+                if (ingredientsExpanded) {
+                    items(ingredients, key = { it.id }) { ingredient ->
+                        IngredientCheckRow(
+                            ingredient = ingredient,
+                            checked = ingredient.id in checkedIds,
+                            onToggle = { viewModel.toggleIngredient(ingredient.id) },
+                        )
                     }
                 }
             }
 
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                val stepText = currentStep?.text ?: ""
-                val timers = remember(stepText) { extractTimers(stepText) }
+            item(key = "steps_header") {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.recipe_detail_instructions),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                HorizontalDivider()
+            }
+
+            items(total, key = { "step_$it" }) { index ->
+                val instruction = instructions[index]
+                val done = index in completedSteps
+                val timers = remember(instruction.text) { extractTimers(instruction.text) }
+
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.toggleStep(index) }
+                        .padding(vertical = 8.dp),
                 ) {
-                    Text(
-                        text = stepText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(vertical = 16.dp),
-                    )
-                    if (timers.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = "${index + 1}.",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (done) MaterialTheme.colorScheme.onSurfaceVariant
+                                   else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 1.dp),
+                        )
+                        Text(
+                            text = instruction.text,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                textDecoration = if (done) TextDecoration.LineThrough else TextDecoration.None,
+                            ),
+                            color = if (done) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                   else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    if (timers.isNotEmpty() && !done) {
                         @OptIn(ExperimentalLayoutApi::class)
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(start = 28.dp, top = 4.dp),
                         ) {
                             timers.forEach { timer ->
                                 SuggestionChip(
@@ -302,36 +310,18 @@ fun RecipeCookScreen(
                         }
                     }
                 }
+                if (index < total - 1) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 4.dp))
+                }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Spacer(Modifier.height(8.dp))
-
-                if (stepIndex == total - 1) {
-                    Button(
-                        onClick = onBack,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.cook_done))
-                    }
-                } else {
-                    Button(
-                        onClick = { stepIndex++ },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.NavigateNext, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Text(stringResource(R.string.cook_next))
-                    }
-                }
-
-                if (stepIndex > 0) {
-                    FilledTonalButton(
-                        onClick = { stepIndex-- },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.NavigateBefore, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Text(stringResource(R.string.cook_prev))
-                    }
+            item(key = "done_button") {
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = onBack,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.cook_done))
                 }
             }
         }

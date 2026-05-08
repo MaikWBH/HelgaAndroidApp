@@ -2,6 +2,7 @@ package com.helga.android.ui.weekplan
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -27,8 +29,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -38,11 +43,13 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -65,6 +72,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
@@ -95,10 +103,15 @@ fun WeekplanScreen(
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
     val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
+    val showAnchorPicker by viewModel.showAnchorPicker.collectAsStateWithLifecycle()
+    val anchorCandidates by viewModel.anchorCandidates.collectAsStateWithLifecycle()
+    val selectedAnchors by viewModel.selectedAnchors.collectAsStateWithLifecycle()
+    val generateStatus by viewModel.generateStatus.collectAsStateWithLifecycle()
+    val feedbackMap by viewModel.feedbackForSelectedDay.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
 
-    val recipeById: (String) -> RecipeEntity? = { id -> allRecipes.find { it.id == id } }
+    val recipeById: (String) -> RecipeEntity? = { id -> allRecipes[id] }
 
     val startDate = remember(days) {
         days.firstOrNull()?.planDate
@@ -131,11 +144,41 @@ fun WeekplanScreen(
         )
     }
 
+    if (showAnchorPicker) {
+        AnchorPickerSheet(
+            candidates = anchorCandidates,
+            selectedIds = selectedAnchors,
+            serverUrl = serverUrl,
+            onToggle = viewModel::toggleAnchor,
+            onSkip = {
+                viewModel.dismissAnchorPicker()
+                viewModel.generateWithAnchors(startDate)
+            },
+            onGenerate = { viewModel.generateWithAnchors(startDate) },
+            onDismiss = viewModel::dismissAnchorPicker,
+        )
+    }
+
+    val proposalAssignments = (generateStatus as? WeekplanGenerateStatus.Proposal)?.assignments
+    if (proposalAssignments != null) {
+        ProposalSheet(
+            assignments = proposalAssignments,
+            onAccept = { viewModel.applyProposal(proposalAssignments) },
+            onDismiss = viewModel::discardProposal,
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.weekplan_title)) },
                 actions = {
+                    IconButton(onClick = { viewModel.openAnchorPicker() }) {
+                        Icon(
+                            imageVector = Icons.Filled.Restaurant,
+                            contentDescription = stringResource(R.string.weekplan_generate),
+                        )
+                    }
                     IconButton(onClick = { constraintsEditorVisible = true }) {
                         Icon(
                             imageVector = Icons.Filled.Tune,
@@ -152,69 +195,98 @@ fun WeekplanScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp + bottomPadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item(key = "week_nav") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconButton(onClick = viewModel::prevWeek) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.weekplan_prev_week),
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp + bottomPadding),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item(key = "week_nav") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = viewModel::prevWeek) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.weekplan_prev_week),
+                            )
+                        }
+                        Text(
+                            text = weekLabel,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleSmall,
+                            textAlign = TextAlign.Center,
                         )
-                    }
-                    Text(
-                        text = weekLabel,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleSmall,
-                        textAlign = TextAlign.Center,
-                    )
-                    if (weekOffset != 0) {
-                        TextButton(onClick = viewModel::goToCurrentWeek) {
-                            Text(stringResource(R.string.weekplan_today))
+                        if (weekOffset != 0) {
+                            TextButton(onClick = viewModel::goToCurrentWeek) {
+                                Text(stringResource(R.string.weekplan_today))
+                            }
+                        }
+                        IconButton(onClick = viewModel::nextWeek) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = stringResource(R.string.weekplan_next_week),
+                            )
                         }
                     }
-                    IconButton(onClick = viewModel::nextWeek) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = stringResource(R.string.weekplan_next_week),
+                }
+                items(days, key = { it.id }) { day ->
+                    val isSelected = day.id == selectedDayId
+                    val dayRecipes = if (isSelected) weekplanRecipes else emptyList()
+                    val dayExtras = if (isSelected) weekplanExtras else emptyList()
+                    val summary = daySummaries[day.id]
+
+                    DayCard(
+                        day = day,
+                        isSelected = isSelected,
+                        weekplanRecipes = dayRecipes,
+                        weekplanExtras = dayExtras,
+                        recipeCount = summary?.recipeCount ?: 0,
+                        extraCount = summary?.extraCount ?: 0,
+                        recipeById = recipeById,
+                        serverUrl = serverUrl,
+                        onSelect = { viewModel.selectDay(day.id) },
+                        onNoteChange = { note -> viewModel.updateNote(day.id, note) },
+                        onAddRecipe = { onAddRecipeForDay(day.id) },
+                        onRemoveRecipe = viewModel::removeRecipe,
+                        onAddExtra = { text -> viewModel.addExtra(day.id, text) },
+                        onRemoveExtra = viewModel::removeExtra,
+                        onSuggestExtra = viewModel::suggestItems,
+                        onExport = { exportPicker = day.id },
+                        onNavigateToRecipe = onNavigateToRecipe,
+                        onToggleQuick = { viewModel.toggleQuickDay(day) },
+                        onToggleGuest = { viewModel.toggleGuestDay(day) },
+                        feedbackMap = feedbackMap,
+                        onFeedback = { recipeId, liked -> viewModel.setFeedback(recipeId, day.planDate, liked) },
+                    )
+                }
+            }
+
+            if (generateStatus is WeekplanGenerateStatus.Loading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.weekplan_ai_generating),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
-            }
-            items(days, key = { it.id }) { day ->
-                val isSelected = day.id == selectedDayId
-                val dayRecipes = if (isSelected) weekplanRecipes else emptyList()
-                val dayExtras = if (isSelected) weekplanExtras else emptyList()
-                val summary = daySummaries[day.id]
-
-                DayCard(
-                    day = day,
-                    isSelected = isSelected,
-                    weekplanRecipes = dayRecipes,
-                    weekplanExtras = dayExtras,
-                    recipeCount = summary?.recipeCount ?: 0,
-                    extraCount = summary?.extraCount ?: 0,
-                    recipeById = recipeById,
-                    serverUrl = serverUrl,
-                    onSelect = { viewModel.selectDay(day.id) },
-                    onNoteChange = { note -> viewModel.updateNote(day.id, note) },
-                    onAddRecipe = { onAddRecipeForDay(day.id) },
-                    onRemoveRecipe = viewModel::removeRecipe,
-                    onAddExtra = { text -> viewModel.addExtra(day.id, text) },
-                    onRemoveExtra = viewModel::removeExtra,
-                    onExport = { exportPicker = day.id },
-                    onNavigateToRecipe = onNavigateToRecipe,
-                )
             }
         }
     }
@@ -236,8 +308,13 @@ private fun DayCard(
     onRemoveRecipe: (WeekplanRecipeEntity) -> Unit,
     onAddExtra: (String) -> Unit,
     onRemoveExtra: (WeekplanExtraEntity) -> Unit,
+    onSuggestExtra: suspend (String) -> List<String>,
     onExport: () -> Unit,
     onNavigateToRecipe: (String) -> Unit,
+    onToggleQuick: () -> Unit,
+    onToggleGuest: () -> Unit,
+    feedbackMap: Map<String, Int>,
+    onFeedback: (recipeId: String, liked: Int) -> Unit,
 ) {
     val date = remember(day.planDate) {
         runCatching { LocalDate.parse(day.planDate, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
@@ -263,7 +340,18 @@ private fun DayCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = dayLabel, style = MaterialTheme.typography.titleMedium)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(text = dayLabel, style = MaterialTheme.typography.titleMedium)
+                        if (day.isQuickDay == 1) {
+                            Text("⚡", style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (day.isGuestDay == 1) {
+                            Text("👥", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                     if (dateLabel.isNotBlank()) {
                         Text(
                             text = dateLabel,
@@ -273,6 +361,20 @@ private fun DayCard(
                     }
                 }
                 if (isSelected) {
+                    IconButton(onClick = onToggleQuick) {
+                        Text(
+                            text = "⚡",
+                            color = if (day.isQuickDay == 1) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        )
+                    }
+                    IconButton(onClick = onToggleGuest) {
+                        Text(
+                            text = "👥",
+                            color = if (day.isGuestDay == 1) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        )
+                    }
                     IconButton(onClick = onExport) {
                         Icon(
                             imageVector = Icons.Filled.ShoppingCart,
@@ -290,17 +392,24 @@ private fun DayCard(
 
                 weekplanRecipes.forEach { entry ->
                     val recipe = recipeById(entry.recipeId)
-                    val imageUrl = remember(recipe?.imagePath, serverUrl) {
+                    val imageUrl = remember(recipe?.localImageUri, recipe?.imagePath, serverUrl) {
+                        val localUri = recipe?.localImageUri.orEmpty()
                         val path = recipe?.imagePath.orEmpty()
-                        if (path.isNotBlank() && serverUrl.isNotBlank())
-                            "${serverUrl.trimEnd('/')}/api/images/$path"
-                        else null
+                        when {
+                            localUri.isNotBlank() -> localUri
+                            path.isNotBlank() && serverUrl.isNotBlank() ->
+                                "${serverUrl.trimEnd('/')}/api/images/$path"
+                            else -> null
+                        }
                     }
                     RecipeItemRow(
                         name = recipe?.name?.ifBlank { recipe.slug } ?: entry.recipeId,
                         imageUrl = imageUrl,
+                        liked = feedbackMap[entry.recipeId] ?: 0,
                         onNavigate = { onNavigateToRecipe(entry.recipeId) },
                         onRemove = { onRemoveRecipe(entry) },
+                        onThumbUp = { onFeedback(entry.recipeId, 1) },
+                        onThumbDown = { onFeedback(entry.recipeId, -1) },
                     )
                 }
 
@@ -316,7 +425,22 @@ private fun DayCard(
                 }
 
                 var noteText by remember(day.id) { mutableStateOf(day.note) }
+
+                DisposableEffect(day.id) {
+                    onDispose { onNoteChange(noteText) }
+                }
+
                 var extraInput by remember { mutableStateOf("") }
+                var extraSuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
+
+                LaunchedEffect(extraInput) {
+                    if (extraInput.length >= 2) {
+                        kotlinx.coroutines.delay(300)
+                        extraSuggestions = onSuggestExtra(extraInput)
+                    } else {
+                        extraSuggestions = emptyList()
+                    }
+                }
 
                 OutlinedTextField(
                     value = noteText,
@@ -331,6 +455,25 @@ private fun DayCard(
                 )
 
                 Spacer(Modifier.height(8.dp))
+
+                if (extraSuggestions.isNotEmpty()) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        items(extraSuggestions) { suggestion ->
+                            SuggestionChip(
+                                onClick = {
+                                    onAddExtra(suggestion)
+                                    extraInput = ""
+                                    extraSuggestions = emptyList()
+                                },
+                                label = { Text(suggestion) },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -347,12 +490,14 @@ private fun DayCard(
                         keyboardActions = KeyboardActions(onSend = {
                             onAddExtra(extraInput)
                             extraInput = ""
+                            extraSuggestions = emptyList()
                         }),
                     )
                     IconButton(
                         onClick = {
                             onAddExtra(extraInput)
                             extraInput = ""
+                            extraSuggestions = emptyList()
                         },
                         enabled = extraInput.isNotBlank(),
                     ) {
@@ -392,8 +537,11 @@ private fun DayCard(
 private fun RecipeItemRow(
     name: String,
     imageUrl: String?,
+    liked: Int,
     onNavigate: () -> Unit,
     onRemove: () -> Unit,
+    onThumbUp: () -> Unit,
+    onThumbDown: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -435,11 +583,34 @@ private fun RecipeItemRow(
                 }
             }
         }
-        Text(
-            text = name,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(
+                    onClick = onThumbUp,
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Text(
+                        text = "👍",
+                        color = if (liked == 1) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    )
+                }
+                IconButton(
+                    onClick = onThumbDown,
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Text(
+                        text = "👎",
+                        color = if (liked == -1) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    )
+                }
+            }
+        }
         IconButton(onClick = onRemove) {
             Icon(
                 imageVector = Icons.Filled.Close,
@@ -585,4 +756,160 @@ private fun ConstraintsEditorSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AnchorPickerSheet(
+    candidates: List<RecipeEntity>,
+    selectedIds: Set<String>,
+    serverUrl: String,
+    onToggle: (String) -> Unit,
+    onSkip: () -> Unit,
+    onGenerate: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.weekplan_anchor_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(R.string.weekplan_anchor_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            candidates.forEach { recipe ->
+                val selected = recipe.id in selectedIds
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onToggle(recipe.id) }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = selected,
+                        onCheckedChange = { onToggle(recipe.id) },
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    val imageUrl = when {
+                        recipe.localImageUri.isNotBlank() -> recipe.localImageUri
+                        recipe.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
+                            "${serverUrl.trimEnd('/')}/images/${recipe.imagePath}"
+                        else -> null
+                    }
+                    if (imageUrl != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(imageUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = recipe.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = recipe.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                TextButton(onClick = {
+                    onSkip()
+                }) {
+                    Text(stringResource(R.string.weekplan_anchor_skip))
+                }
+                Button(
+                    onClick = onGenerate,
+                    enabled = selectedIds.isNotEmpty(),
+                ) {
+                    Text(stringResource(R.string.weekplan_anchor_generate))
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProposalSheet(
+    assignments: List<WeekplanAssignmentDto>,
+    onAccept: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.weekplan_proposal_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            assignments.forEach { assignment ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = assignment.date,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.width(90.dp),
+                    )
+                    Text(
+                        text = assignment.recipeName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.weekplan_proposal_discard))
+                }
+                Button(onClick = onAccept) {
+                    Text(stringResource(R.string.weekplan_proposal_accept))
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}

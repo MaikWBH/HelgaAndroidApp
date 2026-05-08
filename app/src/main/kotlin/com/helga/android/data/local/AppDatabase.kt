@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.dao.ShoppingDao
@@ -21,6 +22,7 @@ import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
+import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
@@ -38,7 +40,7 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 
 @Database(
-    version = 10,
+    version = 12,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -61,6 +63,7 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
         WeekplanTemplateEntity::class,
         WeekplanTemplateEntryEntity::class,
         RecipeHistoryEntity::class,
+        RecipeFeedbackEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -75,6 +78,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun weekplanConstraintsDao(): WeekplanConstraintsDao
     abstract fun weekplanTemplateDao(): WeekplanTemplateDao
     abstract fun recipeHistoryDao(): RecipeHistoryDao
+    abstract fun recipeFeedbackDao(): RecipeFeedbackDao
 
     companion object {
         const val NAME = "helga.db"
@@ -369,10 +373,38 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE weekplan_days ADD COLUMN isQuickDay INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE weekplan_days ADD COLUMN isGuestDay INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS recipe_feedback (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        recipeId TEXT NOT NULL,
+                        plannedDate TEXT NOT NULL DEFAULT '',
+                        liked INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_recipe_feedback_recipeId ON recipe_feedback(recipeId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_recipe_feedback_plannedDate ON recipe_feedback(plannedDate)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_recipe_feedback_updatedAt ON recipe_feedback(updatedAt)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                 .build()
     }
 }

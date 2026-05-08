@@ -62,6 +62,7 @@ class SettingsViewModel @Inject constructor(
             val defaultListId = preferences.defaultShoppingListId.first()
             val themeMode = preferences.themeMode.first()
             val accentColor = preferences.accentColor.first()
+            val checkMode = preferences.checkMode.first()
             _state.update {
                 it.copy(
                     serverUrl = conn.serverUrl,
@@ -71,6 +72,7 @@ class SettingsViewModel @Inject constructor(
                     defaultShoppingListId = defaultListId,
                     themeMode = themeMode,
                     accentColor = accentColor,
+                    checkMode = checkMode,
                     loaded = true,
                 )
             }
@@ -99,6 +101,11 @@ class SettingsViewModel @Inject constructor(
     fun setAccentColor(index: Int) {
         _state.update { it.copy(accentColor = index) }
         viewModelScope.launch { preferences.saveAccentColor(index) }
+    }
+
+    fun setCheckMode(mode: String) {
+        _state.update { it.copy(checkMode = mode) }
+        viewModelScope.launch { preferences.saveCheckMode(mode) }
     }
 
     fun testAndSave() {
@@ -238,6 +245,7 @@ data class SettingsState(
     val defaultShoppingListId: String = "",
     val themeMode: String = "system",
     val accentColor: Int = 0,
+    val checkMode: String = "keep",
     val loaded: Boolean = false,
     val validation: SettingsValidation = SettingsValidation.Idle,
 )

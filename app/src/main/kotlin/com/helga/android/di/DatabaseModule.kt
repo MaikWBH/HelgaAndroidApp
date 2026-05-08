@@ -7,6 +7,8 @@ import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.StoreDao
 import com.helga.android.data.local.dao.SyncDao
+import com.helga.android.data.local.dao.RecipeFeedbackDao
+import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
@@ -53,4 +55,10 @@ object DatabaseModule {
 
     @Provides
     fun provideWeekplanTemplateDao(db: AppDatabase): WeekplanTemplateDao = db.weekplanTemplateDao()
+
+    @Provides
+    fun provideRecipeHistoryDao(db: AppDatabase): RecipeHistoryDao = db.recipeHistoryDao()
+
+    @Provides
+    fun provideRecipeFeedbackDao(db: AppDatabase): RecipeFeedbackDao = db.recipeFeedbackDao()
 }

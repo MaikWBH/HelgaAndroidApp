@@ -197,6 +197,11 @@
     <string name="settings_default_list">Standard-Einkaufsliste</string>
     <string name="settings_default_list_none">Nicht gesetzt</string>
     <string name="settings_save_feature_settings">Einkaufs- und Wochenplan-Settings speichern</string>
+    <string name="settings_check_mode">Abhak-Modus</string>
+    <string name="settings_check_mode_keep">Behalten</string>
+    <string name="settings_check_mode_move">Verschieben</string>
+    <string name="shopping_checked_section">Abgehakt</string>
+    <string name="shopping_finish">Einkauf beenden</string>
     <string name="settings_shopping_lists_manage">Einkaufslisten verwalten</string>
     <string name="settings_delete_list_title">Einkaufsliste löschen?</string>
     <string name="settings_delete_list_text">Die Liste „%1$s“ wird entfernt und beim nächsten Sync gelöscht.</string>
@@ -226,6 +231,11 @@
     <string name="weekplan_proposal_discard">Verwerfen</string>
     <string name="weekplan_constraints_save">Constraints speichern</string>
     <string name="weekplan_no_recipes_error">Keine passenden Rezepte gefunden</string>
+    <string name="weekplan_generate">Plan generieren</string>
+    <string name="weekplan_anchor_title">Anker-Rezepte wählen</string>
+    <string name="weekplan_anchor_subtitle">Wähle bis zu 3 Rezepte als Fixpunkte</string>
+    <string name="weekplan_anchor_skip">Ohne Anker generieren</string>
+    <string name="weekplan_anchor_generate">Plan erstellen</string>
     <string name="weekplan_templates">Vorlagen</string>
     <string name="weekplan_template_save_section">Aktuelle Woche als Vorlage speichern</string>
     <string name="weekplan_template_name_hint">Vorlagenname…</string>

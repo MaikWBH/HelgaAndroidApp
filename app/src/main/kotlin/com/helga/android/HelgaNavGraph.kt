@@ -99,7 +99,6 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                                 navController.navigate(item.route) {
                                     popUpTo(ROUTE_SHOPPING) {
                                         saveState = true
-                                        inclusive = item.route == ROUTE_SHOPPING
                                     }
                                     launchSingleTop = true
                                     restoreState = true

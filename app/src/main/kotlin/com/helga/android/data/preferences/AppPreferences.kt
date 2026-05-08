@@ -49,6 +49,7 @@ class AppPreferences @Inject constructor(
     val defaultShoppingListId: Flow<String> = ds.data.map { it[KEY_DEFAULT_SHOPPING_LIST_ID].orEmpty() }
     val themeMode: Flow<String> = ds.data.map { it[KEY_THEME_MODE] ?: "system" }
     val accentColor: Flow<Int> = ds.data.map { it[KEY_ACCENT_COLOR] ?: 0 }
+    val checkMode: Flow<String> = ds.data.map { it[KEY_CHECK_MODE] ?: "keep" }
 
     suspend fun currentConnection(): HelgaConnection = connection.first()
     suspend fun currentLastSyncTs(): Long = lastSyncTs.first()
@@ -88,6 +89,10 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_ACCENT_COLOR] = index.coerceIn(0, 5) }
     }
 
+    suspend fun saveCheckMode(mode: String) {
+        ds.edit { it[KEY_CHECK_MODE] = mode }
+    }
+
     suspend fun clearConnection() {
         ds.edit {
             it.remove(KEY_SERVER_URL)
@@ -106,5 +111,6 @@ class AppPreferences @Inject constructor(
         val KEY_DEFAULT_SHOPPING_LIST_ID = stringPreferencesKey("default_shopping_list_id")
         val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
+        val KEY_CHECK_MODE = stringPreferencesKey("check_mode")
     }
 }

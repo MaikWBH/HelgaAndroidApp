@@ -263,10 +263,13 @@ private fun RecipeRow(
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
 ) {
-    val imageUrl = remember(recipe.imagePath, serverUrl) {
-        if (recipe.imagePath.isNotBlank() && serverUrl.isNotBlank())
-            "${serverUrl.trimEnd('/')}/api/images/${recipe.imagePath}"
-        else null
+    val imageUrl = remember(recipe.localImageUri, recipe.imagePath, serverUrl) {
+        when {
+            recipe.localImageUri.isNotBlank() -> recipe.localImageUri
+            recipe.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
+                "${serverUrl.trimEnd('/')}/api/images/${recipe.imagePath}"
+            else -> null
+        }
     }
 
     with(sharedTransitionScope) {

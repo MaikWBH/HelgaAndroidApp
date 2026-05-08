@@ -105,6 +105,9 @@ interface RecipeDao {
     @Query("SELECT * FROM recipes WHERE localImageUri != '' AND deleted = 0")
     suspend fun recipesWithLocalImage(): List<RecipeEntity>
 
+    @Query("SELECT * FROM recipes WHERE deleted = 0 AND id NOT IN (:excludeIds) ORDER BY RANDOM() LIMIT :limit")
+    suspend fun getRandomExcluding(excludeIds: List<String>, limit: Int): List<RecipeEntity>
+
     @Query("UPDATE recipes SET imagePath = :imagePath, localImageUri = '', updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
     suspend fun setImagePathAndClearLocal(id: String, imagePath: String, updatedAt: Long)
 

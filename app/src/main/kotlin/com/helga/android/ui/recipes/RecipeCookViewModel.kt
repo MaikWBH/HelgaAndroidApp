@@ -11,8 +11,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 data class RecipeCookUiState(
@@ -30,6 +32,8 @@ class RecipeCookViewModel @Inject constructor(
 
     private val recipeId: String = checkNotNull(savedStateHandle["recipeId"])
     private val _checkedIds = MutableStateFlow<Set<String>>(emptySet())
+    private val _completedSteps = MutableStateFlow<Set<Int>>(emptySet())
+    val completedSteps: StateFlow<Set<Int>> = _completedSteps.asStateFlow()
 
     val uiState: StateFlow<RecipeCookUiState> = combine(
         repository.observeById(recipeId),
@@ -49,5 +53,9 @@ class RecipeCookViewModel @Inject constructor(
         _checkedIds.value = _checkedIds.value.let {
             if (id in it) it - id else it + id
         }
+    }
+
+    fun toggleStep(index: Int) {
+        _completedSteps.update { if (index in it) it - index else it + index }
     }
 }

@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -143,7 +144,13 @@ fun RecipeDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(recipe?.name ?: "") },
+                title = {
+                    Text(
+                        text = recipe?.name ?: "",
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee(),
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -167,12 +174,6 @@ fun RecipeDetailScreen(
                                 Icon(Icons.Filled.MenuBook, contentDescription = stringResource(R.string.recipe_cook))
                             }
                         }
-                        IconButton(onClick = { onEdit(it.id) }) {
-                            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.recipe_edit))
-                        }
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
-                        }
                         Box {
                             IconButton(onClick = { showOverflow = true }) {
                                 Icon(Icons.Filled.MoreVert, contentDescription = null)
@@ -181,6 +182,23 @@ fun RecipeDetailScreen(
                                 expanded = showOverflow,
                                 onDismissRequest = { showOverflow = false },
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.recipe_edit)) },
+                                    leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                                    onClick = {
+                                        showOverflow = false
+                                        onEdit(it.id)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.recipe_delete)) },
+                                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                                    onClick = {
+                                        showOverflow = false
+                                        showDeleteDialog = true
+                                    },
+                                )
+                                HorizontalDivider()
                                 DropdownMenuItem(
                                     text = {
                                         val defaultList = shoppingLists.firstOrNull { it.isDefaultRecipe == 1 }
@@ -215,6 +233,10 @@ fun RecipeDetailScreen(
                                         },
                                     )
                                 }
+                                val alreadyClassified = recipe != null && listOf(
+                                    recipe.proteinType, recipe.effort, recipe.cuisine,
+                                    recipe.mealType, recipe.seasonFit,
+                                ).any { it.isNotBlank() }
                                 DropdownMenuItem(
                                     text = {
                                         if (uiState.isClassifying) {
@@ -228,7 +250,7 @@ fun RecipeDetailScreen(
                                         showOverflow = false
                                         viewModel.classify()
                                     },
-                                    enabled = !uiState.isClassifying,
+                                    enabled = !uiState.isClassifying && !alreadyClassified,
                                 )
                             }
                         }
@@ -323,9 +345,12 @@ private fun HeroImage(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    val imageUrl = if (recipe.imagePath.isNotBlank() && serverUrl.isNotBlank())
-        "${serverUrl.trimEnd('/')}/api/images/${recipe.imagePath}"
-    else null
+    val imageUrl = when {
+        recipe.localImageUri.isNotBlank() -> recipe.localImageUri
+        recipe.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
+            "${serverUrl.trimEnd('/')}/api/images/${recipe.imagePath}"
+        else -> null
+    }
 
     with(sharedTransitionScope) {
         Box(
@@ -415,13 +440,13 @@ private fun TagsSection(tags: List<TagEntity>) {
 @Composable
 private fun MetadataSection(recipe: RecipeEntity) {
     val items = buildList {
-        if (recipe.recipeYield.isNotBlank()) add(stringResource(R.string.recipe_detail_yield) to recipe.recipeYield)
-        if (recipe.totalTime.isNotBlank()) add(stringResource(R.string.recipe_detail_total_time) to recipe.totalTime)
-        if (recipe.prepTime.isNotBlank()) add(stringResource(R.string.recipe_detail_prep_time) to recipe.prepTime)
-        if (recipe.cookTime.isNotBlank()) add(stringResource(R.string.recipe_detail_cook_time) to recipe.cookTime)
-        if (recipe.cuisine.isNotBlank()) add(stringResource(R.string.recipe_detail_cuisine) to recipe.cuisine)
-        if (recipe.mealType.isNotBlank()) add(stringResource(R.string.recipe_detail_meal_type) to recipe.mealType)
-        if (recipe.effort.isNotBlank()) add(stringResource(R.string.recipe_detail_effort) to recipe.effort)
+        if (recipe.recipeYield.isNotBlank()) add("🍽️" to recipe.recipeYield)
+        if (recipe.totalTime.isNotBlank()) add("⏱️" to recipe.totalTime)
+        if (recipe.prepTime.isNotBlank()) add("🔪" to recipe.prepTime)
+        if (recipe.cookTime.isNotBlank()) add("🔥" to recipe.cookTime)
+        if (recipe.cuisine.isNotBlank()) add("🌍" to recipe.cuisine)
+        if (recipe.mealType.isNotBlank()) add("🍳" to recipe.mealType)
+        if (recipe.effort.isNotBlank()) add("💪" to recipe.effort)
     }
     if (items.isEmpty()) return
 
@@ -432,10 +457,10 @@ private fun MetadataSection(recipe: RecipeEntity) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        items.forEach { (label, value) ->
+        items.forEach { (emoji, value) ->
             SuggestionChip(
                 onClick = {},
-                label = { Text("$label: $value", style = MaterialTheme.typography.bodySmall) },
+                label = { Text("$emoji $value", style = MaterialTheme.typography.bodySmall) },
             )
         }
     }
@@ -503,13 +528,30 @@ private fun ServingsStepper(servings: Int, onDecrease: () -> Unit, onIncrease: (
 
 @Composable
 private fun IngredientRow(ingredient: IngredientEntity, scaleFactor: Float = 1f) {
-    Text(
-        text = ingredient.displayText(scaleFactor),
-        style = MaterialTheme.typography.bodyMedium,
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
-    )
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val quantityText = ingredient.quantityText(scaleFactor)
+        if (quantityText.isNotBlank()) {
+            Text(
+                text = quantityText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.widthIn(min = 64.dp),
+            )
+        }
+        Text(
+            text = buildString {
+                append(ingredient.food)
+                if (ingredient.note.isNotBlank()) append(" (${ingredient.note})")
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+    }
 }
 
 @Composable
@@ -546,6 +588,17 @@ private fun IngredientEntity.displayText(scaleFactor: Float = 1f): String = buil
     }
     append(food)
     if (note.isNotBlank()) append(" ($note)")
+}
+
+private fun IngredientEntity.quantityText(scaleFactor: Float = 1f): String = buildString {
+    if (quantity > 0.0) {
+        val scaled = quantity * scaleFactor
+        val q = if (scaled % 1.0 < 0.01) "${scaled.toInt()}"
+                else String.format(java.util.Locale.getDefault(), "%.1f", scaled)
+                    .trimEnd('0').trimEnd(',').trimEnd('.')
+        append(q)
+        if (unit.isNotBlank()) append(" $unit")
+    }
 }
 
 @Composable

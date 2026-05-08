@@ -7,19 +7,18 @@ import androidx.room.PrimaryKey
 
 @Immutable
 @Entity(
-    tableName = "weekplan_days",
+    tableName = "recipe_feedback",
     indices = [
-        Index(value = ["planDate"]),
+        Index(value = ["recipeId"]),
+        Index(value = ["plannedDate"]),
         Index(value = ["updatedAt"]),
-        Index(value = ["deleted"]),
     ],
 )
-data class WeekplanDayEntity(
+data class RecipeFeedbackEntity(
     @PrimaryKey val id: String,
-    val planDate: String = "",
-    val note: String = "",
-    val isQuickDay: Int = 0,
-    val isGuestDay: Int = 0,
+    val recipeId: String,
+    val plannedDate: String = "",
+    val liked: Int = 0,
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

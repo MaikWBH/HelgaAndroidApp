@@ -54,6 +54,7 @@ class ShoppingRepository @Inject constructor(
         quantity: Double = 1.0,
         unit: String = "",
         aisle: String = "",
+        source: String = "manual",
     ): String {
         val id = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
@@ -65,6 +66,7 @@ class ShoppingRepository @Inject constructor(
                 quantity = quantity,
                 unit = unit,
                 aisle = aisle,
+                source = source,
                 updatedAt = now,
                 dirty = 1,
             )

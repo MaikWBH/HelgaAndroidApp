@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.helga.android.data.local.entity.RecipeHistoryEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RecipeHistoryDao {
@@ -17,4 +18,10 @@ interface RecipeHistoryDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(entries: List<RecipeHistoryEntity>)
+
+    @Query("SELECT * FROM recipe_history WHERE deleted = 0 AND plannedDate >= :since")
+    fun observeSince(since: String): Flow<List<RecipeHistoryEntity>>
+
+    @Query("SELECT DISTINCT recipeId FROM recipe_history WHERE deleted = 0 AND plannedDate >= :since")
+    suspend fun getRecentRecipeIds(since: String): List<String>
 }

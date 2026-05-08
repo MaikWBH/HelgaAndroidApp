@@ -91,6 +91,7 @@ fun ShoppingListScreen(
     val storeAisles by viewModel.storeAisles.collectAsStateWithLifecycle()
     val aisleSortMap by viewModel.aisleSortMap.collectAsStateWithLifecycle()
     val staples by viewModel.staples.collectAsStateWithLifecycle()
+    val checkMode by viewModel.checkMode.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
     var showListDropdown by remember { mutableStateOf(false) }
@@ -131,6 +132,7 @@ fun ShoppingListScreen(
             },
             onAddStaple = viewModel::addStaple,
             onDeleteStaple = viewModel::deleteStaple,
+            onSuggest = viewModel::suggestItems,
         )
     }
 
@@ -185,6 +187,12 @@ fun ShoppingListScreen(
                     }
                 },
                 actions = {
+                    val hasChecked = itemsByAisle.values.any { items -> items.any { it.isChecked == 1 } }
+                    if (checkMode == "move" && hasChecked) {
+                        IconButton(onClick = { viewModel.deleteCheckedItems() }) {
+                            Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.shopping_finish))
+                        }
+                    }
                     Box {
                         IconButton(onClick = { showOverflow = true }) {
                             Icon(Icons.Filled.MoreVert, contentDescription = null)
@@ -193,15 +201,17 @@ fun ShoppingListScreen(
                             expanded = showOverflow,
                             onDismissRequest = { showOverflow = false },
                         ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.shopping_delete_checked)) },
-                                leadingIcon = { Icon(Icons.Filled.Delete, null) },
-                                onClick = {
-                                    showOverflow = false
-                                    viewModel.deleteCheckedItems()
-                                },
-                                enabled = itemsByAisle.values.any { items -> items.any { it.isChecked == 1 } },
-                            )
+                            if (checkMode == "keep") {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.shopping_delete_checked)) },
+                                    leadingIcon = { Icon(Icons.Filled.Delete, null) },
+                                    onClick = {
+                                        showOverflow = false
+                                        viewModel.deleteCheckedItems()
+                                    },
+                                    enabled = hasChecked,
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.shopping_staples)) },
                                 onClick = {
@@ -209,6 +219,17 @@ fun ShoppingListScreen(
                                     showStaplesSheet = true
                                 },
                             )
+                            if (staples.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.shopping_staples_add_all)) },
+                                    leadingIcon = { Icon(Icons.Filled.Add, null) },
+                                    onClick = {
+                                        showOverflow = false
+                                        viewModel.addStaplesToList()
+                                    },
+                                    enabled = activeListId != null,
+                                )
+                            }
                         }
                     }
                 },
@@ -228,31 +249,84 @@ fun ShoppingListScreen(
                     )
                     itemsByAisle.isEmpty() -> EmptyItemsState(modifier = Modifier.fillMaxSize())
                     else -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 8.dp),
-                        ) {
-                            val sortedAisles = itemsByAisle.keys.sortedWith(
+                        val allItems = remember(itemsByAisle) { itemsByAisle.values.flatten() }
+                        val sortedAisles = remember(itemsByAisle, aisleSortMap) {
+                            itemsByAisle.keys.sortedWith(
                                 compareBy {
                                     aisleSortMap[it] ?: if (it.isBlank()) Int.MAX_VALUE else Int.MAX_VALUE - 1
                                 }
                             )
-                            sortedAisles.forEach { aisle ->
-                                val items = itemsByAisle[aisle] ?: return@forEach
-                                if (aisle.isNotBlank()) {
-                                    item(key = "header_$aisle") {
-                                        AisleHeader(aisle = aisle)
+                        }
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 8.dp),
+                        ) {
+
+                            if (checkMode == "move") {
+                                // Offene Items nach Gang
+                                sortedAisles.forEach { aisle ->
+                                    val unchecked = (itemsByAisle[aisle] ?: emptyList()).filter { it.isChecked == 0 }
+                                    if (unchecked.isEmpty()) return@forEach
+                                    if (aisle.isNotBlank()) {
+                                        item(key = "header_$aisle") {
+                                            AisleHeader(aisle = aisle)
+                                        }
+                                    }
+                                    items(unchecked, key = { it.id }) { item ->
+                                        SwipeableShoppingItem(
+                                            item = item,
+                                            showAisleButton = item.aisle.isBlank() && storeAisles.isNotEmpty(),
+                                            onToggle = { viewModel.toggleChecked(item) },
+                                            onDelete = { viewModel.deleteItem(item) },
+                                            onAssignAisle = { aislePickerItem = item },
+                                            onEdit = { editItem = item },
+                                        )
                                     }
                                 }
-                                items(items, key = { it.id }) { item ->
-                                    SwipeableShoppingItem(
-                                        item = item,
-                                        showAisleButton = item.aisle.isBlank() && storeAisles.isNotEmpty(),
-                                        onToggle = { viewModel.toggleChecked(item) },
-                                        onDelete = { viewModel.deleteItem(item) },
-                                        onAssignAisle = { aislePickerItem = item },
-                                        onEdit = { editItem = item },
-                                    )
+                                // Abgehakt-Sektion
+                                val checkedItems = allItems.filter { it.isChecked == 1 }
+                                if (checkedItems.isNotEmpty()) {
+                                    item(key = "checked_header") {
+                                        Column {
+                                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                                            Text(
+                                                text = stringResource(R.string.shopping_checked_section),
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                            )
+                                        }
+                                    }
+                                    items(checkedItems, key = { "checked_${it.id}" }) { item ->
+                                        SwipeableShoppingItem(
+                                            item = item,
+                                            showAisleButton = false,
+                                            onToggle = { viewModel.toggleChecked(item) },
+                                            onDelete = { viewModel.deleteItem(item) },
+                                            onAssignAisle = { aislePickerItem = item },
+                                            onEdit = { editItem = item },
+                                        )
+                                    }
+                                }
+                            } else {
+                                // Standard KEEP-Modus
+                                sortedAisles.forEach { aisle ->
+                                    val items = itemsByAisle[aisle] ?: return@forEach
+                                    if (aisle.isNotBlank()) {
+                                        item(key = "header_$aisle") {
+                                            AisleHeader(aisle = aisle)
+                                        }
+                                    }
+                                    items(items, key = { it.id }) { item ->
+                                        SwipeableShoppingItem(
+                                            item = item,
+                                            showAisleButton = item.aisle.isBlank() && storeAisles.isNotEmpty(),
+                                            onToggle = { viewModel.toggleChecked(item) },
+                                            onDelete = { viewModel.deleteItem(item) },
+                                            onAssignAisle = { aislePickerItem = item },
+                                            onEdit = { editItem = item },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -365,15 +439,40 @@ private fun ShoppingItemRow(
                 .weight(1f)
                 .clickable(onClick = onEdit)
         ) {
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.bodyLarge,
-                textDecoration = if (item.isChecked == 1) TextDecoration.LineThrough else null,
-                color = if (item.isChecked == 1)
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                else
-                    MaterialTheme.colorScheme.onSurface,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textDecoration = if (item.isChecked == 1) TextDecoration.LineThrough else null,
+                    color = if (item.isChecked == 1)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    else
+                        MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (item.source != "manual") {
+                    val label = when {
+                        item.source == "staple" -> "Vorrat"
+                        item.source == "recipe" -> "Rezept"
+                        item.source == "weekplan" -> "Wochenplan"
+                        else -> item.source
+                    }
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier
+                            .background(
+                                MaterialTheme.colorScheme.secondaryContainer,
+                                RoundedCornerShape(4.dp),
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
             if (item.quantity != 1.0 || item.unit.isNotBlank()) {
                 val qDisplay = if (item.quantity % 1.0 == 0.0)
                     item.quantity.toInt().toString()
@@ -504,9 +603,20 @@ private fun StaplesSheet(
     onAddAll: () -> Unit,
     onAddStaple: (String) -> Unit,
     onDeleteStaple: (ShoppingListStapleEntity) -> Unit,
+    onSuggest: suspend (String) -> List<String>,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var newName by remember { mutableStateOf("") }
+    var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    LaunchedEffect(newName) {
+        if (newName.length >= 2) {
+            delay(300)
+            suggestions = onSuggest(newName)
+        } else {
+            suggestions = emptyList()
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -528,6 +638,23 @@ private fun StaplesSheet(
                 }
             }
             HorizontalDivider()
+            if (suggestions.isNotEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(suggestions) { suggestion ->
+                        SuggestionChip(
+                            onClick = {
+                                onAddStaple(suggestion)
+                                newName = ""
+                                suggestions = emptyList()
+                            },
+                            label = { Text(suggestion) },
+                        )
+                    }
+                }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -600,20 +727,13 @@ private fun EmojiQuickButton(emoji: QuickEmojiEntity, onClick: () -> Unit) {
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.widthIn(min = 56.dp),
+        modifier = Modifier.widthIn(min = 48.dp),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
         ) {
             Text(text = emoji.emoji, fontSize = 24.sp)
-            Text(
-                text = emoji.food,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }

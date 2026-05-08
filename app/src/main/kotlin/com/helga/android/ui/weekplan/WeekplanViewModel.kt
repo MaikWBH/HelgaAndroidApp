@@ -3,6 +3,7 @@ package com.helga.android.ui.weekplan
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
@@ -12,6 +13,7 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.WeekplanConstraintsDao
@@ -36,6 +38,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -62,6 +65,7 @@ class WeekplanViewModel @Inject constructor(
     private val templateRepository: WeekplanTemplateRepository,
     private val recipeDao: RecipeDao,
     private val recipeHistoryDao: RecipeHistoryDao,
+    private val recipeFeedbackDao: RecipeFeedbackDao,
     private val shoppingDao: ShoppingDao,
     private val weekplanDao: WeekplanDao,
     private val weekplanSettingsDao: WeekplanSettingsDao,
@@ -74,6 +78,15 @@ class WeekplanViewModel @Inject constructor(
     private val _selectedDayId = MutableStateFlow<String?>(null)
     private val _weekOffset = MutableStateFlow(0)
     val weekOffset: StateFlow<Int> = _weekOffset.asStateFlow()
+
+    private val _anchorCandidates = MutableStateFlow<List<RecipeEntity>>(emptyList())
+    val anchorCandidates: StateFlow<List<RecipeEntity>> = _anchorCandidates.asStateFlow()
+
+    private val _selectedAnchors = MutableStateFlow<Set<String>>(emptySet())
+    val selectedAnchors: StateFlow<Set<String>> = _selectedAnchors.asStateFlow()
+
+    private val _showAnchorPicker = MutableStateFlow(false)
+    val showAnchorPicker: StateFlow<Boolean> = _showAnchorPicker.asStateFlow()
 
     private fun mondayForOffset(offset: Int): LocalDate =
         LocalDate.now().with(DayOfWeek.MONDAY).plusWeeks(offset.toLong())
@@ -124,8 +137,9 @@ class WeekplanViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    val allRecipes: StateFlow<List<RecipeEntity>> = recipeDao.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val allRecipes: StateFlow<Map<String, RecipeEntity>> = recipeDao.observeAll()
+        .map { list -> list.associateBy { it.id } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val serverUrl: StateFlow<String> = preferences.connection
         .map { it.serverUrl }
@@ -145,6 +159,15 @@ class WeekplanViewModel @Inject constructor(
 
     val templates: StateFlow<List<WeekplanTemplateEntity>> = templateRepository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val feedbackForSelectedDay: StateFlow<Map<String, Int>> = _selectedDayId
+        .flatMapLatest { dayId ->
+            val planDate = days.value.find { it.id == dayId }?.planDate
+            if (planDate == null) flowOf(emptyMap())
+            else recipeFeedbackDao.observeForDate(planDate)
+                .map { list -> list.associate { it.recipeId to it.liked } }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     fun selectDay(id: String) {
         _selectedDayId.value = id
@@ -200,6 +223,51 @@ class WeekplanViewModel @Inject constructor(
     fun updateNote(dayId: String, note: String) {
         viewModelScope.launch {
             repository.updateNote(dayId, note)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun toggleQuickDay(day: WeekplanDayEntity) {
+        viewModelScope.launch {
+            val updated = day.copy(
+                isQuickDay = if (day.isQuickDay == 0) 1 else 0,
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
+            weekplanDao.upsertDay(updated)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun toggleGuestDay(day: WeekplanDayEntity) {
+        viewModelScope.launch {
+            val updated = day.copy(
+                isGuestDay = if (day.isGuestDay == 0) 1 else 0,
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
+            weekplanDao.upsertDay(updated)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun setFeedback(recipeId: String, planDate: String, liked: Int) {
+        viewModelScope.launch {
+            val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, planDate)
+            val newLiked = if (existing?.liked == liked) 0 else liked
+            val entity = existing?.copy(
+                liked = newLiked,
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            ) ?: RecipeFeedbackEntity(
+                id = java.util.UUID.randomUUID().toString(),
+                recipeId = recipeId,
+                plannedDate = planDate,
+                liked = newLiked,
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
+            recipeFeedbackDao.upsert(entity)
             syncScheduler.triggerOneShot()
         }
     }
@@ -365,5 +433,78 @@ class WeekplanViewModel @Inject constructor(
 
     fun deleteTemplate(templateId: String) {
         viewModelScope.launch { templateRepository.delete(templateId) }
+    }
+
+    fun openAnchorPicker() {
+        viewModelScope.launch {
+            val since = LocalDate.now().minusWeeks(4).format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val recentIds = recipeHistoryDao.getRecentRecipeIds(since)
+            _anchorCandidates.value = recipeDao.getRandomExcluding(recentIds, 8)
+            _selectedAnchors.value = emptySet()
+            _showAnchorPicker.value = true
+        }
+    }
+
+    fun toggleAnchor(recipeId: String) {
+        _selectedAnchors.update {
+            if (recipeId in it) it - recipeId
+            else if (it.size < 3) it + recipeId
+            else it
+        }
+    }
+
+    fun dismissAnchorPicker() {
+        _showAnchorPicker.value = false
+    }
+
+    fun generateWithAnchors(startDate: String) {
+        val anchors = _selectedAnchors.value.toList()
+        _showAnchorPicker.value = false
+        val c = constraints.value
+        _generateStatus.value = WeekplanGenerateStatus.Loading
+        viewModelScope.launch {
+            try {
+                val dayCount = preferences.weekplanDays.first()
+                val api = apiFactory.api()
+                val response = api.generateWeekplan(
+                    WeekplanGenerateRequest(
+                        startDate = startDate,
+                        planDays = dayCount,
+                        maxMeatPerWeek = c.maxMeatPerWeek,
+                        minVegetarianPerWeek = c.minVegetarianPerWeek,
+                        maxRepeatDays = c.maxRepeatDays,
+                        anchorIds = anchors,
+                    )
+                )
+                if (response.assignments.isEmpty()) {
+                    _generateStatus.value = WeekplanGenerateStatus.Error("Keine passenden Rezepte gefunden")
+                } else {
+                    _generateStatus.value = WeekplanGenerateStatus.Proposal(response.assignments)
+                }
+            } catch (e: Exception) {
+                _generateStatus.value = WeekplanGenerateStatus.Error(e.message ?: "Fehler bei der Generierung")
+            }
+        }
+    }
+
+    private suspend fun recordHistory(recipeId: String, planDate: String) {
+        val entry = RecipeHistoryEntity(
+            id = UUID.randomUUID().toString(),
+            recipeId = recipeId,
+            plannedDate = planDate,
+            updatedAt = System.currentTimeMillis(),
+            deleted = 0,
+            dirty = 1,
+        )
+        recipeHistoryDao.upsertAll(listOf(entry))
+    }
+
+    suspend fun suggestItems(query: String): List<String> {
+        if (query.length < 2) return emptyList()
+        return try {
+            apiFactory.api().suggestItems(query).suggestions
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 }

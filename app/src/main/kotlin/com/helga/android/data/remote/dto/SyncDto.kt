@@ -157,6 +157,8 @@ data class WeekplanDayDto(
     val deleted: Int = 0,
     @Json(name = "plan_date") val planDate: String = "",
     val note: String = "",
+    @Json(name = "is_quick_day") val isQuickDay: Int = 0,
+    @Json(name = "is_guest_day") val isGuestDay: Int = 0,
 )
 
 @JsonClass(generateAdapter = true)
@@ -208,6 +210,16 @@ data class RecipeHistoryDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class RecipeFeedbackDto(
+    val id: String,
+    @Json(name = "recipe_id") val recipeId: String,
+    @Json(name = "planned_date") val plannedDate: String = "",
+    val liked: Int = 0,
+    @Json(name = "updated_at") val updatedAt: Long = 0,
+    val deleted: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
@@ -231,6 +243,7 @@ data class SyncPullResponse(
     @Json(name = "weekplan_settings") val weekplanSettings: List<WeekplanSettingsDto> = emptyList(),
     @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
     @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
+    @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -254,6 +267,7 @@ data class SyncPushRequest(
     @Json(name = "weekplan_settings") val weekplanSettings: List<WeekplanSettingsDto> = emptyList(),
     @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
     @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
+    @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -322,6 +336,7 @@ data class WeekplanGenerateRequest(
     @Json(name = "max_meat_per_week") val maxMeatPerWeek: Int = 3,
     @Json(name = "min_vegetarian_per_week") val minVegetarianPerWeek: Int = 2,
     @Json(name = "max_repeat_days") val maxRepeatDays: Int = 14,
+    @Json(name = "anchor_ids") val anchorIds: List<String> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

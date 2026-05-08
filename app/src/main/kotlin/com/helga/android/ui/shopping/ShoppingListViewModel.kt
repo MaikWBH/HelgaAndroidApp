@@ -84,6 +84,9 @@ class ShoppingListViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val checkMode: StateFlow<String> = preferences.checkMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "keep")
+
     fun selectList(id: String) {
         _activeListId.value = id
     }
@@ -154,6 +157,7 @@ class ShoppingListViewModel @Inject constructor(
                     name = staple.name,
                     quantity = staple.quantity,
                     aisle = aisle,
+                    source = "staple",
                 )
             }
             syncScheduler.triggerOneShot()

@@ -13,6 +13,8 @@ Abgeleitet aus `doku/todo.md`. Alle Punkte sind priorisiert nach Sichtbarkeit/Im
 | 3 | Rezeptliste: Plus-Button in der Liste | klein | hoch |
 | 4 | Rezeptdetail: Rezeptname abgehackt | klein | hoch |
 | 5 | Rezeptdetail: Arbeitsschritte ab 1 | trivial | hoch |
+| 5.1 | Rezeptdetail: Zutaten Ansicht könnte optisch ansprechender sein (etwas mehr mittig und als Tabelle gegliedert) | trivial | mittel |
+| 5.2 | Rezeptdetail: Die Metadaten eine Rezeptes sollten in der Rezept ansicht vlt als Emojie dargestellt werden um Platz zu sparen | trivial | mittel |
 | 6 | Rezeptdetail: Alle Schritte sichtbar + abhaken | mittel | hoch |
 | 7 | Rezept-Tags: Filtermenü statt permanente Anzeige | mittel | mittel |
 | 8 | KI-Klassifizierung deaktivieren wenn vorhanden | klein | mittel |
