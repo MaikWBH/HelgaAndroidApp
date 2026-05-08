@@ -29,6 +29,13 @@ sealed interface AiGenerateStatus {
 
 data class AiGenerateState(
     val prompt: String = "",
+    val dietType: String = "Egal",
+    val cookTime: String = "Egal",
+    val effort: String = "Egal",
+    val cuisine: String = "Egal",
+    val special: String = "",
+    val feedbackVisible: Boolean = false,
+    val feedback: String = "",
     val status: AiGenerateStatus = AiGenerateStatus.Idle,
     val isSaving: Boolean = false,
 )
@@ -47,27 +54,56 @@ class AiGenerateViewModel @Inject constructor(
     private val generateAdapter by lazy { moshi.adapter(AiGenerateRequest::class.java) }
 
     fun setPrompt(p: String) = _state.update { it.copy(prompt = p, status = AiGenerateStatus.Idle) }
+    fun setDietType(v: String) = _state.update { it.copy(dietType = v) }
+    fun setCookTime(v: String) = _state.update { it.copy(cookTime = v) }
+    fun setEffort(v: String) = _state.update { it.copy(effort = v) }
+    fun setCuisine(v: String) = _state.update { it.copy(cuisine = v) }
+    fun setSpecial(v: String) = _state.update { it.copy(special = v) }
+    fun showFeedback() = _state.update { it.copy(feedbackVisible = true, feedback = "") }
+    fun hideFeedback() = _state.update { it.copy(feedbackVisible = false) }
+    fun setFeedback(v: String) = _state.update { it.copy(feedback = v) }
 
     fun discardPreview() {
-        _state.update { it.copy(status = AiGenerateStatus.Idle, isSaving = false) }
+        _state.update { it.copy(status = AiGenerateStatus.Idle, feedbackVisible = false, isSaving = false) }
     }
 
     fun generate() {
-        val prompt = _state.value.prompt.trim()
+        val s = _state.value
+        val prompt = s.prompt.trim()
         if (prompt.isBlank()) return
-        _state.update { it.copy(status = AiGenerateStatus.Generating) }
+        val customInstructions = buildCustomInstructions(s)
+        _state.update { it.copy(status = AiGenerateStatus.Generating, feedbackVisible = false) }
         viewModelScope.launch {
             try {
-                val bodyJson = generateAdapter.toJson(AiGenerateRequest(prompt = prompt))
+                val bodyJson = generateAdapter.toJson(
+                    AiGenerateRequest(
+                        prompt = prompt,
+                        customInstructions = customInstructions,
+                    )
+                )
                 val html = sseClient.collect("api/ai/generate", bodyJson)
                 val parsed = RecipeJsonLdParser.parse(html)
                     ?: throw Exception("Rezept konnte nicht aus der KI-Antwort extrahiert werden")
-                _state.update { it.copy(status = AiGenerateStatus.Preview(parsed)) }
+                _state.update { it.copy(status = AiGenerateStatus.Preview(parsed), feedback = "") }
             } catch (e: Exception) {
                 _state.update { it.copy(status = AiGenerateStatus.Error(e.message ?: "Unbekannter Fehler")) }
             }
         }
     }
+
+    fun regenerate() {
+        _state.update { it.copy(feedbackVisible = false) }
+        generate()
+    }
+
+    private fun buildCustomInstructions(s: AiGenerateState): String = buildString {
+        if (s.dietType != "Egal") appendLine("Ernährungsweise: ${s.dietType}")
+        if (s.cookTime != "Egal") appendLine("Kochzeit: ${s.cookTime}")
+        if (s.effort != "Egal") appendLine("Schwierigkeitsgrad: ${s.effort}")
+        if (s.cuisine != "Egal") appendLine("Küche/Stil: ${s.cuisine}")
+        if (s.special.isNotBlank()) appendLine("Besonderes: ${s.special}")
+        if (s.feedback.isNotBlank()) appendLine("Feedback zum vorherigen Rezept: ${s.feedback}")
+    }.trim()
 
     fun save(recipe: ParsedAiRecipe, onSaved: (id: String) -> Unit) {
         _state.update { it.copy(isSaving = true) }

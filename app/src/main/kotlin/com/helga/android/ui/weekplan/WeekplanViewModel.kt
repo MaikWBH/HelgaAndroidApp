@@ -3,6 +3,7 @@ package com.helga.android.ui.weekplan
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
@@ -11,6 +12,7 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
@@ -59,6 +61,7 @@ class WeekplanViewModel @Inject constructor(
     private val repository: WeekplanRepository,
     private val templateRepository: WeekplanTemplateRepository,
     private val recipeDao: RecipeDao,
+    private val recipeHistoryDao: RecipeHistoryDao,
     private val shoppingDao: ShoppingDao,
     private val weekplanDao: WeekplanDao,
     private val weekplanSettingsDao: WeekplanSettingsDao,
@@ -204,6 +207,8 @@ class WeekplanViewModel @Inject constructor(
     fun addRecipe(dayId: String, recipeId: String) {
         viewModelScope.launch {
             repository.addRecipe(dayId, recipeId)
+            val planDate = days.value.find { it.id == dayId }?.planDate
+            if (planDate != null) recordHistory(recipeId, planDate)
             syncScheduler.triggerOneShot()
         }
     }

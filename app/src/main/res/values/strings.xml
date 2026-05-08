@@ -126,12 +126,24 @@
 
     <!-- KI-Erstellung -->
     <string name="ai_generate_title">KI Rezept erstellen</string>
-    <string name="ai_generate_prompt_label">Was soll die KI kochen?</string>
-    <string name="ai_generate_prompt_hint">z.B. „Veganes Curry mit Kichererbsen und Kokosmilch"</string>
-    <string name="ai_generate_button">Rezept generieren</string>
+    <string name="ai_generate_prompt_label">Was soll gekocht werden?</string>
+    <string name="ai_generate_prompt_hint">z.B. „Curry mit Kichererbsen und Kokosmilch"</string>
+    <string name="ai_generate_button">Rezept erstellen</string>
     <string name="ai_generating">KI arbeitet…</string>
-    <string name="ai_generate_save">Rezept speichern</string>
+    <string name="ai_generate_save">Zur Bibliothek hinzufügen</string>
     <string name="ai_generate_new_prompt">Neuen Prompt eingeben</string>
+    <string name="ai_generate_constraints_title">Rahmenbedingungen</string>
+    <string name="ai_question_diet">Ernährungsweise</string>
+    <string name="ai_question_cooktime">Kochzeit</string>
+    <string name="ai_question_effort">Schwierigkeit</string>
+    <string name="ai_question_cuisine">Küche / Stil</string>
+    <string name="ai_question_special">Besonderes (optional)</string>
+    <string name="ai_question_special_hint">z.B. Low Carb, günstig, saisonal…</string>
+    <string name="ai_option_any">Egal</string>
+    <string name="ai_new_recipe">Anderes Rezept</string>
+    <string name="ai_feedback_title">Was soll anders sein?</string>
+    <string name="ai_feedback_hint">Optional — leer lassen für ein komplett anderes Rezept</string>
+    <string name="ai_regenerate">Neu generieren</string>
 
     <!-- KI-Remix -->
     <string name="ai_remix_title">Rezept remixen</string>

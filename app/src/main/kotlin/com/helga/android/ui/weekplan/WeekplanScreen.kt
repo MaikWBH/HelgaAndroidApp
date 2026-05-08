@@ -23,27 +23,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -79,8 +70,6 @@ import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntity
-import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -103,15 +92,11 @@ fun WeekplanScreen(
     val selectedDayId by viewModel.selectedDayId.collectAsStateWithLifecycle()
     val daySummaries by viewModel.daySummaries.collectAsStateWithLifecycle()
     val constraints by viewModel.constraints.collectAsStateWithLifecycle()
-    val generateStatus by viewModel.generateStatus.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
     val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
-    val templates by viewModel.templates.collectAsStateWithLifecycle()
-
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
-    var templatesSheetVisible by remember { mutableStateOf(false) }
 
     val recipeById: (String) -> RecipeEntity? = { id -> allRecipes.find { it.id == id } }
 
@@ -146,78 +131,15 @@ fun WeekplanScreen(
         )
     }
 
-    if (templatesSheetVisible) {
-        TemplatesSheet(
-            templates = templates,
-            onSave = { name ->
-                viewModel.saveCurrentWeekAsTemplate(name)
-                templatesSheetVisible = false
-            },
-            onApply = { templateId ->
-                viewModel.applyTemplate(templateId)
-                templatesSheetVisible = false
-            },
-            onDelete = viewModel::deleteTemplate,
-            onDismiss = { templatesSheetVisible = false },
-        )
-    }
-
-    when (val status = generateStatus) {
-        is WeekplanGenerateStatus.Loading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
-            }
-        }
-        is WeekplanGenerateStatus.Proposal -> {
-            ProposalSheet(
-                assignments = status.assignments,
-                recipeNameById = { id -> allRecipes.find { it.id == id }?.name ?: id },
-                onAccept = { viewModel.applyProposal(status.assignments) },
-                onDiscard = { viewModel.discardProposal() },
-            )
-        }
-        is WeekplanGenerateStatus.Error -> {
-            AlertDialog(
-                onDismissRequest = { viewModel.discardProposal() },
-                title = { Text(stringResource(R.string.weekplan_ai_generate)) },
-                text = { Text(status.message) },
-                confirmButton = {
-                    TextButton(onClick = { viewModel.discardProposal() }) {
-                        Text(stringResource(R.string.recipe_delete_confirm_cancel))
-                    }
-                },
-            )
-        }
-        else -> Unit
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.weekplan_title)) },
                 actions = {
-                    IconButton(onClick = { templatesSheetVisible = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.Bookmark,
-                            contentDescription = stringResource(R.string.weekplan_templates),
-                        )
-                    }
                     IconButton(onClick = { constraintsEditorVisible = true }) {
                         Icon(
                             imageVector = Icons.Filled.Tune,
                             contentDescription = stringResource(R.string.weekplan_constraints_title),
-                        )
-                    }
-                    IconButton(
-                        onClick = { viewModel.generateWeekplan(startDate) },
-                        enabled = generateStatus !is WeekplanGenerateStatus.Loading,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.AutoAwesome,
-                            contentDescription = stringResource(R.string.weekplan_ai_generate),
                         )
                     }
                     IconButton(onClick = { exportPicker = "all" }) {
@@ -484,7 +406,7 @@ private fun RecipeItemRow(
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(80.dp)
                 .clip(RoundedCornerShape(8.dp)),
         ) {
             if (imageUrl != null) {
@@ -663,148 +585,4 @@ private fun ConstraintsEditorSheet(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ProposalSheet(
-    assignments: List<WeekplanAssignmentDto>,
-    recipeNameById: (String) -> String,
-    onAccept: () -> Unit,
-    onDiscard: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
-        onDismissRequest = onDiscard,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.weekplan_proposal_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = false),
-                contentPadding = PaddingValues(vertical = 8.dp),
-            ) {
-                items(assignments, key = { it.date }) { assignment ->
-                    ListItem(
-                        headlineContent = {
-                            val name = assignment.recipeName.ifBlank { recipeNameById(assignment.recipeId) }
-                            Text(name)
-                        },
-                        supportingContent = { Text(assignment.date) },
-                    )
-                    HorizontalDivider()
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = onDiscard,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(R.string.weekplan_proposal_discard))
-                }
-                Button(
-                    onClick = onAccept,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(R.string.weekplan_proposal_accept))
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TemplatesSheet(
-    templates: List<WeekplanTemplateEntity>,
-    onSave: (name: String) -> Unit,
-    onApply: (templateId: String) -> Unit,
-    onDelete: (templateId: String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var templateName by remember { mutableStateOf("") }
-
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(
-                text = stringResource(R.string.weekplan_templates),
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Spacer(Modifier.height(16.dp))
-
-            // Aktuelle Woche als Vorlage speichern
-            Text(
-                text = stringResource(R.string.weekplan_template_save_section),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = templateName,
-                    onValueChange = { templateName = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text(stringResource(R.string.weekplan_template_name_hint)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = {
-                        if (templateName.isNotBlank()) onSave(templateName)
-                    }),
-                )
-                IconButton(
-                    onClick = { if (templateName.isNotBlank()) onSave(templateName) },
-                    enabled = templateName.isNotBlank(),
-                ) {
-                    Icon(Icons.Filled.BookmarkAdd, contentDescription = stringResource(R.string.weekplan_template_save))
-                }
-            }
-
-            if (templates.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.weekplan_template_load_section),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                templates.forEach { template ->
-                    ListItem(
-                        headlineContent = { Text(template.name) },
-                        trailingContent = {
-                            Row {
-                                TextButton(onClick = { onApply(template.id) }) {
-                                    Text(stringResource(R.string.weekplan_template_apply))
-                                }
-                                IconButton(onClick = { onDelete(template.id) }) {
-                                    Icon(
-                                        Icons.Filled.Delete,
-                                        contentDescription = stringResource(R.string.weekplan_template_delete),
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                            }
-                        },
-                    )
-                }
-            }
-            Spacer(Modifier.height(32.dp))
-        }
-    }
-}

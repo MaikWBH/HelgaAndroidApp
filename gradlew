@@ -164,11 +164,11 @@ export JAVA_OPTS="-Dfile.encoding=UTF-8 $JAVA_OPTS"
 
 eval set -- $args "$@"
 
-exec "$JAVACMD" "$@" \
-    -classpath "$CLASSPATH" \
-    -Dorg.gradle.appname="$APP_BASE_NAME" \
+eval exec '"$JAVACMD"' \
+    -classpath '"$CLASSPATH"' \
+    '"-Dorg.gradle.appname=$APP_BASE_NAME"' \
     $DEFAULT_JVM_OPTS \
     $JAVA_OPTS \
     $GRADLE_OPTS \
     org.gradle.wrapper.GradleWrapperMain \
-    "$@"
+    '"$@"'

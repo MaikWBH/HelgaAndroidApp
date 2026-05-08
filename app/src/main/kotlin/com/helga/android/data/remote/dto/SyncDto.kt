@@ -199,6 +199,15 @@ data class WeekplanConstraintsDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class RecipeHistoryDto(
+    val id: String,
+    @Json(name = "recipe_id") val recipeId: String,
+    @Json(name = "planned_date") val plannedDate: String = "",
+    @Json(name = "updated_at") val updatedAt: Long = 0,
+    val deleted: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
@@ -221,6 +230,7 @@ data class SyncPullResponse(
     @Json(name = "weekplan_extras") val weekplanExtras: List<WeekplanExtraDto> = emptyList(),
     @Json(name = "weekplan_settings") val weekplanSettings: List<WeekplanSettingsDto> = emptyList(),
     @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
+    @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -243,6 +253,7 @@ data class SyncPushRequest(
     @Json(name = "weekplan_extras") val weekplanExtras: List<WeekplanExtraDto> = emptyList(),
     @Json(name = "weekplan_settings") val weekplanSettings: List<WeekplanSettingsDto> = emptyList(),
     @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
+    @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
