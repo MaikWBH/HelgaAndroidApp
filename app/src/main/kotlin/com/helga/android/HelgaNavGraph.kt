@@ -131,6 +131,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                 composable(ROUTE_SHOPPING) {
                     ShoppingListScreen(
                         bottomPadding = padding.calculateBottomPadding(),
+                        onNavigateToWeekplan = { navController.navigate(ROUTE_WEEKPLAN) },
                     )
                 }
                 composable(ROUTE_RECIPES) {
@@ -140,6 +141,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                         onImportClick = { navController.navigate(ROUTE_RECIPE_URL_IMPORT) },
                         onAiGenerateClick = { navController.navigate(ROUTE_AI_GENERATE) },
                         onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
+                        onCookClick = { id -> navController.navigate(recipeCookRoute(id)) },
                         bottomPadding = padding.calculateBottomPadding(),
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this,

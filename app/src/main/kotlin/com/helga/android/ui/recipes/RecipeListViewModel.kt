@@ -2,6 +2,7 @@ package com.helga.android.ui.recipes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.repository.RecipeRepository
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 enum class SortOrder { NAME, RATING, UPDATED }
@@ -25,6 +28,7 @@ enum class SortOrder { NAME, RATING, UPDATED }
 @HiltViewModel
 class RecipeListViewModel @Inject constructor(
     private val repository: RecipeRepository,
+    private val weekplanDao: WeekplanDao,
     syncStatusHolder: SyncStatusHolder,
     private val syncScheduler: SyncScheduler,
     preferences: AppPreferences,
@@ -67,6 +71,19 @@ class RecipeListViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val syncStatus: StateFlow<SyncStatus> = syncStatusHolder.status
+
+    private val todayDate = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+    data class TodayRecipe(val recipeId: String, val recipeName: String)
+
+    val todayRecipe: StateFlow<TodayRecipe?> = weekplanDao.observeTodayRecipeId(todayDate)
+        .flatMapLatest { recipeId ->
+            if (recipeId == null) flowOf(null)
+            else repository.observeAll().map { all ->
+                all.find { it.id == recipeId }?.let { TodayRecipe(it.id, it.name.ifBlank { it.slug }) }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun toggleTag(tag: String) {
         selectedTags.update { current ->

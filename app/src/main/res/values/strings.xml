@@ -184,6 +184,8 @@
     <string name="shopping_staple_hint">Artikel eingeben…</string>
     <string name="shopping_edit_item_title">Einkaufsartikel bearbeiten</string>
     <string name="shopping_no_store">Kein Markt</string>
+    <string name="shopping_weekplan_export_banner">Wochenplan bereit – Zutaten zur Einkaufsliste hinzufügen</string>
+    <string name="shopping_weekplan_create_banner">Noch kein Wochenplan – jetzt erstellen</string>
 
     <!-- Märkte -->
     <string name="stores_title">Märkte</string>

@@ -366,6 +366,13 @@ class WeekplanViewModel @Inject constructor(
                     return@launch
                 }
 
+                // --- Anker-Rezepte: Tage die bereits Rezepte haben, überspringen ---
+                val anchorDays = mutableMapOf<String, List<WeekplanRecipeEntity>>()
+                currentDays.forEach { day ->
+                    val existing = weekplanDao.recipesForDay(day.id)
+                    if (existing.isNotEmpty()) anchorDays[day.id] = existing
+                }
+
                 // Kürzlich geplante Rezepte ausschließen (Wiederholungssperre)
                 val since = LocalDate.now().minusDays(c.maxRepeatDays.toLong())
                     .format(DateTimeFormatter.ISO_LOCAL_DATE)
@@ -388,6 +395,12 @@ class WeekplanViewModel @Inject constructor(
                     return@launch
                 }
 
+                // mealType-Filter: Frühstück/Dessert/Snack ausschließen
+                val mealFiltered = candidates.filter { recipe ->
+                    recipe.mealType.isBlank() ||
+                    recipe.mealType.lowercase() !in listOf("frühstück", "breakfast", "dessert", "snack", "beilage", "side")
+                }.ifEmpty { candidates }
+
                 // Saison-Filter: saisonale Rezepte bevorzugen
                 val currentSeason = when (LocalDate.now().monthValue) {
                     in 3..5 -> "frühling"
@@ -395,7 +408,7 @@ class WeekplanViewModel @Inject constructor(
                     in 9..11 -> "herbst"
                     else -> "winter"
                 }
-                val seasonalCandidates = candidates.partition { recipe ->
+                val seasonalCandidates = mealFiltered.partition { recipe ->
                     recipe.seasonFit.isBlank() ||
                     recipe.seasonFit.lowercase().let { it == "ganzjährig" || it == currentSeason }
                 }
@@ -413,11 +426,40 @@ class WeekplanViewModel @Inject constructor(
 
                 val assignments = mutableListOf<WeekplanAssignmentDto>()
                 val usedIds = mutableSetOf<String>()
+                val usedCuisines = mutableListOf<String>()
                 var meatCount = 0
                 var fishCount = 0
                 var vegCount = 0
 
+                // Anker-Rezepte in Bilanz einrechnen
+                anchorDays.values.flatten().forEach { wr ->
+                    val recipe = allRecipes.value[wr.recipeId]
+                    usedIds.add(wr.recipeId)
+                    if (recipe != null) {
+                        when {
+                            recipe in meatRecipes || recipe.proteinType.lowercase() in listOf("fleisch", "meat", "geflügel", "poultry", "rind", "schwein") -> meatCount++
+                            recipe in fishRecipes || recipe.proteinType.lowercase() in listOf("fisch", "fish", "meeresfrüchte", "seafood") -> fishCount++
+                            recipe in vegRecipes || recipe.proteinType.lowercase() in listOf("vegetarisch", "vegetarian", "vegan") -> vegCount++
+                        }
+                        if (recipe.cuisine.isNotBlank()) usedCuisines.add(recipe.cuisine.lowercase())
+                    }
+                }
+
                 for (day in currentDays) {
+                    // Anker-Tag: bestehende Rezepte beibehalten
+                    if (day.id in anchorDays) {
+                        val anchorRecipe = anchorDays[day.id]!!.firstOrNull()
+                        val recipe = anchorRecipe?.let { allRecipes.value[it.recipeId] }
+                        assignments.add(
+                            WeekplanAssignmentDto(
+                                date = day.planDate,
+                                recipeId = anchorRecipe?.recipeId ?: "",
+                                recipeName = recipe?.name?.ifBlank { recipe.slug } ?: "Anker",
+                            )
+                        )
+                        continue
+                    }
+
                     val isQuick = day.isQuickDay == 1
                     val isGuest = day.isGuestDay == 1
 
@@ -453,10 +495,15 @@ class WeekplanViewModel @Inject constructor(
 
                     val finalPool = effortFiltered.ifEmpty { dayPool }.ifEmpty { seasonAware }
 
-                    // Gewichtete Auswahl: Feedback-Score bevorzugen
-                    val chosen = finalPool
-                        .sortedByDescending { feedbackScores[it.id] ?: 0 }
-                        .shuffled() // Zufälligkeit innerhalb ähnlicher Scores
+                    // Küchen-Diversität: Rezepte bevorzugen deren Küche noch nicht 2× vorkommt
+                    val diverseSorted = finalPool.sortedBy { recipe ->
+                        val c2 = recipe.cuisine.lowercase()
+                        if (c2.isBlank()) 0 else usedCuisines.count { it == c2 }
+                    }
+
+                    // Gewichtete Auswahl: Feedback-Score + Favoriten-Boost
+                    val chosen = diverseSorted
+                        .sortedByDescending { (feedbackScores[it.id] ?: 0) + if (it.isFavorite == 1) 2 else 0 }
                         .let { sorted ->
                             // Top 40% bevorzugen, aber zufällig aus ihnen wählen
                             val topCount = maxOf(1, (sorted.size * 0.4).toInt())
@@ -464,6 +511,7 @@ class WeekplanViewModel @Inject constructor(
                         }
 
                     usedIds.add(chosen.id)
+                    if (chosen.cuisine.isNotBlank()) usedCuisines.add(chosen.cuisine.lowercase())
                     when {
                         chosen in meatRecipes -> meatCount++
                         chosen in fishRecipes -> fishCount++
@@ -505,6 +553,73 @@ class WeekplanViewModel @Inject constructor(
 
     fun discardProposal() {
         _generateStatus.value = WeekplanGenerateStatus.Idle
+    }
+
+    fun regenerateProposalDay(index: Int) {
+        val current = (_generateStatus.value as? WeekplanGenerateStatus.Proposal) ?: return
+        val assignments = current.assignments.toMutableList()
+        val target = assignments[index]
+
+        viewModelScope.launch {
+            val c = constraints.value
+            val recipesMap = allRecipes.value
+
+            // IDs der anderen Tage im Proposal
+            val otherIds = assignments.filterIndexed { i, _ -> i != index }.map { it.recipeId }.toSet()
+
+            // Bilanz ohne den zu ersetzenden Tag
+            var meatCount = 0; var fishCount = 0; var vegCount = 0
+            otherIds.forEach { id ->
+                when (recipesMap[id]?.proteinType?.lowercase()) {
+                    in listOf("fleisch", "meat", "geflügel", "poultry", "rind", "schwein") -> meatCount++
+                    in listOf("fisch", "fish", "meeresfrüchte", "seafood") -> fishCount++
+                    in listOf("vegetarisch", "vegetarian", "vegan") -> vegCount++
+                }
+            }
+
+            val since = LocalDate.now().minusDays(c.maxRepeatDays.toLong())
+                .format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val recentIds = recipeHistoryDao.getRecentRecipeIds(since).toSet()
+
+            val allRecipesList = recipesMap.values.filter { it.deleted == 0 }
+            val available = allRecipesList
+                .filter { it.id !in recentIds && it.id !in otherIds && it.id != target.recipeId }
+                .filter { it.mealType.isBlank() || it.mealType.lowercase() !in listOf("frühstück", "breakfast", "dessert", "snack", "beilage", "side") }
+                .ifEmpty { allRecipesList.filter { it.id !in otherIds && it.id != target.recipeId } }
+                .ifEmpty { allRecipesList }
+
+            val filtered = when {
+                meatCount >= c.maxMeatPerWeek && fishCount >= c.maxFishPerWeek ->
+                    available.filter { it.proteinType.lowercase() in listOf("vegetarisch", "vegetarian", "vegan") || it.proteinType.isBlank() }
+                meatCount >= c.maxMeatPerWeek ->
+                    available.filter { it.proteinType.lowercase() !in listOf("fleisch", "meat", "geflügel", "poultry", "rind", "schwein") }
+                fishCount >= c.maxFishPerWeek ->
+                    available.filter { it.proteinType.lowercase() !in listOf("fisch", "fish", "meeresfrüchte", "seafood") }
+                else -> available
+            }.ifEmpty { available }
+
+            // Quick/Guest-Day berücksichtigen
+            val day = days.value.find { it.planDate == target.date }
+            val effortFiltered = when {
+                day?.isQuickDay == 1 -> {
+                    val quick = filtered.filter { it.effort.lowercase() in listOf("einfach", "easy", "schnell", "quick", "15min", "20min", "30min") }
+                    quick.ifEmpty { filtered }
+                }
+                day?.isGuestDay == 1 -> {
+                    val fancy = filtered.filter { it.effort.lowercase() in listOf("aufwendig", "elaborate", "gourmet", "fancy") }
+                    fancy.ifEmpty { filtered }
+                }
+                else -> filtered
+            }
+
+            val chosen = effortFiltered.shuffled().firstOrNull() ?: return@launch
+            assignments[index] = WeekplanAssignmentDto(
+                date = target.date,
+                recipeId = chosen.id,
+                recipeName = chosen.name.ifBlank { chosen.slug },
+            )
+            _generateStatus.value = WeekplanGenerateStatus.Proposal(assignments)
+        }
     }
 
     fun regenerateDay(dayId: String) {
@@ -618,6 +733,52 @@ class WeekplanViewModel @Inject constructor(
 
     fun deleteTemplate(templateId: String) {
         viewModelScope.launch { templateRepository.delete(templateId) }
+    }
+
+    fun repeatLastWeek() {
+        _generateStatus.value = WeekplanGenerateStatus.Loading
+        viewModelScope.launch {
+            try {
+                val monday = mondayForOffset(_weekOffset.value)
+                val lastMonday = monday.minusWeeks(1)
+                val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+                val lastDays = weekplanDao.getDaysBetween(
+                    lastMonday.format(fmt),
+                    lastMonday.plusDays(6).format(fmt),
+                )
+                if (lastDays.isEmpty()) {
+                    _generateStatus.value = WeekplanGenerateStatus.Error("Keine Vorwoche gefunden")
+                    return@launch
+                }
+                val assignments = mutableListOf<WeekplanAssignmentDto>()
+                val currentDays = days.value
+                lastDays.forEach { lastDay ->
+                    val lastDate = LocalDate.parse(lastDay.planDate, fmt)
+                    val dayOfWeek = lastDate.dayOfWeek
+                    val newDate = monday.with(dayOfWeek)
+                    val matchingCurrentDay = currentDays.find { it.planDate == newDate.format(fmt) }
+                    if (matchingCurrentDay != null) {
+                        val recipes = weekplanDao.recipesForDay(lastDay.id)
+                        val firstRecipe = recipes.firstOrNull() ?: return@forEach
+                        val recipe = allRecipes.value[firstRecipe.recipeId]
+                        assignments.add(
+                            WeekplanAssignmentDto(
+                                date = newDate.format(fmt),
+                                recipeId = firstRecipe.recipeId,
+                                recipeName = recipe?.name?.ifBlank { recipe.slug } ?: firstRecipe.recipeId,
+                            )
+                        )
+                    }
+                }
+                if (assignments.isEmpty()) {
+                    _generateStatus.value = WeekplanGenerateStatus.Error("Vorwoche hat keine Rezepte")
+                    return@launch
+                }
+                _generateStatus.value = WeekplanGenerateStatus.Proposal(assignments)
+            } catch (e: Exception) {
+                _generateStatus.value = WeekplanGenerateStatus.Error(e.message ?: "Fehler")
+            }
+        }
     }
 
     fun generateWithAnchors(startDate: String) {

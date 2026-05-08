@@ -3,6 +3,8 @@ package com.helga.android.ui.shopping
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
@@ -25,6 +27,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -33,6 +38,8 @@ class ShoppingListViewModel @Inject constructor(
     private val repository: ShoppingRepository,
     private val storeRepository: StoreRepository,
     private val quickEmojiDao: QuickEmojiDao,
+    private val weekplanDao: WeekplanDao,
+    private val recipeDao: RecipeDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
     private val preferences: AppPreferences,
@@ -90,8 +97,53 @@ class ShoppingListViewModel @Inject constructor(
     val checkMode: StateFlow<String> = preferences.checkMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "keep")
 
+    // Banner: Wochenplan bereit zum Export?
+    private val monday = LocalDate.now().with(DayOfWeek.MONDAY)
+    private val sunday = monday.plusDays(6)
+    private val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+
+    val weekplanHasRecipes: StateFlow<Boolean> = weekplanDao.observeDaysBetween(
+        monday.format(fmt), sunday.format(fmt),
+    ).flatMapLatest { days ->
+        if (days.isEmpty()) flowOf(false)
+        else {
+            val countFlows = days.map { day -> weekplanDao.observeRecipeCount(day.id) }
+            combine(countFlows) { counts -> counts.any { it > 0 } }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val currentListEmpty: StateFlow<Boolean> = itemsByAisle
+        .map { it.values.flatten().isEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     fun selectList(id: String) {
         _activeListId.value = id
+    }
+
+    fun exportWeekToShoppingList(listId: String) {
+        viewModelScope.launch {
+            val days = weekplanDao.getDaysBetween(monday.format(fmt), sunday.format(fmt))
+            days.forEach { day ->
+                weekplanDao.recipesForDay(day.id).forEach { entry ->
+                    val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
+                    ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
+                        val storeId = activeStore.value?.id
+                        val aisle = if (storeId != null)
+                            storeRepository.findAisleForProduct(ingredient.food, storeId) ?: ""
+                        else ""
+                        repository.addOrMergeItem(
+                            listId = listId,
+                            name = ingredient.food,
+                            quantity = ingredient.quantity,
+                            unit = ingredient.unit,
+                            source = "weekplan",
+                            aisle = aisle,
+                        )
+                    }
+                }
+            }
+            syncScheduler.triggerOneShot()
+        }
     }
 
     fun selectStore(storeId: String?) {

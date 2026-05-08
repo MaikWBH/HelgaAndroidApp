@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -85,6 +86,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ShoppingListScreen(
     bottomPadding: Dp = 0.dp,
+    onNavigateToWeekplan: () -> Unit = {},
     viewModel: ShoppingListViewModel = hiltViewModel(),
 ) {
     val lists by viewModel.lists.collectAsStateWithLifecycle()
@@ -97,6 +99,8 @@ fun ShoppingListScreen(
     val checkMode by viewModel.checkMode.collectAsStateWithLifecycle()
     val activeStore by viewModel.activeStore.collectAsStateWithLifecycle()
     val allStores by viewModel.allStores.collectAsStateWithLifecycle()
+    val weekplanHasRecipes by viewModel.weekplanHasRecipes.collectAsStateWithLifecycle()
+    val currentListEmpty by viewModel.currentListEmpty.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
     var showListDropdown by remember { mutableStateOf(false) }
@@ -247,6 +251,57 @@ fun ShoppingListScreen(
                 .fillMaxSize()
                 .padding(scaffoldPadding),
         ) {
+            // Schnellstart-Banner
+            if (weekplanHasRecipes && currentListEmpty && lists.isNotEmpty()) {
+                Card(
+                    onClick = {
+                        val listId = activeListId ?: return@Card
+                        viewModel.exportWeekToShoppingList(listId)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("📋", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.widthIn(min = 8.dp))
+                        Text(
+                            text = stringResource(R.string.shopping_weekplan_export_banner),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            } else if (!weekplanHasRecipes && currentListEmpty) {
+                Card(
+                    onClick = onNavigateToWeekplan,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("📅", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.widthIn(min = 8.dp))
+                        Text(
+                            text = stringResource(R.string.shopping_weekplan_create_banner),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
             if (allStores.isNotEmpty()) {
                 Row(
                     modifier = Modifier

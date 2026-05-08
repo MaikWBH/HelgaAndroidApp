@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -80,6 +81,7 @@ fun RecipeListScreen(
     onImportClick: () -> Unit,
     onAiGenerateClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onCookClick: (recipeId: String) -> Unit,
     bottomPadding: Dp = 0.dp,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
@@ -93,6 +95,7 @@ fun RecipeListScreen(
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsStateWithLifecycle()
+    val todayRecipe by viewModel.todayRecipe.collectAsStateWithLifecycle()
 
     var showTagFilter by remember { mutableStateOf(false) }
 
@@ -166,6 +169,35 @@ fun RecipeListScreen(
                 onToggleFavorites = viewModel::toggleFavoritesFilter,
                 onClearFilter = { viewModel.clearTags(); if (showFavoritesOnly) viewModel.toggleFavoritesFilter() },
             )
+            if (todayRecipe != null) {
+                Card(
+                    onClick = { onCookClick(todayRecipe!!.recipeId) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("🍳", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.recipes_today_cook),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                text = todayRecipe!!.recipeName,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                }
+            }
             if (recipes.isEmpty()) {
                 EmptyState(modifier = Modifier.weight(1f))
             } else {

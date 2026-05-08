@@ -37,6 +37,12 @@ interface WeekplanDao {
     @Query("SELECT * FROM weekplan_days WHERE planDate = :planDate AND deleted = 0 LIMIT 1")
     suspend fun findDayByDate(planDate: String): WeekplanDayEntity?
 
+    @Query("SELECT * FROM weekplan_days WHERE deleted = 0 AND planDate >= :startDate AND planDate <= :endDate ORDER BY planDate ASC")
+    suspend fun getDaysBetween(startDate: String, endDate: String): List<WeekplanDayEntity>
+
+    @Query("SELECT wr.recipeId FROM weekplan_days wd INNER JOIN weekplan_recipes wr ON wr.weekplanDayId = wd.id WHERE wd.planDate = :date AND wd.deleted = 0 AND wr.deleted = 0 ORDER BY wr.position ASC LIMIT 1")
+    fun observeTodayRecipeId(date: String): Flow<String?>
+
     @Query("SELECT * FROM weekplan_recipes WHERE weekplanDayId = :dayId AND deleted = 0 ORDER BY position ASC")
     suspend fun recipesForDay(dayId: String): List<WeekplanRecipeEntity>
 
