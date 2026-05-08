@@ -73,6 +73,7 @@ class WeekplanViewModel @Inject constructor(
     private val weekplanConstraintsDao: WeekplanConstraintsDao,
     private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
+    private val apiFactory: com.helga.android.data.remote.SyncApiFactory,
 ) : ViewModel() {
 
     private val _selectedDayId = MutableStateFlow<String?>(null)
@@ -128,6 +129,10 @@ class WeekplanViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    val allRecipes: StateFlow<Map<String, RecipeEntity>> = recipeDao.observeAll()
+        .map { list -> list.associateBy { it.id } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     val weekBalance: StateFlow<WeekBalance> = combine(days, allRecipes) { dayList, recipesMap ->
         var meat = 0; var fish = 0; var veg = 0; var other = 0
         dayList.forEach { day ->
@@ -146,10 +151,6 @@ class WeekplanViewModel @Inject constructor(
 
     private val _exportEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val exportEvent = _exportEvent
-
-    val allRecipes: StateFlow<Map<String, RecipeEntity>> = recipeDao.observeAll()
-        .map { list -> list.associateBy { it.id } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val serverUrl: StateFlow<String> = preferences.connection
         .map { it.serverUrl }
@@ -373,7 +374,6 @@ class WeekplanViewModel @Inject constructor(
                 // Feedback-Scores laden (positiv = bevorzugt, negativ = vermeiden)
                 val allFeedback = recipeFeedbackDao.getAll()
                 val feedbackScores = allFeedback
-                    .filter { it.deleted == 0 }
                     .groupBy { it.recipeId }
                     .mapValues { (_, entries) -> entries.sumOf { it.liked } }
 

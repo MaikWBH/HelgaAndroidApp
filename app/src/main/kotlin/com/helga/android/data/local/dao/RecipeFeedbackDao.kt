@@ -29,4 +29,7 @@ interface RecipeFeedbackDao {
 
     @Query("SELECT * FROM recipe_feedback WHERE updatedAt > :since")
     suspend fun getModifiedSince(since: Long): List<RecipeFeedbackEntity>
+
+    @Query("SELECT * FROM recipe_feedback WHERE deleted = 0")
+    suspend fun getAll(): List<RecipeFeedbackEntity>
 }
