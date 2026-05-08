@@ -39,6 +39,7 @@ import com.helga.android.data.local.entity.WeekplanSettingsEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 import com.helga.android.data.local.entity.PantryItemEntity
+import com.helga.android.data.local.dao.PantryDao
 
 @Database(
     version = 15,
