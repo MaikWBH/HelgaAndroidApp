@@ -88,15 +88,18 @@ class WeekplanRepository @Inject constructor(
         weekplanDao.softDeleteDay(dayId, ts)
     }
 
-    suspend fun exportToShoppingList(dayIds: List<String>, shoppingListId: String) {
+    suspend fun exportToShoppingList(dayIds: List<String>, shoppingListId: String, desiredServings: Int = 0) {
         dayIds.forEach { dayId ->
             weekplanDao.recipesForDay(dayId).forEach { entry ->
+                val recipe = recipeDao.findById(entry.recipeId)
+                val baseServings = recipe?.recipeYield?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() } ?: 0
+                val scale = if (desiredServings > 0 && baseServings > 0) desiredServings.toDouble() / baseServings else 1.0
                 val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
                 ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
                     shoppingRepository.addOrMergeItem(
                         listId = shoppingListId,
                         name = ingredient.food,
-                        quantity = ingredient.quantity,
+                        quantity = ingredient.quantity * scale,
                         unit = ingredient.unit,
                         source = "weekplan",
                     )

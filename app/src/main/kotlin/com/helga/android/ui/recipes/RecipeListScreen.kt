@@ -1,9 +1,7 @@
 package com.helga.android.ui.recipes
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,7 +71,7 @@ import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.ui.components.CreateFab
 import com.helga.android.ui.components.SyncStatusIcon
 
-@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeListScreen(
     onRecipeClick: (id: String) -> Unit,
@@ -83,8 +81,6 @@ fun RecipeListScreen(
     onSettingsClick: () -> Unit,
     onCookClick: (recipeId: String) -> Unit,
     bottomPadding: Dp = 0.dp,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: RecipeListViewModel = hiltViewModel(),
 ) {
     val recipes by viewModel.recipes.collectAsStateWithLifecycle()
@@ -210,8 +206,6 @@ fun RecipeListScreen(
                         RecipeRow(
                             recipe = recipe,
                             serverUrl = serverUrl,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
                             onClick = { onRecipeClick(recipe.id) },
                         )
                     }
@@ -320,13 +314,10 @@ private fun SortOrder.label() = stringResource(
     }
 )
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun RecipeRow(
     recipe: RecipeEntity,
     serverUrl: String,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
 ) {
     val imageUrl = remember(recipe.localImageUri, recipe.imagePath, serverUrl) {
@@ -338,45 +329,51 @@ private fun RecipeRow(
         }
     }
 
-    with(sharedTransitionScope) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onClick,
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                RecipeThumbnail(
-                    recipeId = recipe.id,
-                    imageUrl = imageUrl,
-                    animatedVisibilityScope = animatedVisibilityScope,
-                )
-                Column(modifier = Modifier.weight(1f)) {
+            RecipeThumbnail(
+                imageUrl = imageUrl,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = recipe.name.ifBlank { recipe.slug },
                         style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f).basicMarquee(),
                     )
-                    if (recipe.totalTime.isNotBlank()) {
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = recipe.totalTime,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    if (recipe.proteinType.isBlank() && recipe.effort.isBlank() &&
+                        recipe.cuisine.isBlank() && recipe.mealType.isBlank() &&
+                        recipe.seasonFit.isBlank()
+                    ) {
+                        Text("⚠️", modifier = Modifier.padding(start = 4.dp))
                     }
-                    if (recipe.rating > 0) {
-                        Spacer(Modifier.height(2.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                            repeat(recipe.rating) {
-                                Icon(
-                                    imageVector = Icons.Filled.Star,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
+                }
+                if (recipe.totalTime.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = recipe.totalTime,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (recipe.rating > 0) {
+                    Spacer(Modifier.height(2.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        repeat(recipe.rating) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                 }
@@ -387,25 +384,18 @@ private fun RecipeRow(
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun SharedTransitionScope.RecipeThumbnail(
-    recipeId: String,
+private fun RecipeThumbnail(
     imageUrl: String?,
-    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     Box(
         modifier = Modifier
             .size(72.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .sharedElement(
-                state = rememberSharedContentState(key = "image-$recipeId"),
-                animatedVisibilityScope = animatedVisibilityScope,
-            ),
+            .clip(RoundedCornerShape(8.dp)),
     ) {
         if (imageUrl != null) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(imageUrl)
-                    .memoryCacheKey("recipe-$recipeId")
                     .crossfade(true)
                     .build(),
                 contentDescription = null,

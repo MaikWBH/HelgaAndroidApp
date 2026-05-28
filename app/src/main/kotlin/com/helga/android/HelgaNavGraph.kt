@@ -1,7 +1,5 @@
 package com.helga.android
 
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Restaurant
@@ -74,7 +72,6 @@ private val bottomNavItems = listOf(
     BottomNavItem(ROUTE_WEEKPLAN, Icons.Filled.CalendarMonth, R.string.nav_weekplan),
 )
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null) {
     val navController: NavHostController = rememberNavController()
@@ -118,11 +115,10 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
             }
         },
     ) { padding ->
-        SharedTransitionLayout {
-            NavHost(
-                navController = navController,
-                startDestination = ROUTE_ONBOARDING,
-            ) {
+        NavHost(
+            navController = navController,
+            startDestination = ROUTE_ONBOARDING,
+        ) {
                 composable(ROUTE_ONBOARDING) {
                     OnboardingScreen(
                         onContinue = {
@@ -147,8 +143,6 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                         onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
                         onCookClick = { id -> navController.navigate(recipeCookRoute(id)) },
                         bottomPadding = padding.calculateBottomPadding(),
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedVisibilityScope = this,
                     )
                 }
                 composable(ROUTE_WEEKPLAN) {
@@ -219,8 +213,6 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                         onAiGenerate = { navController.navigate(ROUTE_AI_GENERATE) },
                         onImport = { navController.navigate(ROUTE_RECIPE_URL_IMPORT) },
                         onRemix = { id -> navController.navigate(recipeRemixRoute(id)) },
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedVisibilityScope = this,
                     )
                 }
                 composable(
@@ -251,7 +243,6 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                 ) {
                     RecipeFormScreen(onBack = { navController.popBackStack() })
                 }
-            }
         }
     }
 }

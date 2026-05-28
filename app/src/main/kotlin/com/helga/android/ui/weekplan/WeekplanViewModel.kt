@@ -321,17 +321,17 @@ class WeekplanViewModel @Inject constructor(
         }
     }
 
-    fun exportToShoppingList(dayId: String, shoppingListId: String) {
+    fun exportToShoppingList(dayId: String, shoppingListId: String, servings: Int = 0) {
         viewModelScope.launch {
-            repository.exportToShoppingList(listOf(dayId), shoppingListId)
+            repository.exportToShoppingList(listOf(dayId), shoppingListId, servings)
             syncScheduler.triggerOneShot()
         }
     }
 
-    fun exportWeekToShoppingList(shoppingListId: String) {
+    fun exportWeekToShoppingList(shoppingListId: String, servings: Int = 0) {
         viewModelScope.launch {
             val dayIds = days.value.map { it.id }
-            repository.exportToShoppingList(dayIds, shoppingListId)
+            repository.exportToShoppingList(dayIds, shoppingListId, servings)
             syncScheduler.triggerOneShot()
         }
     }

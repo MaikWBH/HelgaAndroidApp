@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.dao.PantryDao
 import com.helga.android.data.local.entity.PantryItemEntity
+import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,6 +19,7 @@ import javax.inject.Inject
 class PantryViewModel @Inject constructor(
     private val pantryDao: PantryDao,
     private val syncScheduler: SyncScheduler,
+    private val apiFactory: SyncApiFactory,
 ) : ViewModel() {
 
     val items: StateFlow<Map<String, List<PantryItemEntity>>> = pantryDao.observeAll()
@@ -54,6 +56,15 @@ class PantryViewModel @Inject constructor(
         viewModelScope.launch {
             pantryDao.upsert(item.copy(updatedAt = System.currentTimeMillis(), dirty = 1))
             syncScheduler.triggerOneShot()
+        }
+    }
+
+    suspend fun suggestItems(query: String): List<String> {
+        if (query.length < 2) return emptyList()
+        return try {
+            apiFactory.api().suggestItems(query).suggestions
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +57,7 @@ fun PantryScreen(
                 viewModel.addItem(name, qty, unit, cat)
                 showAddDialog = false
             },
+            onSuggest = viewModel::suggestItems,
         )
     }
 
@@ -158,11 +160,22 @@ private fun PantryItemRow(
 private fun AddPantryDialog(
     onDismiss: () -> Unit,
     onAdd: (name: String, quantity: Double, unit: String, category: String) -> Unit,
+    onSuggest: suspend (String) -> List<String>,
 ) {
     var name by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
+    var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    LaunchedEffect(name) {
+        if (name.length >= 2) {
+            kotlinx.coroutines.delay(300)
+            suggestions = onSuggest(name)
+        } else {
+            suggestions = emptyList()
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -176,6 +189,21 @@ private fun AddPantryDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (suggestions.isNotEmpty()) {
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(suggestions.size) { idx ->
+                            androidx.compose.material3.SuggestionChip(
+                                onClick = {
+                                    name = suggestions[idx]
+                                    suggestions = emptyList()
+                                },
+                                label = { Text(suggestions[idx]) },
+                            )
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = quantity,

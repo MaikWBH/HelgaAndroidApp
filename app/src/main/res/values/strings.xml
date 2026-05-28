@@ -230,6 +230,7 @@
     <string name="weekplan_extra_hint">Extrazeile hinzufügen…</string>
     <string name="weekplan_pick_recipe">Rezept wählen</string>
     <string name="weekplan_pick_list">Einkaufsliste wählen</string>
+    <string name="weekplan_servings">Portionen</string>
     <string name="weekplan_no_lists">Keine Einkaufslisten vorhanden</string>
     <string name="weekplan_export_day">Tag auf Einkaufsliste</string>
     <string name="weekplan_export_week">Woche auf Einkaufsliste</string>

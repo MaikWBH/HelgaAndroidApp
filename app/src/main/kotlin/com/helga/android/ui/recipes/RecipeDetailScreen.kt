@@ -1,8 +1,5 @@
 package com.helga.android.ui.recipes
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -84,7 +81,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeDetailScreen(
     onBack: () -> Unit,
@@ -94,8 +91,6 @@ fun RecipeDetailScreen(
     onAiGenerate: () -> Unit,
     onImport: () -> Unit,
     onRemix: (id: String) -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: RecipeDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -331,8 +326,6 @@ fun RecipeDetailScreen(
                     HeroImage(
                         recipe = recipe,
                         serverUrl = serverUrl,
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope,
                     )
                 }
                 item {
@@ -385,13 +378,10 @@ fun RecipeDetailScreen(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun HeroImage(
     recipe: RecipeEntity,
     serverUrl: String,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val imageUrl = when {
         recipe.localImageUri.isNotBlank() -> recipe.localImageUri
@@ -400,41 +390,34 @@ private fun HeroImage(
         else -> null
     }
 
-    with(sharedTransitionScope) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(240.dp)
-                .sharedElement(
-                    state = rememberSharedContentState(key = "image-${recipe.id}"),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                ),
-        ) {
-            if (imageUrl != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageUrl)
-                        .placeholderMemoryCacheKey("recipe-${recipe.id}")
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = recipe.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(240.dp),
+    ) {
+        if (imageUrl != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = recipe.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Restaurant,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Restaurant,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
         }
     }
@@ -632,18 +615,17 @@ private fun IngredientRow(ingredient: IngredientEntity, scaleFactor: Float = 1f)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 24.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         val quantityText = ingredient.quantityText(scaleFactor)
-        if (quantityText.isNotBlank()) {
-            Text(
-                text = quantityText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.widthIn(min = 64.dp),
-            )
-        }
+        Text(
+            text = quantityText.ifBlank { "•" },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.widthIn(min = 72.dp),
+        )
         Text(
             text = buildString {
                 append(ingredient.food)

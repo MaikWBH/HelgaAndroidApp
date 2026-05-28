@@ -393,10 +393,10 @@ fun ShoppingListScreen(
                                 sortedAisles.forEach { aisle ->
                                     val unchecked = (itemsByAisle[aisle] ?: emptyList()).filter { it.isChecked == 0 }
                                     if (unchecked.isEmpty()) return@forEach
-                                    if (aisle.isNotBlank()) {
-                                        item(key = "header_$aisle") {
-                                            AisleHeader(aisle = aisle)
-                                        }
+                                    item(key = "header_$aisle") {
+                                        AisleHeader(
+                                            aisle = aisle.ifBlank { stringResource(R.string.shopping_no_aisle) },
+                                        )
                                     }
                                     items(unchecked, key = { it.id }) { item ->
                                         SwipeableShoppingItem(
@@ -438,10 +438,10 @@ fun ShoppingListScreen(
                                 // Standard KEEP-Modus
                                 sortedAisles.forEach { aisle ->
                                     val items = itemsByAisle[aisle] ?: return@forEach
-                                    if (aisle.isNotBlank()) {
-                                        item(key = "header_$aisle") {
-                                            AisleHeader(aisle = aisle)
-                                        }
+                                    item(key = "header_$aisle") {
+                                        AisleHeader(
+                                            aisle = aisle.ifBlank { stringResource(R.string.shopping_no_aisle) },
+                                        )
                                     }
                                     items(items, key = { it.id }) { item ->
                                         SwipeableShoppingItem(

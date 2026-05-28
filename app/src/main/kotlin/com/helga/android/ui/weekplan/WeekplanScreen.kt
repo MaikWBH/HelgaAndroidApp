@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
@@ -63,6 +64,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -118,10 +120,8 @@ fun WeekplanScreen(
     val generateStatus by viewModel.generateStatus.collectAsStateWithLifecycle()
     val feedbackMap by viewModel.feedbackForSelectedDay.collectAsStateWithLifecycle()
     val weekBalance by viewModel.weekBalance.collectAsStateWithLifecycle()
-    val templates by viewModel.templates.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
-    var templateSheetVisible by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -144,10 +144,10 @@ fun WeekplanScreen(
     if (exportPicker != null) {
         ShoppingListPickerDialog(
             lists = shoppingLists,
-            onPick = { listId ->
+            onPick = { listId, servings ->
                 val dayId = exportPicker!!
-                if (dayId == "all") viewModel.exportWeekToShoppingList(listId)
-                else viewModel.exportToShoppingList(dayId, listId)
+                if (dayId == "all") viewModel.exportWeekToShoppingList(listId, servings)
+                else viewModel.exportToShoppingList(dayId, listId, servings)
                 exportPicker = null
             },
             onDismiss = { exportPicker = null },
@@ -162,23 +162,6 @@ fun WeekplanScreen(
                 constraintsEditorVisible = false
             },
             onDismiss = { constraintsEditorVisible = false },
-        )
-    }
-
-    if (templateSheetVisible) {
-        TemplateSheet(
-            templates = templates,
-            onApply = { templateId ->
-                viewModel.applyTemplate(templateId)
-                templateSheetVisible = false
-            },
-            onSave = { name ->
-                viewModel.saveCurrentWeekAsTemplate(name)
-            },
-            onDelete = { templateId ->
-                viewModel.deleteTemplate(templateId)
-            },
-            onDismiss = { templateSheetVisible = false },
         )
     }
 
@@ -199,12 +182,6 @@ fun WeekplanScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.weekplan_title)) },
                 actions = {
-                    IconButton(onClick = { viewModel.generateWeekplan() }) {
-                        Icon(
-                            imageVector = Icons.Filled.Restaurant,
-                            contentDescription = stringResource(R.string.weekplan_generate),
-                        )
-                    }
                     IconButton(onClick = { constraintsEditorVisible = true }) {
                         Icon(
                             imageVector = Icons.Filled.Tune,
@@ -228,13 +205,6 @@ fun WeekplanScreen(
                             expanded = showOverflowMenu,
                             onDismissRequest = { showOverflowMenu = false },
                         ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.weekplan_templates)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    templateSheetVisible = true
-                                },
-                            )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.weekplan_repeat_last_week)) },
                                 onClick = {
@@ -680,7 +650,6 @@ private fun RecipeItemRow(
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(
                     onClick = onThumbUp,
-                    modifier = Modifier.size(40.dp),
                 ) {
                     Text(
                         text = "👍",
@@ -690,7 +659,6 @@ private fun RecipeItemRow(
                 }
                 IconButton(
                     onClick = onThumbDown,
-                    modifier = Modifier.size(40.dp),
                 ) {
                     Text(
                         text = "👎",
@@ -737,20 +705,39 @@ private fun ExtraChip(text: String, onRemove: () -> Unit) {
 @Composable
 private fun ShoppingListPickerDialog(
     lists: List<ShoppingListEntity>,
-    onPick: (String) -> Unit,
+    onPick: (String, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var servings by remember { mutableIntStateOf(2) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.weekplan_pick_list)) },
         text = {
-            if (lists.isEmpty()) {
-                Text(stringResource(R.string.weekplan_no_lists))
-            } else {
-                Column {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(stringResource(R.string.weekplan_servings), style = MaterialTheme.typography.bodyMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { if (servings > 1) servings-- }) {
+                            Icon(Icons.Filled.Remove, contentDescription = null)
+                        }
+                        Text("$servings", style = MaterialTheme.typography.titleMedium)
+                        IconButton(onClick = { if (servings < 12) servings++ }) {
+                            Icon(Icons.Filled.Add, contentDescription = null)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                if (lists.isEmpty()) {
+                    Text(stringResource(R.string.weekplan_no_lists))
+                } else {
                     lists.forEach { list ->
                         TextButton(
-                            onClick = { onPick(list.id) },
+                            onClick = { onPick(list.id, servings) },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(list.name, style = MaterialTheme.typography.bodyLarge)
