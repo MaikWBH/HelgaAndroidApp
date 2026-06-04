@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
     unit        TEXT DEFAULT '',
     food        TEXT DEFAULT '',
     note        TEXT DEFAULT '',
+    off_barcode TEXT NOT NULL DEFAULT '',
     updated_at  INTEGER NOT NULL DEFAULT 0,
     deleted     INTEGER NOT NULL DEFAULT 0
 );
@@ -163,17 +164,21 @@ CREATE TABLE IF NOT EXISTS shopping_lists (
 );
 
 CREATE TABLE IF NOT EXISTS shopping_items (
-    id          TEXT PRIMARY KEY,
-    list_id     TEXT NOT NULL,
-    name        TEXT NOT NULL DEFAULT '',
-    quantity    REAL DEFAULT 1,
-    unit        TEXT DEFAULT '',
-    aisle       TEXT DEFAULT '',
-    source      TEXT DEFAULT 'manual',
-    is_checked  INTEGER DEFAULT 0,
-    sort_order  INTEGER DEFAULT 0,
-    updated_at  INTEGER NOT NULL DEFAULT 0,
-    deleted     INTEGER NOT NULL DEFAULT 0
+    id                  TEXT PRIMARY KEY,
+    list_id             TEXT NOT NULL,
+    name                TEXT NOT NULL DEFAULT '',
+    quantity            REAL DEFAULT 1,
+    unit                TEXT DEFAULT '',
+    aisle               TEXT DEFAULT '',
+    source              TEXT DEFAULT 'manual',
+    is_checked          INTEGER DEFAULT 0,
+    sort_order          INTEGER DEFAULT 0,
+    off_barcode         TEXT NOT NULL DEFAULT '',
+    off_product_id      TEXT NOT NULL DEFAULT '',
+    price_estimate      REAL NOT NULL DEFAULT 0.0,
+    price_last_checked  INTEGER NOT NULL DEFAULT 0,
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS shopping_list_staples (
