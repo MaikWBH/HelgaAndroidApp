@@ -24,6 +24,10 @@ data class ShoppingItemEntity(
     val source: String = "manual",
     val isChecked: Int = 0,
     val sortOrder: Int = 0,
+    val offBarcode: String = "", // OFF barcode/EAN
+    val offProductId: String = "", // link to OffProductEntity
+    val priceEstimate: Double = 0.0, // cached price
+    val priceLastChecked: Long = 0L,
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

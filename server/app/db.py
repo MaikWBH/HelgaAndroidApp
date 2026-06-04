@@ -37,6 +37,7 @@ SYNC_TABLES = [
     "app_settings",
     "weekplan_settings",
     "weekplan_constraints",
+    "off_products",
 ]
 
 SCHEMA = """
@@ -254,6 +255,29 @@ CREATE TABLE IF NOT EXISTS weekplan_constraints (
     updated_at               INTEGER NOT NULL DEFAULT 0,
     deleted                  INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS off_products (
+    id                  TEXT PRIMARY KEY,
+    barcode             TEXT NOT NULL UNIQUE,
+    name                TEXT NOT NULL DEFAULT '',
+    brand               TEXT NOT NULL DEFAULT '',
+    categories          TEXT NOT NULL DEFAULT '[]',
+    kcal_per_unit       REAL NOT NULL DEFAULT 0.0,
+    proteins            REAL NOT NULL DEFAULT 0.0,
+    fats                REAL NOT NULL DEFAULT 0.0,
+    carbs               REAL NOT NULL DEFAULT 0.0,
+    nutri_score         TEXT NOT NULL DEFAULT '',
+    nova                INTEGER NOT NULL DEFAULT 0,
+    eco_score           TEXT NOT NULL DEFAULT '',
+    allergenes          TEXT NOT NULL DEFAULT '[]',
+    additives           TEXT NOT NULL DEFAULT '[]',
+    is_organic          INTEGER NOT NULL DEFAULT 0,
+    vegan               INTEGER NOT NULL DEFAULT 0,
+    vegetarian          INTEGER NOT NULL DEFAULT 0,
+    image_path          TEXT NOT NULL DEFAULT '',
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
 """
 
 INDICES = [
@@ -273,6 +297,8 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_recipe_history_recipe ON recipe_history(recipe_id)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_settings_updated ON weekplan_settings(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_constraints_updated ON weekplan_constraints(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_off_products_barcode ON off_products(barcode)",
+    "CREATE INDEX IF NOT EXISTS idx_off_products_updated ON off_products(updated_at)",
 ]
 
 

@@ -22,6 +22,7 @@ data class IngredientEntity(
     val unit: String = "",
     val food: String = "",
     val note: String = "",
+    val offBarcode: String = "", // optional OFF barcode/EAN
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

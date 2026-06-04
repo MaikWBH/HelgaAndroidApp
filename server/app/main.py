@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from .db import init_db, get_db, now_ms
 from .models import (
     AiClassifyRequest, AiGenerateRequest, AiRemixRequest, AiUrlImportRequest,
+    OffLookupBarcodeRequest, OffSearchRequest,
     SyncPullResponse, SyncPushRequest, WeekplanGenerateRequest,
 )
 from .sync import pull_since, push_records
@@ -126,6 +127,20 @@ async def get_image(filename: str):
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail="Bild nicht gefunden")
     return FileResponse(path)
+
+
+# ── Open Food Facts Lookups ──────────────────────────────────────────────────
+
+@app.post("/api/off/lookup-barcode", dependencies=[Depends(require_auth)])
+async def off_lookup_barcode(req: OffLookupBarcodeRequest):
+    from . import off as off_module
+    return await off_module.lookup_barcode(req.barcode)
+
+
+@app.post("/api/off/search", dependencies=[Depends(require_auth)])
+async def off_search(req: OffSearchRequest):
+    from . import off as off_module
+    return await off_module.search_products(req.query, req.limit)
 
 
 # ── Vorschläge (Autocomplete) ─────────────────────────────────────────────────
