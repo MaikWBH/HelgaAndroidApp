@@ -18,7 +18,7 @@ import androidx.room.Index
     indices = [
         Index("offProductId"),
         Index("storeName"),
-        Index("updated_at"),
+        Index("updatedAt"),
     ]
 )
 data class ProductPriceEntity(
