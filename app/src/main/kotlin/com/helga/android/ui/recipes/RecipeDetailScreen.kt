@@ -106,6 +106,7 @@ fun RecipeDetailScreen(
     val servings by viewModel.servings.collectAsStateWithLifecycle()
     val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
+    val nutrition by viewModel.nutrition.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.classifyError) {
         uiState.classifyError?.let { snackbarHostState.showSnackbar(it) }
@@ -338,6 +339,9 @@ fun RecipeDetailScreen(
                     item { TagsSection(tags = uiState.tags) }
                 }
                 item { MetadataSection(recipe = recipe) }
+                if (nutrition != null) {
+                    item { NutritionSection(nutrition = nutrition!!) }
+                }
                 if (recipe.description.isNotBlank()) {
                     item { DescriptionSection(description = recipe.description) }
                 }
@@ -494,6 +498,84 @@ private fun MetadataSection(recipe: RecipeEntity) {
                 label = { Text("$emoji $value", style = MaterialTheme.typography.bodySmall) },
             )
         }
+    }
+}
+
+@Composable
+private fun NutritionSection(nutrition: com.helga.android.data.model.RecipeNutrition) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = "📊 Nährwerte",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+        ) {
+            NutritionItem(value = String.format("%.0f", nutrition.kcalPerPortion), unit = "kcal")
+            NutritionItem(value = String.format("%.1f", nutrition.protein), unit = "g Protein")
+            NutritionItem(value = String.format("%.1f", nutrition.fat), unit = "g Fett")
+            NutritionItem(value = String.format("%.1f", nutrition.carbs), unit = "g KH")
+        }
+        if (nutrition.nutriScore.isNotBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Nutri-Score:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = nutrition.nutriScore.uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = when (nutrition.nutriScore.lowercase()) {
+                        "a" -> androidx.compose.ui.graphics.Color(0xFF22863A)
+                        "b" -> androidx.compose.ui.graphics.Color(0xFF28A745)
+                        "c" -> androidx.compose.ui.graphics.Color(0xFFFFC107)
+                        "d" -> androidx.compose.ui.graphics.Color(0xFFFF9800)
+                        else -> androidx.compose.ui.graphics.Color(0xFFD32F2F)
+                    },
+                )
+            }
+        }
+        Text(
+            text = "${nutrition.matchedIngredientsCount}/${nutrition.totalIngredientsCount} Zutaten mit Nährwerten",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+}
+
+@Composable
+private fun NutritionItem(value: String, unit: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = unit,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
