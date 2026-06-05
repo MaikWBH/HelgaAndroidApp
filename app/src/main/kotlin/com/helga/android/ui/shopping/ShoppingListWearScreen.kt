@@ -136,8 +136,12 @@ fun WearShoppingItemRow(
         )
 
         if (item.quantity > 0) {
+            val qDisplay = if (item.quantity % 1.0 == 0.0)
+                item.quantity.toInt().toString()
+            else
+                item.quantity.toString()
             Text(
-                text = "${item.quantity}${item.unit}",
+                text = "$qDisplay${item.unit}",
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 9.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
