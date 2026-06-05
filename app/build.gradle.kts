@@ -138,7 +138,8 @@ dependencies {
     implementation(libs.androidx.camera.extensions)
 
     // Wear OS
-    implementation(libs.androidx.wear.compose.material3)
+    implementation(libs.androidx.wear.compose.foundation)
+    implementation(libs.androidx.wear.compose.material)
     implementation(libs.horologist.compose.layout)
     implementation(libs.horologist.compose.material)
 }

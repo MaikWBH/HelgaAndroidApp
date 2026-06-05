@@ -18,8 +18,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.Scaffold
-import androidx.wear.compose.material3.TimeTextMode
+import androidx.wear.compose.foundation.lazy.items
+import androidx.wear.compose.material.Scaffold
+import androidx.wear.compose.material.TimeTextMode
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.google.android.horologist.compose.layout.PositionIndicator
 import androidx.compose.foundation.layout.Box
@@ -73,7 +74,7 @@ fun ShoppingListWearScreen(
                         )
                     }
                 } else {
-                    itemsByAisle.forEach { (aisle, items) ->
+                    itemsByAisle.forEach { (aisle, itemsList) ->
                         item {
                             Text(
                                 text = aisle.ifBlank { "Sonstiges" },
@@ -84,8 +85,7 @@ fun ShoppingListWearScreen(
                             )
                         }
 
-                        items(items.size) { index ->
-                            val item = items[index]
+                        items(itemsList) { item ->
                             WearShoppingItemRow(
                                 item = item,
                                 onToggle = { viewModel.toggleChecked(item) }
