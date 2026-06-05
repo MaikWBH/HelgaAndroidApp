@@ -452,29 +452,29 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("""
                     CREATE TABLE IF NOT EXISTS off_products (
                         id TEXT NOT NULL PRIMARY KEY,
-                        barcode TEXT NOT NULL UNIQUE,
-                        name TEXT NOT NULL DEFAULT '',
-                        brand TEXT NOT NULL DEFAULT '',
-                        categories TEXT NOT NULL DEFAULT '[]',
-                        kcalPerUnit REAL NOT NULL DEFAULT 0.0,
-                        proteins REAL NOT NULL DEFAULT 0.0,
-                        fats REAL NOT NULL DEFAULT 0.0,
-                        carbs REAL NOT NULL DEFAULT 0.0,
-                        nutriScore TEXT NOT NULL DEFAULT '',
-                        nova INTEGER NOT NULL DEFAULT 0,
-                        ecoScore TEXT NOT NULL DEFAULT '',
-                        allergenes TEXT NOT NULL DEFAULT '[]',
-                        additives TEXT NOT NULL DEFAULT '[]',
-                        isOrganic INTEGER NOT NULL DEFAULT 0,
-                        vegan INTEGER NOT NULL DEFAULT 0,
-                        vegetarian INTEGER NOT NULL DEFAULT 0,
-                        imagePath TEXT NOT NULL DEFAULT '',
-                        updatedAt INTEGER NOT NULL DEFAULT 0,
-                        deleted INTEGER NOT NULL DEFAULT 0,
-                        dirty INTEGER NOT NULL DEFAULT 0
+                        barcode TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        brand TEXT NOT NULL,
+                        categories TEXT NOT NULL,
+                        kcalPerUnit REAL NOT NULL,
+                        proteins REAL NOT NULL,
+                        fats REAL NOT NULL,
+                        carbs REAL NOT NULL,
+                        nutriScore TEXT NOT NULL,
+                        nova INTEGER NOT NULL,
+                        ecoScore TEXT NOT NULL,
+                        allergenes TEXT NOT NULL,
+                        additives TEXT NOT NULL,
+                        isOrganic INTEGER NOT NULL,
+                        vegan INTEGER NOT NULL,
+                        vegetarian INTEGER NOT NULL,
+                        imagePath TEXT NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        deleted INTEGER NOT NULL,
+                        dirty INTEGER NOT NULL
                     )
                 """.trimIndent())
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_off_products_barcode ON off_products(barcode)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_off_products_barcode ON off_products(barcode)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_off_products_updatedAt ON off_products(updatedAt)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_off_products_deleted ON off_products(deleted)")
 
@@ -510,14 +510,14 @@ abstract class AppDatabase : RoomDatabase() {
                     CREATE TABLE IF NOT EXISTS product_prices (
                         id TEXT NOT NULL PRIMARY KEY,
                         offProductId TEXT NOT NULL,
-                        storeName TEXT NOT NULL DEFAULT '',
-                        currency TEXT NOT NULL DEFAULT 'EUR',
-                        price REAL NOT NULL DEFAULT 0.0,
-                        unit TEXT NOT NULL DEFAULT '',
-                        lastCheckedAt INTEGER NOT NULL DEFAULT 0,
-                        updatedAt INTEGER NOT NULL DEFAULT 0,
-                        deleted INTEGER NOT NULL DEFAULT 0,
-                        dirty INTEGER NOT NULL DEFAULT 0,
+                        storeName TEXT NOT NULL,
+                        currency TEXT NOT NULL,
+                        price REAL NOT NULL,
+                        unit TEXT NOT NULL,
+                        lastCheckedAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        deleted INTEGER NOT NULL,
+                        dirty INTEGER NOT NULL,
                         FOREIGN KEY (offProductId) REFERENCES off_products(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
