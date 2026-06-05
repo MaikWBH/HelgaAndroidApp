@@ -5,6 +5,10 @@ import com.helga.android.data.remote.dto.AiClassifyResponse
 import com.helga.android.data.remote.dto.HealthResponse
 import com.helga.android.data.remote.dto.ImageUploadResponse
 import com.helga.android.data.remote.dto.ImportedRecipeDto
+import com.helga.android.data.remote.dto.OffLookupBarcodeRequest
+import com.helga.android.data.remote.dto.OffLookupBarcodeResponse
+import com.helga.android.data.remote.dto.OffSearchRequest
+import com.helga.android.data.remote.dto.OffSearchResponse
 import com.helga.android.data.remote.dto.SuggestionsResponse
 import com.helga.android.data.remote.dto.SyncPullResponse
 import com.helga.android.data.remote.dto.SyncPushRequest
@@ -45,4 +49,10 @@ interface SyncApi {
 
     @POST("api/weekplan/generate")
     suspend fun generateWeekplan(@Body req: WeekplanGenerateRequest): WeekplanGenerateResponse
+
+    @POST("api/off/lookup-barcode")
+    suspend fun lookupBarcode(@Body req: OffLookupBarcodeRequest): OffLookupBarcodeResponse
+
+    @POST("api/off/search")
+    suspend fun searchProducts(@Body req: OffSearchRequest): OffSearchResponse
 }

@@ -282,4 +282,42 @@ class ShoppingListViewModel @Inject constructor(
             emptyList()
         }
     }
+
+    fun addItemFromBarcode(barcode: String) {
+        val listId = activeListId.value ?: return
+        viewModelScope.launch {
+            try {
+                val product = apiFactory.api().lookupBarcode(
+                    com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
+                )
+                val storeId = activeStore.value?.id
+                val aisle = if (storeId != null)
+                    storeRepository.findAisleForProduct(product.name, storeId) ?: ""
+                else ""
+                repository.addItem(
+                    listId = listId,
+                    name = product.name,
+                    quantity = 1.0,
+                    unit = "Stück",
+                    aisle = aisle,
+                    offBarcode = barcode,
+                    offProductId = product.id,
+                )
+                syncScheduler.triggerOneShot()
+            } catch (e: Exception) {
+                // Handle barcode lookup error - could show snackbar to user
+                // For now, fall back to generic entry
+                val storeId = activeStore.value?.id
+                val aisle = if (storeId != null)
+                    storeRepository.findAisleForProduct("Barcode: $barcode", storeId) ?: ""
+                else ""
+                repository.addItem(
+                    listId = listId,
+                    name = "Barcode: $barcode",
+                    aisle = aisle,
+                )
+                syncScheduler.triggerOneShot()
+            }
+        }
+    }
 }
