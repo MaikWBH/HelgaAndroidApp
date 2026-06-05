@@ -101,6 +101,7 @@ fun ShoppingListScreen(
     val allStores by viewModel.allStores.collectAsStateWithLifecycle()
     val weekplanHasRecipes by viewModel.weekplanHasRecipes.collectAsStateWithLifecycle()
     val currentListEmpty by viewModel.currentListEmpty.collectAsStateWithLifecycle()
+    val costEstimate by viewModel.costEstimate.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
     var showListDropdown by remember { mutableStateOf(false) }
@@ -378,6 +379,10 @@ fun ShoppingListScreen(
                         }
                     }
                 }
+            }
+            // Cost estimate card
+            if (costEstimate != null && costEstimate!!.totalCost > 0) {
+                CostEstimateCard(estimate = costEstimate!!)
             }
             Box(modifier = Modifier.weight(1f)) {
                 when {
@@ -1032,4 +1037,77 @@ private fun NewListDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
             }
         },
     )
+}
+
+@Composable
+private fun CostEstimateCard(estimate: com.helga.android.data.model.ListCostEstimate) {
+    var showDetails by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clickable { showDetails = !showDetails },
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("💶", style = MaterialTheme.typography.titleMedium)
+                    Column {
+                        Text(
+                            text = String.format("%.2f €", estimate.totalCost),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = "${(estimate.estimatedAccuracy * 100).toInt()}% mit Preisen",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                if (estimate.storeComparison.isNotEmpty()) {
+                    Icon(
+                        imageVector = Icons.Filled.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = if (showDetails) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (showDetails && estimate.storeComparison.isNotEmpty()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    estimate.storeComparison.forEachIndexed { index, store ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                text = store.storeName,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Text(
+                                text = String.format("%.2f €", store.totalCost),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (index == 0) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
