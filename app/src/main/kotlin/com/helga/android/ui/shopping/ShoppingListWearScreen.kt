@@ -10,6 +10,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,6 +22,7 @@ import androidx.wear.compose.material3.Scaffold
 import androidx.wear.compose.material3.TimeTextMode
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.google.android.horologist.compose.layout.PositionIndicator
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,56 +39,58 @@ fun ShoppingListWearScreen(
 
     val scalingState = rememberScalingLazyListState()
 
-    Scaffold(
-        timeTextMode = TimeTextMode.Inside,
-        positionIndicator = {
-            PositionIndicator(scalingLazyListState = scalingState)
-        },
-        modifier = Modifier.background(MaterialTheme.colorScheme.background)
-    ) {
-        ScalingLazyColumn(
-            state = scalingState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            horizontalAlignment = Alignment.Start
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            timeTextMode = TimeTextMode.Inside,
+            positionIndicator = {
+                PositionIndicator(scalingLazyListState = scalingState)
+            },
+            modifier = Modifier.background(MaterialTheme.colorScheme.background)
         ) {
-            item {
-                Text(
-                    text = if (activeListId != null) "Einkaufsliste" else "Keine Liste",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    fontSize = 18.sp
-                )
-            }
-
-            if (itemsByAisle.isEmpty()) {
+            ScalingLazyColumn(
+                state = scalingState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
                 item {
                     Text(
-                        text = "Keine Items",
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(vertical = 16.dp),
-                        fontSize = 12.sp
+                        text = if (activeListId != null) "Einkaufsliste" else "Keine Liste",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        fontSize = 18.sp
                     )
                 }
-            } else {
-                itemsByAisle.forEach { (aisle, items) ->
+
+                if (itemsByAisle.isEmpty()) {
                     item {
                         Text(
-                            text = aisle.ifBlank { "Sonstiges" },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp),
-                            fontSize = 10.sp
+                            text = "Keine Items",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(vertical = 16.dp),
+                            fontSize = 12.sp
                         )
                     }
+                } else {
+                    itemsByAisle.forEach { (aisle, items) ->
+                        item {
+                            Text(
+                                text = aisle.ifBlank { "Sonstiges" },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 8.dp),
+                                fontSize = 10.sp
+                            )
+                        }
 
-                    items(items.size) { index ->
-                        val item = items[index]
-                        WearShoppingItemRow(
-                            item = item,
-                            onToggle = { viewModel.toggleChecked(item) }
-                        )
+                        items(items.size) { index ->
+                            val item = items[index]
+                            WearShoppingItemRow(
+                                item = item,
+                                onToggle = { viewModel.toggleChecked(item) }
+                            )
+                        }
                     }
                 }
             }
@@ -98,16 +103,24 @@ fun WearShoppingItemRow(
     item: ShoppingItemEntity,
     onToggle: () -> Unit
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggle() }
+            .clickable {
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                onToggle()
+            }
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = item.isChecked == 1,
-            onCheckedChange = { onToggle() },
+            onCheckedChange = {
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                onToggle()
+            },
             modifier = Modifier.size(18.dp)
         )
 
