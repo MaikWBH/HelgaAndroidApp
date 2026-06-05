@@ -110,6 +110,7 @@ fun ShoppingListScreen(
     var showStaplesSheet by remember { mutableStateOf(false) }
     var editItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
     var showStoreDropdown by remember { mutableStateOf(false) }
+    var showBarcodeScanner by remember { mutableStateOf(false) }
 
     if (showNewListDialog) {
         NewListDialog(
@@ -143,6 +144,17 @@ fun ShoppingListScreen(
             onAddStaple = viewModel::addStaple,
             onDeleteStaple = viewModel::deleteStaple,
             onSuggest = viewModel::suggestItems,
+        )
+    }
+
+    if (showBarcodeScanner) {
+        com.helga.android.ui.components.BarcodeScanner(
+            onBarcodeDetected = { barcode ->
+                viewModel.addItemFromBarcode(barcode)
+                showBarcodeScanner = false
+            },
+            onDismiss = { showBarcodeScanner = false },
+            modifier = Modifier.fillMaxSize(),
         )
     }
 
@@ -466,6 +478,7 @@ fun ShoppingListScreen(
                 onAdd = viewModel::addItem,
                 onSuggest = viewModel::suggestItems,
                 onEmojiClick = viewModel::addEmojiItem,
+                onScanClick = { showBarcodeScanner = true },
                 bottomPadding = bottomPadding,
             )
         }
@@ -871,6 +884,7 @@ private fun QuickAddBar(
     onAdd: (String) -> Unit,
     onSuggest: suspend (String) -> List<String>,
     onEmojiClick: (QuickEmojiEntity) -> Unit,
+    onScanClick: () -> Unit = {},
     bottomPadding: Dp = 0.dp,
 ) {
     var text by remember { mutableStateOf("") }
@@ -937,6 +951,11 @@ private fun QuickAddBar(
                     }
                 }
             ),
+            leadingIcon = {
+                IconButton(onClick = onScanClick, enabled = activeListId != null) {
+                    Text(stringResource(R.string.shopping_scanner_button))
+                }
+            },
             trailingIcon = {
                 if (text.isNotBlank()) {
                     IconButton(onClick = {
