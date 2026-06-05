@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.helga.android.data.local.dao.OffProductDao
+import com.helga.android.data.local.dao.ProductPriceDao
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeDao
@@ -23,6 +24,7 @@ import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.OffProductEntity
+import com.helga.android.data.local.entity.ProductPriceEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.RecipeEntity
@@ -44,7 +46,7 @@ import com.helga.android.data.local.entity.PantryItemEntity
 import com.helga.android.data.local.dao.PantryDao
 
 @Database(
-    version = 16,
+    version = 17,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -70,6 +72,7 @@ import com.helga.android.data.local.dao.PantryDao
         RecipeFeedbackEntity::class,
         PantryItemEntity::class,
         OffProductEntity::class,
+        ProductPriceEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -87,6 +90,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
     abstract fun pantryDao(): PantryDao
     abstract fun offProductDao(): OffProductDao
+    abstract fun productPriceDao(): ProductPriceDao
 
     companion object {
         const val NAME = "helga.db"
@@ -489,10 +493,34 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Create product_prices table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS product_prices (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        offProductId TEXT NOT NULL,
+                        storeName TEXT NOT NULL DEFAULT '',
+                        currency TEXT NOT NULL DEFAULT 'EUR',
+                        price REAL NOT NULL DEFAULT 0.0,
+                        unit TEXT NOT NULL DEFAULT '',
+                        lastCheckedAt INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY (offProductId) REFERENCES off_products(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_product_prices_offProductId ON product_prices(offProductId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_product_prices_storeName ON product_prices(storeName)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_product_prices_updatedAt ON product_prices(updatedAt)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                 .build()
     }
 }

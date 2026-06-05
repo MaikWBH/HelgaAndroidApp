@@ -250,6 +250,31 @@ data class OffProductDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class ProductPriceDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "off_product_id") val offProductId: String = "",
+    @Json(name = "store_name") val storeName: String = "",
+    val currency: String = "EUR",
+    val price: Double = 0.0,
+    val unit: String = "",
+    @Json(name = "last_checked_at") val lastCheckedAt: Long = 0L,
+)
+
+@JsonClass(generateAdapter = true)
+data class OpenPricesLookupRequest(
+    @Json(name = "off_product_id") val offProductId: String,
+    val stores: List<String> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class OpenPricesLookupResponse(
+    @Json(name = "product_name") val productName: String = "",
+    val prices: List<ProductPriceDto> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
@@ -275,6 +300,7 @@ data class SyncPullResponse(
     @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
     @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
+    @Json(name = "product_prices") val productPrices: List<ProductPriceDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -300,6 +326,7 @@ data class SyncPushRequest(
     @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
     @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
+    @Json(name = "product_prices") val productPrices: List<ProductPriceDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

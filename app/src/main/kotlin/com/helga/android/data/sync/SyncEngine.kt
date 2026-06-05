@@ -1,6 +1,7 @@
 package com.helga.android.data.sync
 
 import com.helga.android.data.local.AppDatabase
+import com.helga.android.data.local.dao.ProductPriceDao
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
@@ -15,6 +16,7 @@ import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
+import com.helga.android.data.local.entity.ProductPriceEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
@@ -36,6 +38,7 @@ import com.helga.android.data.remote.dto.AisleProductDto
 import com.helga.android.data.remote.dto.CategoryDto
 import com.helga.android.data.remote.dto.IngredientDto
 import com.helga.android.data.remote.dto.InstructionDto
+import com.helga.android.data.remote.dto.ProductPriceDto
 import com.helga.android.data.remote.dto.QuickEmojiDto
 import com.helga.android.data.remote.dto.RecipeDto
 import com.helga.android.data.remote.dto.ShoppingItemDto
@@ -64,6 +67,7 @@ class SyncEngine @Inject constructor(
     private val syncDao: SyncDao,
     private val shoppingDao: ShoppingDao,
     private val storeDao: StoreDao,
+    private val productPriceDao: ProductPriceDao,
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanDao: WeekplanDao,
     private val weekplanSettingsDao: WeekplanSettingsDao,
@@ -120,6 +124,7 @@ class SyncEngine @Inject constructor(
         val feedbackWinners = response.recipeFeedback.filter { dto ->
             dto.updatedAt > 0L
         }
+        val priceWinners = filterServerWins(response.productPrices, syncDao.productPriceTimestamps()) { it.id to it.updatedAt }
 
         if (recipeWinners.isEmpty() && ingredientWinners.isEmpty() &&
             instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty() &&
@@ -128,7 +133,7 @@ class SyncEngine @Inject constructor(
             stapleWinners.isEmpty() && emojiWinners.isEmpty() &&
             wpDayWinners.isEmpty() && wpRecipeWinners.isEmpty() && wpExtraWinners.isEmpty() &&
             wpSettingsWinners.isEmpty() && wpConstraintsWinners.isEmpty() && historyWinners.isEmpty() &&
-            feedbackWinners.isEmpty()
+            feedbackWinners.isEmpty() && priceWinners.isEmpty()
         ) return
 
         database.withTransaction {
@@ -151,6 +156,7 @@ class SyncEngine @Inject constructor(
             if (wpConstraintsWinners.isNotEmpty()) weekplanConstraintsDao.upsert(wpConstraintsWinners.first().toEntity())
             if (historyWinners.isNotEmpty()) recipeHistoryDao.upsertAll(historyWinners.map { it.toEntity() })
             if (feedbackWinners.isNotEmpty()) recipeFeedbackDao.upsertAll(feedbackWinners.map { it.toEntity() })
+            if (priceWinners.isNotEmpty()) productPriceDao.insertAll(priceWinners.map { it.toEntity() })
         }
     }
 
@@ -175,6 +181,7 @@ class SyncEngine @Inject constructor(
         weekplanConstraints = weekplanConstraintsDao.dirty().map { it.toDto() },
         recipeHistory = recipeHistoryDao.dirtyHistory().map { it.toDto() },
         recipeFeedback = recipeFeedbackDao.getDirty().map { it.toDto() },
+        productPrices = productPriceDao.dirtyPrices().map { it.toDto() },
     )
 
     private suspend fun clearDirtyFlagsExcept(
@@ -200,6 +207,7 @@ class SyncEngine @Inject constructor(
         val wpConstraintsIds = pushed.weekplanConstraints.map { it.id } - serverWins.weekplanConstraints.map { it.id }.toSet()
         val historyIds = pushed.recipeHistory.map { it.id } - serverWins.recipeHistory.map { it.id }.toSet()
         val feedbackIds = pushed.recipeFeedback.map { it.id } - serverWins.recipeFeedback.map { it.id }.toSet()
+        val priceIds = pushed.productPrices.map { it.id } - serverWins.productPrices.map { it.id }.toSet()
 
         database.withTransaction {
             if (recipeIds.isNotEmpty()) recipeDao.clearRecipeDirty(recipeIds)
@@ -221,6 +229,7 @@ class SyncEngine @Inject constructor(
             if (wpConstraintsIds.isNotEmpty()) weekplanConstraintsDao.clearDirty(wpConstraintsIds.toList())
             if (historyIds.isNotEmpty()) recipeHistoryDao.clearDirty(historyIds.toList())
             if (feedbackIds.isNotEmpty()) recipeFeedbackDao.clearDirty(feedbackIds.toList())
+            if (priceIds.isNotEmpty()) productPriceDao.clearPricesDirty(priceIds.toList())
         }
     }
 
@@ -453,4 +462,16 @@ private fun RecipeFeedbackDto.toEntity(): RecipeFeedbackEntity = RecipeFeedbackE
 private fun RecipeFeedbackEntity.toDto(): RecipeFeedbackDto = RecipeFeedbackDto(
     id = id, recipeId = recipeId, plannedDate = plannedDate,
     liked = liked, updatedAt = updatedAt, deleted = deleted,
+)
+
+private fun ProductPriceDto.toEntity(): ProductPriceEntity = ProductPriceEntity(
+    id = id, offProductId = offProductId, storeName = storeName,
+    currency = currency, price = price, unit = unit, lastCheckedAt = lastCheckedAt,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun ProductPriceEntity.toDto(): ProductPriceDto = ProductPriceDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, offProductId = offProductId,
+    storeName = storeName, currency = currency, price = price, unit = unit,
+    lastCheckedAt = lastCheckedAt,
 )
