@@ -382,7 +382,6 @@ private fun RecipeRow(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun RecipeThumbnail(
     imageUrl: String?,

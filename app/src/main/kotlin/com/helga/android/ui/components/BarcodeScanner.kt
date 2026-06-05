@@ -42,6 +42,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.helga.android.R
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
@@ -68,11 +70,11 @@ fun BarcodeScanner(
 
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(
-                com.google.mlkit.vision.barcode.Barcode.FORMAT_EAN_8,
-                com.google.mlkit.vision.barcode.Barcode.FORMAT_EAN_13,
-                com.google.mlkit.vision.barcode.Barcode.FORMAT_UPC_A,
-                com.google.mlkit.vision.barcode.Barcode.FORMAT_CODE_128,
-                com.google.mlkit.vision.barcode.Barcode.FORMAT_CODE_39,
+                Barcode.FORMAT_EAN_8,
+                Barcode.FORMAT_EAN_13,
+                Barcode.FORMAT_UPC_A,
+                Barcode.FORMAT_CODE_128,
+                Barcode.FORMAT_CODE_39,
             )
             .build()
         val scanner = BarcodeScanning.getClient(options)

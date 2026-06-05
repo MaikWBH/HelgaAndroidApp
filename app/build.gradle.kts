@@ -140,6 +140,4 @@ dependencies {
     // Wear OS
     implementation(libs.androidx.wear.compose.foundation)
     implementation(libs.androidx.wear.compose.material)
-    implementation(libs.horologist.compose.layout)
-    implementation(libs.horologist.compose.material)
 }

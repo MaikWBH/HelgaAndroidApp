@@ -112,7 +112,7 @@ class WeekplanRepository @Inject constructor(
     }
 
     suspend fun getWeekplanNutrition(startDate: String, endDate: String): WeekplanNutrition {
-        val days = weekplanDao.daysBetween(startDate, endDate)
+        val days = weekplanDao.getDaysBetween(startDate, endDate)
         val dayNutritions = mutableListOf<DayNutrition>()
         var totalKcal = 0.0
         var bestNutriScore = ""

@@ -282,6 +282,46 @@ data class OpenPricesLookupResponse(
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
+data class OffLookupBarcodeRequest(
+    val barcode: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class OffLookupBarcodeResponse(
+    val id: String = "",
+    @Json(name = "updated_at") val updatedAt: Long = 0L,
+    val deleted: Int = 0,
+    val barcode: String = "",
+    val name: String = "",
+    val brand: String = "",
+    val categories: String = "[]",
+    @Json(name = "kcal_per_unit") val kcalPerUnit: Double = 0.0,
+    val proteins: Double = 0.0,
+    val fats: Double = 0.0,
+    val carbs: Double = 0.0,
+    @Json(name = "nutri_score") val nutriScore: String = "",
+    val nova: Int = 0,
+    @Json(name = "eco_score") val ecoScore: String = "",
+    val allergenes: String = "[]",
+    val additives: String = "[]",
+    @Json(name = "is_organic") val isOrganic: Int = 0,
+    val vegan: Int = 0,
+    val vegetarian: Int = 0,
+    @Json(name = "image_path") val imagePath: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class OffSearchRequest(
+    val query: String,
+    val limit: Int = 5,
+)
+
+@JsonClass(generateAdapter = true)
+data class OffSearchResponse(
+    val products: List<OffProductDto> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
 data class SyncPullResponse(
     @Json(name = "server_ts") val serverTs: Long,
     val recipes: List<RecipeDto> = emptyList(),

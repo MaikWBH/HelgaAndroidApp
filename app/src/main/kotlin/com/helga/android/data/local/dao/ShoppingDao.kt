@@ -17,6 +17,9 @@ interface ShoppingDao {
     @Query("SELECT * FROM shopping_items WHERE listId = :listId AND deleted = 0 ORDER BY aisle COLLATE NOCASE ASC, sortOrder ASC, name COLLATE NOCASE ASC")
     fun observeItemsByList(listId: String): Flow<List<ShoppingItemEntity>>
 
+    @Query("SELECT * FROM shopping_items WHERE listId = :listId AND deleted = 0 ORDER BY aisle COLLATE NOCASE ASC, sortOrder ASC, name COLLATE NOCASE ASC")
+    suspend fun itemsByList(listId: String): List<ShoppingItemEntity>
+
     @Query("SELECT * FROM shopping_lists WHERE id = :id LIMIT 1")
     suspend fun findListById(id: String): ShoppingListEntity?
 
