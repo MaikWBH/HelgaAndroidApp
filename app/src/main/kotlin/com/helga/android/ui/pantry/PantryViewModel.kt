@@ -67,4 +67,41 @@ class PantryViewModel @Inject constructor(
             emptyList()
         }
     }
+
+    fun addItemFromBarcode(barcode: String) {
+        viewModelScope.launch {
+            try {
+                val product = apiFactory.api().lookupBarcode(
+                    com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
+                )
+                val now = System.currentTimeMillis()
+                pantryDao.upsert(
+                    PantryItemEntity(
+                        id = UUID.randomUUID().toString(),
+                        name = product.name,
+                        quantity = 1.0,
+                        unit = "Stück",
+                        category = "",
+                        offBarcode = barcode,
+                        offProductId = product.id,
+                        updatedAt = now,
+                        dirty = 1,
+                    )
+                )
+                syncScheduler.triggerOneShot()
+            } catch (e: Exception) {
+                // Handle barcode lookup error - add with fallback name
+                val now = System.currentTimeMillis()
+                pantryDao.upsert(
+                    PantryItemEntity(
+                        id = UUID.randomUUID().toString(),
+                        name = "Barcode: $barcode",
+                        updatedAt = now,
+                        dirty = 1,
+                    )
+                )
+                syncScheduler.triggerOneShot()
+            }
+        }
+    }
 }

@@ -49,6 +49,18 @@ fun PantryScreen(
 ) {
     val itemsByCategory by viewModel.items.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showBarcodeScanner by remember { mutableStateOf(false) }
+
+    if (showBarcodeScanner) {
+        com.helga.android.ui.components.BarcodeScanner(
+            onBarcodeDetected = { barcode ->
+                viewModel.addItemFromBarcode(barcode)
+                showBarcodeScanner = false
+            },
+            onDismiss = { showBarcodeScanner = false },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 
     if (showAddDialog) {
         AddPantryDialog(
@@ -68,6 +80,11 @@ fun PantryScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showBarcodeScanner = true }) {
+                        Text(stringResource(R.string.pantry_scanner_button))
                     }
                 },
             )
