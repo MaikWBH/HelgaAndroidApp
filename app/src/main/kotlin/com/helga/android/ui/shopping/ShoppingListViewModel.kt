@@ -11,6 +11,7 @@ import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.repository.ShoppingRepository
@@ -115,6 +116,19 @@ class ShoppingListViewModel @Inject constructor(
     val currentListEmpty: StateFlow<Boolean> = itemsByAisle
         .map { it.values.flatten().isEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    private val _costEstimate = MutableStateFlow<ListCostEstimate?>(null)
+    val costEstimate: StateFlow<ListCostEstimate?> = _costEstimate
+
+    init {
+        viewModelScope.launch {
+            activeListId.collect { listId ->
+                if (listId != null) {
+                    _costEstimate.value = repository.estimateListCosts(listId)
+                }
+            }
+        }
+    }
 
     fun selectList(id: String) {
         _activeListId.value = id
