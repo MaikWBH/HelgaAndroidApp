@@ -21,7 +21,7 @@ interface ProductPriceDao {
     @Query("SELECT * FROM product_prices WHERE offProductId = :offProductId AND storeName = :storeName AND deleted = 0 LIMIT 1")
     suspend fun getPriceForStore(offProductId: String, storeName: String): ProductPriceEntity?
 
-    @Query("SELECT * FROM product_prices WHERE deleted = 0 ORDER BY updated_at DESC LIMIT :limit")
+    @Query("SELECT * FROM product_prices WHERE deleted = 0 ORDER BY updatedAt DESC LIMIT :limit")
     suspend fun getLatestPrices(limit: Int = 100): List<ProductPriceEntity>
 
     @Query("SELECT DISTINCT storeName FROM product_prices WHERE deleted = 0 ORDER BY storeName")
@@ -33,7 +33,7 @@ interface ProductPriceDao {
     @Query("UPDATE product_prices SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearPricesDirty(ids: List<String>)
 
-    @Query("UPDATE product_prices SET deleted = 1, updated_at = :now WHERE id = :id")
+    @Query("UPDATE product_prices SET deleted = 1, updatedAt = :now WHERE id = :id")
     suspend fun delete(id: String, now: Long = System.currentTimeMillis())
 
     @Query("SELECT * FROM product_prices WHERE offProductId = :offProductId AND deleted = 0")
