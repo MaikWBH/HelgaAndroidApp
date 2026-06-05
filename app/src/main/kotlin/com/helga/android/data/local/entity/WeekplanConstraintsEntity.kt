@@ -16,6 +16,10 @@ data class WeekplanConstraintsEntity(
     val maxFishPerWeek: Int = 2,
     val minVegetarianPerWeek: Int = 2,
     val maxRepeatDays: Int = 14,
+    val maxKcalPerPortion: Int = 700,
+    val minNutriScore: String = "c", // "a", "b", "c"
+    val preferOrganic: Int = 0, // boolean flag
+    val excludeAllergens: String = "[]", // JSON array of allergen strings
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

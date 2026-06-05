@@ -157,8 +157,9 @@ fun WeekplanScreen(
     if (constraintsEditorVisible) {
         ConstraintsEditorSheet(
             constraints = constraints,
-            onSave = { maxMeat, maxFish, minVeg, maxRepeat ->
-                viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat)
+            allergies = emptyList(), // TODO: load from preferences
+            onSave = { maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies ->
+                viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies)
                 constraintsEditorVisible = false
             },
             onDismiss = { constraintsEditorVisible = false },
@@ -759,7 +760,8 @@ private fun ShoppingListPickerDialog(
 @Composable
 private fun ConstraintsEditorSheet(
     constraints: WeekplanConstraintsEntity,
-    onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int) -> Unit,
+    allergies: List<String>,
+    onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, minScore: String, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -767,6 +769,10 @@ private fun ConstraintsEditorSheet(
     var maxFish by remember(constraints.maxFishPerWeek) { mutableFloatStateOf(constraints.maxFishPerWeek.toFloat()) }
     var minVeg by remember(constraints.minVegetarianPerWeek) { mutableFloatStateOf(constraints.minVegetarianPerWeek.toFloat()) }
     var maxRepeat by remember(constraints.maxRepeatDays) { mutableFloatStateOf(constraints.maxRepeatDays.toFloat()) }
+    var maxKcal by remember(constraints.maxKcalPerPortion) { mutableFloatStateOf(constraints.maxKcalPerPortion.toFloat()) }
+    var minNutriScore by remember(constraints.minNutriScore) { mutableStateOf(constraints.minNutriScore) }
+    var preferOrganic by remember(constraints.preferOrganic) { mutableStateOf(constraints.preferOrganic == 1) }
+    var selectedAllergens by remember(constraints.excludeAllergens) { mutableStateOf(emptyList<String>()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -835,8 +841,69 @@ private fun ConstraintsEditorSheet(
             )
             Spacer(Modifier.height(16.dp))
 
+            HorizontalDivider()
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "🔥 Nährwert-Budgets",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "Max kcal/Portion: ${maxKcal.toInt()}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = maxKcal,
+                onValueChange = { maxKcal = it },
+                valueRange = 300f..1200f,
+                steps = 18,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "Min Nutri-Score",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf("c", "b", "a").forEach { score ->
+                    Button(
+                        onClick = { minNutriScore = score },
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = if (minNutriScore == score) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                    ) {
+                        Text(score.uppercase())
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "🌿 Bio bevorzugt",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                androidx.compose.material3.Switch(
+                    checked = preferOrganic,
+                    onCheckedChange = { preferOrganic = it },
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+
             Button(
-                onClick = { onSave(maxMeat.toInt(), maxFish.toInt(), minVeg.toInt(), maxRepeat.toInt()) },
+                onClick = { onSave(maxMeat.toInt(), maxFish.toInt(), minVeg.toInt(), maxRepeat.toInt(), maxKcal.toInt(), minNutriScore, preferOrganic, selectedAllergens) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.weekplan_constraints_save))

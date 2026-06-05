@@ -336,9 +336,20 @@ class WeekplanViewModel @Inject constructor(
         }
     }
 
-    fun saveConstraints(maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int) {
+    fun saveConstraints(
+        maxMeat: Int,
+        maxFish: Int,
+        minVeg: Int,
+        maxRepeat: Int,
+        maxKcalPerPortion: Int = 700,
+        minNutriScore: String = "c",
+        preferOrganic: Boolean = false,
+        excludeAllergens: List<String> = emptyList(),
+    ) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
+            val allergenJson = com.squareup.moshi.Moshi.Builder().build()
+                .adapter(List::class.java).toJson(excludeAllergens)
             weekplanConstraintsDao.upsert(
                 WeekplanConstraintsEntity(
                     id = "global",
@@ -346,6 +357,10 @@ class WeekplanViewModel @Inject constructor(
                     maxFishPerWeek = maxFish,
                     minVegetarianPerWeek = minVeg,
                     maxRepeatDays = maxRepeat,
+                    maxKcalPerPortion = maxKcalPerPortion,
+                    minNutriScore = minNutriScore,
+                    preferOrganic = if (preferOrganic) 1 else 0,
+                    excludeAllergens = allergenJson,
                     updatedAt = now,
                     dirty = 1,
                 )
