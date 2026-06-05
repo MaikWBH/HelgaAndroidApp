@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import com.helga.android.data.local.entity.ShoppingItemEntity
-import dagger.hilt.android.lifecycle.HiltViewModel
 
 @Composable
 fun ShoppingListWearScreen(
