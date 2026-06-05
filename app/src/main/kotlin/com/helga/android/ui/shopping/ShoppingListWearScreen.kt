@@ -2,9 +2,6 @@ package com.helga.android.ui.shopping
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -18,9 +15,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material.Scaffold
+import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeTextMode
+import androidx.wear.compose.material.Checkbox
+import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.google.android.horologist.compose.layout.PositionIndicator
 import androidx.compose.foundation.layout.Box
