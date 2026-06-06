@@ -16,8 +16,10 @@ import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.StoreRepository
+import com.helga.android.data.sync.SyncEngine
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,6 +30,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -43,6 +46,7 @@ class ShoppingListViewModel @Inject constructor(
     private val recipeDao: RecipeDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
+    private val syncEngine: SyncEngine,
     private val preferences: AppPreferences,
 ) : ViewModel() {
 
@@ -120,6 +124,9 @@ class ShoppingListViewModel @Inject constructor(
     private val _costEstimate = MutableStateFlow<ListCostEstimate?>(null)
     val costEstimate: StateFlow<ListCostEstimate?> = _costEstimate
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
     init {
         viewModelScope.launch {
             activeListId.collect { listId ->
@@ -132,6 +139,30 @@ class ShoppingListViewModel @Inject constructor(
 
     fun selectList(id: String) {
         _activeListId.value = id
+    }
+
+    /**
+     * Manueller Pull-to-Refresh: zieht sofort die aktuellen Server-Daten und merged
+     * sie in Room. So sieht Handy B direkt einen Eintrag, den Handy A erstellt hat.
+     * Netzwerkfehler sind nicht-fatal – die lokale Liste bleibt erhalten.
+     */
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                withContext(Dispatchers.IO) {
+                    syncEngine.runFullSync()
+                }
+                activeListId.value?.let { listId ->
+                    _costEstimate.value = repository.estimateListCosts(listId)
+                }
+            } catch (e: Exception) {
+                // Offline oder Server nicht erreichbar – lokale Liste unverändert lassen.
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
     }
 
     fun exportWeekToShoppingList(listId: String) {

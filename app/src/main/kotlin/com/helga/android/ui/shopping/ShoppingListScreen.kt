@@ -48,6 +48,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -102,6 +103,7 @@ fun ShoppingListScreen(
     val weekplanHasRecipes by viewModel.weekplanHasRecipes.collectAsStateWithLifecycle()
     val currentListEmpty by viewModel.currentListEmpty.collectAsStateWithLifecycle()
     val costEstimate by viewModel.costEstimate.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
     var showListDropdown by remember { mutableStateOf(false) }
@@ -384,7 +386,11 @@ fun ShoppingListScreen(
             if (costEstimate != null && costEstimate!!.totalCost > 0) {
                 CostEstimateCard(estimate = costEstimate!!)
             }
-            Box(modifier = Modifier.weight(1f)) {
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.weight(1f),
+            ) {
                 when {
                     lists.isEmpty() -> EmptyListsState(
                         modifier = Modifier.fillMaxSize(),
@@ -982,17 +988,25 @@ private fun QuickAddBar(
 
 @Composable
 private fun EmptyListsState(modifier: Modifier = Modifier, onCreateList: () -> Unit) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.shopping_no_lists),
-                style = MaterialTheme.typography.titleLarge,
-            )
-            TextButton(onClick = onCreateList) {
-                Text(stringResource(R.string.shopping_new_list))
+    // LazyColumn statt Box, damit Pull-to-Refresh die Scroll-Geste auch ohne Inhalt erkennt.
+    LazyColumn(modifier = modifier) {
+        item {
+            Box(
+                modifier = Modifier.fillParentMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.shopping_no_lists),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    TextButton(onClick = onCreateList) {
+                        Text(stringResource(R.string.shopping_new_list))
+                    }
+                }
             }
         }
     }
@@ -1000,12 +1014,20 @@ private fun EmptyListsState(modifier: Modifier = Modifier, onCreateList: () -> U
 
 @Composable
 private fun EmptyItemsState(modifier: Modifier = Modifier) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Text(
-            text = stringResource(R.string.shopping_empty),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    // LazyColumn statt Box, damit Pull-to-Refresh die Scroll-Geste auch ohne Inhalt erkennt.
+    LazyColumn(modifier = modifier) {
+        item {
+            Box(
+                modifier = Modifier.fillParentMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.shopping_empty),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 
