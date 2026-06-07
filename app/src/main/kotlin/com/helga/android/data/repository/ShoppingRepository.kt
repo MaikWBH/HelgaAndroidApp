@@ -5,6 +5,8 @@ import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.model.ItemCostEstimate
+import com.helga.android.data.model.ItemOrigin
+import com.helga.android.data.model.ItemOrigins
 import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.model.StoreCost
 import com.helga.android.data.remote.SyncApiFactory
@@ -65,9 +67,11 @@ class ShoppingRepository @Inject constructor(
         source: String = "manual",
         offBarcode: String = "",
         offProductId: String = "",
+        recipeName: String = "",
     ): String {
         val id = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
+        val origins = listOf(ItemOrigin(recipe = recipeName, quantity = quantity, unit = unit))
         shoppingDao.upsertItem(
             ShoppingItemEntity(
                 id = id,
@@ -77,6 +81,7 @@ class ShoppingRepository @Inject constructor(
                 unit = unit,
                 aisle = aisle,
                 source = source,
+                origins = ItemOrigins.encode(origins),
                 offBarcode = offBarcode,
                 offProductId = offProductId,
                 updatedAt = now,
@@ -138,13 +143,24 @@ class ShoppingRepository @Inject constructor(
         unit: String,
         aisle: String = "",
         source: String = "recipe",
+        recipeName: String = "",
     ) {
         val norm = name.trim()
         if (norm.isBlank()) return
-        val existing = shoppingDao.findUncheckedItemByNameUnit(listId, norm, unit.trim())
+        val cleanUnit = unit.trim()
+        val existing = shoppingDao.findUncheckedItemByNameUnit(listId, norm, cleanUnit)
         val now = System.currentTimeMillis()
+        val newOrigin = ItemOrigin(recipe = recipeName, quantity = quantity, unit = cleanUnit)
         if (existing != null) {
-            shoppingDao.upsertItem(existing.copy(quantity = existing.quantity + quantity, updatedAt = now, dirty = 1))
+            val mergedOrigins = ItemOrigins.decode(existing.origins) + newOrigin
+            shoppingDao.upsertItem(
+                existing.copy(
+                    quantity = existing.quantity + quantity,
+                    origins = ItemOrigins.encode(mergedOrigins),
+                    updatedAt = now,
+                    dirty = 1,
+                )
+            )
         } else {
             shoppingDao.upsertItem(
                 ShoppingItemEntity(
@@ -152,9 +168,10 @@ class ShoppingRepository @Inject constructor(
                     listId = listId,
                     name = norm,
                     quantity = quantity,
-                    unit = unit.trim(),
+                    unit = cleanUnit,
                     aisle = aisle,
                     source = source,
+                    origins = ItemOrigins.encode(listOf(newOrigin)),
                     updatedAt = now,
                     dirty = 1,
                 )

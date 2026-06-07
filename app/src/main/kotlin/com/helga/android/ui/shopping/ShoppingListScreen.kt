@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MoreVert
@@ -77,6 +78,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
 import com.helga.android.data.local.entity.QuickEmojiEntity
+import com.helga.android.data.model.ItemOrigin
+import com.helga.android.data.model.ItemOrigins
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
@@ -572,80 +575,149 @@ private fun ShoppingItemRow(
     onAssignAisle: () -> Unit,
     onEdit: () -> Unit,
 ) {
-    Row(
+    val origins = remember(item.id, item.origins) { ItemOrigins.decode(item.origins) }
+    val breakdown = remember(origins) { ItemOrigins.aggregateByRecipe(origins) }
+    val recipes = remember(breakdown) { breakdown.map { it.recipe }.filter { it.isNotBlank() }.distinct() }
+    val canExpand = breakdown.size >= 2
+    var expanded by remember(item.id) { mutableStateOf(false) }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .background(MaterialTheme.colorScheme.surface),
     ) {
-        Checkbox(
-            checked = item.isChecked == 1,
-            onCheckedChange = { onToggle() },
-        )
-        Column(
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .clickable(onClick = onEdit)
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            Checkbox(
+                checked = item.isChecked == 1,
+                onCheckedChange = { onToggle() },
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onEdit)
             ) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    textDecoration = if (item.isChecked == 1) TextDecoration.LineThrough else null,
-                    color = if (item.isChecked == 1)
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    else
-                        MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                if (item.source != "manual") {
-                    val label = when {
-                        item.source == "staple" -> "Vorrat"
-                        item.source == "recipe" -> "Rezept"
-                        item.source == "weekplan" -> "Wochenplan"
-                        else -> item.source
-                    }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier
-                            .background(
-                                MaterialTheme.colorScheme.secondaryContainer,
-                                RoundedCornerShape(4.dp),
-                            )
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        text = item.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textDecoration = if (item.isChecked == 1) TextDecoration.LineThrough else null,
+                        color = if (item.isChecked == 1)
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        else
+                            MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    SourceBadge(item = item, recipes = recipes)
+                }
+                if (item.quantity != 1.0 || item.unit.isNotBlank()) {
+                    Text(
+                        text = if (item.unit.isBlank()) formatQty(item.quantity)
+                               else "${formatQty(item.quantity)} ${item.unit}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-            if (item.quantity != 1.0 || item.unit.isNotBlank()) {
-                val qDisplay = if (item.quantity % 1.0 == 0.0)
-                    item.quantity.toInt().toString()
-                else
-                    item.quantity.toString()
-                Text(
-                    text = if (item.unit.isBlank()) qDisplay else "$qDisplay ${item.unit}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (canExpand) {
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = "Rezept-Aufschlüsselung",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            if (showAisleButton) {
+                IconButton(onClick = onAssignAisle) {
+                    Icon(
+                        imageVector = Icons.Filled.LocalOffer,
+                        contentDescription = stringResource(R.string.shopping_assign_aisle),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
-        if (showAisleButton) {
-            IconButton(onClick = onAssignAisle) {
-                Icon(
-                    imageVector = Icons.Filled.LocalOffer,
-                    contentDescription = stringResource(R.string.shopping_assign_aisle),
-                    tint = MaterialTheme.colorScheme.primary,
+        AnimatedVisibility(visible = expanded && canExpand) {
+            OriginBreakdown(
+                breakdown = breakdown,
+                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp),
+            )
+        }
+    }
+}
+
+/** Herkunfts-Badge: Rezeptname, "N Rezepte" oder Quelle (Manuell/Vorrat/…). */
+@Composable
+private fun SourceBadge(item: ShoppingItemEntity, recipes: List<String>) {
+    val label = when {
+        recipes.size >= 2 -> "${recipes.size} Rezepte"
+        recipes.size == 1 -> recipes.first()
+        item.source == "staple" -> "Vorrat"
+        item.source == "weekplan" -> "Wochenplan"
+        item.source == "recipe" -> "Rezept"
+        else -> "Manuell"
+    }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        color = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = Modifier
+            .widthIn(max = 140.dp)
+            .background(
+                MaterialTheme.colorScheme.secondaryContainer,
+                RoundedCornerShape(4.dp),
+            )
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    )
+}
+
+/** Aufgeklappte Aufschlüsselung: pro Rezept (bzw. "Manuell") die benötigte Menge. */
+@Composable
+private fun OriginBreakdown(breakdown: List<ItemOrigin>, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        breakdown.forEach { origin ->
+            val label = origin.recipe.ifBlank { "Manuell" }
+            val qtyText = if (origin.unit.isBlank()) formatQty(origin.quantity)
+                          else "${formatQty(origin.quantity)} ${origin.unit}"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "• $label",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Text(
+                    text = qtyText,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
     }
 }
+
+private fun formatQty(q: Double): String =
+    if (q % 1.0 == 0.0) q.toInt().toString() else q.toString()
 
 @Composable
 private fun EditItemDialog(

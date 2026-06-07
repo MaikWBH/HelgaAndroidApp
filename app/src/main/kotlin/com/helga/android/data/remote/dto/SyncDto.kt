@@ -97,6 +97,7 @@ data class ShoppingItemDto(
     val source: String = "manual",
     @Json(name = "is_checked") val isChecked: Int = 0,
     @Json(name = "sort_order") val sortOrder: Int = 0,
+    val origins: String = "[]",
     @Json(name = "off_barcode") val offBarcode: String = "",
     @Json(name = "off_product_id") val offProductId: String = "",
     @Json(name = "price_estimate") val priceEstimate: Double = 0.0,

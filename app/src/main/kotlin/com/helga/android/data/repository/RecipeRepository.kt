@@ -99,6 +99,7 @@ class RecipeRepository @Inject constructor(
     }
 
     suspend fun exportToShoppingList(recipeId: String, listId: String) {
+        val recipeName = recipeDao.findById(recipeId)?.name ?: ""
         val ingredients = recipeDao.ingredientsByRecipeId(recipeId).filter { it.deleted == 0 }
         ingredients.forEach { ingredient ->
             shoppingRepository.addOrMergeItem(
@@ -107,6 +108,7 @@ class RecipeRepository @Inject constructor(
                 quantity = ingredient.quantity,
                 unit = ingredient.unit,
                 source = "recipe",
+                recipeName = recipeName,
             )
         }
     }

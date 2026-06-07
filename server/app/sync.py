@@ -43,7 +43,7 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     ],
     "shopping_items": [
         "id", "list_id", "name", "quantity", "unit", "aisle", "source",
-        "is_checked", "sort_order", "off_barcode", "off_product_id",
+        "is_checked", "sort_order", "origins", "off_barcode", "off_product_id",
         "price_estimate", "price_last_checked", "updated_at", "deleted",
     ],
     "shopping_list_staples": [

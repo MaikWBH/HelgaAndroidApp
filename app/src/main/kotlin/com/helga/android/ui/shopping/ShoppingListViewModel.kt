@@ -170,6 +170,7 @@ class ShoppingListViewModel @Inject constructor(
             val days = weekplanDao.getDaysBetween(monday.format(fmt), sunday.format(fmt))
             days.forEach { day ->
                 weekplanDao.recipesForDay(day.id).forEach { entry ->
+                    val recipeName = recipeDao.findById(entry.recipeId)?.name ?: ""
                     val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
                     ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
                         val storeId = activeStore.value?.id
@@ -183,6 +184,7 @@ class ShoppingListViewModel @Inject constructor(
                             unit = ingredient.unit,
                             source = "weekplan",
                             aisle = aisle,
+                            recipeName = recipeName,
                         )
                     }
                 }

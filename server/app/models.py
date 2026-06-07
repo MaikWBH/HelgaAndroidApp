@@ -100,6 +100,7 @@ class ShoppingItemRecord(SyncRecord):
     source: str = "manual"
     is_checked: int = 0
     sort_order: int = 0
+    origins: str = "[]"
     off_barcode: str = ""
     off_product_id: str = ""
     price_estimate: float = 0.0

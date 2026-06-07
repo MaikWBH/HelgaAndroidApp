@@ -24,6 +24,7 @@ data class ShoppingItemEntity(
     val source: String = "manual",
     val isChecked: Int = 0,
     val sortOrder: Int = 0,
+    val origins: String = "[]", // JSON-Liste von ItemOrigin: Rezept-Herkünfte
     val offBarcode: String = "", // OFF barcode/EAN
     val offProductId: String = "", // link to OffProductEntity
     val priceEstimate: Double = 0.0, // cached price

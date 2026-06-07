@@ -173,6 +173,7 @@ CREATE TABLE IF NOT EXISTS shopping_items (
     source              TEXT DEFAULT 'manual',
     is_checked          INTEGER DEFAULT 0,
     sort_order          INTEGER DEFAULT 0,
+    origins             TEXT NOT NULL DEFAULT '[]',
     off_barcode         TEXT NOT NULL DEFAULT '',
     off_product_id      TEXT NOT NULL DEFAULT '',
     price_estimate      REAL NOT NULL DEFAULT 0.0,
@@ -307,6 +308,23 @@ INDICES = [
 ]
 
 
+# Spalten, die nach dem ersten Release ergänzt wurden. init_db() fügt sie
+# non-destruktiv zu bestehenden DBs hinzu (ALTER TABLE ... ADD COLUMN), da
+# "CREATE TABLE IF NOT EXISTS" bestehende Tabellen nicht verändert.
+ADDED_COLUMNS = {
+    "shopping_items": [
+        ("origins", "TEXT NOT NULL DEFAULT '[]'"),
+        ("off_barcode", "TEXT NOT NULL DEFAULT ''"),
+        ("off_product_id", "TEXT NOT NULL DEFAULT ''"),
+        ("price_estimate", "REAL NOT NULL DEFAULT 0.0"),
+        ("price_last_checked", "INTEGER NOT NULL DEFAULT 0"),
+    ],
+    "recipe_ingredients": [
+        ("off_barcode", "TEXT NOT NULL DEFAULT ''"),
+    ],
+}
+
+
 @asynccontextmanager
 async def get_db():
     async with aiosqlite.connect(DB_PATH) as db:
@@ -316,10 +334,20 @@ async def get_db():
         yield db
 
 
+async def _ensure_columns(db):
+    for table, columns in ADDED_COLUMNS.items():
+        async with db.execute(f"PRAGMA table_info({table})") as cursor:
+            existing = {row[1] for row in await cursor.fetchall()}
+        for name, ddl in columns:
+            if name not in existing:
+                await db.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+
+
 async def init_db():
     os.makedirs(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".", exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(SCHEMA)
+        await _ensure_columns(db)
         for idx in INDICES:
             await db.execute(idx)
         await db.commit()

@@ -105,6 +105,7 @@ class WeekplanRepository @Inject constructor(
                         quantity = ingredient.quantity * scale,
                         unit = ingredient.unit,
                         source = "weekplan",
+                        recipeName = recipe?.name ?: "",
                     )
                 }
             }

@@ -287,6 +287,7 @@ private fun ShoppingListDto.toEntity(): ShoppingListEntity = ShoppingListEntity(
 private fun ShoppingItemDto.toEntity(): ShoppingItemEntity = ShoppingItemEntity(
     id = id, listId = listId, name = name, quantity = quantity, unit = unit,
     aisle = aisle, source = source, isChecked = isChecked, sortOrder = sortOrder,
+    origins = origins.ifBlank { "[]" },
     updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
@@ -349,7 +350,7 @@ private fun ShoppingListEntity.toDto(): ShoppingListDto = ShoppingListDto(
 private fun ShoppingItemEntity.toDto(): ShoppingItemDto = ShoppingItemDto(
     id = id, updatedAt = updatedAt, deleted = deleted, listId = listId, name = name,
     quantity = quantity, unit = unit, aisle = aisle, source = source,
-    isChecked = isChecked, sortOrder = sortOrder,
+    isChecked = isChecked, sortOrder = sortOrder, origins = origins,
 )
 
 private fun StoreEntity.toDto(): StoreDto = StoreDto(
