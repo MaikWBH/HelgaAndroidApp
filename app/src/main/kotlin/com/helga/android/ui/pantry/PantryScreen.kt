@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -84,7 +85,10 @@ fun PantryScreen(
                 },
                 actions = {
                     IconButton(onClick = { showBarcodeScanner = true }) {
-                        Text(stringResource(R.string.pantry_scanner_button))
+                        Icon(
+                            imageVector = Icons.Filled.QrCodeScanner,
+                            contentDescription = stringResource(R.string.pantry_scanner_button),
+                        )
                     }
                 },
             )

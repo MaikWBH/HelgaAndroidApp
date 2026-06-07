@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -1036,7 +1037,12 @@ private fun QuickAddBar(
             ),
             leadingIcon = {
                 IconButton(onClick = onScanClick, enabled = activeListId != null) {
-                    Text(stringResource(R.string.shopping_scanner_button))
+                    Icon(
+                        imageVector = Icons.Filled.QrCodeScanner,
+                        contentDescription = stringResource(R.string.shopping_scanner_button),
+                        tint = if (activeListId != null) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             },
             trailingIcon = {
