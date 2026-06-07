@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "helga_prefs")
 
@@ -53,6 +55,19 @@ class AppPreferences @Inject constructor(
     val checkMode: Flow<String> = ds.data.map { it[KEY_CHECK_MODE] ?: "keep" }
     val notifyShoppingDay: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_SHOPPING] ?: false }
     val notifyCookReminder: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_COOK] ?: false }
+    val allergies: Flow<List<String>> = ds.data.map { prefs ->
+        val json = prefs[KEY_ALLERGIES].orEmpty()
+        if (json.isBlank()) emptyList()
+        else {
+            val moshi = Moshi.Builder().build()
+            val type = Types.newParameterizedType(List::class.java, String::class.java)
+            try {
+                moshi.adapter<List<String>>(type).fromJson(json) ?: emptyList()
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
 
     suspend fun currentConnection(): HelgaConnection = connection.first()
     suspend fun currentLastSyncTs(): Long = lastSyncTs.first()
@@ -104,6 +119,18 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_NOTIFY_COOK] = enabled }
     }
 
+    suspend fun saveAllergies(allergies: List<String>) {
+        ds.edit {
+            if (allergies.isEmpty()) it.remove(KEY_ALLERGIES)
+            else {
+                val moshi = Moshi.Builder().build()
+                val type = Types.newParameterizedType(List::class.java, String::class.java)
+                val json = moshi.adapter<List<String>>(type).toJson(allergies)
+                it[KEY_ALLERGIES] = json
+            }
+        }
+    }
+
     suspend fun clearConnection() {
         ds.edit {
             it.remove(KEY_SERVER_URL)
@@ -125,5 +152,6 @@ class AppPreferences @Inject constructor(
         val KEY_CHECK_MODE = stringPreferencesKey("check_mode")
         val KEY_NOTIFY_SHOPPING = booleanPreferencesKey("notify_shopping_day")
         val KEY_NOTIFY_COOK = booleanPreferencesKey("notify_cook_reminder")
+        val KEY_ALLERGIES = stringPreferencesKey("allergies")
     }
 }

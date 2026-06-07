@@ -37,6 +37,7 @@ SYNC_TABLES = [
     "app_settings",
     "weekplan_settings",
     "weekplan_constraints",
+    "off_products",
 ]
 
 SCHEMA = """
@@ -73,6 +74,7 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
     unit        TEXT DEFAULT '',
     food        TEXT DEFAULT '',
     note        TEXT DEFAULT '',
+    off_barcode TEXT NOT NULL DEFAULT '',
     updated_at  INTEGER NOT NULL DEFAULT 0,
     deleted     INTEGER NOT NULL DEFAULT 0
 );
@@ -162,17 +164,22 @@ CREATE TABLE IF NOT EXISTS shopping_lists (
 );
 
 CREATE TABLE IF NOT EXISTS shopping_items (
-    id          TEXT PRIMARY KEY,
-    list_id     TEXT NOT NULL,
-    name        TEXT NOT NULL DEFAULT '',
-    quantity    REAL DEFAULT 1,
-    unit        TEXT DEFAULT '',
-    aisle       TEXT DEFAULT '',
-    source      TEXT DEFAULT 'manual',
-    is_checked  INTEGER DEFAULT 0,
-    sort_order  INTEGER DEFAULT 0,
-    updated_at  INTEGER NOT NULL DEFAULT 0,
-    deleted     INTEGER NOT NULL DEFAULT 0
+    id                  TEXT PRIMARY KEY,
+    list_id             TEXT NOT NULL,
+    name                TEXT NOT NULL DEFAULT '',
+    quantity            REAL DEFAULT 1,
+    unit                TEXT DEFAULT '',
+    aisle               TEXT DEFAULT '',
+    source              TEXT DEFAULT 'manual',
+    is_checked          INTEGER DEFAULT 0,
+    sort_order          INTEGER DEFAULT 0,
+    origins             TEXT NOT NULL DEFAULT '[]',
+    off_barcode         TEXT NOT NULL DEFAULT '',
+    off_product_id      TEXT NOT NULL DEFAULT '',
+    price_estimate      REAL NOT NULL DEFAULT 0.0,
+    price_last_checked  INTEGER NOT NULL DEFAULT 0,
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS shopping_list_staples (
@@ -254,6 +261,29 @@ CREATE TABLE IF NOT EXISTS weekplan_constraints (
     updated_at               INTEGER NOT NULL DEFAULT 0,
     deleted                  INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS off_products (
+    id                  TEXT PRIMARY KEY,
+    barcode             TEXT NOT NULL UNIQUE,
+    name                TEXT NOT NULL DEFAULT '',
+    brand               TEXT NOT NULL DEFAULT '',
+    categories          TEXT NOT NULL DEFAULT '[]',
+    kcal_per_unit       REAL NOT NULL DEFAULT 0.0,
+    proteins            REAL NOT NULL DEFAULT 0.0,
+    fats                REAL NOT NULL DEFAULT 0.0,
+    carbs               REAL NOT NULL DEFAULT 0.0,
+    nutri_score         TEXT NOT NULL DEFAULT '',
+    nova                INTEGER NOT NULL DEFAULT 0,
+    eco_score           TEXT NOT NULL DEFAULT '',
+    allergenes          TEXT NOT NULL DEFAULT '[]',
+    additives           TEXT NOT NULL DEFAULT '[]',
+    is_organic          INTEGER NOT NULL DEFAULT 0,
+    vegan               INTEGER NOT NULL DEFAULT 0,
+    vegetarian          INTEGER NOT NULL DEFAULT 0,
+    image_path          TEXT NOT NULL DEFAULT '',
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
 """
 
 INDICES = [
@@ -273,7 +303,26 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_recipe_history_recipe ON recipe_history(recipe_id)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_settings_updated ON weekplan_settings(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_constraints_updated ON weekplan_constraints(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_off_products_barcode ON off_products(barcode)",
+    "CREATE INDEX IF NOT EXISTS idx_off_products_updated ON off_products(updated_at)",
 ]
+
+
+# Spalten, die nach dem ersten Release ergänzt wurden. init_db() fügt sie
+# non-destruktiv zu bestehenden DBs hinzu (ALTER TABLE ... ADD COLUMN), da
+# "CREATE TABLE IF NOT EXISTS" bestehende Tabellen nicht verändert.
+ADDED_COLUMNS = {
+    "shopping_items": [
+        ("origins", "TEXT NOT NULL DEFAULT '[]'"),
+        ("off_barcode", "TEXT NOT NULL DEFAULT ''"),
+        ("off_product_id", "TEXT NOT NULL DEFAULT ''"),
+        ("price_estimate", "REAL NOT NULL DEFAULT 0.0"),
+        ("price_last_checked", "INTEGER NOT NULL DEFAULT 0"),
+    ],
+    "recipe_ingredients": [
+        ("off_barcode", "TEXT NOT NULL DEFAULT ''"),
+    ],
+}
 
 
 @asynccontextmanager
@@ -285,10 +334,20 @@ async def get_db():
         yield db
 
 
+async def _ensure_columns(db):
+    for table, columns in ADDED_COLUMNS.items():
+        async with db.execute(f"PRAGMA table_info({table})") as cursor:
+            existing = {row[1] for row in await cursor.fetchall()}
+        for name, ddl in columns:
+            if name not in existing:
+                await db.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+
+
 async def init_db():
     os.makedirs(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".", exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(SCHEMA)
+        await _ensure_columns(db)
         for idx in INDICES:
             await db.execute(idx)
         await db.commit()

@@ -5,6 +5,8 @@ import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
+import com.helga.android.data.model.DayNutrition
+import com.helga.android.data.model.WeekplanNutrition
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
@@ -14,6 +16,7 @@ import javax.inject.Singleton
 class WeekplanRepository @Inject constructor(
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
+    private val recipeRepository: RecipeRepository,
     private val shoppingRepository: ShoppingRepository,
 ) {
 
@@ -102,9 +105,69 @@ class WeekplanRepository @Inject constructor(
                         quantity = ingredient.quantity * scale,
                         unit = ingredient.unit,
                         source = "weekplan",
+                        recipeName = recipe?.name ?: "",
                     )
                 }
             }
         }
+    }
+
+    suspend fun getWeekplanNutrition(startDate: String, endDate: String): WeekplanNutrition {
+        val days = weekplanDao.getDaysBetween(startDate, endDate)
+        val dayNutritions = mutableListOf<DayNutrition>()
+        var totalKcal = 0.0
+        var bestNutriScore = ""
+        var totalRecipes = 0
+
+        days.forEach { day ->
+            val recipes = weekplanDao.recipesForDay(day.id)
+            val dayRecipes = mutableListOf<String>()
+            var dayTotalKcal = 0.0
+            var dayBestScore = ""
+
+            recipes.forEach { entry ->
+                val recipe = recipeDao.findById(entry.recipeId)
+                if (recipe != null && recipe.deleted == 0) {
+                    dayRecipes.add(recipe.name)
+                    val nutrition = recipeRepository.getRecipeNutrition(recipe.id)
+                    dayTotalKcal += nutrition.kcalPerPortion
+                    if (nutrition.nutriScore.isNotBlank()) {
+                        if (dayBestScore.isEmpty() || nutrition.nutriScore < dayBestScore) {
+                            dayBestScore = nutrition.nutriScore
+                        }
+                    }
+                    totalRecipes++
+                }
+            }
+
+            val avgDayKcal = if (recipes.isNotEmpty()) dayTotalKcal / recipes.size else 0.0
+            dayNutritions.add(
+                DayNutrition(
+                    date = day.planDate,
+                    recipeNames = dayRecipes,
+                    avgKcal = avgDayKcal,
+                    avgNutriScore = dayBestScore,
+                    totalRecipes = recipes.size,
+                )
+            )
+            totalKcal += avgDayKcal
+        }
+
+        val weekAvgKcal = if (days.isNotEmpty()) totalKcal / days.size else 0.0
+        var weekBestScore = ""
+        dayNutritions.forEach { day ->
+            if (day.avgNutriScore.isNotBlank()) {
+                if (weekBestScore.isEmpty() || day.avgNutriScore < weekBestScore) {
+                    weekBestScore = day.avgNutriScore
+                }
+            }
+        }
+
+        return WeekplanNutrition(
+            days = dayNutritions,
+            weekAvgKcal = weekAvgKcal,
+            weekAvgNutriScore = weekBestScore,
+            totalRecipes = totalRecipes,
+        )
     }
 }

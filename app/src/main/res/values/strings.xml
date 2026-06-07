@@ -315,4 +315,12 @@
 
     <!-- Export -->
     <string name="settings_export_data">Alle Daten exportieren</string>
+
+    <!-- Barcode-Scanner -->
+    <string name="barcode_scanner_title">Barcode scannen</string>
+    <string name="barcode_scanner_hint">Halte ein Produkt mit Barcode in die Kamera</string>
+    <string name="barcode_scanner_permission">Für den Barcode-Scanner wird Zugriff auf die Kamera benötigt.</string>
+    <string name="barcode_scanner_grant">Kamera erlauben</string>
+    <string name="shopping_scanner_button">Barcode scannen</string>
+    <string name="pantry_scanner_button">Barcode scannen</string>
 </resources>

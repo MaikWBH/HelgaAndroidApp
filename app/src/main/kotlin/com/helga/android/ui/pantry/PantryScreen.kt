@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -49,6 +50,18 @@ fun PantryScreen(
 ) {
     val itemsByCategory by viewModel.items.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showBarcodeScanner by remember { mutableStateOf(false) }
+
+    if (showBarcodeScanner) {
+        com.helga.android.ui.components.BarcodeScanner(
+            onBarcodeDetected = { barcode ->
+                viewModel.addItemFromBarcode(barcode)
+                showBarcodeScanner = false
+            },
+            onDismiss = { showBarcodeScanner = false },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 
     if (showAddDialog) {
         AddPantryDialog(
@@ -68,6 +81,14 @@ fun PantryScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showBarcodeScanner = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.QrCodeScanner,
+                            contentDescription = stringResource(R.string.pantry_scanner_button),
+                        )
                     }
                 },
             )

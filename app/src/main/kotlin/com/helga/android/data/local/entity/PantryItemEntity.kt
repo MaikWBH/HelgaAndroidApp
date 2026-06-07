@@ -21,6 +21,8 @@ data class PantryItemEntity(
     val unit: String = "",
     val category: String = "",
     val expiresAt: String = "",
+    val offBarcode: String = "", // OFF barcode/EAN
+    val offProductId: String = "", // link to OffProductEntity
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

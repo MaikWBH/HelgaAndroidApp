@@ -14,6 +14,7 @@ import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
+import com.helga.android.data.model.RecipeNutrition
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
@@ -93,6 +94,9 @@ class RecipeDetailViewModel @Inject constructor(
     val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingRepository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    private val _nutrition = MutableStateFlow<RecipeNutrition?>(null)
+    val nutrition: StateFlow<RecipeNutrition?> = _nutrition.asStateFlow()
+
     init {
         viewModelScope.launch {
             uiState.filter { it.recipe != null }.first().recipe?.let { recipe ->
@@ -101,6 +105,7 @@ class RecipeDetailViewModel @Inject constructor(
                     _baseServings.value = base
                     _servings.value = base
                 }
+                _nutrition.value = repository.getRecipeNutrition(recipe.id)
             }
         }
     }

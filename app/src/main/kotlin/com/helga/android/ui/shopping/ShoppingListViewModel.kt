@@ -11,12 +11,15 @@ import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.StoreRepository
+import com.helga.android.data.sync.SyncEngine
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +30,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -42,6 +46,7 @@ class ShoppingListViewModel @Inject constructor(
     private val recipeDao: RecipeDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
+    private val syncEngine: SyncEngine,
     private val preferences: AppPreferences,
 ) : ViewModel() {
 
@@ -116,8 +121,48 @@ class ShoppingListViewModel @Inject constructor(
         .map { it.values.flatten().isEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
+    private val _costEstimate = MutableStateFlow<ListCostEstimate?>(null)
+    val costEstimate: StateFlow<ListCostEstimate?> = _costEstimate
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    init {
+        viewModelScope.launch {
+            activeListId.collect { listId ->
+                if (listId != null) {
+                    _costEstimate.value = repository.estimateListCosts(listId)
+                }
+            }
+        }
+    }
+
     fun selectList(id: String) {
         _activeListId.value = id
+    }
+
+    /**
+     * Manueller Pull-to-Refresh: zieht sofort die aktuellen Server-Daten und merged
+     * sie in Room. So sieht Handy B direkt einen Eintrag, den Handy A erstellt hat.
+     * Netzwerkfehler sind nicht-fatal – die lokale Liste bleibt erhalten.
+     */
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                withContext(Dispatchers.IO) {
+                    syncEngine.runFullSync()
+                }
+                activeListId.value?.let { listId ->
+                    _costEstimate.value = repository.estimateListCosts(listId)
+                }
+            } catch (e: Exception) {
+                // Offline oder Server nicht erreichbar – lokale Liste unverändert lassen.
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
     }
 
     fun exportWeekToShoppingList(listId: String) {
@@ -125,6 +170,7 @@ class ShoppingListViewModel @Inject constructor(
             val days = weekplanDao.getDaysBetween(monday.format(fmt), sunday.format(fmt))
             days.forEach { day ->
                 weekplanDao.recipesForDay(day.id).forEach { entry ->
+                    val recipeName = recipeDao.findById(entry.recipeId)?.name ?: ""
                     val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
                     ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
                         val storeId = activeStore.value?.id
@@ -138,6 +184,7 @@ class ShoppingListViewModel @Inject constructor(
                             unit = ingredient.unit,
                             source = "weekplan",
                             aisle = aisle,
+                            recipeName = recipeName,
                         )
                     }
                 }
@@ -280,6 +327,44 @@ class ShoppingListViewModel @Inject constructor(
             apiFactory.api().suggestItems(query).suggestions
         } catch (e: Exception) {
             emptyList()
+        }
+    }
+
+    fun addItemFromBarcode(barcode: String) {
+        val listId = activeListId.value ?: return
+        viewModelScope.launch {
+            try {
+                val product = apiFactory.api().lookupBarcode(
+                    com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
+                )
+                val storeId = activeStore.value?.id
+                val aisle = if (storeId != null)
+                    storeRepository.findAisleForProduct(product.name, storeId) ?: ""
+                else ""
+                repository.addItem(
+                    listId = listId,
+                    name = product.name,
+                    quantity = 1.0,
+                    unit = "Stück",
+                    aisle = aisle,
+                    offBarcode = barcode,
+                    offProductId = product.id,
+                )
+                syncScheduler.triggerOneShot()
+            } catch (e: Exception) {
+                // Handle barcode lookup error - could show snackbar to user
+                // For now, fall back to generic entry
+                val storeId = activeStore.value?.id
+                val aisle = if (storeId != null)
+                    storeRepository.findAisleForProduct("Barcode: $barcode", storeId) ?: ""
+                else ""
+                repository.addItem(
+                    listId = listId,
+                    name = "Barcode: $barcode",
+                    aisle = aisle,
+                )
+                syncScheduler.triggerOneShot()
+            }
         }
     }
 }

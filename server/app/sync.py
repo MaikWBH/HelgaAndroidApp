@@ -14,7 +14,7 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     ],
     "recipe_ingredients": [
         "id", "recipe_id", "position", "quantity", "unit", "food", "note",
-        "updated_at", "deleted",
+        "off_barcode", "updated_at", "deleted",
     ],
     "recipe_instructions": [
         "id", "recipe_id", "position", "text", "updated_at", "deleted",
@@ -43,7 +43,8 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     ],
     "shopping_items": [
         "id", "list_id", "name", "quantity", "unit", "aisle", "source",
-        "is_checked", "sort_order", "updated_at", "deleted",
+        "is_checked", "sort_order", "origins", "off_barcode", "off_product_id",
+        "price_estimate", "price_last_checked", "updated_at", "deleted",
     ],
     "shopping_list_staples": [
         "id", "list_id", "name", "quantity", "sort_order", "updated_at", "deleted",
@@ -67,6 +68,12 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     "weekplan_constraints": [
         "id", "max_meat_per_week", "min_vegetarian_per_week", "max_repeat_days",
         "updated_at", "deleted",
+    ],
+    "off_products": [
+        "id", "barcode", "name", "brand", "categories", "kcal_per_unit",
+        "proteins", "fats", "carbs", "nutri_score", "nova", "eco_score",
+        "allergenes", "additives", "is_organic", "vegan", "vegetarian",
+        "image_path", "updated_at", "deleted",
     ],
 }
 
@@ -94,6 +101,7 @@ PAYLOAD_FIELD = {
     "app_settings": "app_settings",
     "weekplan_settings": "weekplan_settings",
     "weekplan_constraints": "weekplan_constraints",
+    "off_products": "off_products",
 }
 
 

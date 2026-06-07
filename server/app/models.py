@@ -34,6 +34,7 @@ class IngredientRecord(SyncRecord):
     unit: str = ""
     food: str = ""
     note: str = ""
+    off_barcode: str = ""
 
 
 class InstructionRecord(SyncRecord):
@@ -99,6 +100,11 @@ class ShoppingItemRecord(SyncRecord):
     source: str = "manual"
     is_checked: int = 0
     sort_order: int = 0
+    origins: str = "[]"
+    off_barcode: str = ""
+    off_product_id: str = ""
+    price_estimate: float = 0.0
+    price_last_checked: int = 0
 
 
 class ShoppingListStapleRecord(SyncRecord):
@@ -153,6 +159,26 @@ class WeekplanConstraintsRecord(SyncRecord):
     max_repeat_days: int = 14
 
 
+class OffProductRecord(SyncRecord):
+    barcode: str = ""
+    name: str = ""
+    brand: str = ""
+    categories: str = "[]"
+    kcal_per_unit: float = 0.0
+    proteins: float = 0.0
+    fats: float = 0.0
+    carbs: float = 0.0
+    nutri_score: str = ""
+    nova: int = 0
+    eco_score: str = ""
+    allergenes: str = "[]"
+    additives: str = "[]"
+    is_organic: int = 0
+    vegan: int = 0
+    vegetarian: int = 0
+    image_path: str = ""
+
+
 # ── Sync-Payload ────────────────────────────────────────────────────────────
 
 class SyncPayload(BaseModel):
@@ -178,6 +204,7 @@ class SyncPayload(BaseModel):
     app_settings: List[AppSettingRecord] = []
     weekplan_settings: List[WeekplanSettingsRecord] = []
     weekplan_constraints: List[WeekplanConstraintsRecord] = []
+    off_products: List[OffProductRecord] = []
 
 
 class SyncPullResponse(SyncPayload):
@@ -262,3 +289,22 @@ class WeekplanAssignmentDto(BaseModel):
 
 class WeekplanGenerateResponse(BaseModel):
     assignments: List[WeekplanAssignmentDto] = []
+
+
+# ── OFF-Lookups ──────────────────────────────────────────────────────────────
+
+class OffLookupBarcodeRequest(BaseModel):
+    barcode: str
+
+
+class OffLookupBarcodeResponse(OffProductRecord):
+    pass
+
+
+class OffSearchRequest(BaseModel):
+    query: str
+    limit: int = 5
+
+
+class OffSearchResponse(BaseModel):
+    products: List[OffProductRecord] = []
