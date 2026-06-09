@@ -252,10 +252,7 @@ fun RecipeDetailScreen(
                                         },
                                     )
                                 }
-                                val alreadyClassified = recipe != null && listOf(
-                                    recipe.proteinType, recipe.effort, recipe.cuisine,
-                                    recipe.mealType, recipe.seasonFit,
-                                ).any { it.isNotBlank() }
+                                val alreadyClassified = recipe != null && recipe.mealSlot != "other"
                                 DropdownMenuItem(
                                     text = {
                                         if (uiState.isClassifying) {
@@ -480,7 +477,7 @@ private fun MetadataSection(recipe: RecipeEntity) {
         if (recipe.prepTime.isNotBlank()) add("🔪" to recipe.prepTime)
         if (recipe.cookTime.isNotBlank()) add("🔥" to recipe.cookTime)
         if (recipe.cuisine.isNotBlank()) add("🌍" to recipe.cuisine)
-        if (recipe.mealType.isNotBlank()) add("🍳" to recipe.mealType)
+        if (recipe.mealSlot != "other") add("🍳" to getMealSlotLabel(recipe.mealSlot))
         if (recipe.effort.isNotBlank()) add("💪" to recipe.effort)
     }
     if (items.isEmpty()) return
@@ -862,4 +859,12 @@ private fun WeekplanDayPickerDialog(
             }
         },
     )
+}
+
+private fun getMealSlotLabel(mealSlot: String): String = when (mealSlot) {
+    "breakfast" -> "Frühstück"
+    "lunch" -> "Mittag"
+    "dinner" -> "Abendessen"
+    "snack" -> "Snack"
+    else -> "Sonstiges"
 }

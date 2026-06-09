@@ -277,7 +277,7 @@ class SettingsViewModel @Inject constructor(
                         put("proteinType", recipe.proteinType)
                         put("effort", recipe.effort)
                         put("cuisine", recipe.cuisine)
-                        put("mealType", recipe.mealType)
+                        put("mealSlot", recipe.mealSlot)
                         put("personalNotes", recipe.personalNotes)
                     }
                     val ingredients = recipeRepository.ingredientsForRecipe(recipe.id)

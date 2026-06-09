@@ -351,10 +351,7 @@ private fun RecipeRow(
                         maxLines = 1,
                         modifier = Modifier.weight(1f).basicMarquee(),
                     )
-                    if (recipe.proteinType.isBlank() && recipe.effort.isBlank() &&
-                        recipe.cuisine.isBlank() && recipe.mealType.isBlank() &&
-                        recipe.seasonFit.isBlank()
-                    ) {
+                    if (recipe.mealSlot == "other") {
                         Text("⚠️", modifier = Modifier.padding(start = 4.dp))
                     }
                 }
