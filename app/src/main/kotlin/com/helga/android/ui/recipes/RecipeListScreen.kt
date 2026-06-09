@@ -127,6 +127,8 @@ fun RecipeListScreen(
                 onNewRecipe = onCreateClick,
                 onAiGenerate = onAiGenerateClick,
                 onUrlImport = onImportClick,
+                // FAB über der Bottom-Navigation halten, sonst liegt er dahinter
+                modifier = Modifier.padding(bottom = bottomPadding),
             )
         },
     ) { padding ->
