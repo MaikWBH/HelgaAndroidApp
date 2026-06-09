@@ -31,6 +31,8 @@ data class RecipeEntity(
     val effort: String = "",
     val cuisine: String = "",
     val mealType: String = "",
+    @ColumnInfo(defaultValue = "other")
+    val mealSlot: String = "other",  // "breakfast", "lunch", "dinner", "snack", "other"
     val seasonFit: String = "",
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,

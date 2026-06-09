@@ -120,7 +120,7 @@ class AiGenerateViewModel @Inject constructor(
                 cookTime = recipe.cookTime,
                 totalTime = recipe.totalTime,
                 cuisine = recipe.cuisine,
-                mealType = recipe.mealType,
+                mealSlot = recipe.mealSlot,
                 effort = recipe.effort,
                 proteinType = recipe.proteinType,
                 seasonFit = recipe.seasonFit,

@@ -256,7 +256,7 @@ private fun RecipeDto.toEntity(): RecipeEntity = RecipeEntity(
     recipeYield = recipeYield, prepTime = prepTime, cookTime = cookTime,
     totalTime = totalTime, imagePath = imagePath, sourceUrl = sourceUrl,
     rating = rating, proteinType = proteinType, effort = effort,
-    cuisine = cuisine, mealType = mealType, seasonFit = seasonFit,
+    cuisine = cuisine, mealSlot = mealSlot, seasonFit = seasonFit,
     createdAt = createdAt, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
@@ -320,7 +320,7 @@ private fun RecipeEntity.toDto(): RecipeDto = RecipeDto(
     description = description, recipeYield = recipeYield, prepTime = prepTime,
     cookTime = cookTime, totalTime = totalTime, imagePath = imagePath,
     sourceUrl = sourceUrl, rating = rating, proteinType = proteinType,
-    effort = effort, cuisine = cuisine, mealType = mealType, seasonFit = seasonFit,
+    effort = effort, cuisine = cuisine, mealSlot = mealSlot, seasonFit = seasonFit,
     createdAt = createdAt,
 )
 

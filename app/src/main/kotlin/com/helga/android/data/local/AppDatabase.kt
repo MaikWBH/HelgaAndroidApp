@@ -46,7 +46,7 @@ import com.helga.android.data.local.entity.PantryItemEntity
 import com.helga.android.data.local.dao.PantryDao
 
 @Database(
-    version = 20,
+    version = 21,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -518,6 +518,24 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_20_21 = object : Migration(20, 21) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add mealSlot column to recipes table
+                db.execSQL("ALTER TABLE recipes ADD COLUMN mealSlot TEXT NOT NULL DEFAULT 'other'")
+
+                // Migrate existing mealType values to mealSlot
+                db.execSQL("""
+                    UPDATE recipes SET mealSlot = CASE
+                        WHEN LOWER(mealType) IN ('frühstück', 'breakfast') THEN 'breakfast'
+                        WHEN LOWER(mealType) IN ('mittag', 'lunch', 'abendessen', 'dinner') THEN 'lunch'
+                        WHEN LOWER(mealType) IN ('dessert', 'snack', 'beilage', 'side') THEN 'snack'
+                        WHEN mealType = '' THEN 'other'
+                        ELSE 'other'
+                    END
+                """.trimIndent())
+            }
+        }
+
         private val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Create product_prices table
@@ -545,7 +563,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
                 .build()
     }
 }

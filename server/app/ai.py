@@ -32,8 +32,7 @@ CLASSIFY_VALUES = {
     "effort": ["schnell", "mittel", "aufwendig"],
     "cuisine": ["deutsch", "italienisch", "asiatisch", "mexikanisch", "französisch",
                 "mediterran", "orientalisch", "amerikanisch", "indisch", "sonstige"],
-    "meal_type": ["pasta", "eintopf", "ofen", "salat", "suppe", "grill", "pfanne",
-                  "auflauf", "bowl", "sandwich", "sonstige"],
+    "meal_slot": ["breakfast", "lunch", "dinner", "snack"],
     "season_fit": ["winter", "sommer", "ganzjährig"],
 }
 
@@ -63,7 +62,7 @@ AUSGABEFORMAT — zwingend:
     "rocks_protein_type": "fleisch|fisch|vegetarisch|vegan",
     "rocks_effort": "schnell|mittel|aufwendig",
     "rocks_cuisine": "deutsch|italienisch|...",
-    "rocks_meal_type": "pasta|eintopf|...",
+    "rocks_meal_slot": "breakfast|lunch|dinner|snack",
     "rocks_season_fit": "winter|sommer|ganzjährig"
   }
   </script>
@@ -133,7 +132,7 @@ async def classify(req: AiClassifyRequest) -> dict:
         _line("protein_type", "protein_type"),
         _line("effort", "effort"),
         _line("cuisine", "cuisine"),
-        _line("meal_type", "meal_type"),
+        _line("meal_slot", "meal_slot"),
         _line("season_fit", "season_fit"),
     ])
     ingredients_block = "\n".join(f"- {i}" for i in req.ingredients[:40]) or "(keine)"
@@ -145,7 +144,7 @@ async def classify(req: AiClassifyRequest) -> dict:
         f"TAGS: {', '.join(req.tags) or 'keine'}\nZUTATEN:\n{ingredients_block}\n\n"
         f"FELDER:\n{allowed}\n\n"
         "Antworte mit: {\"protein_type\":\"...\",\"effort\":\"...\","
-        "\"cuisine\":\"...\",\"meal_type\":\"...\",\"season_fit\":\"...\"}"
+        "\"cuisine\":\"...\",\"meal_slot\":\"...\",\"season_fit\":\"...\"}"
     )
 
     text = await _call_once(system, user)
