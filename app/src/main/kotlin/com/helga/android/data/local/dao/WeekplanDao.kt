@@ -23,8 +23,14 @@ interface WeekplanDao {
     @Query("SELECT * FROM weekplan_recipes WHERE weekplanDayId = :dayId AND deleted = 0 ORDER BY position ASC")
     fun observeRecipesForDay(dayId: String): Flow<List<WeekplanRecipeEntity>>
 
+    @Query("SELECT * FROM weekplan_recipes WHERE weekplanDayId IN (:dayIds) AND deleted = 0 ORDER BY position ASC")
+    fun observeRecipesForDays(dayIds: List<String>): Flow<List<WeekplanRecipeEntity>>
+
     @Query("SELECT * FROM weekplan_extras WHERE weekplanDayId = :dayId AND deleted = 0 ORDER BY position ASC")
     fun observeExtrasForDay(dayId: String): Flow<List<WeekplanExtraEntity>>
+
+    @Query("SELECT * FROM weekplan_extras WHERE weekplanDayId IN (:dayIds) AND deleted = 0 ORDER BY position ASC")
+    fun observeExtrasForDays(dayIds: List<String>): Flow<List<WeekplanExtraEntity>>
 
     @Query("SELECT COUNT(*) FROM weekplan_recipes WHERE weekplanDayId = :dayId AND deleted = 0")
     fun observeRecipeCount(dayId: String): Flow<Int>

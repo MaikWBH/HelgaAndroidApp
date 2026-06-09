@@ -129,6 +129,24 @@ class WeekplanViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    // Rezepte aller Tage der Woche – damit jeder Tag direkt seine Rezepte zeigt
+    val weekRecipes: StateFlow<Map<String, List<WeekplanRecipeEntity>>> = days
+        .flatMapLatest { dayList ->
+            if (dayList.isEmpty()) flowOf(emptyMap())
+            else weekplanDao.observeRecipesForDays(dayList.map { it.id })
+                .map { recipes -> recipes.groupBy { it.weekplanDayId } }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    // Extras aller Tage der Woche – direkt sichtbar ohne Tag anzuklicken
+    val weekExtras: StateFlow<Map<String, List<WeekplanExtraEntity>>> = days
+        .flatMapLatest { dayList ->
+            if (dayList.isEmpty()) flowOf(emptyMap())
+            else weekplanDao.observeExtrasForDays(dayList.map { it.id })
+                .map { extras -> extras.groupBy { it.weekplanDayId } }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     val allRecipes: StateFlow<Map<String, RecipeEntity>> = recipeDao.observeAll()
         .map { list -> list.associateBy { it.id } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
