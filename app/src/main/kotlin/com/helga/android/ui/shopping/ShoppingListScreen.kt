@@ -1,11 +1,13 @@
 package com.helga.android.ui.shopping
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -52,27 +55,31 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -86,6 +93,8 @@ import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -500,7 +509,6 @@ fun ShoppingListScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeableShoppingItem(
     item: ShoppingItemEntity,
@@ -510,21 +518,18 @@ private fun SwipeableShoppingItem(
     onAssignAisle: () -> Unit,
     onEdit: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    val offsetX = remember { Animatable(0f) }
+    var rowWidthPx by remember { mutableFloatStateOf(0f) }
     var dismissed by remember { mutableStateOf(false) }
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> { onToggle(); false }
-                SwipeToDismissBoxValue.EndToStart -> { dismissed = true; true }
-                else -> false
-            }
-        },
-        positionalThreshold = { totalDistance -> totalDistance * 0.4f },
-    )
+
+    // Aktion löst erst ab 35 % der Zeilenbreite aus – versehentliches Antippen wird so vermieden
+    val threshold = rowWidthPx * 0.35f
 
     LaunchedEffect(dismissed) {
         if (dismissed) {
-            delay(300)
+            delay(250)
             onDelete()
         }
     }
@@ -533,13 +538,17 @@ private fun SwipeableShoppingItem(
         visible = !dismissed,
         exit = shrinkVertically(tween(300)) + fadeOut(tween(300)),
     ) {
-        SwipeToDismissBox(
-            state = dismissState,
-            backgroundContent = {
-                val isCheckSwipe = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { rowWidthPx = it.width.toFloat() },
+        ) {
+            // Hintergrund nur sichtbar, sobald gewischt wird
+            if (offsetX.value != 0f) {
+                val isCheckSwipe = offsetX.value > 0
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .matchParentSize()
                         .background(
                             if (isCheckSwipe) MaterialTheme.colorScheme.primaryContainer
                             else MaterialTheme.colorScheme.error
@@ -554,16 +563,52 @@ private fun SwipeableShoppingItem(
                                else MaterialTheme.colorScheme.onError,
                     )
                 }
-            },
-            enableDismissFromStartToEnd = true,
-        ) {
-            ShoppingItemRow(
-                item = item,
-                showAisleButton = showAisleButton,
-                onToggle = onToggle,
-                onAssignAisle = onAssignAisle,
-                onEdit = onEdit,
-            )
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                    .pointerInput(item.id) {
+                        // Wischen erst NACH langem Drücken – normales Scrollen löst nichts aus
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                scope.launch { offsetX.snapTo(offsetX.value + dragAmount.x) }
+                            },
+                            onDragEnd = {
+                                when {
+                                    threshold > 0f && offsetX.value <= -threshold -> {
+                                        // nach links → löschen
+                                        scope.launch {
+                                            offsetX.animateTo(-rowWidthPx, tween(200))
+                                            dismissed = true
+                                        }
+                                    }
+                                    threshold > 0f && offsetX.value >= threshold -> {
+                                        // nach rechts → abhaken
+                                        onToggle()
+                                        scope.launch { offsetX.animateTo(0f, tween(200)) }
+                                    }
+                                    else -> scope.launch { offsetX.animateTo(0f, tween(200)) }
+                                }
+                            },
+                            onDragCancel = {
+                                scope.launch { offsetX.animateTo(0f, tween(200)) }
+                            },
+                        )
+                    },
+            ) {
+                ShoppingItemRow(
+                    item = item,
+                    showAisleButton = showAisleButton,
+                    onToggle = onToggle,
+                    onAssignAisle = onAssignAisle,
+                    onEdit = onEdit,
+                )
+            }
         }
     }
 }
