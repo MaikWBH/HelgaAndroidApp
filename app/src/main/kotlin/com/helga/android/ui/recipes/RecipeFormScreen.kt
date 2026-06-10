@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -40,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -162,10 +165,9 @@ fun RecipeFormScreen(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FormField(
-                    value = state.mealType,
-                    onValueChange = viewModel::setMealType,
-                    label = stringResource(R.string.recipe_detail_meal_type),
+                MealSlotPicker(
+                    selected = state.mealSlot,
+                    onSelect = viewModel::setMealSlot,
                     modifier = Modifier.weight(1f),
                 )
                 FormField(
@@ -267,6 +269,58 @@ private fun ImagePicker(localImageUri: String, onPickImage: () -> Unit) {
                 .padding(8.dp),
         ) {
             Icon(Icons.Filled.AddPhotoAlternate, contentDescription = stringResource(R.string.recipe_form_pick_image))
+        }
+    }
+}
+
+@Composable
+private fun MealSlotPicker(
+    selected: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val slots = listOf("breakfast", "lunch", "dinner", "snack", "other")
+    val displayNames = mapOf(
+        "breakfast" to "Frühstück",
+        "lunch" to "Mittag",
+        "dinner" to "Abendessen",
+        "snack" to "Snack",
+        "other" to "Sonstiges",
+    )
+
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = displayNames[selected] ?: selected,
+            onValueChange = {},
+            label = { Text("Mahlzeit") },
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.5f),
+        ) {
+            slots.forEach { slot ->
+                DropdownMenuItem(
+                    text = { Text(displayNames[slot] ?: slot) },
+                    onClick = {
+                        onSelect(slot)
+                        expanded = false
+                    },
+                )
+            }
+        }
+        TextButton(
+            onClick = { expanded = !expanded },
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.CenterEnd),
+        ) {
+            Text(displayNames[selected] ?: selected)
         }
     }
 }

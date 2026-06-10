@@ -127,6 +127,8 @@ fun RecipeListScreen(
                 onNewRecipe = onCreateClick,
                 onAiGenerate = onAiGenerateClick,
                 onUrlImport = onImportClick,
+                // FAB über der Bottom-Navigation halten, sonst liegt er dahinter
+                modifier = Modifier.padding(bottom = bottomPadding),
             )
         },
     ) { padding ->
@@ -349,10 +351,7 @@ private fun RecipeRow(
                         maxLines = 1,
                         modifier = Modifier.weight(1f).basicMarquee(),
                     )
-                    if (recipe.proteinType.isBlank() && recipe.effort.isBlank() &&
-                        recipe.cuisine.isBlank() && recipe.mealType.isBlank() &&
-                        recipe.seasonFit.isBlank()
-                    ) {
+                    if (recipe.mealSlot == "other") {
                         Text("⚠️", modifier = Modifier.padding(start = 4.dp))
                     }
                 }

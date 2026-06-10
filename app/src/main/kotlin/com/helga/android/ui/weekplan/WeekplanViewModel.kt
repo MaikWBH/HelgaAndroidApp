@@ -129,6 +129,24 @@ class WeekplanViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    // Rezepte aller Tage der Woche – damit jeder Tag direkt seine Rezepte zeigt
+    val weekRecipes: StateFlow<Map<String, List<WeekplanRecipeEntity>>> = days
+        .flatMapLatest { dayList ->
+            if (dayList.isEmpty()) flowOf(emptyMap())
+            else weekplanDao.observeRecipesForDays(dayList.map { it.id })
+                .map { recipes -> recipes.groupBy { it.weekplanDayId } }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    // Extras aller Tage der Woche – direkt sichtbar ohne Tag anzuklicken
+    val weekExtras: StateFlow<Map<String, List<WeekplanExtraEntity>>> = days
+        .flatMapLatest { dayList ->
+            if (dayList.isEmpty()) flowOf(emptyMap())
+            else weekplanDao.observeExtrasForDays(dayList.map { it.id })
+                .map { extras -> extras.groupBy { it.weekplanDayId } }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     val allRecipes: StateFlow<Map<String, RecipeEntity>> = recipeDao.observeAll()
         .map { list -> list.associateBy { it.id } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
@@ -410,10 +428,9 @@ class WeekplanViewModel @Inject constructor(
                     return@launch
                 }
 
-                // mealType-Filter: Frühstück/Dessert/Snack ausschließen
+                // mealSlot-Filter: Keine Frühstück/Snack ins Dinner-Rezept platzieren
                 val mealFiltered = candidates.filter { recipe ->
-                    recipe.mealType.isBlank() ||
-                    recipe.mealType.lowercase() !in listOf("frühstück", "breakfast", "dessert", "snack", "beilage", "side")
+                    recipe.mealSlot !in listOf("breakfast", "snack")
                 }.ifEmpty { candidates }
 
                 // Saison-Filter: saisonale Rezepte bevorzugen
@@ -599,7 +616,7 @@ class WeekplanViewModel @Inject constructor(
             val allRecipesList = recipesMap.values.filter { it.deleted == 0 }
             val available = allRecipesList
                 .filter { it.id !in recentIds && it.id !in otherIds && it.id != target.recipeId }
-                .filter { it.mealType.isBlank() || it.mealType.lowercase() !in listOf("frühstück", "breakfast", "dessert", "snack", "beilage", "side") }
+                .filter { it.mealSlot !in listOf("breakfast", "snack") }
                 .ifEmpty { allRecipesList.filter { it.id !in otherIds && it.id != target.recipeId } }
                 .ifEmpty { allRecipesList }
 

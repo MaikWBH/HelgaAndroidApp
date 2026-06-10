@@ -26,7 +26,7 @@ data class RecipeDto(
     @Json(name = "protein_type") val proteinType: String = "",
     val effort: String = "",
     val cuisine: String = "",
-    @Json(name = "meal_type") val mealType: String = "",
+    @Json(name = "meal_slot") val mealSlot: String = "other",
     @Json(name = "season_fit") val seasonFit: String = "",
     @Json(name = "created_at") val createdAt: Long = 0,
 )
@@ -418,7 +418,7 @@ data class AiClassifyResponse(
     @Json(name = "protein_type") val proteinType: String = "",
     val effort: String = "",
     val cuisine: String = "",
-    @Json(name = "meal_type") val mealType: String = "",
+    @Json(name = "meal_slot") val mealSlot: String = "other",
     @Json(name = "season_fit") val seasonFit: String = "",
 )
 
@@ -469,7 +469,7 @@ data class ImportedRecipeDto(
     @Json(name = "cook_time") val cookTime: String = "",
     @Json(name = "total_time") val totalTime: String = "",
     val cuisine: String = "",
-    @Json(name = "meal_type") val mealType: String = "",
+    @Json(name = "meal_slot") val mealSlot: String = "other",
     val effort: String = "",
     @Json(name = "protein_type") val proteinType: String = "",
     @Json(name = "season_fit") val seasonFit: String = "",

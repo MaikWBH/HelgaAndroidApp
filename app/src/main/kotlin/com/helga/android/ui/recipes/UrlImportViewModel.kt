@@ -79,7 +79,7 @@ class UrlImportViewModel @Inject constructor(
                 cookTime = recipe.cookTime,
                 totalTime = recipe.totalTime,
                 cuisine = recipe.cuisine,
-                mealType = recipe.mealType,
+                mealSlot = "other",
                 effort = recipe.effort,
                 proteinType = recipe.proteinType,
                 seasonFit = recipe.seasonFit,

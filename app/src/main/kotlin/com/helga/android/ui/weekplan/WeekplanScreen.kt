@@ -113,6 +113,8 @@ fun WeekplanScreen(
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
     val selectedDayId by viewModel.selectedDayId.collectAsStateWithLifecycle()
     val daySummaries by viewModel.daySummaries.collectAsStateWithLifecycle()
+    val weekRecipes by viewModel.weekRecipes.collectAsStateWithLifecycle()
+    val weekExtras by viewModel.weekExtras.collectAsStateWithLifecycle()
     val constraints by viewModel.constraints.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
@@ -288,8 +290,9 @@ fun WeekplanScreen(
                 }
                 items(days, key = { it.id }) { day ->
                     val isSelected = day.id == selectedDayId
-                    val dayRecipes = if (isSelected) weekplanRecipes else emptyList()
-                    val dayExtras = if (isSelected) weekplanExtras else emptyList()
+                    // Im ausgewählten Zustand die live editierbaren Listen, sonst die Wochen-Übersicht
+                    val dayRecipes = if (isSelected) weekplanRecipes else (weekRecipes[day.id] ?: emptyList())
+                    val dayExtras = if (isSelected) weekplanExtras else (weekExtras[day.id] ?: emptyList())
                     val summary = daySummaries[day.id]
 
                     DayCard(
@@ -575,19 +578,51 @@ private fun DayCard(
                     Spacer(Modifier.width(4.dp))
                     Text(stringResource(R.string.weekplan_add_recipe))
                 }
-            } else if (recipeCount > 0 || extraCount > 0) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = buildString {
-                        if (recipeCount > 0) append("$recipeCount Rezepte")
-                        if (extraCount > 0) {
-                            if (isNotEmpty()) append(", ")
-                            append("$extraCount Extras")
+            } else if (weekplanRecipes.isNotEmpty() || weekplanExtras.isNotEmpty() || day.note.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+
+                weekplanRecipes.forEach { entry ->
+                    val recipe = recipeById(entry.recipeId)
+                    val imageUrl = remember(recipe?.localImageUri, recipe?.imagePath, serverUrl) {
+                        val localUri = recipe?.localImageUri.orEmpty()
+                        val path = recipe?.imagePath.orEmpty()
+                        when {
+                            localUri.isNotBlank() -> localUri
+                            path.isNotBlank() && serverUrl.isNotBlank() ->
+                                "${serverUrl.trimEnd('/')}/api/images/$path"
+                            else -> null
                         }
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                    }
+                    DayPreviewRecipeRow(
+                        name = recipe?.name?.ifBlank { recipe.slug } ?: entry.recipeId,
+                        imageUrl = imageUrl,
+                        onNavigate = { onNavigateToRecipe(entry.recipeId) },
+                    )
+                }
+
+                weekplanExtras.forEach { extra ->
+                    Text(
+                        text = "– ${extra.itemText}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 1.dp),
+                    )
+                }
+
+                if (day.note.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.padding(top = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text("📝", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = day.note,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
     }
@@ -676,6 +711,62 @@ private fun RecipeItemRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun DayPreviewRecipeRow(
+    name: String,
+    imageUrl: String?,
+    onNavigate: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .clickable(onClick = onNavigate),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(6.dp)),
+        ) {
+            if (imageUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Restaurant,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

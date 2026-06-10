@@ -165,7 +165,7 @@ class RecipeDetailViewModel @Inject constructor(
                         proteinType = result.proteinType.ifBlank { recipe.proteinType },
                         effort = result.effort.ifBlank { recipe.effort },
                         cuisine = result.cuisine.ifBlank { recipe.cuisine },
-                        mealType = result.mealType.ifBlank { recipe.mealType },
+                        mealSlot = result.mealSlot.ifBlank { recipe.mealSlot },
                         seasonFit = result.seasonFit.ifBlank { recipe.seasonFit },
                     )
                 )

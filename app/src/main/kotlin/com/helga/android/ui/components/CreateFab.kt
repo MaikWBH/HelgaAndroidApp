@@ -41,10 +41,12 @@ fun CreateFab(
     onAiGenerate: () -> Unit,
     onUrlImport: () -> Unit,
     onRemix: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     Column(
+        modifier = modifier,
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

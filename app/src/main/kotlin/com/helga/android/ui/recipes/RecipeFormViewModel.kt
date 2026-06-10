@@ -46,7 +46,7 @@ data class RecipeFormState(
     val cookTime: String = "",
     val totalTime: String = "",
     val cuisine: String = "",
-    val mealType: String = "",
+    val mealSlot: String = "other",
     val effort: String = "",
     val proteinType: String = "",
     val seasonFit: String = "",
@@ -98,7 +98,7 @@ class RecipeFormViewModel @Inject constructor(
                     cookTime = recipe.cookTime,
                     totalTime = recipe.totalTime,
                     cuisine = recipe.cuisine,
-                    mealType = recipe.mealType,
+                    mealSlot = recipe.mealSlot,
                     effort = recipe.effort,
                     proteinType = recipe.proteinType,
                     seasonFit = recipe.seasonFit,
@@ -136,7 +136,7 @@ class RecipeFormViewModel @Inject constructor(
     fun setCookTime(v: String) = _state.update { it.copy(cookTime = v) }
     fun setTotalTime(v: String) = _state.update { it.copy(totalTime = v) }
     fun setCuisine(v: String) = _state.update { it.copy(cuisine = v) }
-    fun setMealType(v: String) = _state.update { it.copy(mealType = v) }
+    fun setMealSlot(v: String) = _state.update { it.copy(mealSlot = v) }
     fun setEffort(v: String) = _state.update { it.copy(effort = v) }
     fun setProteinType(v: String) = _state.update { it.copy(proteinType = v) }
     fun setSeasonFit(v: String) = _state.update { it.copy(seasonFit = v) }
@@ -218,7 +218,7 @@ class RecipeFormViewModel @Inject constructor(
                 cookTime = s.cookTime.trim(),
                 totalTime = s.totalTime.trim(),
                 cuisine = s.cuisine.trim(),
-                mealType = s.mealType.trim(),
+                mealSlot = s.mealSlot,
                 effort = s.effort.trim(),
                 proteinType = s.proteinType.trim(),
                 seasonFit = s.seasonFit.trim(),
