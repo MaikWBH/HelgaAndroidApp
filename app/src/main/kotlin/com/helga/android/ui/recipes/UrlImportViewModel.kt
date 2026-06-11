@@ -112,7 +112,41 @@ class UrlImportViewModel @Inject constructor(
             repository.saveRecipe(entity, ingredients, instructions, tags)
             syncScheduler.triggerOneShot()
             _state.update { it.copy(isSaving = false) }
+
+            // Auto-Klassifizierung: Nach dem Speichern im Hintergrund klassifizieren
+            classifyRecipeAsync(entity, ingredients, tags)
+
             onSuccess()
+        }
+    }
+
+    private fun classifyRecipeAsync(recipe: RecipeEntity, ingredients: List<IngredientEntity>, tags: List<TagEntity>) {
+        viewModelScope.launch {
+            try {
+                val api = apiFactory.api()
+                val result = api.classifyRecipe(
+                    com.helga.android.data.remote.dto.AiClassifyRequest(
+                        name = recipe.name,
+                        description = recipe.description,
+                        tags = tags.map { it.name },
+                        ingredients = ingredients.map { it.food },
+                    )
+                )
+                if (result.isNotEmpty()) {
+                    repository.upsertLocal(
+                        recipe.copy(
+                            mealSlot = result["meal_slot"] ?: recipe.mealSlot,
+                            proteinType = result["protein_type"] ?: recipe.proteinType,
+                            effort = result["effort"] ?: recipe.effort,
+                            cuisine = result["cuisine"] ?: recipe.cuisine,
+                            seasonFit = result["season_fit"] ?: recipe.seasonFit,
+                        )
+                    )
+                    syncScheduler.triggerOneShot()
+                }
+            } catch (_: Exception) {
+                // Stillschweigend fehlschlagen — Rezept wurde bereits gespeichert
+            }
         }
     }
 }

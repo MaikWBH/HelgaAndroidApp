@@ -25,7 +25,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -44,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -93,8 +94,13 @@ fun RecipeListScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsStateWithLifecycle()
     val todayRecipe by viewModel.todayRecipe.collectAsStateWithLifecycle()
+    val unclassifiedCount by viewModel.unclassifiedCount.collectAsStateWithLifecycle()
+    val unclassifiedRecipes by viewModel.unclassifiedRecipes.collectAsStateWithLifecycle()
 
     var showTagFilter by remember { mutableStateOf(false) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
+    var showBulkClassifyDialog by remember { mutableStateOf(false) }
+    var classifyProgress by remember { mutableStateOf(0 to 0) }
 
     if (showTagFilter) {
         TagFilterDialog(
@@ -106,6 +112,27 @@ fun RecipeListScreen(
         )
     }
 
+    if (showBulkClassifyDialog) {
+        BulkClassifyDialog(
+            unclassifiedRecipes = unclassifiedRecipes,
+            isRunning = classifyProgress.first > 0,
+            progress = classifyProgress,
+            onConfirm = { selected ->
+                viewModel.classifyBatch(selected) { current, total ->
+                    classifyProgress = current to total
+                }
+                if (classifyProgress.first == classifyProgress.second) {
+                    showBulkClassifyDialog = false
+                    classifyProgress = 0 to 0
+                }
+            },
+            onDismiss = {
+                showBulkClassifyDialog = false
+                classifyProgress = 0 to 0
+            },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -113,6 +140,23 @@ fun RecipeListScreen(
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
                         SyncStatusIcon(syncStatus)
+                    }
+                    if (unclassifiedCount > 0) {
+                        Box {
+                            IconButton(onClick = { showOverflowMenu = !showOverflowMenu }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.recipe_actions))
+                                Badge(modifier = Modifier.align(Alignment.TopEnd)) { Text(unclassifiedCount.toString()) }
+                            }
+                            DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("⚡ Alle klassifizieren ($unclassifiedCount)") },
+                                    onClick = {
+                                        showBulkClassifyDialog = true
+                                        showOverflowMenu = false
+                                    },
+                                )
+                            }
+                        }
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
@@ -486,6 +530,73 @@ private fun TagFilterDialog(
                 TextButton(onClick = onClearAll) {
                     Text(stringResource(R.string.recipes_filter_clear))
                 }
+            }
+        },
+    )
+}
+
+@Composable
+private fun BulkClassifyDialog(
+    unclassifiedRecipes: List<RecipeListViewModel.UnclassifiedRecipe>,
+    isRunning: Boolean,
+    progress: Pair<Int, Int>,
+    onConfirm: (List<String>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selectedRecipes by remember { mutableStateOf(unclassifiedRecipes.map { it.id }.toSet()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rezepte klassifizieren") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("${unclassifiedRecipes.size} Rezepte sind noch nicht kategorisiert.",
+                    style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(12.dp))
+                if (isRunning) {
+                    LinearProgressIndicator(
+                        progress = { if (progress.second > 0) progress.first.toFloat() / progress.second else 0f },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text("${progress.first}/${progress.second}",
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        style = MaterialTheme.typography.labelSmall)
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp)) {
+                        items(unclassifiedRecipes) { recipe ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(
+                                    checked = recipe.id in selectedRecipes,
+                                    onCheckedChange = { checked ->
+                                        selectedRecipes = if (checked) {
+                                            selectedRecipes + recipe.id
+                                        } else {
+                                            selectedRecipes - recipe.id
+                                        }
+                                    },
+                                    modifier = Modifier.padding(end = 8.dp),
+                                )
+                                Text(recipe.name, modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(selectedRecipes.toList()) },
+                enabled = selectedRecipes.isNotEmpty() && !isRunning,
+            ) {
+                Text(if (isRunning) "Lädt..." else "Klassifizieren")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isRunning) {
+                Text(android.R.string.cancel)
             }
         },
     )
