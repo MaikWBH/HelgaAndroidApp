@@ -57,7 +57,7 @@ Neue Tabellen im Schema erfordern:
 |----------|-----------|
 | `POST /api/ai/generate` | SSE-Stream: Rezept aus Prompt generieren |
 | `POST /api/ai/remix` | SSE-Stream: Rezept abwandeln |
-| `POST /api/ai/classify` | JSON: 5 Felder (protein_type, effort, cuisine, meal_type, season_fit) |
+| `POST /api/ai/classify` | JSON: 5 Felder (protein_type, effort, cuisine, meal_slot, season_fit) |
 
 SSE-Format: `data: <chunk>\n\n`, Abschluss: `data: [DONE]\n\n`. Zeilenumbrüche im Chunk als `\n` escaped.
 

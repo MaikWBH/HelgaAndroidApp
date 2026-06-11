@@ -56,7 +56,10 @@ data class WeekBalance(val meat: Int = 0, val fish: Int = 0, val veg: Int = 0, v
 sealed interface WeekplanGenerateStatus {
     data object Idle : WeekplanGenerateStatus
     data object Loading : WeekplanGenerateStatus
-    data class Proposal(val assignments: List<WeekplanAssignmentDto>) : WeekplanGenerateStatus
+    data class Proposal(
+        val assignments: List<WeekplanAssignmentDto>,
+        val warnings: List<String> = emptyList(),
+    ) : WeekplanGenerateStatus
     data class Error(val message: String) : WeekplanGenerateStatus
 }
 
@@ -429,9 +432,14 @@ class WeekplanViewModel @Inject constructor(
                 }
 
                 // mealSlot-Filter: Keine Frühstück/Snack ins Dinner-Rezept platzieren
+                val warnings = mutableListOf<String>()
                 val mealFiltered = candidates.filter { recipe ->
                     recipe.mealSlot !in listOf("breakfast", "snack")
-                }.ifEmpty { candidates }
+                }
+                if (mealFiltered.isEmpty()) {
+                    warnings.add("⚠️ Zu wenige klassifizierte Hauptgericht-Rezepte. Alle Rezepte werden verwendet.")
+                }
+                val mealFilteredSafe = mealFiltered.ifEmpty { candidates }
 
                 // Saison-Filter: saisonale Rezepte bevorzugen
                 val currentSeason = when (LocalDate.now().monthValue) {
@@ -440,7 +448,7 @@ class WeekplanViewModel @Inject constructor(
                     in 9..11 -> "herbst"
                     else -> "winter"
                 }
-                val seasonalCandidates = mealFiltered.partition { recipe ->
+                val seasonalCandidates = mealFilteredSafe.partition { recipe ->
                     recipe.seasonFit.isBlank() ||
                     recipe.seasonFit.lowercase().let { it == "ganzjährig" || it == currentSeason }
                 }
@@ -559,7 +567,7 @@ class WeekplanViewModel @Inject constructor(
                     )
                 }
 
-                _generateStatus.value = WeekplanGenerateStatus.Proposal(assignments)
+                _generateStatus.value = WeekplanGenerateStatus.Proposal(assignments, warnings)
             } catch (e: Exception) {
                 _generateStatus.value = WeekplanGenerateStatus.Error(e.message ?: "Fehler bei der Generierung")
             }
@@ -650,7 +658,8 @@ class WeekplanViewModel @Inject constructor(
                 recipeId = chosen.id,
                 recipeName = chosen.name.ifBlank { chosen.slug },
             )
-            _generateStatus.value = WeekplanGenerateStatus.Proposal(assignments)
+            val currentProposal = (_generateStatus.value as? WeekplanGenerateStatus.Proposal)
+            _generateStatus.value = WeekplanGenerateStatus.Proposal(assignments, currentProposal?.warnings ?: emptyList())
         }
     }
 
@@ -806,7 +815,7 @@ class WeekplanViewModel @Inject constructor(
                     _generateStatus.value = WeekplanGenerateStatus.Error("Vorwoche hat keine Rezepte")
                     return@launch
                 }
-                _generateStatus.value = WeekplanGenerateStatus.Proposal(assignments)
+                _generateStatus.value = WeekplanGenerateStatus.Proposal(assignments, emptyList())
             } catch (e: Exception) {
                 _generateStatus.value = WeekplanGenerateStatus.Error(e.message ?: "Fehler")
             }

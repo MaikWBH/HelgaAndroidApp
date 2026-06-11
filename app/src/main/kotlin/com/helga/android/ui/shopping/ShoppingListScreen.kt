@@ -70,6 +70,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -92,6 +93,7 @@ import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.local.entity.OffProductEntity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -117,6 +119,7 @@ fun ShoppingListScreen(
     val currentListEmpty by viewModel.currentListEmpty.collectAsStateWithLifecycle()
     val costEstimate by viewModel.costEstimate.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val scannedProduct by viewModel.scannedProduct.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
     var showListDropdown by remember { mutableStateOf(false) }
@@ -171,6 +174,24 @@ fun ShoppingListScreen(
             },
             onDismiss = { showBarcodeScanner = false },
             modifier = Modifier.fillMaxSize(),
+        )
+    }
+
+    // Product Detail Dialog nach dem Scannen
+    scannedProduct?.let { product ->
+        ScannedProductDialog(
+            product = product,
+            activeStore = activeStore,
+            onConfirm = {
+                viewModel.confirmScannedProduct()
+            },
+            onSearchAlternatives = {
+                viewModel.searchAlternatives(product)
+                // Phase 1: Alternatives-Dialog würde hier gezeigt
+            },
+            onDismiss = {
+                viewModel.clearScannedProduct()
+            },
         )
     }
 
@@ -1255,4 +1276,166 @@ private fun CostEstimateCard(estimate: com.helga.android.data.model.ListCostEsti
             }
         }
     }
+}
+
+@Composable
+fun ScannedProductDialog(
+    product: OffProductEntity,
+    activeStore: StoreEntity?,
+    onConfirm: () -> Unit,
+    onSearchAlternatives: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "📦 ${product.name}") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // NutriScore
+                if (product.nutriScore.isNotBlank()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "NutriScore:",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Surface(
+                            modifier = Modifier.size(32.dp),
+                            shape = RoundedCornerShape(4.dp),
+                            color = when (product.nutriScore.uppercase()) {
+                                "A" -> Color(0xFF4CAF50)
+                                "B" -> Color(0xFF8BC34A)
+                                "C" -> Color(0xFFFFC107)
+                                "D" -> Color(0xFFFF9800)
+                                "E" -> Color(0xFFF44336)
+                                else -> MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = product.nutriScore.uppercase(),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Kcal
+                if (product.kcalPerUnit > 0) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Kcal/100g:",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            text = "${product.kcalPerUnit.toInt()} kcal",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                // Brand
+                if (product.brand.isNotBlank()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Marke:",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            text = product.brand,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                // Badges
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (product.vegan == 1) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("🌱 Vegan") },
+                        )
+                    }
+                    if (product.vegetarian == 1) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("🥬 Vegetarisch") },
+                        )
+                    }
+                    if (product.isOrganic == 1) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("🌿 Bio") },
+                        )
+                    }
+                }
+
+                // Allergen Warning
+                if (product.allergenes.isNotBlank() && product.allergenes != "[]") {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(12.dp),
+                        ) {
+                            Text(
+                                text = "⚠️ Allergene enthalten",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            )
+                            Text(
+                                text = product.allergenes,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("✅ Zur Liste hinzufügen")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onSearchAlternatives) {
+                Text("⚡ Alternativen")
+            }
+        },
+        modifier = Modifier.widthIn(max = 400.dp),
+    )
 }

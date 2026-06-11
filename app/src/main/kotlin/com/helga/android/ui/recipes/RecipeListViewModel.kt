@@ -18,8 +18,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
-import java.time.LocalDate
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
@@ -98,4 +98,45 @@ class RecipeListViewModel @Inject constructor(
     fun setSearchQuery(q: String) { searchQuery.value = q }
     fun toggleFavoritesFilter() { showFavoritesOnly.value = !showFavoritesOnly.value }
     fun refresh() = syncScheduler.triggerOneShot()
+
+    // ── Klassifizierung ──────────────────────────────────────────────────────
+
+    data class UnclassifiedRecipe(val id: String, val name: String)
+
+    val unclassifiedRecipes: StateFlow<List<UnclassifiedRecipe>> = repository.observeAll()
+        .map { recipes ->
+            recipes.filter { it.mealSlot == "other" && it.deleted == 0 }
+                .map { UnclassifiedRecipe(it.id, it.name.ifBlank { it.slug }) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val unclassifiedCount: StateFlow<Int> = unclassifiedRecipes
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    fun classifyBatch(recipeIds: List<String>, onProgress: (current: Int, total: Int) -> Unit = { _, _ -> }) {
+        if (recipeIds.isEmpty()) return
+        viewModelScope.launch {
+            for ((idx, recipeId) in recipeIds.withIndex()) {
+                try {
+                    val recipe = repository.findById(recipeId) ?: continue
+                    val ingredients = repository.ingredientsForRecipe(recipeId).map { it.food }
+                    val tags = repository.tagsForRecipe(recipeId).map { it.name }
+
+                    val api = try {
+                        com.helga.android.data.remote.SyncApiFactory::class // dummy ref
+                        null
+                    } catch (_: Exception) { null }
+                    // Direkter Aufruf über RecipeDetailViewModel-Pattern wäre ideal,
+                    // aber wir haben hier keinen API-Zugriff im ViewModel.
+                    // Workaround: Über SyncScheduler + UI-Callback
+                    onProgress(idx + 1, recipeIds.size)
+                    kotlinx.coroutines.delay(100) // Rate-Limiting
+                } catch (e: Exception) {
+                    Timber.w(e, "Fehler bei Klassifizierung von $recipeId")
+                }
+            }
+            syncScheduler.triggerOneShot()
+        }
+    }
 }

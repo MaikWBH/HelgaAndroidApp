@@ -9,7 +9,7 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     "recipes": [
         "id", "slug", "name", "description", "recipe_yield", "prep_time",
         "cook_time", "total_time", "image_path", "source_url", "rating",
-        "protein_type", "effort", "cuisine", "meal_type", "season_fit",
+        "protein_type", "effort", "cuisine", "meal_type", "meal_slot", "season_fit",
         "created_at", "updated_at", "deleted",
     ],
     "recipe_ingredients": [

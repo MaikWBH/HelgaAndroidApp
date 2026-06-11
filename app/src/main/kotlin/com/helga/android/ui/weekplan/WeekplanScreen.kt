@@ -168,13 +168,14 @@ fun WeekplanScreen(
         )
     }
 
-    val proposalAssignments = (generateStatus as? WeekplanGenerateStatus.Proposal)?.assignments
-    if (proposalAssignments != null) {
+    val proposal = generateStatus as? WeekplanGenerateStatus.Proposal
+    if (proposal != null) {
         ProposalSheet(
-            assignments = proposalAssignments,
+            assignments = proposal.assignments,
+            warnings = proposal.warnings,
             allRecipes = allRecipes,
             serverUrl = serverUrl,
-            onAccept = { viewModel.applyProposal(proposalAssignments) },
+            onAccept = { viewModel.applyProposal(proposal.assignments) },
             onDismiss = viewModel::discardProposal,
             onRegenerateDay = { index -> viewModel.regenerateProposalDay(index) },
         )
@@ -1008,6 +1009,7 @@ private fun ConstraintsEditorSheet(
 @Composable
 private fun ProposalSheet(
     assignments: List<WeekplanAssignmentDto>,
+    warnings: List<String> = emptyList(),
     allRecipes: Map<String, RecipeEntity>,
     serverUrl: String,
     onAccept: () -> Unit,
@@ -1030,6 +1032,21 @@ private fun ProposalSheet(
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(12.dp))
+            warnings.forEach { warning ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    Text(
+                        text = warning,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(8.dp),
+                    )
+                }
+            }
 
             assignments.forEachIndexed { index, assignment ->
                 val recipe = allRecipes[assignment.recipeId]

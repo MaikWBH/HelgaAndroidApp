@@ -30,9 +30,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,7 +43,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.helga.android.ui.components.MealSlots
+import com.helga.android.ui.components.mealSlotLabel
 import com.helga.android.R
 import java.io.File
 
@@ -273,54 +275,43 @@ private fun ImagePicker(localImageUri: String, onPickImage: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MealSlotPicker(
     selected: String,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val slots = listOf("breakfast", "lunch", "dinner", "snack", "other")
-    val displayNames = mapOf(
-        "breakfast" to "Frühstück",
-        "lunch" to "Mittag",
-        "dinner" to "Abendessen",
-        "snack" to "Snack",
-        "other" to "Sonstiges",
-    )
-
     var expanded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier,
+    ) {
         OutlinedTextField(
-            value = displayNames[selected] ?: selected,
+            value = mealSlotLabel(selected),
             onValueChange = {},
-            label = { Text("Mahlzeit") },
             readOnly = true,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = false,
+            label = { Text(stringResource(R.string.recipe_form_meal_slot)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
         )
-        DropdownMenu(
+        ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            modifier = Modifier.fillMaxWidth(0.5f),
         ) {
-            slots.forEach { slot ->
+            MealSlots.ALL.forEach { slot ->
                 DropdownMenuItem(
-                    text = { Text(displayNames[slot] ?: slot) },
+                    text = { Text(mealSlotLabel(slot)) },
                     onClick = {
                         onSelect(slot)
                         expanded = false
                     },
                 )
             }
-        }
-        TextButton(
-            onClick = { expanded = !expanded },
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.CenterEnd),
-        ) {
-            Text(displayNames[selected] ?: selected)
         }
     }
 }
