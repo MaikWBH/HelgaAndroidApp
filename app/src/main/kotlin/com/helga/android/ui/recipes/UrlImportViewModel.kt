@@ -132,14 +132,16 @@ class UrlImportViewModel @Inject constructor(
                         ingredients = ingredients.map { it.food },
                     )
                 )
-                if (result.isNotEmpty()) {
+                val hasData = result.mealSlot.isNotBlank() || result.proteinType.isNotBlank() ||
+                    result.effort.isNotBlank() || result.cuisine.isNotBlank() || result.seasonFit.isNotBlank()
+                if (hasData) {
                     repository.upsertLocal(
                         recipe.copy(
-                            mealSlot = result["meal_slot"] ?: recipe.mealSlot,
-                            proteinType = result["protein_type"] ?: recipe.proteinType,
-                            effort = result["effort"] ?: recipe.effort,
-                            cuisine = result["cuisine"] ?: recipe.cuisine,
-                            seasonFit = result["season_fit"] ?: recipe.seasonFit,
+                            mealSlot = result.mealSlot.ifBlank { recipe.mealSlot },
+                            proteinType = result.proteinType.ifBlank { recipe.proteinType },
+                            effort = result.effort.ifBlank { recipe.effort },
+                            cuisine = result.cuisine.ifBlank { recipe.cuisine },
+                            seasonFit = result.seasonFit.ifBlank { recipe.seasonFit },
                         )
                     )
                     syncScheduler.triggerOneShot()
