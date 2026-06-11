@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS recipes (
     effort      TEXT DEFAULT '',
     cuisine     TEXT DEFAULT '',
     meal_type   TEXT DEFAULT '',
+    meal_slot   TEXT NOT NULL DEFAULT 'other',
     season_fit  TEXT DEFAULT '',
     created_at  INTEGER NOT NULL DEFAULT 0,
     updated_at  INTEGER NOT NULL DEFAULT 0,
@@ -322,6 +323,23 @@ ADDED_COLUMNS = {
     "recipe_ingredients": [
         ("off_barcode", "TEXT NOT NULL DEFAULT ''"),
     ],
+    "recipes": [
+        ("meal_slot", "TEXT NOT NULL DEFAULT 'other'"),
+    ],
+}
+
+# Einmalige Daten-Migrationen nach dem Anlegen neuer Spalten.
+# Key: (Tabelle, Spalte) → SQL das nur läuft wenn die Spalte gerade neu angelegt wurde.
+COLUMN_BACKFILL = {
+    ("recipes", "meal_slot"): """
+        UPDATE recipes SET meal_slot = CASE
+            WHEN LOWER(meal_type) IN ('frühstück', 'breakfast') THEN 'breakfast'
+            WHEN LOWER(meal_type) IN ('mittag', 'lunch', 'mittagessen') THEN 'lunch'
+            WHEN LOWER(meal_type) IN ('abendessen', 'dinner', 'hauptgericht', 'hauptspeise') THEN 'dinner'
+            WHEN LOWER(meal_type) IN ('dessert', 'snack', 'beilage', 'side') THEN 'snack'
+            ELSE 'other'
+        END
+    """,
 }
 
 
@@ -341,6 +359,9 @@ async def _ensure_columns(db):
         for name, ddl in columns:
             if name not in existing:
                 await db.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+                backfill = COLUMN_BACKFILL.get((table, name))
+                if backfill:
+                    await db.execute(backfill)
 
 
 async def init_db():

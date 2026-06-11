@@ -68,6 +68,12 @@
     <string name="recipe_form_source_url">Quell-URL</string>
     <string name="recipe_form_protein_type">Protein-Typ</string>
     <string name="recipe_form_season_fit">Saison</string>
+    <string name="recipe_form_meal_slot">Mahlzeit</string>
+    <string name="meal_slot_breakfast">Frühstück</string>
+    <string name="meal_slot_lunch">Mittagessen</string>
+    <string name="meal_slot_dinner">Abendessen</string>
+    <string name="meal_slot_snack">Snack</string>
+    <string name="meal_slot_other">Nicht kategorisiert</string>
     <string name="recipe_form_quantity">Menge</string>
     <string name="recipe_form_unit">Einheit</string>
     <string name="recipe_form_food">Zutat</string>

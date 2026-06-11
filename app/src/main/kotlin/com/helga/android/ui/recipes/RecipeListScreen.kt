@@ -69,6 +69,7 @@ import coil.request.ImageRequest
 import com.helga.android.R
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.ui.components.CreateFab
+import com.helga.android.ui.components.MealSlots
 import com.helga.android.ui.components.SyncStatusIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -351,7 +352,7 @@ private fun RecipeRow(
                         maxLines = 1,
                         modifier = Modifier.weight(1f).basicMarquee(),
                     )
-                    if (recipe.mealSlot == "other") {
+                    if (recipe.mealSlot == MealSlots.OTHER) {
                         Text("⚠️", modifier = Modifier.padding(start = 4.dp))
                     }
                 }

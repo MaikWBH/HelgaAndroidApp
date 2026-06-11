@@ -23,6 +23,7 @@ class RecipeRecord(SyncRecord):
     effort: str = ""
     cuisine: str = ""
     meal_type: str = ""
+    meal_slot: str = "other"
     season_fit: str = ""
     created_at: int = 0
 
@@ -262,7 +263,7 @@ class AiImportResponse(BaseModel):
     cook_time: str = ""
     total_time: str = ""
     cuisine: str = ""
-    meal_type: str = ""
+    meal_slot: str = "other"
     effort: str = ""
     protein_type: str = ""
     season_fit: str = ""

@@ -225,7 +225,7 @@ async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
 async def generate_weekplan(req: WeekplanGenerateRequest) -> WeekplanGenerateResponse:
     from .db import get_db
 
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute(
             "SELECT id, name, protein_type FROM recipes WHERE deleted = 0 AND name != ''",
         ) as cursor:

@@ -76,6 +76,8 @@ import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.ui.components.CreateFab
+import com.helga.android.ui.components.MealSlots
+import com.helga.android.ui.components.mealSlotLabel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -252,7 +254,7 @@ fun RecipeDetailScreen(
                                         },
                                     )
                                 }
-                                val alreadyClassified = recipe != null && recipe.mealSlot != "other"
+                                val alreadyClassified = recipe != null && recipe.mealSlot != MealSlots.OTHER
                                 DropdownMenuItem(
                                     text = {
                                         if (uiState.isClassifying) {
@@ -477,7 +479,7 @@ private fun MetadataSection(recipe: RecipeEntity) {
         if (recipe.prepTime.isNotBlank()) add("🔪" to recipe.prepTime)
         if (recipe.cookTime.isNotBlank()) add("🔥" to recipe.cookTime)
         if (recipe.cuisine.isNotBlank()) add("🌍" to recipe.cuisine)
-        if (recipe.mealSlot != "other") add("🍳" to getMealSlotLabel(recipe.mealSlot))
+        if (recipe.mealSlot != MealSlots.OTHER) add("🍳" to mealSlotLabel(recipe.mealSlot))
         if (recipe.effort.isNotBlank()) add("💪" to recipe.effort)
     }
     if (items.isEmpty()) return
@@ -859,12 +861,4 @@ private fun WeekplanDayPickerDialog(
             }
         },
     )
-}
-
-private fun getMealSlotLabel(mealSlot: String): String = when (mealSlot) {
-    "breakfast" -> "Frühstück"
-    "lunch" -> "Mittag"
-    "dinner" -> "Abendessen"
-    "snack" -> "Snack"
-    else -> "Sonstiges"
 }

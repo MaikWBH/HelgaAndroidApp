@@ -527,7 +527,8 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("""
                     UPDATE recipes SET mealSlot = CASE
                         WHEN LOWER(mealType) IN ('frühstück', 'breakfast') THEN 'breakfast'
-                        WHEN LOWER(mealType) IN ('mittag', 'lunch', 'abendessen', 'dinner') THEN 'lunch'
+                        WHEN LOWER(mealType) IN ('mittag', 'lunch', 'mittagessen') THEN 'lunch'
+                        WHEN LOWER(mealType) IN ('abendessen', 'dinner', 'hauptgericht', 'hauptspeise') THEN 'dinner'
                         WHEN LOWER(mealType) IN ('dessert', 'snack', 'beilage', 'side') THEN 'snack'
                         WHEN mealType = '' THEN 'other'
                         ELSE 'other'
