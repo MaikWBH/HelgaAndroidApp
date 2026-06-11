@@ -36,6 +36,7 @@
     <string name="recipes_today_cook">Heute kochen</string>
 
     <!-- Rezept-Detail -->
+    <string name="recipe_actions">Aktionen</string>
     <string name="recipe_detail_back">Zurück</string>
     <string name="recipe_detail_ingredients">Zutaten</string>
     <string name="recipe_detail_instructions">Zubereitung</string>
