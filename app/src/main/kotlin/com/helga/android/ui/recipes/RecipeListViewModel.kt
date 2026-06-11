@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
@@ -86,7 +88,7 @@ class RecipeListViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun toggleTag(tag: String) {
-        selectedTags.update { current ->
+        selectedTags.value = selectedTags.value.let { current ->
             if (tag in current) current - tag else current + tag
         }
     }
@@ -121,7 +123,7 @@ class RecipeListViewModel @Inject constructor(
                 try {
                     val recipe = repository.findById(recipeId) ?: continue
                     val ingredients = repository.ingredientsForRecipe(recipeId).map { it.food }
-                    val tags = repository.tagsForRecipe(recipeId).map { it.name }
+                    val tags = repository.tagsByRecipeId(recipeId).map { it.name }
 
                     val api = try {
                         com.helga.android.data.remote.SyncApiFactory::class // dummy ref

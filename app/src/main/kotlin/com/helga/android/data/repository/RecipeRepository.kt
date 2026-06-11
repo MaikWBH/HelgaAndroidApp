@@ -31,6 +31,7 @@ class RecipeRepository @Inject constructor(
     suspend fun allRecipes(): List<RecipeEntity> = recipeDao.allActive()
     suspend fun ingredientsForRecipe(id: String): List<IngredientEntity> = recipeDao.ingredientsByRecipeId(id)
     suspend fun instructionsForRecipe(id: String): List<InstructionEntity> = recipeDao.instructionsByRecipeId(id)
+    suspend fun tagsByRecipeId(id: String): List<TagEntity> = recipeDao.tagsByRecipeId(id)
 
     /** Schreibt einen Datensatz lokal mit `dirty = 1`, damit er beim nächsten Sync hochgeht. */
     suspend fun upsertLocal(recipe: RecipeEntity) {
