@@ -31,6 +31,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.helga.android.data.local.entity.OffProductEntity
+import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -50,7 +52,10 @@ class ShoppingListViewModel @Inject constructor(
     private val preferences: AppPreferences,
 ) : ViewModel() {
 
-    private val _activeListId = MutableStateFlow<String?>(null)
+    private val _scannedProduct = MutableStateFlow<OffProductEntity?>(null)
+    val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.stateIn(
+        viewModelScope, SharingStarted.Eagerly, null
+    )
 
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -337,6 +342,25 @@ class ShoppingListViewModel @Inject constructor(
                 val product = apiFactory.api().lookupBarcode(
                     com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
                 )
+                // Zeige Produkt-Detail-Dialog statt direkt hinzuzufügen
+                _scannedProduct.value = product
+            } catch (e: Exception) {
+                Timber.w(e, "Barcode lookup failed: $barcode")
+                // Bei Fehler: Generisches Produkt-Dummy anzeigen
+                _scannedProduct.value = OffProductEntity(
+                    id = barcode,
+                    barcode = barcode,
+                    name = "Barcode: $barcode (nicht gefunden)",
+                )
+            }
+        }
+    }
+
+    fun confirmScannedProduct(quantity: Double = 1.0, unit: String = "Stück") {
+        val listId = activeListId.value ?: return
+        val product = scannedProduct.value ?: return
+        viewModelScope.launch {
+            try {
                 val storeId = activeStore.value?.id
                 val aisle = if (storeId != null)
                     storeRepository.findAisleForProduct(product.name, storeId) ?: ""
@@ -344,27 +368,27 @@ class ShoppingListViewModel @Inject constructor(
                 repository.addItem(
                     listId = listId,
                     name = product.name,
-                    quantity = 1.0,
-                    unit = "Stück",
+                    quantity = quantity,
+                    unit = unit,
                     aisle = aisle,
-                    offBarcode = barcode,
+                    offBarcode = product.barcode,
                     offProductId = product.id,
                 )
                 syncScheduler.triggerOneShot()
+                _scannedProduct.value = null
             } catch (e: Exception) {
-                // Handle barcode lookup error - could show snackbar to user
-                // For now, fall back to generic entry
-                val storeId = activeStore.value?.id
-                val aisle = if (storeId != null)
-                    storeRepository.findAisleForProduct("Barcode: $barcode", storeId) ?: ""
-                else ""
-                repository.addItem(
-                    listId = listId,
-                    name = "Barcode: $barcode",
-                    aisle = aisle,
-                )
-                syncScheduler.triggerOneShot()
+                Timber.e(e, "Failed to add item from barcode")
             }
         }
+    }
+
+    fun clearScannedProduct() {
+        _scannedProduct.value = null
+    }
+
+    fun searchAlternatives(product: OffProductEntity) {
+        // Phase 1: Implementierung der Alternatives-Engine
+        // TODO: Nach besseren Produkten suchen, basierend auf NutriScore, Allergen, etc.
+        Timber.i("Searching alternatives for: ${product.name}")
     }
 }
