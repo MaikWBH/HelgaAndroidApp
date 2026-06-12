@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
+import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
@@ -38,6 +39,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
+import org.json.JSONArray
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -47,6 +49,7 @@ class ShoppingListViewModel @Inject constructor(
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
+    private val offProductDao: OffProductDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
     private val syncEngine: SyncEngine,
@@ -57,6 +60,9 @@ class ShoppingListViewModel @Inject constructor(
 
     private val _scannedProduct = MutableStateFlow<OffProductEntity?>(null)
     val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.asStateFlow()
+
+    private val _alternativeProducts = MutableStateFlow<List<OffProductEntity>>(emptyList())
+    val alternativeProducts: StateFlow<List<OffProductEntity>> = _alternativeProducts.asStateFlow()
 
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -378,23 +384,23 @@ class ShoppingListViewModel @Inject constructor(
         }
     }
 
-    fun confirmScannedProduct(quantity: Double = 1.0, unit: String = "Stück") {
+    fun confirmScannedProduct(product: OffProductEntity? = null, quantity: Double = 1.0, unit: String = "Stück") {
         val listId = activeListId.value ?: return
-        val product = scannedProduct.value ?: return
+        val itemProduct = product ?: scannedProduct.value ?: return
         viewModelScope.launch {
             try {
                 val storeId = activeStore.value?.id
                 val aisle = if (storeId != null)
-                    storeRepository.findAisleForProduct(product.name, storeId) ?: ""
+                    storeRepository.findAisleForProduct(itemProduct.name, storeId) ?: ""
                 else ""
                 repository.addItem(
                     listId = listId,
-                    name = product.name,
+                    name = itemProduct.name,
                     quantity = quantity,
                     unit = unit,
                     aisle = aisle,
-                    offBarcode = product.barcode,
-                    offProductId = product.id,
+                    offBarcode = itemProduct.barcode,
+                    offProductId = itemProduct.id,
                 )
                 syncScheduler.triggerOneShot()
                 _scannedProduct.value = null
@@ -409,8 +415,74 @@ class ShoppingListViewModel @Inject constructor(
     }
 
     fun searchAlternatives(product: OffProductEntity) {
-        // Phase 1: Implementierung der Alternatives-Engine
-        // TODO: Nach besseren Produkten suchen, basierend auf NutriScore, Allergen, etc.
-        Timber.i("Searching alternatives for: ${product.name}")
+        viewModelScope.launch {
+            try {
+                val searchTerms = product.name
+                    .split(Regex("[\\s\\-]+"))
+                    .take(2)
+                    .filter { it.isNotBlank() && it.length > 2 }
+
+                if (searchTerms.isEmpty()) {
+                    _alternativeProducts.value = emptyList()
+                    return@launch
+                }
+
+                val allCandidates = mutableListOf<OffProductEntity>()
+                for (term in searchTerms) {
+                    allCandidates.addAll(offProductDao.search(term, limit = 20))
+                }
+
+                val currentAllergens = parseAllergens(product.allergenes)
+                val currentNutriScoreRank = nutriScoreRank(product.nutriScore)
+
+                val alternatives = allCandidates
+                    .filter { it.id != product.id }
+                    .filter { candidate ->
+                        val candidateNutriRank = nutriScoreRank(candidate.nutriScore)
+                        val candidateAllergens = parseAllergens(candidate.allergenes)
+
+                        val hasLowerKcal = candidate.kcalPerUnit < product.kcalPerUnit * 0.95
+                        val hasBetterNutriScore = candidateNutriRank < currentNutriScoreRank
+                        val noNewAllergens = candidateAllergens.none { allergen ->
+                            allergen !in currentAllergens
+                        }
+
+                        (hasLowerKcal || hasBetterNutriScore) && noNewAllergens
+                    }
+                    .distinctBy { it.id }
+                    .sortedWith(compareBy(
+                        { -nutriScoreRank(it.nutriScore) },
+                        { it.kcalPerUnit }
+                    ))
+                    .take(3)
+
+                _alternativeProducts.value = alternatives
+                Timber.i("Found ${alternatives.size} alternatives for: ${product.name}")
+            } catch (e: Exception) {
+                Timber.e(e, "Error searching alternatives")
+                _alternativeProducts.value = emptyList()
+            }
+        }
+    }
+
+    private fun nutriScoreRank(score: String): Int = when (score.uppercase()) {
+        "A" -> 4
+        "B" -> 3
+        "C" -> 2
+        "D" -> 1
+        "E" -> 0
+        else -> -1
+    }
+
+    private fun parseAllergens(jsonString: String): Set<String> = try {
+        if (jsonString.isBlank() || jsonString == "[]") {
+            emptySet()
+        } else {
+            val array = JSONArray(jsonString)
+            (0 until array.length()).map { array.getString(it) }.toSet()
+        }
+    } catch (e: Exception) {
+        Timber.w(e, "Failed to parse allergens")
+        emptySet()
     }
 }
