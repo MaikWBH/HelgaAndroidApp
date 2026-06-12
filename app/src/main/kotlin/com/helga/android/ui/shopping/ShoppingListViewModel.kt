@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -52,10 +53,10 @@ class ShoppingListViewModel @Inject constructor(
     private val preferences: AppPreferences,
 ) : ViewModel() {
 
+    private val _activeListId = MutableStateFlow<String?>(null)
+
     private val _scannedProduct = MutableStateFlow<OffProductEntity?>(null)
-    val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.stateIn(
-        viewModelScope, SharingStarted.Eagerly, null
-    )
+    val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.asStateFlow()
 
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -339,11 +340,32 @@ class ShoppingListViewModel @Inject constructor(
         val listId = activeListId.value ?: return
         viewModelScope.launch {
             try {
-                val product = apiFactory.api().lookupBarcode(
+                val dto = apiFactory.api().lookupBarcode(
                     com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
                 )
                 // Zeige Produkt-Detail-Dialog statt direkt hinzuzufügen
-                _scannedProduct.value = product
+                _scannedProduct.value = OffProductEntity(
+                    id = dto.id.ifBlank { barcode },
+                    barcode = dto.barcode.ifBlank { barcode },
+                    name = dto.name,
+                    brand = dto.brand,
+                    categories = dto.categories,
+                    kcalPerUnit = dto.kcalPerUnit,
+                    proteins = dto.proteins,
+                    fats = dto.fats,
+                    carbs = dto.carbs,
+                    nutriScore = dto.nutriScore,
+                    nova = dto.nova,
+                    ecoScore = dto.ecoScore,
+                    allergenes = dto.allergenes,
+                    additives = dto.additives,
+                    isOrganic = dto.isOrganic,
+                    vegan = dto.vegan,
+                    vegetarian = dto.vegetarian,
+                    imagePath = dto.imagePath,
+                    updatedAt = dto.updatedAt,
+                    deleted = dto.deleted,
+                )
             } catch (e: Exception) {
                 Timber.w(e, "Barcode lookup failed: $barcode")
                 // Bei Fehler: Generisches Produkt-Dummy anzeigen

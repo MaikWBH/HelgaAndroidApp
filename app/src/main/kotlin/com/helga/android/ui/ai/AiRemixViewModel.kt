@@ -103,16 +103,6 @@ class AiRemixViewModel @Inject constructor(
         }
     }
 
-    private fun classifyRecipeAsync(recipe: RecipeEntity, ingredients: List<IngredientEntity>, tags: List<TagEntity>) {
-        viewModelScope.launch {
-            try {
-                // Auto-Klassifizierung nach Remix (nicht nötig da bereits klassifiziert)
-            } catch (_: Exception) {
-                // Fehler ignorieren
-            }
-        }
-    }
-
     fun save(recipe: ParsedAiRecipe, onSaved: (id: String) -> Unit) {
         _state.update { it.copy(isSaving = true) }
         viewModelScope.launch {
@@ -157,9 +147,6 @@ class AiRemixViewModel @Inject constructor(
             }
             repository.saveRecipe(entity, ingredients, instructions, tags)
             syncScheduler.triggerOneShot()
-
-            // Auto-Klassifizierung
-            classifyRecipeAsync(entity, ingredients, tags)
 
             _state.update { it.copy(isSaving = false) }
             onSaved(id)

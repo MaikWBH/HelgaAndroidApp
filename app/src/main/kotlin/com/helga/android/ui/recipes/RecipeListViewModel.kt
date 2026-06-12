@@ -6,6 +6,8 @@ import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.preferences.AppPreferences
+import com.helga.android.data.remote.SyncApiFactory
+import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -33,6 +36,7 @@ class RecipeListViewModel @Inject constructor(
     private val weekplanDao: WeekplanDao,
     syncStatusHolder: SyncStatusHolder,
     private val syncScheduler: SyncScheduler,
+    private val apiFactory: SyncApiFactory,
     preferences: AppPreferences,
 ) : ViewModel() {
 
@@ -125,18 +129,28 @@ class RecipeListViewModel @Inject constructor(
                     val ingredients = repository.ingredientsForRecipe(recipeId).map { it.food }
                     val tags = repository.tagsByRecipeId(recipeId).map { it.name }
 
-                    val api = try {
-                        com.helga.android.data.remote.SyncApiFactory::class // dummy ref
-                        null
-                    } catch (_: Exception) { null }
-                    // Direkter Aufruf über RecipeDetailViewModel-Pattern wäre ideal,
-                    // aber wir haben hier keinen API-Zugriff im ViewModel.
-                    // Workaround: Über SyncScheduler + UI-Callback
-                    onProgress(idx + 1, recipeIds.size)
-                    kotlinx.coroutines.delay(100) // Rate-Limiting
+                    val result = apiFactory.api().classifyRecipe(
+                        AiClassifyRequest(
+                            name = recipe.name,
+                            description = recipe.description,
+                            tags = tags,
+                            ingredients = ingredients,
+                        )
+                    )
+                    repository.upsertLocal(
+                        recipe.copy(
+                            mealSlot = result.mealSlot.ifBlank { recipe.mealSlot },
+                            proteinType = result.proteinType.ifBlank { recipe.proteinType },
+                            effort = result.effort.ifBlank { recipe.effort },
+                            cuisine = result.cuisine.ifBlank { recipe.cuisine },
+                            seasonFit = result.seasonFit.ifBlank { recipe.seasonFit },
+                        )
+                    )
                 } catch (e: Exception) {
                     Timber.w(e, "Fehler bei Klassifizierung von $recipeId")
                 }
+                onProgress(idx + 1, recipeIds.size)
+                delay(100) // Rate-Limiting
             }
             syncScheduler.triggerOneShot()
         }
