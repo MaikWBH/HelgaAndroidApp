@@ -42,6 +42,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -86,9 +88,12 @@ fun BarcodeScanner(
     }
 
     // Eine einzige PreviewView, die sowohl angezeigt als auch von der Kamera bespielt wird.
+    // COMPATIBLE (TextureView) statt PERFORMANCE (SurfaceView), damit die Vorschau auch im
+    // Dialog-Window zuverlässig gerendert wird.
     val previewView = remember {
         PreviewView(context).apply {
             scaleType = PreviewView.ScaleType.FILL_CENTER
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         }
     }
 
@@ -166,6 +171,13 @@ fun BarcodeScanner(
         }
     }
 
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
+    ) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -252,5 +264,6 @@ fun BarcodeScanner(
         ) {
             Text(stringResource(android.R.string.cancel))
         }
+    }
     }
 }
