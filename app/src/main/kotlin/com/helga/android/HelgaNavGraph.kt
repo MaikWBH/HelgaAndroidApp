@@ -58,6 +58,7 @@ internal const val ROUTE_PANTRY = "pantry"
 internal const val ROUTE_STATS = "stats"
 internal const val ROUTE_MY_PRODUCTS = "my-products"
 internal const val ROUTE_INGREDIENT_MAPPING = "ingredient-mapping"
+internal const val ROUTE_PURCHASE_STATS = "purchase-stats"
 internal const val ROUTE_WEEKPLAN_PICK_RECIPE = "weekplan/pick-recipe/{dayId}"
 
 internal fun recipeDetailRoute(id: String) = "recipe/$id"
@@ -212,6 +213,9 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                 }
                 composable(ROUTE_INGREDIENT_MAPPING) {
                     IngredientMappingScreen(onBack = { navController.popBackStack() })
+                }
+                composable(ROUTE_PURCHASE_STATS) {
+                    com.helga.android.ui.stats.PurchaseStatsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
                     route = ROUTE_RECIPE_DETAIL,
