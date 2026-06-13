@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -178,6 +179,27 @@ private fun MyProductCard(
 }
 
 @Composable
+private fun NutrientRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
 private fun NutriScoreBadge(score: String) {
     Surface(
         modifier = Modifier.size(36.dp),
@@ -212,20 +234,49 @@ private fun AddToCatalogDialog(
         onDismissRequest = onDismiss,
         title = { Text("📦 ${product.name.ifBlank { product.barcode }}") },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (product.brand.isNotBlank()) {
-                    Text("Marke: ${product.brand}", style = MaterialTheme.typography.bodySmall)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (product.nutriScore.isNotBlank()) {
+                        NutriScoreBadge(product.nutriScore)
+                        Spacer(Modifier.size(12.dp))
+                    }
+                    if (product.brand.isNotBlank()) {
+                        Text(
+                            text = product.brand,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-                if (product.nutriScore.isNotBlank()) {
-                    Text("NutriScore: ${product.nutriScore.uppercase()}", style = MaterialTheme.typography.bodySmall)
+                if (product.kcalPerUnit > 0 || product.proteins > 0 ||
+                    product.fats > 0 || product.carbs > 0
+                ) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "Nährwerte (pro 100 g)",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(Modifier.size(6.dp))
+                            if (product.kcalPerUnit > 0) {
+                                NutrientRow("🔥 Energie", "${product.kcalPerUnit.toInt()} kcal")
+                            }
+                            if (product.proteins > 0) {
+                                NutrientRow("🥚 Eiweiß", "${product.proteins.toInt()} g")
+                            }
+                            if (product.fats > 0) {
+                                NutrientRow("🧈 Fett", "${product.fats.toInt()} g")
+                            }
+                            if (product.carbs > 0) {
+                                NutrientRow("🍞 Kohlenhydrate", "${product.carbs.toInt()} g")
+                            }
+                        }
+                    }
                 }
-                if (product.kcalPerUnit > 0) {
-                    Text("${product.kcalPerUnit.toInt()} kcal / 100 g", style = MaterialTheme.typography.bodySmall)
-                }
-                Text(
-                    "Eiweiß ${product.proteins.toInt()}g · Fett ${product.fats.toInt()}g · KH ${product.carbs.toInt()}g",
-                    style = MaterialTheme.typography.bodySmall,
-                )
             }
         },
         confirmButton = {

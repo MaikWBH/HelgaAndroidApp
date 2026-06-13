@@ -62,6 +62,10 @@ class ShoppingListViewModel @Inject constructor(
     private val _scannedProduct = MutableStateFlow<OffProductEntity?>(null)
     val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.asStateFlow()
 
+    /** Persönlicher Produktkatalog "Meine Produkte" (favorisierte Produkte). */
+    val catalogProducts: StateFlow<List<OffProductEntity>> = offProductDao.observeFavorites()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -425,6 +429,38 @@ class ShoppingListViewModel @Inject constructor(
 
     fun clearScannedProduct() {
         _scannedProduct.value = null
+    }
+
+    /** Fügt ein Produkt aus dem Katalog der aktiven Einkaufsliste hinzu (inkl. Produktverknüpfung). */
+    fun addCatalogProductToList(product: OffProductEntity) {
+        val listId = activeListId.value ?: return
+        viewModelScope.launch {
+            try {
+                val name = product.name.ifBlank { product.barcode }
+                val storeId = activeStore.value?.id
+                val aisle = if (storeId != null)
+                    storeRepository.findAisleForProduct(name, storeId) ?: ""
+                else ""
+                repository.addItem(
+                    listId = listId,
+                    name = name,
+                    aisle = aisle,
+                    offBarcode = product.barcode,
+                    offProductId = product.id,
+                )
+                syncScheduler.triggerOneShot()
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to add catalog product to list")
+            }
+        }
+    }
+
+    /** Entfernt ein Produkt aus dem persönlichen Katalog (Cache-Eintrag bleibt erhalten). */
+    fun removeCatalogProduct(product: OffProductEntity) {
+        viewModelScope.launch {
+            offProductDao.setFavorite(product.id, 0, System.currentTimeMillis())
+            syncScheduler.triggerOneShot()
+        }
     }
 
     /** Speichert das gescannte Produkt im persönlichen Katalog "Meine Produkte". */
