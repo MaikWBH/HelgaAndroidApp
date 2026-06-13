@@ -6,6 +6,7 @@ import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.dao.OffProductDao
+import com.helga.android.data.local.dao.ProductPurchaseDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -50,6 +52,7 @@ class ShoppingListViewModel @Inject constructor(
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
     private val offProductDao: OffProductDao,
+    private val productPurchaseDao: ProductPurchaseDao,
     private val ingredientMappingDao: com.helga.android.data.local.dao.IngredientMappingDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
@@ -345,10 +348,32 @@ class ShoppingListViewModel @Inject constructor(
 
     suspend fun suggestItems(query: String): List<String> {
         if (query.length < 2) return emptyList()
-        return try {
-            apiFactory.api().suggestItems(query).suggestions
+
+        val suggestions = mutableListOf<String>()
+
+        try {
+            val purchases = productPurchaseDao.observeAll().first()
+            val topProducts = purchases
+                .filter { it.deleted == 0 && it.offProductId.isNotBlank() }
+                .groupingBy { it.offProductId }
+                .eachCount()
+                .entries
+                .sortedByDescending { it.value }
+                .take(3)
+
+            for ((_, count) in topProducts) {
+                suggestions.add("Katalog ($count×)")
+            }
         } catch (e: Exception) {
-            emptyList()
+            Timber.d(e, "Failed to get purchase suggestions")
+        }
+
+        return try {
+            val apiSuggestions = apiFactory.api().suggestItems(query).suggestions
+            suggestions.addAll(apiSuggestions.take(5))
+            suggestions.distinct()
+        } catch (e: Exception) {
+            suggestions
         }
     }
 

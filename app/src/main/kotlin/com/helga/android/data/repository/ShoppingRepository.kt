@@ -2,7 +2,9 @@ package com.helga.android.data.repository
 
 import com.helga.android.data.local.dao.ProductPriceDao
 import com.helga.android.data.local.dao.ShoppingDao
+import com.helga.android.data.local.dao.ProductPurchaseDao
 import com.helga.android.data.local.entity.ShoppingItemEntity
+import com.helga.android.data.local.entity.ProductPurchaseEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.model.ItemCostEstimate
 import com.helga.android.data.model.ItemOrigin
@@ -20,6 +22,7 @@ import javax.inject.Singleton
 class ShoppingRepository @Inject constructor(
     private val shoppingDao: ShoppingDao,
     private val productPriceDao: ProductPriceDao,
+    private val productPurchaseDao: ProductPurchaseDao,
     private val apiFactory: SyncApiFactory,
 ) {
 
@@ -93,13 +96,29 @@ class ShoppingRepository @Inject constructor(
 
     suspend fun toggleChecked(item: ShoppingItemEntity) {
         val now = System.currentTimeMillis()
+        val newCheckedState = if (item.isChecked == 0) 1 else 0
         shoppingDao.upsertItem(
             item.copy(
-                isChecked = if (item.isChecked == 0) 1 else 0,
+                isChecked = newCheckedState,
                 updatedAt = now,
                 dirty = 1,
             )
         )
+
+        if (newCheckedState == 1 && item.offProductId.isNotBlank()) {
+            val purchase = ProductPurchaseEntity(
+                id = UUID.randomUUID().toString(),
+                shoppingItemId = item.id,
+                offProductId = item.offProductId,
+                quantityPurchased = item.quantity,
+                pricePaid = 0.0,
+                storeName = "",
+                purchaseDate = now,
+                updatedAt = now,
+                dirty = 1,
+            )
+            productPurchaseDao.upsert(purchase)
+        }
     }
 
     suspend fun softDeleteItem(item: ShoppingItemEntity) {
