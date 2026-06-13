@@ -336,6 +336,19 @@ data class IngredientMappingDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class ProductPurchaseDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "shopping_item_id") val shoppingItemId: String = "",
+    @Json(name = "off_product_id") val offProductId: String,
+    @Json(name = "quantity_purchased") val quantityPurchased: Double = 1.0,
+    @Json(name = "price_paid") val pricePaid: Double = 0.0,
+    @Json(name = "store_name") val storeName: String = "",
+    @Json(name = "purchase_date") val purchaseDate: Long = 0L,
+)
+
+@JsonClass(generateAdapter = true)
 data class SyncPullResponse(
     @Json(name = "server_ts") val serverTs: Long,
     val recipes: List<RecipeDto> = emptyList(),
@@ -360,6 +373,7 @@ data class SyncPullResponse(
     @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
     @Json(name = "product_prices") val productPrices: List<ProductPriceDto> = emptyList(),
     @Json(name = "ingredient_product_mappings") val ingredientMappings: List<IngredientMappingDto> = emptyList(),
+    @Json(name = "product_purchases") val productPurchases: List<ProductPurchaseDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -387,6 +401,7 @@ data class SyncPushRequest(
     @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
     @Json(name = "product_prices") val productPrices: List<ProductPriceDto> = emptyList(),
     @Json(name = "ingredient_product_mappings") val ingredientMappings: List<IngredientMappingDto> = emptyList(),
+    @Json(name = "product_purchases") val productPurchases: List<ProductPurchaseDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
