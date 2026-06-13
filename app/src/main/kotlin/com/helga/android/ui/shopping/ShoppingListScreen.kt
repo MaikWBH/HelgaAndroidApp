@@ -25,11 +25,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -41,9 +39,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -124,7 +120,6 @@ fun ShoppingListScreen(
     val costEstimate by viewModel.costEstimate.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val scannedProduct by viewModel.scannedProduct.collectAsStateWithLifecycle()
-    val alternativeProducts by viewModel.alternativeProducts.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
     var showListDropdown by remember { mutableStateOf(false) }
@@ -135,7 +130,6 @@ fun ShoppingListScreen(
     var editItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
     var showStoreDropdown by remember { mutableStateOf(false) }
     var showBarcodeScanner by remember { mutableStateOf(false) }
-    var showAlternativesDialog by remember { mutableStateOf(false) }
 
     if (showNewListDialog) {
         NewListDialog(
@@ -185,35 +179,13 @@ fun ShoppingListScreen(
 
     // Product Detail Dialog nach dem Scannen
     scannedProduct?.let { product ->
-        if (showAlternativesDialog && alternativeProducts.isNotEmpty()) {
-            AlternativesDialog(
-                currentProduct = product,
-                alternatives = alternativeProducts,
-                onSelectAlternative = { alternative ->
-                    viewModel.confirmScannedProduct(alternative)
-                    showAlternativesDialog = false
-                    viewModel.clearScannedProduct()
-                },
-                onDismiss = {
-                    showAlternativesDialog = false
-                },
-            )
-        } else if (!showAlternativesDialog) {
-            ScannedProductDialog(
-                product = product,
-                activeStore = activeStore,
-                onConfirm = {
-                    viewModel.confirmScannedProduct()
-                },
-                onSearchAlternatives = {
-                    viewModel.searchAlternatives(product)
-                    showAlternativesDialog = true
-                },
-                onDismiss = {
-                    viewModel.clearScannedProduct()
-                },
-            )
-        }
+        ScannedProductDialog(
+            product = product,
+            activeStore = activeStore,
+            onAddToList = { viewModel.confirmScannedProduct() },
+            onSaveToCatalog = { viewModel.saveScannedToCatalog() },
+            onDismiss = { viewModel.clearScannedProduct() },
+        )
     }
 
     editItem?.let { item ->
@@ -1303,8 +1275,8 @@ private fun CostEstimateCard(estimate: com.helga.android.data.model.ListCostEsti
 fun ScannedProductDialog(
     product: OffProductEntity,
     activeStore: StoreEntity?,
-    onConfirm: () -> Unit,
-    onSearchAlternatives: () -> Unit,
+    onAddToList: () -> Unit,
+    onSaveToCatalog: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -1368,6 +1340,13 @@ fun ScannedProductDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
+
+                // Nährwert-Übersicht (pro 100 g)
+                if (product.proteins > 0 || product.fats > 0 || product.carbs > 0) {
+                    NutrientRow(label = "🥚 Eiweiß", value = "${product.proteins.toInt()} g")
+                    NutrientRow(label = "🧈 Fett", value = "${product.fats.toInt()} g")
+                    NutrientRow(label = "🍞 Kohlenhydrate", value = "${product.carbs.toInt()} g")
                 }
 
                 // Brand
@@ -1448,13 +1427,13 @@ fun ScannedProductDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("✅ Zur Liste hinzufügen")
+            TextButton(onClick = onSaveToCatalog) {
+                Text(if (product.isFavorite == 1) "⭐ Im Katalog" else "⭐ Zu meinen Produkten")
             }
         },
         dismissButton = {
-            TextButton(onClick = onSearchAlternatives) {
-                Text("⚡ Alternativen")
+            TextButton(onClick = onAddToList) {
+                Text("✅ Zur Liste")
             }
         },
         modifier = Modifier.widthIn(max = 400.dp),
@@ -1462,185 +1441,22 @@ fun ScannedProductDialog(
 }
 
 @Composable
-fun AlternativesDialog(
-    currentProduct: OffProductEntity,
-    alternatives: List<OffProductEntity>,
-    onSelectAlternative: (OffProductEntity) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "⚡ Bessere Alternativen") },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Aktuelles Produkt:",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-                ProductComparisonCard(product = currentProduct, isCurrent = true)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Bessere Alternativen:",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    alternatives.forEachIndexed { idx, alternative ->
-                        Button(
-                            onClick = { onSelectAlternative(alternative) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                horizontalAlignment = Alignment.Start,
-                            ) {
-                                ProductComparisonCard(product = alternative, isCurrent = false)
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Zurück")
-            }
-        },
-        modifier = Modifier.widthIn(max = 500.dp),
-    )
-}
-
-@Composable
-fun ProductComparisonCard(
-    product: OffProductEntity,
-    isCurrent: Boolean,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCurrent)
-                MaterialTheme.colorScheme.surfaceVariant
-            else
-                MaterialTheme.colorScheme.surface
-        ),
+private fun NutrientRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                text = product.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            if (product.brand.isNotBlank()) {
-                Text(
-                    text = "🏷️ ${product.brand}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (product.nutriScore.isNotBlank()) {
-                    Surface(
-                        modifier = Modifier.size(36.dp),
-                        shape = RoundedCornerShape(4.dp),
-                        color = when (product.nutriScore.uppercase()) {
-                            "A" -> Color(0xFF4CAF50)
-                            "B" -> Color(0xFF8BC34A)
-                            "C" -> Color(0xFFFFC107)
-                            "D" -> Color(0xFFFF9800)
-                            "E" -> Color(0xFFF44336)
-                            else -> MaterialTheme.colorScheme.surfaceVariant
-                        },
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = product.nutriScore.uppercase(),
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                            )
-                        }
-                    }
-                }
-
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    if (product.kcalPerUnit > 0) {
-                        Text(
-                            text = "⚡ ${product.kcalPerUnit.toInt()} kcal/100g",
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                    if (product.proteins > 0) {
-                        Text(
-                            text = "🥚 ${product.proteins.toInt()}g Protein",
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                    if (product.fats > 0) {
-                        Text(
-                            text = "🧈 ${product.fats.toInt()}g Fett",
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                if (product.vegan == 1) {
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text("🌱", style = MaterialTheme.typography.labelSmall) },
-                        modifier = Modifier.height(24.dp),
-                    )
-                }
-                if (product.vegetarian == 1) {
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text("🥬", style = MaterialTheme.typography.labelSmall) },
-                        modifier = Modifier.height(24.dp),
-                    )
-                }
-                if (product.isOrganic == 1) {
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text("🌿", style = MaterialTheme.typography.labelSmall) },
-                        modifier = Modifier.height(24.dp),
-                    )
-                }
-            }
-        }
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

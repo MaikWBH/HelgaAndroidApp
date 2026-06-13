@@ -12,6 +12,7 @@ import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.PantryDao
 import com.helga.android.data.local.dao.ProductPriceDao
+import com.helga.android.data.local.dao.IngredientMappingDao
 import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
@@ -73,4 +74,7 @@ object DatabaseModule {
 
     @Provides
     fun provideProductPriceDao(db: AppDatabase): ProductPriceDao = db.productPriceDao()
+
+    @Provides
+    fun provideIngredientMappingDao(db: AppDatabase): IngredientMappingDao = db.ingredientMappingDao()
 }

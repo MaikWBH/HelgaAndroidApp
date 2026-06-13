@@ -2,6 +2,8 @@ package com.helga.android.data.repository
 
 import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.local.dao.IngredientMappingDao
+import com.helga.android.data.util.IngredientNormalizer
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
@@ -17,6 +19,7 @@ class RecipeRepository @Inject constructor(
     private val recipeDao: RecipeDao,
     private val shoppingRepository: ShoppingRepository,
     private val offProductDao: OffProductDao,
+    private val ingredientMappingDao: IngredientMappingDao,
 ) {
     fun observeAll(): Flow<List<RecipeEntity>> = recipeDao.observeAll()
     fun observeById(id: String): Flow<RecipeEntity?> = recipeDao.observeById(id)
@@ -103,13 +106,21 @@ class RecipeRepository @Inject constructor(
         val recipeName = recipeDao.findById(recipeId)?.name ?: ""
         val ingredients = recipeDao.ingredientsByRecipeId(recipeId).filter { it.deleted == 0 }
         ingredients.forEach { ingredient ->
+            val mapping = ingredientMappingDao.getByIngredientName(
+                IngredientNormalizer.normalize(ingredient.food)
+            )
+            val displayName = if (mapping != null && mapping.displayName.isNotBlank())
+                "${ingredient.food} → ${mapping.displayName}"
+            else ingredient.food
             shoppingRepository.addOrMergeItem(
                 listId = listId,
-                name = ingredient.food,
+                name = displayName,
                 quantity = ingredient.quantity,
                 unit = ingredient.unit,
                 source = "recipe",
                 recipeName = recipeName,
+                offBarcode = mapping?.offBarcode ?: "",
+                offProductId = mapping?.offProductId ?: "",
             )
         }
     }
@@ -133,8 +144,14 @@ class RecipeRepository @Inject constructor(
         var matchedCount = 0
 
         ingredients.forEach { ingredient ->
-            val product = if (ingredient.offBarcode.isNotBlank()) {
-                offProductDao.getByBarcode(ingredient.offBarcode)
+            // 1. Direkter Produkt-Link an der Zutat, 2. globales Zutat→Produkt-Mapping
+            val barcode = ingredient.offBarcode.ifBlank {
+                ingredientMappingDao.getByIngredientName(
+                    IngredientNormalizer.normalize(ingredient.food)
+                )?.offBarcode ?: ""
+            }
+            val product = if (barcode.isNotBlank()) {
+                offProductDao.getByBarcode(barcode)
             } else {
                 null
             }

@@ -252,6 +252,7 @@ data class OffProductDto(
     val vegan: Int = 0,
     val vegetarian: Int = 0,
     @Json(name = "image_path") val imagePath: String = "",
+    @Json(name = "is_favorite") val isFavorite: Int = 0,
 )
 
 @JsonClass(generateAdapter = true)
@@ -309,6 +310,7 @@ data class OffLookupBarcodeResponse(
     val vegan: Int = 0,
     val vegetarian: Int = 0,
     @Json(name = "image_path") val imagePath: String = "",
+    @Json(name = "is_favorite") val isFavorite: Int = 0,
 )
 
 @JsonClass(generateAdapter = true)
@@ -320,6 +322,17 @@ data class OffSearchRequest(
 @JsonClass(generateAdapter = true)
 data class OffSearchResponse(
     val products: List<OffProductDto> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class IngredientMappingDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "ingredient_name") val ingredientName: String = "",
+    @Json(name = "off_product_id") val offProductId: String = "",
+    @Json(name = "off_barcode") val offBarcode: String = "",
+    @Json(name = "display_name") val displayName: String = "",
 )
 
 @JsonClass(generateAdapter = true)
@@ -346,6 +359,7 @@ data class SyncPullResponse(
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
     @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
     @Json(name = "product_prices") val productPrices: List<ProductPriceDto> = emptyList(),
+    @Json(name = "ingredient_product_mappings") val ingredientMappings: List<IngredientMappingDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -372,6 +386,7 @@ data class SyncPushRequest(
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
     @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
     @Json(name = "product_prices") val productPrices: List<ProductPriceDto> = emptyList(),
+    @Json(name = "ingredient_product_mappings") val ingredientMappings: List<IngredientMappingDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

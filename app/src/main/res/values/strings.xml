@@ -314,6 +314,10 @@
     <string name="pantry_unit">Einheit</string>
     <string name="pantry_category">Kategorie</string>
 
+    <!-- Meine Produkte / Zutaten-Mapping -->
+    <string name="my_products_title">Meine Produkte</string>
+    <string name="ingredient_mapping_title">Zutaten zuordnen</string>
+
     <!-- Statistik -->
     <string name="stats_title">Monats-Report</string>
     <string name="stats_cooked">%1$d Rezepte gekocht</string>

@@ -82,6 +82,8 @@ fun SettingsScreen(
     onStoresClick: () -> Unit = {},
     onPantryClick: () -> Unit = {},
     onStatsClick: () -> Unit = {},
+    onMyProductsClick: () -> Unit = {},
+    onIngredientMappingClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -384,6 +386,20 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.pantry_title))
+            }
+
+            OutlinedButton(
+                onClick = onMyProductsClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.my_products_title))
+            }
+
+            OutlinedButton(
+                onClick = onIngredientMappingClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.ingredient_mapping_title))
             }
 
             OutlinedButton(

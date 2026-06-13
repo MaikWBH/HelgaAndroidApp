@@ -38,6 +38,7 @@ SYNC_TABLES = [
     "weekplan_settings",
     "weekplan_constraints",
     "off_products",
+    "ingredient_product_mappings",
 ]
 
 SCHEMA = """
@@ -282,6 +283,17 @@ CREATE TABLE IF NOT EXISTS off_products (
     vegan               INTEGER NOT NULL DEFAULT 0,
     vegetarian          INTEGER NOT NULL DEFAULT 0,
     image_path          TEXT NOT NULL DEFAULT '',
+    is_favorite         INTEGER NOT NULL DEFAULT 0,
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS ingredient_product_mappings (
+    id                  TEXT PRIMARY KEY,
+    ingredient_name     TEXT NOT NULL DEFAULT '',
+    off_product_id      TEXT NOT NULL DEFAULT '',
+    off_barcode         TEXT NOT NULL DEFAULT '',
+    display_name        TEXT NOT NULL DEFAULT '',
     updated_at          INTEGER NOT NULL DEFAULT 0,
     deleted             INTEGER NOT NULL DEFAULT 0
 );
@@ -306,6 +318,8 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_weekplan_constraints_updated ON weekplan_constraints(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_off_products_barcode ON off_products(barcode)",
     "CREATE INDEX IF NOT EXISTS idx_off_products_updated ON off_products(updated_at)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_ingredient_mappings_name ON ingredient_product_mappings(ingredient_name)",
+    "CREATE INDEX IF NOT EXISTS idx_ingredient_mappings_updated ON ingredient_product_mappings(updated_at)",
 ]
 
 
@@ -325,6 +339,9 @@ ADDED_COLUMNS = {
     ],
     "recipes": [
         ("meal_slot", "TEXT NOT NULL DEFAULT 'other'"),
+    ],
+    "off_products": [
+        ("is_favorite", "INTEGER NOT NULL DEFAULT 0"),
     ],
 }
 

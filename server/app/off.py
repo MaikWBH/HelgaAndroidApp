@@ -191,6 +191,7 @@ def _row_to_product(row) -> OffProductRecord:
         vegan=row["vegan"],
         vegetarian=row["vegetarian"],
         image_path=row["image_path"],
+        is_favorite=row["is_favorite"] if "is_favorite" in row.keys() else 0,
         updated_at=row["updated_at"],
         deleted=row["deleted"],
     )

@@ -178,6 +178,14 @@ class OffProductRecord(SyncRecord):
     vegan: int = 0
     vegetarian: int = 0
     image_path: str = ""
+    is_favorite: int = 0
+
+
+class IngredientMappingRecord(SyncRecord):
+    ingredient_name: str = ""
+    off_product_id: str = ""
+    off_barcode: str = ""
+    display_name: str = ""
 
 
 # ── Sync-Payload ────────────────────────────────────────────────────────────
@@ -206,6 +214,7 @@ class SyncPayload(BaseModel):
     weekplan_settings: List[WeekplanSettingsRecord] = []
     weekplan_constraints: List[WeekplanConstraintsRecord] = []
     off_products: List[OffProductRecord] = []
+    ingredient_product_mappings: List[IngredientMappingRecord] = []
 
 
 class SyncPullResponse(SyncPayload):

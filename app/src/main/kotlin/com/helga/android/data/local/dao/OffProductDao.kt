@@ -22,6 +22,24 @@ interface OffProductDao {
     @Query("SELECT * FROM off_products WHERE id = :id")
     fun observeById(id: String): Flow<OffProductEntity?>
 
+    // ── Persönlicher Katalog "Meine Produkte" ────────────────────────────────
+
+    @Query("SELECT * FROM off_products WHERE isFavorite = 1 AND deleted = 0 ORDER BY name")
+    fun observeFavorites(): Flow<List<OffProductEntity>>
+
+    @Query(
+        "SELECT * FROM off_products WHERE isFavorite = 1 AND deleted = 0 " +
+            "AND (name LIKE '%' || :query || '%' OR brand LIKE '%' || :query || '%') " +
+            "ORDER BY name LIMIT :limit"
+    )
+    suspend fun searchFavorites(query: String, limit: Int = 10): List<OffProductEntity>
+
+    @Query("UPDATE off_products SET isFavorite = :value, dirty = 1, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun setFavorite(id: String, value: Int, updatedAt: Long)
+
+    @Query("SELECT * FROM off_products WHERE barcode IN (:barcodes) AND deleted = 0")
+    suspend fun getByBarcodes(barcodes: List<String>): List<OffProductEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(product: OffProductEntity)
 

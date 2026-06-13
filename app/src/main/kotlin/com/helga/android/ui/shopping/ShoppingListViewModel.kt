@@ -34,12 +34,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.helga.android.data.local.entity.OffProductEntity
+import com.helga.android.data.util.IngredientNormalizer
 import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
-import org.json.JSONArray
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -50,6 +50,7 @@ class ShoppingListViewModel @Inject constructor(
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
     private val offProductDao: OffProductDao,
+    private val ingredientMappingDao: com.helga.android.data.local.dao.IngredientMappingDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
     private val syncEngine: SyncEngine,
@@ -60,9 +61,6 @@ class ShoppingListViewModel @Inject constructor(
 
     private val _scannedProduct = MutableStateFlow<OffProductEntity?>(null)
     val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.asStateFlow()
-
-    private val _alternativeProducts = MutableStateFlow<List<OffProductEntity>>(emptyList())
-    val alternativeProducts: StateFlow<List<OffProductEntity>> = _alternativeProducts.asStateFlow()
 
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -189,14 +187,22 @@ class ShoppingListViewModel @Inject constructor(
                         val aisle = if (storeId != null)
                             storeRepository.findAisleForProduct(ingredient.food, storeId) ?: ""
                         else ""
+                        val mapping = ingredientMappingDao.getByIngredientName(
+                            IngredientNormalizer.normalize(ingredient.food)
+                        )
+                        val displayName = if (mapping != null && mapping.displayName.isNotBlank())
+                            "${ingredient.food} → ${mapping.displayName}"
+                        else ingredient.food
                         repository.addOrMergeItem(
                             listId = listId,
-                            name = ingredient.food,
+                            name = displayName,
                             quantity = ingredient.quantity,
                             unit = ingredient.unit,
                             source = "weekplan",
                             aisle = aisle,
                             recipeName = recipeName,
+                            offBarcode = mapping?.offBarcode ?: "",
+                            offProductId = mapping?.offProductId ?: "",
                         )
                     }
                 }
@@ -349,8 +355,9 @@ class ShoppingListViewModel @Inject constructor(
                 val dto = apiFactory.api().lookupBarcode(
                     com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
                 )
-                // Zeige Produkt-Detail-Dialog statt direkt hinzuzufügen
-                _scannedProduct.value = OffProductEntity(
+                // Bereits favorisiert? Dann lokalen Stand (inkl. isFavorite) bevorzugen.
+                val cached = offProductDao.getByBarcode(barcode)
+                val product = OffProductEntity(
                     id = dto.id.ifBlank { barcode },
                     barcode = dto.barcode.ifBlank { barcode },
                     name = dto.name,
@@ -369,9 +376,15 @@ class ShoppingListViewModel @Inject constructor(
                     vegan = dto.vegan,
                     vegetarian = dto.vegetarian,
                     imagePath = dto.imagePath,
+                    isFavorite = maxOf(dto.isFavorite, cached?.isFavorite ?: 0),
                     updatedAt = dto.updatedAt,
                     deleted = dto.deleted,
                 )
+                // Lokal cachen, damit Nährwerte/Katalog auch offline verfügbar sind.
+                // dirty bleibt am bestehenden Stand (Favoriten nicht versehentlich erneut pushen).
+                offProductDao.insert(product.copy(dirty = cached?.dirty ?: 0))
+                // Zeige Produkt-Detail-Dialog statt direkt hinzuzufügen
+                _scannedProduct.value = product
             } catch (e: Exception) {
                 Timber.w(e, "Barcode lookup failed: $barcode")
                 // Bei Fehler: Generisches Produkt-Dummy anzeigen
@@ -414,75 +427,20 @@ class ShoppingListViewModel @Inject constructor(
         _scannedProduct.value = null
     }
 
-    fun searchAlternatives(product: OffProductEntity) {
+    /** Speichert das gescannte Produkt im persönlichen Katalog "Meine Produkte". */
+    fun saveScannedToCatalog() {
+        val product = scannedProduct.value ?: return
         viewModelScope.launch {
             try {
-                val searchTerms = product.name
-                    .split(Regex("[\\s\\-]+"))
-                    .take(2)
-                    .filter { it.isNotBlank() && it.length > 2 }
-
-                if (searchTerms.isEmpty()) {
-                    _alternativeProducts.value = emptyList()
-                    return@launch
-                }
-
-                val allCandidates = mutableListOf<OffProductEntity>()
-                for (term in searchTerms) {
-                    allCandidates.addAll(offProductDao.search(term, limit = 20))
-                }
-
-                val currentAllergens = parseAllergens(product.allergenes)
-                val currentNutriScoreRank = nutriScoreRank(product.nutriScore)
-
-                val alternatives = allCandidates
-                    .filter { it.id != product.id }
-                    .filter { candidate ->
-                        val candidateNutriRank = nutriScoreRank(candidate.nutriScore)
-                        val candidateAllergens = parseAllergens(candidate.allergenes)
-
-                        val hasLowerKcal = candidate.kcalPerUnit < product.kcalPerUnit * 0.95
-                        val hasBetterNutriScore = candidateNutriRank < currentNutriScoreRank
-                        val noNewAllergens = candidateAllergens.none { allergen ->
-                            allergen !in currentAllergens
-                        }
-
-                        (hasLowerKcal || hasBetterNutriScore) && noNewAllergens
-                    }
-                    .distinctBy { it.id }
-                    .sortedWith(compareBy(
-                        { -nutriScoreRank(it.nutriScore) },
-                        { it.kcalPerUnit }
-                    ))
-                    .take(3)
-
-                _alternativeProducts.value = alternatives
-                Timber.i("Found ${alternatives.size} alternatives for: ${product.name}")
+                val now = System.currentTimeMillis()
+                offProductDao.insert(
+                    product.copy(isFavorite = 1, dirty = 1, updatedAt = now)
+                )
+                syncScheduler.triggerOneShot()
+                _scannedProduct.value = null
             } catch (e: Exception) {
-                Timber.e(e, "Error searching alternatives")
-                _alternativeProducts.value = emptyList()
+                Timber.e(e, "Failed to save product to catalog")
             }
         }
-    }
-
-    private fun nutriScoreRank(score: String): Int = when (score.uppercase()) {
-        "A" -> 4
-        "B" -> 3
-        "C" -> 2
-        "D" -> 1
-        "E" -> 0
-        else -> -1
-    }
-
-    private fun parseAllergens(jsonString: String): Set<String> = try {
-        if (jsonString.isBlank() || jsonString == "[]") {
-            emptySet()
-        } else {
-            val array = JSONArray(jsonString)
-            (0 until array.length()).map { array.getString(it) }.toSet()
-        }
-    } catch (e: Exception) {
-        Timber.w(e, "Failed to parse allergens")
-        emptySet()
     }
 }

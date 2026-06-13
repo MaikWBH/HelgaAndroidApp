@@ -33,6 +33,7 @@ data class OffProductEntity(
     val vegan: Int = 0,
     val vegetarian: Int = 0,
     val imagePath: String = "",
+    val isFavorite: Int = 0, // 1 = Teil des persönlichen Katalogs "Meine Produkte"
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

@@ -8,6 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.ProductPriceDao
+import com.helga.android.data.local.dao.IngredientMappingDao
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeDao
@@ -25,6 +26,7 @@ import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.OffProductEntity
 import com.helga.android.data.local.entity.ProductPriceEntity
+import com.helga.android.data.local.entity.IngredientProductMappingEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.RecipeEntity
@@ -46,7 +48,7 @@ import com.helga.android.data.local.entity.PantryItemEntity
 import com.helga.android.data.local.dao.PantryDao
 
 @Database(
-    version = 21,
+    version = 22,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -73,6 +75,7 @@ import com.helga.android.data.local.dao.PantryDao
         PantryItemEntity::class,
         OffProductEntity::class,
         ProductPriceEntity::class,
+        IngredientProductMappingEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -91,6 +94,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pantryDao(): PantryDao
     abstract fun offProductDao(): OffProductDao
     abstract fun productPriceDao(): ProductPriceDao
+    abstract fun ingredientMappingDao(): IngredientMappingDao
 
     companion object {
         const val NAME = "helga.db"
@@ -537,6 +541,30 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Persönlicher Katalog: Favoriten-Flag auf OFF-Produkten
+                db.execSQL("ALTER TABLE off_products ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+
+                // Globales Zutat→Produkt-Mapping
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS ingredient_product_mappings (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        ingredientName TEXT NOT NULL DEFAULT '',
+                        offProductId TEXT NOT NULL DEFAULT '',
+                        offBarcode TEXT NOT NULL DEFAULT '',
+                        displayName TEXT NOT NULL DEFAULT '',
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_ingredient_product_mappings_ingredientName ON ingredient_product_mappings(ingredientName)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_ingredient_product_mappings_updatedAt ON ingredient_product_mappings(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_ingredient_product_mappings_deleted ON ingredient_product_mappings(deleted)")
+            }
+        }
+
         private val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Create product_prices table
@@ -564,7 +592,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22)
                 .build()
     }
 }

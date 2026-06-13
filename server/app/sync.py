@@ -73,7 +73,11 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "barcode", "name", "brand", "categories", "kcal_per_unit",
         "proteins", "fats", "carbs", "nutri_score", "nova", "eco_score",
         "allergenes", "additives", "is_organic", "vegan", "vegetarian",
-        "image_path", "updated_at", "deleted",
+        "image_path", "is_favorite", "updated_at", "deleted",
+    ],
+    "ingredient_product_mappings": [
+        "id", "ingredient_name", "off_product_id", "off_barcode", "display_name",
+        "updated_at", "deleted",
     ],
 }
 
@@ -102,6 +106,7 @@ PAYLOAD_FIELD = {
     "weekplan_settings": "weekplan_settings",
     "weekplan_constraints": "weekplan_constraints",
     "off_products": "off_products",
+    "ingredient_product_mappings": "ingredient_product_mappings",
 }
 
 

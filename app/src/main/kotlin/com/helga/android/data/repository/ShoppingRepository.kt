@@ -144,6 +144,8 @@ class ShoppingRepository @Inject constructor(
         aisle: String = "",
         source: String = "recipe",
         recipeName: String = "",
+        offBarcode: String = "",
+        offProductId: String = "",
     ) {
         val norm = name.trim()
         if (norm.isBlank()) return
@@ -157,6 +159,9 @@ class ShoppingRepository @Inject constructor(
                 existing.copy(
                     quantity = existing.quantity + quantity,
                     origins = ItemOrigins.encode(mergedOrigins),
+                    // Produktverknüpfung übernehmen, falls noch keine vorhanden ist
+                    offBarcode = existing.offBarcode.ifBlank { offBarcode },
+                    offProductId = existing.offProductId.ifBlank { offProductId },
                     updatedAt = now,
                     dirty = 1,
                 )
@@ -172,6 +177,8 @@ class ShoppingRepository @Inject constructor(
                     aisle = aisle,
                     source = source,
                     origins = ItemOrigins.encode(listOf(newOrigin)),
+                    offBarcode = offBarcode,
+                    offProductId = offProductId,
                     updatedAt = now,
                     dirty = 1,
                 )
