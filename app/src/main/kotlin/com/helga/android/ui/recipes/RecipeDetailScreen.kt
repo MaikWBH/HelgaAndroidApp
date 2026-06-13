@@ -41,7 +41,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -65,6 +69,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -75,6 +80,7 @@ import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
+import com.helga.android.data.repository.RecipeNutritionWithMappings
 import com.helga.android.ui.components.CreateFab
 import com.helga.android.ui.components.MealSlots
 import com.helga.android.ui.components.mealSlotLabel
@@ -109,6 +115,7 @@ fun RecipeDetailScreen(
     val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
     val nutrition by viewModel.nutrition.collectAsStateWithLifecycle()
+    val nutritionWithMappings by viewModel.nutritionWithMappings.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.classifyError) {
         uiState.classifyError?.let { snackbarHostState.showSnackbar(it) }
@@ -340,6 +347,24 @@ fun RecipeDetailScreen(
                 item { MetadataSection(recipe = recipe) }
                 if (nutrition != null) {
                     item { NutritionSection(nutrition = nutrition!!) }
+                }
+                item {
+                    Button(
+                        onClick = { viewModel.calculateNutritionWithProducts() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    ) {
+                        Text("📊 Nährwerte berechnen mit Katalog")
+                    }
+                }
+                if (nutritionWithMappings != null) {
+                    item {
+                        NutritionSectionWithMappings(
+                            data = nutritionWithMappings!!,
+                            onScanClick = { }
+                        )
+                    }
                 }
                 if (recipe.description.isNotBlank()) {
                     item { DescriptionSection(description = recipe.description) }
@@ -575,6 +600,81 @@ private fun NutritionItem(value: String, unit: String) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+private fun NutritionSectionWithMappings(
+    data: RecipeNutritionWithMappings,
+    onScanClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("📊 Nährwerte", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    NutritionItem(value = String.format("%.0f", data.nutrition.kcalPerPortion), unit = "kcal")
+                    NutritionItem(value = String.format("%.1f", data.nutrition.protein), unit = "g Protein")
+                    NutritionItem(value = String.format("%.1f", data.nutrition.fat), unit = "g Fett")
+                    NutritionItem(value = String.format("%.1f", data.nutrition.carbs), unit = "g KH")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        if (data.ingredientMappings.isNotEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Verwendet: ${data.ingredientMappings.joinToString(", ") { it.productName }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        if (data.unmappedIngredients.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    data.unmappedIngredients.forEach { ingredient ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "⚠ $ingredient",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Button(
+                                onClick = onScanClick,
+                                modifier = Modifier.height(32.dp),
+                            ) {
+                                Text("Jetzt scannen", fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
