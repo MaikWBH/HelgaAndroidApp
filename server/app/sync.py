@@ -87,6 +87,14 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "shopping_item_id", "off_product_id", "quantity_purchased", "price_paid",
         "store_name", "purchase_date", "updated_at", "deleted",
     ],
+    "receipts": [
+        "id", "store_id", "store_name", "shopping_list_id", "purchase_date", "total_amount",
+        "currency", "image_path", "local_image_uri", "raw_ocr_text", "status", "updated_at", "deleted",
+    ],
+    "receipt_items": [
+        "id", "receipt_id", "position", "raw_text", "name", "quantity", "unit_price", "total_price",
+        "matched_shopping_item_id", "match_status", "updated_at", "deleted",
+    ],
 }
 
 # Mapping Tabellenname → Feldname im SyncPayload
@@ -117,6 +125,8 @@ PAYLOAD_FIELD = {
     "ingredient_product_mappings": "ingredient_product_mappings",
     "product_prices": "product_prices",
     "product_purchases": "product_purchases",
+    "receipts": "receipts",
+    "receipt_items": "receipt_items",
 }
 
 

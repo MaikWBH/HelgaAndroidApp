@@ -60,4 +60,7 @@ interface SyncApi {
 
     @POST("api/open-prices/lookup")
     suspend fun lookupPrices(@Body req: OpenPricesLookupRequest): OpenPricesLookupResponse
+
+    @POST("api/receipts/analyze")
+    suspend fun analyzeReceipt(@Body req: Map<String, String>)
 }

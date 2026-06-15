@@ -41,6 +41,8 @@ SYNC_TABLES = [
     "ingredient_product_mappings",
     "product_prices",
     "product_purchases",
+    "receipts",
+    "receipt_items",
 ]
 
 SCHEMA = """
@@ -324,6 +326,37 @@ CREATE TABLE IF NOT EXISTS product_purchases (
     deleted             INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS receipts (
+    id                  TEXT PRIMARY KEY,
+    store_id            TEXT NOT NULL DEFAULT '',
+    store_name          TEXT NOT NULL DEFAULT '',
+    shopping_list_id    TEXT NOT NULL DEFAULT '',
+    purchase_date       INTEGER NOT NULL DEFAULT 0,
+    total_amount        REAL NOT NULL DEFAULT 0.0,
+    currency            TEXT NOT NULL DEFAULT 'EUR',
+    image_path          TEXT NOT NULL DEFAULT '',
+    local_image_uri     TEXT NOT NULL DEFAULT '',
+    raw_ocr_text        TEXT NOT NULL DEFAULT '',
+    status              TEXT NOT NULL DEFAULT 'scanned',
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS receipt_items (
+    id                      TEXT PRIMARY KEY,
+    receipt_id              TEXT NOT NULL,
+    position                INTEGER NOT NULL DEFAULT 0,
+    raw_text                TEXT NOT NULL DEFAULT '',
+    name                    TEXT NOT NULL DEFAULT '',
+    quantity                REAL NOT NULL DEFAULT 1.0,
+    unit_price              REAL NOT NULL DEFAULT 0.0,
+    total_price             REAL NOT NULL DEFAULT 0.0,
+    matched_shopping_item_id TEXT NOT NULL DEFAULT '',
+    match_status            TEXT NOT NULL DEFAULT '',
+    updated_at              INTEGER NOT NULL DEFAULT 0,
+    deleted                 INTEGER NOT NULL DEFAULT 0
+);
+
 -- Globaler Monotonzähler für den Sync-Cursor (entkoppelt Auslieferung von
 -- der Bearbeitungs-Zeit/Client-Uhr). Wird bei jedem Push hochgezählt; jeder
 -- akzeptierte Schreibvorgang erhält die aktuelle Commit-Sequenz als server_seq.
@@ -362,6 +395,12 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_product_purchases_off_product ON product_purchases(off_product_id)",
     "CREATE INDEX IF NOT EXISTS idx_product_purchases_date ON product_purchases(purchase_date)",
     "CREATE INDEX IF NOT EXISTS idx_product_purchases_updated ON product_purchases(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_store ON receipts(store_id)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_shopping_list ON receipts(shopping_list_id)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_date ON receipts(purchase_date)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_updated ON receipts(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_receipt_items_receipt ON receipt_items(receipt_id)",
+    "CREATE INDEX IF NOT EXISTS idx_receipt_items_updated ON receipt_items(updated_at)",
 ]
 
 

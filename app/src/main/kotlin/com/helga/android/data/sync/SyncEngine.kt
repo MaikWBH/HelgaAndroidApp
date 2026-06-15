@@ -2,6 +2,7 @@ package com.helga.android.data.sync
 
 import com.helga.android.data.local.AppDatabase
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
@@ -16,6 +17,8 @@ import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
+import com.helga.android.data.local.entity.ReceiptEntity
+import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
@@ -37,6 +40,8 @@ import com.helga.android.data.remote.dto.CategoryDto
 import com.helga.android.data.remote.dto.IngredientDto
 import com.helga.android.data.remote.dto.InstructionDto
 import com.helga.android.data.remote.dto.QuickEmojiDto
+import com.helga.android.data.remote.dto.ReceiptDto
+import com.helga.android.data.remote.dto.ReceiptItemDto
 import com.helga.android.data.remote.dto.RecipeDto
 import com.helga.android.data.remote.dto.ShoppingItemDto
 import com.helga.android.data.remote.dto.ShoppingListDto
@@ -70,6 +75,7 @@ class SyncEngine @Inject constructor(
     private val weekplanConstraintsDao: WeekplanConstraintsDao,
     private val recipeHistoryDao: RecipeHistoryDao,
     private val recipeFeedbackDao: RecipeFeedbackDao,
+    private val receiptDao: ReceiptDao,
     private val apiFactory: SyncApiFactory,
     private val preferences: AppPreferences,
 ) {
@@ -122,6 +128,8 @@ class SyncEngine @Inject constructor(
         val feedbackWinners = response.recipeFeedback.filter { dto ->
             dto.updatedAt > 0L
         }
+        val receiptWinners = filterServerWins(response.receipts, syncDao.receiptTimestamps()) { it.id to it.updatedAt }
+        val receiptItemWinners = filterServerWins(response.receiptItems, syncDao.receiptItemTimestamps()) { it.id to it.updatedAt }
 
         if (recipeWinners.isEmpty() && ingredientWinners.isEmpty() &&
             instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty() &&
@@ -130,7 +138,7 @@ class SyncEngine @Inject constructor(
             stapleWinners.isEmpty() && emojiWinners.isEmpty() &&
             wpDayWinners.isEmpty() && wpRecipeWinners.isEmpty() && wpExtraWinners.isEmpty() &&
             wpSettingsWinners.isEmpty() && wpConstraintsWinners.isEmpty() && historyWinners.isEmpty() &&
-            feedbackWinners.isEmpty()
+            feedbackWinners.isEmpty() && receiptWinners.isEmpty() && receiptItemWinners.isEmpty()
         ) return
 
         database.withTransaction {
@@ -153,6 +161,8 @@ class SyncEngine @Inject constructor(
             if (wpConstraintsWinners.isNotEmpty()) weekplanConstraintsDao.upsert(wpConstraintsWinners.first().toEntity())
             if (historyWinners.isNotEmpty()) recipeHistoryDao.upsertAll(historyWinners.map { it.toEntity() })
             if (feedbackWinners.isNotEmpty()) recipeFeedbackDao.upsertAll(feedbackWinners.map { it.toEntity() })
+            if (receiptWinners.isNotEmpty()) receiptDao.upsertReceipts(receiptWinners.map { it.toEntity() })
+            if (receiptItemWinners.isNotEmpty()) receiptDao.upsertItems(receiptItemWinners.map { it.toEntity() })
         }
     }
 
@@ -177,6 +187,8 @@ class SyncEngine @Inject constructor(
         weekplanConstraints = weekplanConstraintsDao.dirty().map { it.toDto() },
         recipeHistory = recipeHistoryDao.dirtyHistory().map { it.toDto() },
         recipeFeedback = recipeFeedbackDao.getDirty().map { it.toDto() },
+        receipts = receiptDao.dirtyReceipts().map { it.toDto() },
+        receiptItems = receiptDao.dirtyItems().map { it.toDto() },
     )
 
     private suspend fun clearDirtyFlagsExcept(
@@ -202,6 +214,8 @@ class SyncEngine @Inject constructor(
         val wpConstraintsIds = pushed.weekplanConstraints.map { it.id } - serverWins.weekplanConstraints.map { it.id }.toSet()
         val historyIds = pushed.recipeHistory.map { it.id } - serverWins.recipeHistory.map { it.id }.toSet()
         val feedbackIds = pushed.recipeFeedback.map { it.id } - serverWins.recipeFeedback.map { it.id }.toSet()
+        val receiptIds = pushed.receipts.map { it.id } - serverWins.receipts.map { it.id }.toSet()
+        val receiptItemIds = pushed.receiptItems.map { it.id } - serverWins.receiptItems.map { it.id }.toSet()
 
         database.withTransaction {
             if (recipeIds.isNotEmpty()) recipeDao.clearRecipeDirty(recipeIds)
@@ -223,6 +237,8 @@ class SyncEngine @Inject constructor(
             if (wpConstraintsIds.isNotEmpty()) weekplanConstraintsDao.clearDirty(wpConstraintsIds.toList())
             if (historyIds.isNotEmpty()) recipeHistoryDao.clearDirty(historyIds.toList())
             if (feedbackIds.isNotEmpty()) recipeFeedbackDao.clearDirty(feedbackIds.toList())
+            if (receiptIds.isNotEmpty()) receiptDao.clearReceiptDirty(receiptIds)
+            if (receiptItemIds.isNotEmpty()) receiptDao.clearItemDirty(receiptItemIds)
         }
     }
 
@@ -456,4 +472,32 @@ private fun RecipeFeedbackDto.toEntity(): RecipeFeedbackEntity = RecipeFeedbackE
 private fun RecipeFeedbackEntity.toDto(): RecipeFeedbackDto = RecipeFeedbackDto(
     id = id, recipeId = recipeId, plannedDate = plannedDate,
     liked = liked, updatedAt = updatedAt, deleted = deleted,
+)
+
+private fun ReceiptDto.toEntity(): ReceiptEntity = ReceiptEntity(
+    id = id, storeId = storeId, storeName = storeName, shoppingListId = shoppingListId,
+    purchaseDate = purchaseDate, totalAmount = totalAmount, currency = currency,
+    imagePath = imagePath, localImageUri = localImageUri, rawOcrText = rawOcrText,
+    status = status, updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun ReceiptEntity.toDto(): ReceiptDto = ReceiptDto(
+    id = id, storeId = storeId, storeName = storeName, shoppingListId = shoppingListId,
+    purchaseDate = purchaseDate, totalAmount = totalAmount, currency = currency,
+    imagePath = imagePath, localImageUri = localImageUri, rawOcrText = rawOcrText,
+    status = status, updatedAt = updatedAt, deleted = deleted,
+)
+
+private fun ReceiptItemDto.toEntity(): ReceiptItemEntity = ReceiptItemEntity(
+    id = id, receiptId = receiptId, position = position, rawText = rawText, name = name,
+    quantity = quantity, unitPrice = unitPrice, totalPrice = totalPrice,
+    matchedShoppingItemId = matchedShoppingItemId, matchStatus = matchStatus,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun ReceiptItemEntity.toDto(): ReceiptItemDto = ReceiptItemDto(
+    id = id, receiptId = receiptId, position = position, rawText = rawText, name = name,
+    quantity = quantity, unitPrice = unitPrice, totalPrice = totalPrice,
+    matchedShoppingItemId = matchedShoppingItemId, matchStatus = matchStatus,
+    updatedAt = updatedAt, deleted = deleted,
 )

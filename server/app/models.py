@@ -206,6 +206,31 @@ class ProductPurchaseRecord(SyncRecord):
     purchase_date: int = 0
 
 
+class ReceiptRecord(SyncRecord):
+    store_id: str = ""
+    store_name: str = ""
+    shopping_list_id: str = ""
+    purchase_date: int = 0
+    total_amount: float = 0.0
+    currency: str = "EUR"
+    image_path: str = ""
+    local_image_uri: str = ""
+    raw_ocr_text: str = ""
+    status: str = "scanned"
+
+
+class ReceiptItemRecord(SyncRecord):
+    receipt_id: str
+    position: int = 0
+    raw_text: str = ""
+    name: str = ""
+    quantity: float = 1.0
+    unit_price: float = 0.0
+    total_price: float = 0.0
+    matched_shopping_item_id: str = ""
+    match_status: str = ""
+
+
 # ── Sync-Payload ────────────────────────────────────────────────────────────
 
 class SyncPayload(BaseModel):
@@ -235,6 +260,8 @@ class SyncPayload(BaseModel):
     ingredient_product_mappings: List[IngredientMappingRecord] = []
     product_prices: List[ProductPriceRecord] = []
     product_purchases: List[ProductPurchaseRecord] = []
+    receipts: List[ReceiptRecord] = []
+    receipt_items: List[ReceiptItemRecord] = []
 
 
 class SyncPullResponse(SyncPayload):

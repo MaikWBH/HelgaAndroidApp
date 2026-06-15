@@ -103,6 +103,36 @@ async def weekplan_generate(req: WeekplanGenerateRequest):
     return await ai_module.generate_weekplan(req)
 
 
+@app.post("/api/receipts/analyze", dependencies=[Depends(require_auth)])
+async def analyze_receipt(req: dict):
+    """Analyzes a receipt image (already uploaded) and returns OCR data as JSON via SSE."""
+    image_filename = req.get("image_filename", "")
+    if not image_filename:
+        raise HTTPException(status_code=400, detail="image_filename erforderlich")
+
+    # Pfad-Traversal verhindern
+    safe_name = Path(image_filename).name
+    image_path = IMAGES_DIR / safe_name
+    if not image_path.exists() or not image_path.is_file():
+        raise HTTPException(status_code=404, detail="Bild nicht gefunden")
+
+    # Read image and encode as base64
+    import base64
+    image_bytes = image_path.read_bytes()
+    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
+    # Determine media type from extension
+    ext = Path(image_filename).suffix.lower()
+    media_type_map = {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+        ".webp": "image/webp", ".gif": "image/gif"
+    }
+    media_type = media_type_map.get(ext, "image/jpeg")
+
+    # Call Vision AI and stream response
+    return _sse(ai_module.analyze_receipt(image_b64, media_type))
+
+
 # ── Bilder ────────────────────────────────────────────────────────────────────
 
 @app.post("/api/images/upload", dependencies=[Depends(require_auth)])

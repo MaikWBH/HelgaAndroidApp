@@ -3,6 +3,7 @@ package com.helga.android.di
 import android.content.Context
 import com.helga.android.data.local.AppDatabase
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.StoreDao
@@ -61,4 +62,7 @@ object DatabaseModule {
 
     @Provides
     fun provideRecipeFeedbackDao(db: AppDatabase): RecipeFeedbackDao = db.recipeFeedbackDao()
+
+    @Provides
+    fun provideReceiptDao(db: AppDatabase): ReceiptDao = db.receiptDao()
 }

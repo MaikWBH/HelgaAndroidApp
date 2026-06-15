@@ -230,6 +230,39 @@ data class RecipeFeedbackDto(
     val deleted: Int = 0,
 )
 
+@JsonClass(generateAdapter = true)
+data class ReceiptDto(
+    val id: String,
+    @Json(name = "store_id") val storeId: String = "",
+    @Json(name = "store_name") val storeName: String = "",
+    @Json(name = "shopping_list_id") val shoppingListId: String = "",
+    @Json(name = "purchase_date") val purchaseDate: Long = 0,
+    @Json(name = "total_amount") val totalAmount: Double = 0.0,
+    val currency: String = "EUR",
+    @Json(name = "image_path") val imagePath: String = "",
+    @Json(name = "local_image_uri") val localImageUri: String = "",
+    @Json(name = "raw_ocr_text") val rawOcrText: String = "",
+    val status: String = "scanned",
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class ReceiptItemDto(
+    val id: String,
+    @Json(name = "receipt_id") val receiptId: String,
+    val position: Int = 0,
+    @Json(name = "raw_text") val rawText: String = "",
+    val name: String = "",
+    val quantity: Double = 1.0,
+    @Json(name = "unit_price") val unitPrice: Double = 0.0,
+    @Json(name = "total_price") val totalPrice: Double = 0.0,
+    @Json(name = "matched_shopping_item_id") val matchedShoppingItemId: String = "",
+    @Json(name = "match_status") val matchStatus: String = "",
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+)
+
 
 @JsonClass(generateAdapter = true)
 data class OpenPricesLookupRequest(
@@ -310,6 +343,8 @@ data class SyncPullResponse(
     @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
     @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
+    val receipts: List<ReceiptDto> = emptyList(),
+    @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -334,6 +369,8 @@ data class SyncPushRequest(
     @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
     @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
+    val receipts: List<ReceiptDto> = emptyList(),
+    @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
