@@ -6,9 +6,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.helga.android.data.local.dao.OffProductDao
-import com.helga.android.data.local.dao.ProductPriceDao
-import com.helga.android.data.local.dao.IngredientMappingDao
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeDao
@@ -24,9 +21,6 @@ import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
-import com.helga.android.data.local.entity.OffProductEntity
-import com.helga.android.data.local.entity.ProductPriceEntity
-import com.helga.android.data.local.entity.IngredientProductMappingEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.RecipeEntity
@@ -44,10 +38,6 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
-import com.helga.android.data.local.entity.PantryItemEntity
-import com.helga.android.data.local.dao.PantryDao
-import com.helga.android.data.local.dao.ProductPurchaseDao
-import com.helga.android.data.local.entity.ProductPurchaseEntity
 
 @Database(
     version = 23,
@@ -74,11 +64,6 @@ import com.helga.android.data.local.entity.ProductPurchaseEntity
         WeekplanTemplateEntryEntity::class,
         RecipeHistoryEntity::class,
         RecipeFeedbackEntity::class,
-        PantryItemEntity::class,
-        OffProductEntity::class,
-        ProductPriceEntity::class,
-        IngredientProductMappingEntity::class,
-        ProductPurchaseEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -94,11 +79,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun weekplanTemplateDao(): WeekplanTemplateDao
     abstract fun recipeHistoryDao(): RecipeHistoryDao
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
-    abstract fun pantryDao(): PantryDao
-    abstract fun offProductDao(): OffProductDao
-    abstract fun productPriceDao(): ProductPriceDao
-    abstract fun ingredientMappingDao(): IngredientMappingDao
-    abstract fun productPurchaseDao(): ProductPurchaseDao
 
     companion object {
         const val NAME = "helga.db"

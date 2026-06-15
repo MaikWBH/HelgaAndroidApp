@@ -1,10 +1,6 @@
 package com.helga.android.data.sync
 
 import com.helga.android.data.local.AppDatabase
-import com.helga.android.data.local.dao.ProductPriceDao
-import com.helga.android.data.local.dao.OffProductDao
-import com.helga.android.data.local.dao.IngredientMappingDao
-import com.helga.android.data.local.dao.ProductPurchaseDao
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
@@ -19,10 +15,6 @@ import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
-import com.helga.android.data.local.entity.ProductPriceEntity
-import com.helga.android.data.local.entity.OffProductEntity
-import com.helga.android.data.local.entity.IngredientProductMappingEntity
-import com.helga.android.data.local.entity.ProductPurchaseEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
@@ -44,10 +36,6 @@ import com.helga.android.data.remote.dto.AisleProductDto
 import com.helga.android.data.remote.dto.CategoryDto
 import com.helga.android.data.remote.dto.IngredientDto
 import com.helga.android.data.remote.dto.InstructionDto
-import com.helga.android.data.remote.dto.ProductPriceDto
-import com.helga.android.data.remote.dto.OffProductDto
-import com.helga.android.data.remote.dto.IngredientMappingDto
-import com.helga.android.data.remote.dto.ProductPurchaseDto
 import com.helga.android.data.remote.dto.QuickEmojiDto
 import com.helga.android.data.remote.dto.RecipeDto
 import com.helga.android.data.remote.dto.ShoppingItemDto
@@ -76,10 +64,6 @@ class SyncEngine @Inject constructor(
     private val syncDao: SyncDao,
     private val shoppingDao: ShoppingDao,
     private val storeDao: StoreDao,
-    private val productPriceDao: ProductPriceDao,
-    private val offProductDao: OffProductDao,
-    private val ingredientMappingDao: IngredientMappingDao,
-    private val productPurchaseDao: ProductPurchaseDao,
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanDao: WeekplanDao,
     private val weekplanSettingsDao: WeekplanSettingsDao,
@@ -93,8 +77,6 @@ class SyncEngine @Inject constructor(
     suspend fun runFullSync(): SyncOutcome {
         val api = apiFactory.api()
 
-        // Einmalige Migration auf server_seq-Cursor: erzwingt bei Bedarf einen
-        // vollen Re-Pull, um zuvor unsichtbare Einträge nachzuziehen.
         preferences.ensureSyncProtocol()
 
         val lastSyncTs = preferences.currentLastSyncTs()
@@ -140,10 +122,6 @@ class SyncEngine @Inject constructor(
         val feedbackWinners = response.recipeFeedback.filter { dto ->
             dto.updatedAt > 0L
         }
-        val priceWinners = filterServerWins(response.productPrices, syncDao.productPriceTimestamps()) { it.id to it.updatedAt }
-        val offProductWinners = filterServerWins(response.offProducts, syncDao.offProductTimestamps()) { it.id to it.updatedAt }
-        val mappingWinners = filterServerWins(response.ingredientMappings, syncDao.ingredientMappingTimestamps()) { it.id to it.updatedAt }
-        val purchaseWinners = filterServerWins(response.productPurchases, syncDao.productPurchaseTimestamps()) { it.id to it.updatedAt }
 
         if (recipeWinners.isEmpty() && ingredientWinners.isEmpty() &&
             instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty() &&
@@ -152,8 +130,7 @@ class SyncEngine @Inject constructor(
             stapleWinners.isEmpty() && emojiWinners.isEmpty() &&
             wpDayWinners.isEmpty() && wpRecipeWinners.isEmpty() && wpExtraWinners.isEmpty() &&
             wpSettingsWinners.isEmpty() && wpConstraintsWinners.isEmpty() && historyWinners.isEmpty() &&
-            feedbackWinners.isEmpty() && priceWinners.isEmpty() &&
-            offProductWinners.isEmpty() && mappingWinners.isEmpty() && purchaseWinners.isEmpty()
+            feedbackWinners.isEmpty()
         ) return
 
         database.withTransaction {
@@ -176,10 +153,6 @@ class SyncEngine @Inject constructor(
             if (wpConstraintsWinners.isNotEmpty()) weekplanConstraintsDao.upsert(wpConstraintsWinners.first().toEntity())
             if (historyWinners.isNotEmpty()) recipeHistoryDao.upsertAll(historyWinners.map { it.toEntity() })
             if (feedbackWinners.isNotEmpty()) recipeFeedbackDao.upsertAll(feedbackWinners.map { it.toEntity() })
-            if (priceWinners.isNotEmpty()) productPriceDao.insertAll(priceWinners.map { it.toEntity() })
-            if (offProductWinners.isNotEmpty()) offProductDao.insertAll(offProductWinners.map { it.toEntity() })
-            if (mappingWinners.isNotEmpty()) ingredientMappingDao.upsertAll(mappingWinners.map { it.toEntity() })
-            if (purchaseWinners.isNotEmpty()) productPurchaseDao.upsertAll(purchaseWinners.map { it.toEntity() })
         }
     }
 
@@ -204,10 +177,6 @@ class SyncEngine @Inject constructor(
         weekplanConstraints = weekplanConstraintsDao.dirty().map { it.toDto() },
         recipeHistory = recipeHistoryDao.dirtyHistory().map { it.toDto() },
         recipeFeedback = recipeFeedbackDao.getDirty().map { it.toDto() },
-        productPrices = productPriceDao.dirtyPrices().map { it.toDto() },
-        offProducts = offProductDao.dirtyProducts().map { it.toDto() },
-        ingredientMappings = ingredientMappingDao.dirty().map { it.toDto() },
-        productPurchases = productPurchaseDao.dirty().map { it.toDto() },
     )
 
     private suspend fun clearDirtyFlagsExcept(
@@ -233,10 +202,6 @@ class SyncEngine @Inject constructor(
         val wpConstraintsIds = pushed.weekplanConstraints.map { it.id } - serverWins.weekplanConstraints.map { it.id }.toSet()
         val historyIds = pushed.recipeHistory.map { it.id } - serverWins.recipeHistory.map { it.id }.toSet()
         val feedbackIds = pushed.recipeFeedback.map { it.id } - serverWins.recipeFeedback.map { it.id }.toSet()
-        val priceIds = pushed.productPrices.map { it.id } - serverWins.productPrices.map { it.id }.toSet()
-        val offProductIds = pushed.offProducts.map { it.id } - serverWins.offProducts.map { it.id }.toSet()
-        val mappingIds = pushed.ingredientMappings.map { it.id } - serverWins.ingredientMappings.map { it.id }.toSet()
-        val purchaseIds = pushed.productPurchases.map { it.id } - serverWins.productPurchases.map { it.id }.toSet()
 
         database.withTransaction {
             if (recipeIds.isNotEmpty()) recipeDao.clearRecipeDirty(recipeIds)
@@ -258,10 +223,6 @@ class SyncEngine @Inject constructor(
             if (wpConstraintsIds.isNotEmpty()) weekplanConstraintsDao.clearDirty(wpConstraintsIds.toList())
             if (historyIds.isNotEmpty()) recipeHistoryDao.clearDirty(historyIds.toList())
             if (feedbackIds.isNotEmpty()) recipeFeedbackDao.clearDirty(feedbackIds.toList())
-            if (priceIds.isNotEmpty()) productPriceDao.clearPricesDirty(priceIds.toList())
-            if (offProductIds.isNotEmpty()) offProductDao.clearProductsDirty(offProductIds.toList())
-            if (mappingIds.isNotEmpty()) ingredientMappingDao.clearDirty(mappingIds.toList())
-            if (purchaseIds.isNotEmpty()) productPurchaseDao.clearDirty(purchaseIds.toList())
         }
     }
 
@@ -495,54 +456,4 @@ private fun RecipeFeedbackDto.toEntity(): RecipeFeedbackEntity = RecipeFeedbackE
 private fun RecipeFeedbackEntity.toDto(): RecipeFeedbackDto = RecipeFeedbackDto(
     id = id, recipeId = recipeId, plannedDate = plannedDate,
     liked = liked, updatedAt = updatedAt, deleted = deleted,
-)
-
-private fun ProductPriceDto.toEntity(): ProductPriceEntity = ProductPriceEntity(
-    id = id, offProductId = offProductId, storeName = storeName,
-    currency = currency, price = price, unit = unit, lastCheckedAt = lastCheckedAt,
-    updatedAt = updatedAt, deleted = deleted, dirty = 0,
-)
-
-private fun ProductPriceEntity.toDto(): ProductPriceDto = ProductPriceDto(
-    id = id, updatedAt = updatedAt, deleted = deleted, offProductId = offProductId,
-    storeName = storeName, currency = currency, price = price, unit = unit,
-    lastCheckedAt = lastCheckedAt,
-)
-
-private fun OffProductDto.toEntity(): OffProductEntity = OffProductEntity(
-    id = id, barcode = barcode, name = name, brand = brand, categories = categories,
-    kcalPerUnit = kcalPerUnit, proteins = proteins, fats = fats, carbs = carbs,
-    nutriScore = nutriScore, nova = nova, ecoScore = ecoScore, allergenes = allergenes,
-    additives = additives, isOrganic = isOrganic, vegan = vegan, vegetarian = vegetarian,
-    imagePath = imagePath, isFavorite = isFavorite, updatedAt = updatedAt, deleted = deleted, dirty = 0,
-)
-
-private fun OffProductEntity.toDto(): OffProductDto = OffProductDto(
-    id = id, updatedAt = updatedAt, deleted = deleted, barcode = barcode, name = name,
-    brand = brand, categories = categories, kcalPerUnit = kcalPerUnit, proteins = proteins,
-    fats = fats, carbs = carbs, nutriScore = nutriScore, nova = nova, ecoScore = ecoScore,
-    allergenes = allergenes, additives = additives, isOrganic = isOrganic, vegan = vegan,
-    vegetarian = vegetarian, imagePath = imagePath, isFavorite = isFavorite,
-)
-
-private fun IngredientMappingDto.toEntity(): IngredientProductMappingEntity = IngredientProductMappingEntity(
-    id = id, ingredientName = ingredientName, offProductId = offProductId, offBarcode = offBarcode,
-    displayName = displayName, updatedAt = updatedAt, deleted = deleted, dirty = 0,
-)
-
-private fun IngredientProductMappingEntity.toDto(): IngredientMappingDto = IngredientMappingDto(
-    id = id, updatedAt = updatedAt, deleted = deleted, ingredientName = ingredientName,
-    offProductId = offProductId, offBarcode = offBarcode, displayName = displayName,
-)
-
-private fun ProductPurchaseDto.toEntity(): ProductPurchaseEntity = ProductPurchaseEntity(
-    id = id, shoppingItemId = shoppingItemId, offProductId = offProductId,
-    quantityPurchased = quantityPurchased, pricePaid = pricePaid, storeName = storeName,
-    purchaseDate = purchaseDate, updatedAt = updatedAt, deleted = deleted, dirty = 0,
-)
-
-private fun ProductPurchaseEntity.toDto(): ProductPurchaseDto = ProductPurchaseDto(
-    id = id, updatedAt = updatedAt, deleted = deleted, shoppingItemId = shoppingItemId,
-    offProductId = offProductId, quantityPurchased = quantityPurchased,
-    pricePaid = pricePaid, storeName = storeName, purchaseDate = purchaseDate,
 )

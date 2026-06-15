@@ -1,18 +1,10 @@
 package com.helga.android.data.repository
 
-import com.helga.android.data.local.dao.ProductPriceDao
 import com.helga.android.data.local.dao.ShoppingDao
-import com.helga.android.data.local.dao.ProductPurchaseDao
 import com.helga.android.data.local.entity.ShoppingItemEntity
-import com.helga.android.data.local.entity.ProductPurchaseEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
-import com.helga.android.data.model.ItemCostEstimate
 import com.helga.android.data.model.ItemOrigin
 import com.helga.android.data.model.ItemOrigins
-import com.helga.android.data.model.ListCostEstimate
-import com.helga.android.data.model.StoreCost
-import com.helga.android.data.remote.SyncApiFactory
-import com.helga.android.data.remote.dto.OpenPricesLookupRequest
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
@@ -21,9 +13,6 @@ import javax.inject.Singleton
 @Singleton
 class ShoppingRepository @Inject constructor(
     private val shoppingDao: ShoppingDao,
-    private val productPriceDao: ProductPriceDao,
-    private val productPurchaseDao: ProductPurchaseDao,
-    private val apiFactory: SyncApiFactory,
 ) {
 
     fun observeLists(): Flow<List<ShoppingListEntity>> = shoppingDao.observeLists()
@@ -68,8 +57,6 @@ class ShoppingRepository @Inject constructor(
         unit: String = "",
         aisle: String = "",
         source: String = "manual",
-        offBarcode: String = "",
-        offProductId: String = "",
         recipeName: String = "",
     ): String {
         val id = UUID.randomUUID().toString()
@@ -85,8 +72,6 @@ class ShoppingRepository @Inject constructor(
                 aisle = aisle,
                 source = source,
                 origins = ItemOrigins.encode(origins),
-                offBarcode = offBarcode,
-                offProductId = offProductId,
                 updatedAt = now,
                 dirty = 1,
             )
@@ -104,21 +89,6 @@ class ShoppingRepository @Inject constructor(
                 dirty = 1,
             )
         )
-
-        if (newCheckedState == 1 && item.offProductId.isNotBlank()) {
-            val purchase = ProductPurchaseEntity(
-                id = UUID.randomUUID().toString(),
-                shoppingItemId = item.id,
-                offProductId = item.offProductId,
-                quantityPurchased = item.quantity,
-                pricePaid = 0.0,
-                storeName = "",
-                purchaseDate = now,
-                updatedAt = now,
-                dirty = 1,
-            )
-            productPurchaseDao.upsert(purchase)
-        }
     }
 
     suspend fun softDeleteItem(item: ShoppingItemEntity) {
@@ -151,10 +121,6 @@ class ShoppingRepository @Inject constructor(
         }
     }
 
-    /**
-     * Adds an ingredient to the list. If an unchecked item with the same name+unit already exists,
-     * its quantity is summed instead of adding a duplicate entry.
-     */
     suspend fun addOrMergeItem(
         listId: String,
         name: String,
@@ -163,8 +129,6 @@ class ShoppingRepository @Inject constructor(
         aisle: String = "",
         source: String = "recipe",
         recipeName: String = "",
-        offBarcode: String = "",
-        offProductId: String = "",
     ) {
         val norm = name.trim()
         if (norm.isBlank()) return
@@ -178,9 +142,6 @@ class ShoppingRepository @Inject constructor(
                 existing.copy(
                     quantity = existing.quantity + quantity,
                     origins = ItemOrigins.encode(mergedOrigins),
-                    // Produktverknüpfung übernehmen, falls noch keine vorhanden ist
-                    offBarcode = existing.offBarcode.ifBlank { offBarcode },
-                    offProductId = existing.offProductId.ifBlank { offProductId },
                     updatedAt = now,
                     dirty = 1,
                 )
@@ -196,98 +157,10 @@ class ShoppingRepository @Inject constructor(
                     aisle = aisle,
                     source = source,
                     origins = ItemOrigins.encode(listOf(newOrigin)),
-                    offBarcode = offBarcode,
-                    offProductId = offProductId,
                     updatedAt = now,
                     dirty = 1,
                 )
             )
         }
-    }
-
-    suspend fun estimateListCosts(listId: String): ListCostEstimate {
-        val items = shoppingDao.itemsByList(listId).filter { it.deleted == 0 }
-        val itemEstimates = mutableListOf<ItemCostEstimate>()
-        val pricesByStore = mutableMapOf<String, MutableList<Double>>()
-
-        items.forEach { item ->
-            if (item.offProductId.isNotEmpty()) {
-                try {
-                    val prices = productPriceDao.getPricesByProductId(item.offProductId)
-                    if (prices.isNotEmpty()) {
-                        val cheapest = prices.minByOrNull { it.price }
-                        if (cheapest != null) {
-                            val itemCost = cheapest.price * item.quantity
-                            itemEstimates.add(
-                                ItemCostEstimate(
-                                    itemId = item.id,
-                                    name = item.name,
-                                    quantity = item.quantity,
-                                    unit = item.unit,
-                                    price = cheapest.price,
-                                    totalPrice = itemCost,
-                                )
-                            )
-                            prices.forEach { price ->
-                                val storePrices = pricesByStore.getOrPut(price.storeName) { mutableListOf() }
-                                storePrices.add(price.price * item.quantity)
-                            }
-                        } else {
-                            itemEstimates.add(
-                                ItemCostEstimate(
-                                    itemId = item.id,
-                                    name = item.name,
-                                    quantity = item.quantity,
-                                    unit = item.unit,
-                                )
-                            )
-                        }
-                    } else {
-                        itemEstimates.add(
-                            ItemCostEstimate(
-                                itemId = item.id,
-                                name = item.name,
-                                quantity = item.quantity,
-                                unit = item.unit,
-                            )
-                        )
-                    }
-                } catch (_: Exception) {
-                    itemEstimates.add(
-                        ItemCostEstimate(
-                            itemId = item.id,
-                            name = item.name,
-                            quantity = item.quantity,
-                            unit = item.unit,
-                        )
-                    )
-                }
-            } else {
-                itemEstimates.add(
-                    ItemCostEstimate(
-                        itemId = item.id,
-                        name = item.name,
-                        quantity = item.quantity,
-                        unit = item.unit,
-                    )
-                )
-            }
-        }
-
-        val totalCost = itemEstimates.mapNotNull { it.totalPrice }.sum()
-        val itemsWithPrice = itemEstimates.count { it.price != null }
-        val accuracy = if (items.isNotEmpty()) itemsWithPrice.toDouble() / items.size else 0.0
-
-        val storeComparisons = pricesByStore.map { (storeName, costs) ->
-            StoreCost(storeName = storeName, totalCost = costs.sum())
-        }.sortedBy { it.totalCost }
-
-        return ListCostEstimate(
-            listId = listId,
-            items = itemEstimates,
-            totalCost = totalCost,
-            estimatedAccuracy = accuracy,
-            storeComparison = storeComparisons,
-        )
     }
 }

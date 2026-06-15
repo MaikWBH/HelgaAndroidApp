@@ -33,10 +33,6 @@ import com.helga.android.ui.recipes.UrlImportScreen
 import com.helga.android.ui.settings.SettingsScreen
 import com.helga.android.ui.shopping.ShoppingListScreen
 import com.helga.android.ui.stores.StoreListScreen
-import com.helga.android.ui.pantry.PantryScreen
-import com.helga.android.ui.products.MyProductsScreen
-import com.helga.android.ui.products.IngredientMappingScreen
-import com.helga.android.ui.stats.StatsScreen
 import com.helga.android.ui.weekplan.WeekplanRecipePickerScreen
 import com.helga.android.ui.weekplan.WeekplanScreen
 import kotlinx.coroutines.flow.first
@@ -54,11 +50,6 @@ internal const val ROUTE_RECIPE_REMIX = "recipe/{recipeId}/remix"
 internal const val ROUTE_RECIPE_URL_IMPORT = "recipe/url-import"
 internal const val ROUTE_AI_GENERATE = "ai/generate"
 internal const val ROUTE_SETTINGS = "settings"
-internal const val ROUTE_PANTRY = "pantry"
-internal const val ROUTE_STATS = "stats"
-internal const val ROUTE_MY_PRODUCTS = "my-products"
-internal const val ROUTE_INGREDIENT_MAPPING = "ingredient-mapping"
-internal const val ROUTE_PURCHASE_STATS = "purchase-stats"
 internal const val ROUTE_WEEKPLAN_PICK_RECIPE = "weekplan/pick-recipe/{dayId}"
 
 internal fun recipeDetailRoute(id: String) = "recipe/$id"
@@ -193,29 +184,10 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                             }
                         },
                         onStoresClick = { navController.navigate(ROUTE_STORES) },
-                        onPantryClick = { navController.navigate(ROUTE_PANTRY) },
-                        onStatsClick = { navController.navigate(ROUTE_STATS) },
-                        onMyProductsClick = { navController.navigate(ROUTE_MY_PRODUCTS) },
-                        onIngredientMappingClick = { navController.navigate(ROUTE_INGREDIENT_MAPPING) },
                     )
                 }
                 composable(ROUTE_STORES) {
                     StoreListScreen(onBack = { navController.popBackStack() })
-                }
-                composable(ROUTE_PANTRY) {
-                    PantryScreen(onBack = { navController.popBackStack() })
-                }
-                composable(ROUTE_STATS) {
-                    StatsScreen(onBack = { navController.popBackStack() })
-                }
-                composable(ROUTE_MY_PRODUCTS) {
-                    MyProductsScreen(onBack = { navController.popBackStack() })
-                }
-                composable(ROUTE_INGREDIENT_MAPPING) {
-                    IngredientMappingScreen(onBack = { navController.popBackStack() })
-                }
-                composable(ROUTE_PURCHASE_STATS) {
-                    com.helga.android.ui.stats.PurchaseStatsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
                     route = ROUTE_RECIPE_DETAIL,

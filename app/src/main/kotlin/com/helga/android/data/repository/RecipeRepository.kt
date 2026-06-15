@@ -1,16 +1,11 @@
 package com.helga.android.data.repository
 
-import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.RecipeDao
-import com.helga.android.data.local.dao.IngredientMappingDao
-import com.helga.android.data.local.dao.ProductPurchaseDao
-import com.helga.android.data.util.IngredientNormalizer
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
-import com.helga.android.data.model.RecipeNutrition
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,9 +14,6 @@ import javax.inject.Singleton
 class RecipeRepository @Inject constructor(
     private val recipeDao: RecipeDao,
     private val shoppingRepository: ShoppingRepository,
-    private val offProductDao: OffProductDao,
-    private val ingredientMappingDao: IngredientMappingDao,
-    private val productPurchaseDao: ProductPurchaseDao,
 ) {
     fun observeAll(): Flow<List<RecipeEntity>> = recipeDao.observeAll()
     fun observeById(id: String): Flow<RecipeEntity?> = recipeDao.observeById(id)
@@ -108,219 +100,14 @@ class RecipeRepository @Inject constructor(
         val recipeName = recipeDao.findById(recipeId)?.name ?: ""
         val ingredients = recipeDao.ingredientsByRecipeId(recipeId).filter { it.deleted == 0 }
         ingredients.forEach { ingredient ->
-            val mapping = ingredientMappingDao.getByIngredientName(
-                IngredientNormalizer.normalize(ingredient.food)
-            )
-            val displayName = if (mapping != null && mapping.displayName.isNotBlank())
-                "${ingredient.food} → ${mapping.displayName}"
-            else ingredient.food
             shoppingRepository.addOrMergeItem(
                 listId = listId,
-                name = displayName,
+                name = ingredient.food,
                 quantity = ingredient.quantity,
                 unit = ingredient.unit,
                 source = "recipe",
                 recipeName = recipeName,
-                offBarcode = mapping?.offBarcode ?: "",
-                offProductId = mapping?.offProductId ?: "",
             )
         }
     }
-
-    suspend fun getRecipeNutrition(recipeId: String): RecipeNutrition {
-        val recipe = findById(recipeId)
-        if (recipe == null) {
-            return RecipeNutrition(0.0, 0.0, 0.0, 0.0, 0.0, "", 0, 0)
-        }
-
-        val ingredients = ingredientsForRecipe(recipeId).filter { it.deleted == 0 }
-        if (ingredients.isEmpty()) {
-            return RecipeNutrition(0.0, 0.0, 0.0, 0.0, 0.0, "", 0, 0)
-        }
-
-        var totalKcal = 0.0
-        var totalProtein = 0.0
-        var totalFat = 0.0
-        var totalCarbs = 0.0
-        var bestNutriScore = ""
-        var matchedCount = 0
-
-        ingredients.forEach { ingredient ->
-            // 1. Direkter Produkt-Link an der Zutat, 2. globales Zutat→Produkt-Mapping
-            val barcode = ingredient.offBarcode.ifBlank {
-                ingredientMappingDao.getByIngredientName(
-                    IngredientNormalizer.normalize(ingredient.food)
-                )?.offBarcode ?: ""
-            }
-            val product = if (barcode.isNotBlank()) {
-                offProductDao.getByBarcode(barcode)
-            } else {
-                null
-            }
-
-            if (product != null) {
-                matchedCount++
-                val quantityGrams = convertToGrams(ingredient.quantity, ingredient.unit)
-                if (quantityGrams > 0) {
-                    totalKcal += (product.kcalPerUnit / 100.0) * quantityGrams
-                    totalProtein += (product.proteins / 100.0) * quantityGrams
-                    totalFat += (product.fats / 100.0) * quantityGrams
-                    totalCarbs += (product.carbs / 100.0) * quantityGrams
-
-                    if (product.nutriScore.isNotBlank()) {
-                        if (bestNutriScore.isEmpty() || product.nutriScore < bestNutriScore) {
-                            bestNutriScore = product.nutriScore
-                        }
-                    }
-                }
-            }
-        }
-
-        val portionCount = parsePortions(recipe.recipeYield)
-        val kcalPerPortion = if (portionCount > 0) totalKcal / portionCount else totalKcal
-
-        return RecipeNutrition(
-            totalKcal = totalKcal,
-            kcalPerPortion = kcalPerPortion,
-            protein = totalProtein,
-            fat = totalFat,
-            carbs = totalCarbs,
-            nutriScore = bestNutriScore,
-            matchedIngredientsCount = matchedCount,
-            totalIngredientsCount = ingredients.size,
-        )
-    }
-
-    private fun convertToGrams(quantity: Double, unit: String): Double {
-        return when (unit.lowercase()) {
-            "g", "gramm" -> quantity
-            "kg" -> quantity * 1000
-            "ml", "l" -> quantity // Approximate: 1ml ≈ 1g for water-based
-            "el", "esslöffel" -> quantity * 15
-            "tl", "teelöffel" -> quantity * 5
-            "tasse", "cup" -> quantity * 240
-            "stück", "piece" -> quantity * 50 // Generic guess
-            else -> quantity // Fallback
-        }
-    }
-
-    private fun parsePortions(recipeYield: String): Int {
-        return recipeYield.takeWhile { it.isDigit() }.toIntOrNull() ?: 1
-    }
-
-    suspend fun getRecipeNutritionWithTopProducts(recipeId: String): RecipeNutritionWithMappings {
-        val recipe = findById(recipeId) ?: return RecipeNutritionWithMappings(
-            RecipeNutrition(0.0, 0.0, 0.0, 0.0, 0.0, "", 0, 0),
-            emptyList(),
-            emptyList(),
-        )
-
-        val ingredients = ingredientsForRecipe(recipeId).filter { it.deleted == 0 }
-        if (ingredients.isEmpty()) return RecipeNutritionWithMappings(
-            RecipeNutrition(0.0, 0.0, 0.0, 0.0, 0.0, "", 0, 0),
-            emptyList(),
-            emptyList(),
-        )
-
-        var totalKcal = 0.0
-        var totalProtein = 0.0
-        var totalFat = 0.0
-        var totalCarbs = 0.0
-        var bestNutriScore = ""
-        var matchedCount = 0
-
-        val ingredientMappings = mutableListOf<IngredientProductMapping>()
-        val unmappedIngredients = mutableListOf<String>()
-
-        val purchasesByProduct = try {
-            productPurchaseDao.dirty()
-                .groupingBy { it.offProductId }
-                .eachCount()
-        } catch (e: Exception) {
-            emptyMap()
-        }
-
-        ingredients.forEach { ingredient ->
-            // 1. Direct barcode link
-            var product = if (ingredient.offBarcode.isNotBlank()) {
-                offProductDao.getByBarcode(ingredient.offBarcode)
-            } else null
-
-            // 2. Top-purchased product for this ingredient (if available from purchases)
-            if (product == null && purchasesByProduct.isNotEmpty()) {
-                val topProductId = purchasesByProduct.entries.maxByOrNull { it.value }?.key
-                if (topProductId != null) {
-                    product = offProductDao.getById(topProductId)
-                }
-            }
-
-            // 3. Fallback to global mapping
-            if (product == null) {
-                val mapping = ingredientMappingDao.getByIngredientName(
-                    IngredientNormalizer.normalize(ingredient.food)
-                )
-                product = if (mapping != null && mapping.offProductId.isNotBlank()) {
-                    offProductDao.getById(mapping.offProductId)
-                } else null
-            }
-
-            if (product != null) {
-                matchedCount++
-                val quantityGrams = convertToGrams(ingredient.quantity, ingredient.unit)
-                if (quantityGrams > 0) {
-                    totalKcal += (product.kcalPerUnit / 100.0) * quantityGrams
-                    totalProtein += (product.proteins / 100.0) * quantityGrams
-                    totalFat += (product.fats / 100.0) * quantityGrams
-                    totalCarbs += (product.carbs / 100.0) * quantityGrams
-
-                    if (product.nutriScore.isNotBlank()) {
-                        if (bestNutriScore.isEmpty() || product.nutriScore < bestNutriScore) {
-                            bestNutriScore = product.nutriScore
-                        }
-                    }
-                }
-                ingredientMappings.add(
-                    IngredientProductMapping(
-                        ingredientName = ingredient.food,
-                        productName = product.name,
-                        productId = product.id,
-                        purchaseCount = purchasesByProduct[product.id] ?: 0,
-                    )
-                )
-            } else {
-                unmappedIngredients.add(ingredient.food)
-            }
-        }
-
-        val portionCount = parsePortions(recipe.recipeYield)
-        val kcalPerPortion = if (portionCount > 0) totalKcal / portionCount else totalKcal
-
-        return RecipeNutritionWithMappings(
-            nutrition = RecipeNutrition(
-                totalKcal = totalKcal,
-                kcalPerPortion = kcalPerPortion,
-                protein = totalProtein,
-                fat = totalFat,
-                carbs = totalCarbs,
-                nutriScore = bestNutriScore,
-                matchedIngredientsCount = matchedCount,
-                totalIngredientsCount = ingredients.size,
-            ),
-            ingredientMappings = ingredientMappings,
-            unmappedIngredients = unmappedIngredients,
-        )
-    }
 }
-
-data class IngredientProductMapping(
-    val ingredientName: String,
-    val productName: String,
-    val productId: String,
-    val purchaseCount: Int = 0,
-)
-
-data class RecipeNutritionWithMappings(
-    val nutrition: RecipeNutrition,
-    val ingredientMappings: List<IngredientProductMapping>,
-    val unmappedIngredients: List<String>,
-)

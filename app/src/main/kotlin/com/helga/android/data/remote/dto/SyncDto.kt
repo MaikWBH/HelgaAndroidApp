@@ -230,43 +230,6 @@ data class RecipeFeedbackDto(
     val deleted: Int = 0,
 )
 
-@JsonClass(generateAdapter = true)
-data class OffProductDto(
-    val id: String,
-    @Json(name = "updated_at") val updatedAt: Long,
-    val deleted: Int = 0,
-    val barcode: String = "",
-    val name: String = "",
-    val brand: String = "",
-    val categories: String = "[]",
-    @Json(name = "kcal_per_unit") val kcalPerUnit: Double = 0.0,
-    val proteins: Double = 0.0,
-    val fats: Double = 0.0,
-    val carbs: Double = 0.0,
-    @Json(name = "nutri_score") val nutriScore: String = "",
-    val nova: Int = 0,
-    @Json(name = "eco_score") val ecoScore: String = "",
-    val allergenes: String = "[]",
-    val additives: String = "[]",
-    @Json(name = "is_organic") val isOrganic: Int = 0,
-    val vegan: Int = 0,
-    val vegetarian: Int = 0,
-    @Json(name = "image_path") val imagePath: String = "",
-    @Json(name = "is_favorite") val isFavorite: Int = 0,
-)
-
-@JsonClass(generateAdapter = true)
-data class ProductPriceDto(
-    val id: String,
-    @Json(name = "updated_at") val updatedAt: Long,
-    val deleted: Int = 0,
-    @Json(name = "off_product_id") val offProductId: String = "",
-    @Json(name = "store_name") val storeName: String = "",
-    val currency: String = "EUR",
-    val price: Double = 0.0,
-    val unit: String = "",
-    @Json(name = "last_checked_at") val lastCheckedAt: Long = 0L,
-)
 
 @JsonClass(generateAdapter = true)
 data class OpenPricesLookupRequest(
@@ -324,29 +287,6 @@ data class OffSearchResponse(
     val products: List<OffProductDto> = emptyList(),
 )
 
-@JsonClass(generateAdapter = true)
-data class IngredientMappingDto(
-    val id: String,
-    @Json(name = "updated_at") val updatedAt: Long,
-    val deleted: Int = 0,
-    @Json(name = "ingredient_name") val ingredientName: String = "",
-    @Json(name = "off_product_id") val offProductId: String = "",
-    @Json(name = "off_barcode") val offBarcode: String = "",
-    @Json(name = "display_name") val displayName: String = "",
-)
-
-@JsonClass(generateAdapter = true)
-data class ProductPurchaseDto(
-    val id: String,
-    @Json(name = "updated_at") val updatedAt: Long,
-    val deleted: Int = 0,
-    @Json(name = "shopping_item_id") val shoppingItemId: String = "",
-    @Json(name = "off_product_id") val offProductId: String,
-    @Json(name = "quantity_purchased") val quantityPurchased: Double = 1.0,
-    @Json(name = "price_paid") val pricePaid: Double = 0.0,
-    @Json(name = "store_name") val storeName: String = "",
-    @Json(name = "purchase_date") val purchaseDate: Long = 0L,
-)
 
 @JsonClass(generateAdapter = true)
 data class SyncPullResponse(
@@ -370,10 +310,6 @@ data class SyncPullResponse(
     @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
     @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
-    @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
-    @Json(name = "product_prices") val productPrices: List<ProductPriceDto> = emptyList(),
-    @Json(name = "ingredient_product_mappings") val ingredientMappings: List<IngredientMappingDto> = emptyList(),
-    @Json(name = "product_purchases") val productPurchases: List<ProductPurchaseDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -398,10 +334,6 @@ data class SyncPushRequest(
     @Json(name = "weekplan_constraints") val weekplanConstraints: List<WeekplanConstraintsDto> = emptyList(),
     @Json(name = "recipe_history") val recipeHistory: List<RecipeHistoryDto> = emptyList(),
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
-    @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
-    @Json(name = "product_prices") val productPrices: List<ProductPriceDto> = emptyList(),
-    @Json(name = "ingredient_product_mappings") val ingredientMappings: List<IngredientMappingDto> = emptyList(),
-    @Json(name = "product_purchases") val productPurchases: List<ProductPurchaseDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

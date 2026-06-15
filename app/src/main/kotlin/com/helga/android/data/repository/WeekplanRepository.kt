@@ -2,8 +2,6 @@ package com.helga.android.data.repository
 
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
-import com.helga.android.data.local.dao.IngredientMappingDao
-import com.helga.android.data.util.IngredientNormalizer
 import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
@@ -20,7 +18,6 @@ class WeekplanRepository @Inject constructor(
     private val recipeDao: RecipeDao,
     private val recipeRepository: RecipeRepository,
     private val shoppingRepository: ShoppingRepository,
-    private val ingredientMappingDao: IngredientMappingDao,
 ) {
 
     fun observeDays(): Flow<List<WeekplanDayEntity>> = weekplanDao.observeDays()
@@ -102,21 +99,13 @@ class WeekplanRepository @Inject constructor(
                 val scale = if (desiredServings > 0 && baseServings > 0) desiredServings.toDouble() / baseServings else 1.0
                 val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
                 ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
-                    val mapping = ingredientMappingDao.getByIngredientName(
-                        IngredientNormalizer.normalize(ingredient.food)
-                    )
-                    val displayName = if (mapping != null && mapping.displayName.isNotBlank())
-                        "${ingredient.food} → ${mapping.displayName}"
-                    else ingredient.food
                     shoppingRepository.addOrMergeItem(
                         listId = shoppingListId,
-                        name = displayName,
+                        name = ingredient.food,
                         quantity = ingredient.quantity * scale,
                         unit = ingredient.unit,
                         source = "weekplan",
                         recipeName = recipe?.name ?: "",
-                        offBarcode = mapping?.offBarcode ?: "",
-                        offProductId = mapping?.offProductId ?: "",
                     )
                 }
             }
