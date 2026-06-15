@@ -474,17 +474,19 @@ private fun RecipeFeedbackEntity.toDto(): RecipeFeedbackDto = RecipeFeedbackDto(
     liked = liked, updatedAt = updatedAt, deleted = deleted,
 )
 
+// localImageUri ist gerätelokal (absoluter Dateipfad) und wird – wie bei Rezepten –
+// bewusst NICHT synchronisiert. Nur imagePath (Server-Dateiname) wandert über den Sync.
 private fun ReceiptDto.toEntity(): ReceiptEntity = ReceiptEntity(
     id = id, storeId = storeId, storeName = storeName, shoppingListId = shoppingListId,
     purchaseDate = purchaseDate, totalAmount = totalAmount, currency = currency,
-    imagePath = imagePath, localImageUri = localImageUri, rawOcrText = rawOcrText,
+    imagePath = imagePath, rawOcrText = rawOcrText,
     status = status, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun ReceiptEntity.toDto(): ReceiptDto = ReceiptDto(
     id = id, storeId = storeId, storeName = storeName, shoppingListId = shoppingListId,
     purchaseDate = purchaseDate, totalAmount = totalAmount, currency = currency,
-    imagePath = imagePath, localImageUri = localImageUri, rawOcrText = rawOcrText,
+    imagePath = imagePath, rawOcrText = rawOcrText,
     status = status, updatedAt = updatedAt, deleted = deleted,
 )
 

@@ -240,7 +240,6 @@ data class ReceiptDto(
     @Json(name = "total_amount") val totalAmount: Double = 0.0,
     val currency: String = "EUR",
     @Json(name = "image_path") val imagePath: String = "",
-    @Json(name = "local_image_uri") val localImageUri: String = "",
     @Json(name = "raw_ocr_text") val rawOcrText: String = "",
     val status: String = "scanned",
     @Json(name = "updated_at") val updatedAt: Long,

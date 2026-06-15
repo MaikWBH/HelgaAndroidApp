@@ -214,7 +214,7 @@ class ReceiptRecord(SyncRecord):
     total_amount: float = 0.0
     currency: str = "EUR"
     image_path: str = ""
-    local_image_uri: str = ""
+    # local_image_uri wird NICHT synchronisiert (gerätelokaler Pfad) – siehe sync.py.
     raw_ocr_text: str = ""
     status: str = "scanned"
 
