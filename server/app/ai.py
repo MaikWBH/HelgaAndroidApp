@@ -365,3 +365,63 @@ async def _call_once(system: str, user: str) -> str:
     async for chunk in _stream(system, user):
         chunks.append(chunk)
     return "".join(chunks)
+
+
+# ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
+# OCR läuft on-device (Google ML Kit). Der KI-Abgleich vergleicht die abgehakte
+# Einkaufsliste mit den erkannten Bon-Positionen – robust gegen kryptische
+# Marken-Abkürzungen (z. B. "G&G H-MILCH 3,5%" = "Milch").
+
+async def reconcile_receipt(checked_items: list, receipt_items: list) -> dict:
+    """Ordnet Bon-Positionen den abgehakten Listen-Items zu.
+
+    Gibt JSON zurück: {matches:[{shopping_item_id, receipt_item_id}],
+    unexpected:[receipt_item_id...], missing:[shopping_item_id...]}
+    """
+    checked_block = "\n".join(
+        f"- id={i.id}: {i.name} ({i.quantity} {i.unit})".strip()
+        for i in checked_items
+    ) or "(keine)"
+    receipt_block = "\n".join(
+        f"- id={i.id}: {i.name or i.raw_text} ({i.total_price:.2f})"
+        for i in receipt_items
+    ) or "(keine)"
+
+    system = (
+        "Du gleichst eine abgehakte Einkaufsliste mit den Positionen eines "
+        "Kassenbons ab. Bon-Namen sind oft kryptische Marken-Abkürzungen "
+        "(z. B. 'G&G H-MILCH 3,5%' = 'Milch'). Antworte NUR mit validem JSON — "
+        "kein Markdown, keine Erklärungen."
+    )
+    user = (
+        f"ABGEHAKTE EINKAUFSLISTE:\n{checked_block}\n\n"
+        f"KASSENBON-POSITIONEN:\n{receipt_block}\n\n"
+        "Ordne jede Bon-Position höchstens einem Listen-Item zu. Gib zurück:\n"
+        '{"matches":[{"shopping_item_id":"<id>","receipt_item_id":"<id>"}],'
+        '"unexpected":["<receipt_item_id ohne Listen-Entsprechung>"],'
+        '"missing":["<shopping_item_id, das nicht auf dem Bon ist>"]}'
+    )
+
+    raw = (await _call_once(system, user)).strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1].lstrip("json").strip()
+    start, end = raw.find("{"), raw.rfind("}") + 1
+    if start == -1 or end == 0:
+        return {"matches": [], "unexpected": [], "missing": []}
+    try:
+        data = json.loads(raw[start:end])
+    except json.JSONDecodeError:
+        return {"matches": [], "unexpected": [], "missing": []}
+
+    # Auf gültige IDs filtern, damit der Client keine Geister-IDs zurückbekommt
+    checked_ids = {i.id for i in checked_items}
+    receipt_ids = {i.id for i in receipt_items}
+    matches = [
+        {"shopping_item_id": m.get("shopping_item_id", ""),
+         "receipt_item_id": m.get("receipt_item_id", "")}
+        for m in data.get("matches", [])
+        if m.get("shopping_item_id") in checked_ids and m.get("receipt_item_id") in receipt_ids
+    ]
+    unexpected = [rid for rid in data.get("unexpected", []) if rid in receipt_ids]
+    missing = [sid for sid in data.get("missing", []) if sid in checked_ids]
+    return {"matches": matches, "unexpected": unexpected, "missing": missing}

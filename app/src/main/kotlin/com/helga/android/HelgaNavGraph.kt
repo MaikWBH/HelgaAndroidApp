@@ -25,6 +25,10 @@ import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.ui.ai.AiGenerateScreen
 import com.helga.android.ui.ai.AiRemixScreen
 import com.helga.android.ui.onboarding.OnboardingScreen
+import com.helga.android.ui.receipts.CostOverviewScreen
+import com.helga.android.ui.receipts.ReceiptDetailScreen
+import com.helga.android.ui.receipts.ReceiptListScreen
+import com.helga.android.ui.receipts.ReceiptScanScreen
 import com.helga.android.ui.recipes.RecipeCookScreen
 import com.helga.android.ui.recipes.RecipeDetailScreen
 import com.helga.android.ui.recipes.RecipeFormScreen
@@ -33,8 +37,6 @@ import com.helga.android.ui.recipes.UrlImportScreen
 import com.helga.android.ui.settings.SettingsScreen
 import com.helga.android.ui.shopping.ShoppingListScreen
 import com.helga.android.ui.stores.StoreListScreen
-import com.helga.android.ui.pantry.PantryScreen
-import com.helga.android.ui.stats.StatsScreen
 import com.helga.android.ui.weekplan.WeekplanRecipePickerScreen
 import com.helga.android.ui.weekplan.WeekplanScreen
 import kotlinx.coroutines.flow.first
@@ -44,6 +46,10 @@ internal const val ROUTE_RECIPES = "recipes"
 internal const val ROUTE_SHOPPING = "shopping"
 internal const val ROUTE_STORES = "stores"
 internal const val ROUTE_WEEKPLAN = "weekplan"
+internal const val ROUTE_RECEIPTS = "receipts"
+internal const val ROUTE_RECEIPTS_COST_OVERVIEW = "receipts/cost-overview"
+internal const val ROUTE_RECEIPT_SCAN = "receipts/scan?listId={listId}"
+internal const val ROUTE_RECEIPT_DETAIL = "receipts/detail/{receiptId}"
 internal const val ROUTE_RECIPE_DETAIL = "recipe/{recipeId}"
 internal const val ROUTE_RECIPE_CREATE = "recipe/new"
 internal const val ROUTE_RECIPE_EDIT = "recipe/{recipeId}/edit"
@@ -52,8 +58,6 @@ internal const val ROUTE_RECIPE_REMIX = "recipe/{recipeId}/remix"
 internal const val ROUTE_RECIPE_URL_IMPORT = "recipe/url-import"
 internal const val ROUTE_AI_GENERATE = "ai/generate"
 internal const val ROUTE_SETTINGS = "settings"
-internal const val ROUTE_PANTRY = "pantry"
-internal const val ROUTE_STATS = "stats"
 internal const val ROUTE_WEEKPLAN_PICK_RECIPE = "weekplan/pick-recipe/{dayId}"
 
 internal fun recipeDetailRoute(id: String) = "recipe/$id"
@@ -61,6 +65,9 @@ internal fun recipeEditRoute(id: String) = "recipe/$id/edit"
 internal fun recipeCookRoute(id: String) = "recipe/$id/cook"
 internal fun recipeRemixRoute(id: String) = "recipe/$id/remix"
 internal fun weekplanPickRecipeRoute(dayId: String) = "weekplan/pick-recipe/$dayId"
+internal fun receiptScanRoute(listId: String? = null) =
+    if (listId.isNullOrBlank()) "receipts/scan?listId=" else "receipts/scan?listId=$listId"
+internal fun receiptDetailRoute(receiptId: String) = "receipts/detail/$receiptId"
 
 private val ROOT_ROUTES = setOf(ROUTE_SHOPPING, ROUTE_RECIPES, ROUTE_WEEKPLAN)
 
@@ -132,6 +139,10 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                     ShoppingListScreen(
                         bottomPadding = padding.calculateBottomPadding(),
                         onNavigateToWeekplan = { navController.navigate(ROUTE_WEEKPLAN) },
+                        onNavigateToReceiptScan = { listId ->
+                            navController.navigate(receiptScanRoute(listId))
+                        },
+                        onNavigateToReceipts = { navController.navigate(ROUTE_RECEIPTS) },
                     )
                 }
                 composable(ROUTE_RECIPES) {
@@ -188,18 +199,43 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                             }
                         },
                         onStoresClick = { navController.navigate(ROUTE_STORES) },
-                        onPantryClick = { navController.navigate(ROUTE_PANTRY) },
-                        onStatsClick = { navController.navigate(ROUTE_STATS) },
                     )
                 }
                 composable(ROUTE_STORES) {
                     StoreListScreen(onBack = { navController.popBackStack() })
                 }
-                composable(ROUTE_PANTRY) {
-                    PantryScreen(onBack = { navController.popBackStack() })
+                composable(ROUTE_RECEIPTS) {
+                    ReceiptListScreen(
+                        onBack = { navController.popBackStack() },
+                        onReceiptClick = { id -> navController.navigate(receiptDetailRoute(id)) },
+                        onScanClick = { navController.navigate(receiptScanRoute(null)) },
+                        onCostOverviewClick = { navController.navigate(ROUTE_RECEIPTS_COST_OVERVIEW) },
+                    )
                 }
-                composable(ROUTE_STATS) {
-                    StatsScreen(onBack = { navController.popBackStack() })
+                composable(
+                    route = ROUTE_RECEIPT_DETAIL,
+                    arguments = listOf(navArgument("receiptId") { type = NavType.StringType }),
+                ) {
+                    ReceiptDetailScreen(onBack = { navController.popBackStack() })
+                }
+                composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
+                    CostOverviewScreen()
+                }
+                composable(
+                    route = ROUTE_RECEIPT_SCAN,
+                    arguments = listOf(
+                        navArgument("listId") {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        },
+                    ),
+                ) { backStackEntry ->
+                    val listId = backStackEntry.arguments?.getString("listId").orEmpty()
+                    ReceiptScanScreen(
+                        shoppingListId = listId.ifBlank { null },
+                        onBack = { navController.popBackStack() },
+                        onSaved = { navController.popBackStack() },
+                    )
                 }
                 composable(
                     route = ROUTE_RECIPE_DETAIL,

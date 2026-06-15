@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -55,6 +56,16 @@ class AppPreferences @Inject constructor(
     val checkMode: Flow<String> = ds.data.map { it[KEY_CHECK_MODE] ?: "keep" }
     val notifyShoppingDay: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_SHOPPING] ?: false }
     val notifyCookReminder: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_COOK] ?: false }
+
+    /** Anteil abgehakter Items (0.0–1.0), ab dem der Kassenzettel-Scan-Hinweis erscheint. */
+    val scanReminderThreshold: Flow<Float> = ds.data.map { prefs ->
+        (prefs[KEY_SCAN_REMINDER_THRESHOLD] ?: 0.6f).coerceIn(0f, 1f)
+    }
+
+    /** KI-Abgleich Bon ↔ Einkaufsliste (nutzt Server-KI). Default an, nie automatisch. */
+    val receiptReconciliationEnabled: Flow<Boolean> = ds.data.map {
+        it[KEY_RECEIPT_RECONCILE] ?: true
+    }
     val allergies: Flow<List<String>> = ds.data.map { prefs ->
         val json = prefs[KEY_ALLERGIES].orEmpty()
         if (json.isBlank()) emptyList()
@@ -81,6 +92,22 @@ class AppPreferences @Inject constructor(
 
     suspend fun saveLastSyncTs(ts: Long) {
         ds.edit { it[KEY_LAST_SYNC_TS] = ts }
+    }
+
+    /**
+     * Einmalige Migration auf das server_seq-basierte Sync-Protokoll.
+     * Setzt den Cursor einmalig auf 0, damit ein voller Re-Pull alle Einträge
+     * nachzieht, die zuvor durch den wanduhr-basierten Cursor unsichtbar waren.
+     * Idempotent – läuft nur, solange die gespeicherte Protokollversion < 1 ist.
+     */
+    suspend fun ensureSyncProtocol() {
+        ds.edit { prefs ->
+            val version = prefs[KEY_SYNC_PROTOCOL] ?: 0
+            if (version < SYNC_PROTOCOL_VERSION) {
+                prefs[KEY_LAST_SYNC_TS] = 0L
+                prefs[KEY_SYNC_PROTOCOL] = SYNC_PROTOCOL_VERSION
+            }
+        }
     }
 
     suspend fun saveWeekplanDays(days: Int) {
@@ -119,6 +146,14 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_NOTIFY_COOK] = enabled }
     }
 
+    suspend fun saveScanReminderThreshold(threshold: Float) {
+        ds.edit { it[KEY_SCAN_REMINDER_THRESHOLD] = threshold.coerceIn(0f, 1f) }
+    }
+
+    suspend fun saveReceiptReconciliationEnabled(enabled: Boolean) {
+        ds.edit { it[KEY_RECEIPT_RECONCILE] = enabled }
+    }
+
     suspend fun saveAllergies(allergies: List<String>) {
         ds.edit {
             if (allergies.isEmpty()) it.remove(KEY_ALLERGIES)
@@ -141,9 +176,13 @@ class AppPreferences @Inject constructor(
     }
 
     private companion object {
+        // Aktuelle Sync-Protokollversion. Erhöhen erzwingt einen einmaligen Voll-Resync.
+        const val SYNC_PROTOCOL_VERSION = 1
+
         val KEY_SERVER_URL = stringPreferencesKey("server_url")
         val KEY_API_KEY = stringPreferencesKey("api_key")
         val KEY_LAST_SYNC_TS = longPreferencesKey("last_sync_ts")
+        val KEY_SYNC_PROTOCOL = intPreferencesKey("sync_protocol_version")
         val KEY_WEEKPLAN_DAYS = intPreferencesKey("weekplan_days")
         val KEY_SHOPPING_DAY = intPreferencesKey("shopping_day")
         val KEY_DEFAULT_SHOPPING_LIST_ID = stringPreferencesKey("default_shopping_list_id")
@@ -153,5 +192,7 @@ class AppPreferences @Inject constructor(
         val KEY_NOTIFY_SHOPPING = booleanPreferencesKey("notify_shopping_day")
         val KEY_NOTIFY_COOK = booleanPreferencesKey("notify_cook_reminder")
         val KEY_ALLERGIES = stringPreferencesKey("allergies")
+        val KEY_SCAN_REMINDER_THRESHOLD = floatPreferencesKey("scan_reminder_threshold")
+        val KEY_RECEIPT_RECONCILE = booleanPreferencesKey("receipt_reconciliation_enabled")
     }
 }

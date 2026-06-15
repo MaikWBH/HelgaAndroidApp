@@ -19,6 +19,7 @@ import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.data.repository.RecipeNutritionWithMappings
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncScheduler
@@ -36,6 +37,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -96,6 +98,9 @@ class RecipeDetailViewModel @Inject constructor(
 
     private val _nutrition = MutableStateFlow<RecipeNutrition?>(null)
     val nutrition: StateFlow<RecipeNutrition?> = _nutrition.asStateFlow()
+
+    private val _nutritionWithMappings = MutableStateFlow<RecipeNutritionWithMappings?>(null)
+    val nutritionWithMappings: StateFlow<RecipeNutritionWithMappings?> = _nutritionWithMappings.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -277,5 +282,16 @@ class RecipeDetailViewModel @Inject constructor(
             putExtra(Intent.EXTRA_TEXT, text)
         }
         context.startActivity(Intent.createChooser(intent, null))
+    }
+
+    fun calculateNutritionWithProducts() {
+        viewModelScope.launch {
+            try {
+                val result = repository.getRecipeNutritionWithTopProducts(recipeId)
+                _nutritionWithMappings.value = result
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to calculate nutrition with products")
+            }
+        }
     }
 }

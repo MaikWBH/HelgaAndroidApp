@@ -178,6 +178,57 @@ class OffProductRecord(SyncRecord):
     vegan: int = 0
     vegetarian: int = 0
     image_path: str = ""
+    is_favorite: int = 0
+
+
+class IngredientMappingRecord(SyncRecord):
+    ingredient_name: str = ""
+    off_product_id: str = ""
+    off_barcode: str = ""
+    display_name: str = ""
+
+
+class ProductPriceRecord(SyncRecord):
+    off_product_id: str = ""
+    store_name: str = ""
+    currency: str = "EUR"
+    price: float = 0.0
+    unit: str = ""
+    last_checked_at: int = 0
+
+
+class ProductPurchaseRecord(SyncRecord):
+    shopping_item_id: str = ""
+    off_product_id: str = ""
+    quantity_purchased: float = 1.0
+    price_paid: float = 0.0
+    store_name: str = ""
+    purchase_date: int = 0
+
+
+class ReceiptRecord(SyncRecord):
+    store_id: str = ""
+    store_name: str = ""
+    shopping_list_id: str = ""
+    purchase_date: int = 0
+    total_amount: float = 0.0
+    currency: str = "EUR"
+    image_path: str = ""
+    local_image_uri: str = ""
+    raw_ocr_text: str = ""
+    status: str = "scanned"
+
+
+class ReceiptItemRecord(SyncRecord):
+    receipt_id: str
+    position: int = 0
+    raw_text: str = ""
+    name: str = ""
+    quantity: float = 1.0
+    unit_price: float = 0.0
+    total_price: float = 0.0
+    matched_shopping_item_id: str = ""
+    match_status: str = ""
 
 
 # ── Sync-Payload ────────────────────────────────────────────────────────────
@@ -206,6 +257,11 @@ class SyncPayload(BaseModel):
     weekplan_settings: List[WeekplanSettingsRecord] = []
     weekplan_constraints: List[WeekplanConstraintsRecord] = []
     off_products: List[OffProductRecord] = []
+    ingredient_product_mappings: List[IngredientMappingRecord] = []
+    product_prices: List[ProductPriceRecord] = []
+    product_purchases: List[ProductPurchaseRecord] = []
+    receipts: List[ReceiptRecord] = []
+    receipt_items: List[ReceiptItemRecord] = []
 
 
 class SyncPullResponse(SyncPayload):
@@ -309,3 +365,35 @@ class OffSearchRequest(BaseModel):
 
 class OffSearchResponse(BaseModel):
     products: List[OffProductRecord] = []
+
+
+# ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
+
+class ReconcileShoppingItem(BaseModel):
+    id: str
+    name: str = ""
+    quantity: float = 1.0
+    unit: str = ""
+
+
+class ReconcileReceiptItem(BaseModel):
+    id: str
+    name: str = ""
+    raw_text: str = ""
+    total_price: float = 0.0
+
+
+class ReceiptReconcileRequest(BaseModel):
+    checked_items: List[ReconcileShoppingItem] = []
+    receipt_items: List[ReconcileReceiptItem] = []
+
+
+class ReconcileMatch(BaseModel):
+    shopping_item_id: str = ""
+    receipt_item_id: str = ""
+
+
+class ReceiptReconcileResponse(BaseModel):
+    matches: List[ReconcileMatch] = []
+    unexpected: List[str] = []
+    missing: List[str] = []

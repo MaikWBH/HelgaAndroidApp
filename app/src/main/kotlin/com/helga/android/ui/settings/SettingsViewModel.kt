@@ -67,6 +67,8 @@ class SettingsViewModel @Inject constructor(
             val themeMode = preferences.themeMode.first()
             val accentColor = preferences.accentColor.first()
             val checkMode = preferences.checkMode.first()
+            val scanReminderThreshold = preferences.scanReminderThreshold.first()
+            val reconcileEnabled = preferences.receiptReconciliationEnabled.first()
             val notifyShopping = preferences.notifyShoppingDay.first()
             val notifyCook = preferences.notifyCookReminder.first()
             _state.update {
@@ -79,6 +81,8 @@ class SettingsViewModel @Inject constructor(
                     themeMode = themeMode,
                     accentColor = accentColor,
                     checkMode = checkMode,
+                    scanReminderThreshold = scanReminderThreshold,
+                    receiptReconciliationEnabled = reconcileEnabled,
                     notifyShoppingDay = notifyShopping,
                     notifyCookReminder = notifyCook,
                     loaded = true,
@@ -114,6 +118,16 @@ class SettingsViewModel @Inject constructor(
     fun setCheckMode(mode: String) {
         _state.update { it.copy(checkMode = mode) }
         viewModelScope.launch { preferences.saveCheckMode(mode) }
+    }
+
+    fun setScanReminderThreshold(threshold: Float) {
+        _state.update { it.copy(scanReminderThreshold = threshold) }
+        viewModelScope.launch { preferences.saveScanReminderThreshold(threshold) }
+    }
+
+    fun setReceiptReconciliationEnabled(enabled: Boolean) {
+        _state.update { it.copy(receiptReconciliationEnabled = enabled) }
+        viewModelScope.launch { preferences.saveReceiptReconciliationEnabled(enabled) }
     }
 
     fun setNotifyShoppingDay(enabled: Boolean) {
@@ -322,6 +336,8 @@ data class SettingsState(
     val themeMode: String = "system",
     val accentColor: Int = 0,
     val checkMode: String = "keep",
+    val scanReminderThreshold: Float = 0.6f,
+    val receiptReconciliationEnabled: Boolean = true,
     val notifyShoppingDay: Boolean = false,
     val notifyCookReminder: Boolean = false,
     val loaded: Boolean = false,

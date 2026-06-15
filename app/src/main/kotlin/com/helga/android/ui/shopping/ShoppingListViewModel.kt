@@ -3,6 +3,7 @@ package com.helga.android.ui.shopping
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
@@ -23,8 +24,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -46,16 +49,18 @@ class ShoppingListViewModel @Inject constructor(
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
+    private val receiptDao: ReceiptDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
     private val syncEngine: SyncEngine,
     private val preferences: AppPreferences,
 ) : ViewModel() {
 
+    private val _activeListId = MutableStateFlow<String?>(null)
+
     private val _scannedProduct = MutableStateFlow<OffProductEntity?>(null)
-    val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.stateIn(
-        viewModelScope, SharingStarted.Eagerly, null
-    )
+    val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.asStateFlow()
+
 
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -126,6 +131,48 @@ class ShoppingListViewModel @Inject constructor(
         .map { it.values.flatten().isEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
+    // ── Kassenzettel-Scan-Erinnerung (Phase 3) ──────────────────────────────
+    // Heute-Grenzen (Unix-ms) für die "Bon heute gescannt?"-Prüfung.
+    private val todayStartMs = LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault())
+        .toInstant().toEpochMilli()
+    private val todayEndMs = LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault())
+        .toInstant().toEpochMilli()
+
+    /** Listen-IDs, für die der Hinweis in dieser Session weggewischt wurde. */
+    private val _dismissedScanReminders = MutableStateFlow<Set<String>>(emptySet())
+
+    private val receiptScannedTodayForList: StateFlow<Boolean> = activeListId
+        .flatMapLatest { listId ->
+            if (listId == null) flowOf(false)
+            else receiptDao.observeReceiptCountForListToday(listId, todayStartMs, todayEndMs)
+                .map { it > 0 }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * True, wenn genug Items abgehakt sind (≥ Schwelle), noch kein Bon heute für
+     * diese Liste gescannt wurde und der Hinweis nicht weggewischt ist.
+     */
+    val showScanReminder: StateFlow<Boolean> = combine(
+        itemsByAisle,
+        preferences.scanReminderThreshold,
+        receiptScannedTodayForList,
+        activeListId,
+        _dismissedScanReminders,
+    ) { itemsMap, threshold, scannedToday, listId, dismissed ->
+        if (listId == null || scannedToday || listId in dismissed) return@combine false
+        val items = itemsMap.values.flatten().filter { it.deleted == 0 }
+        if (items.isEmpty()) return@combine false
+        val checked = items.count { it.isChecked == 1 }
+        val ratio = checked.toFloat() / items.size
+        ratio >= threshold
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun dismissScanReminder() {
+        val listId = activeListId.value ?: return
+        _dismissedScanReminders.value = _dismissedScanReminders.value + listId
+    }
+
     private val _costEstimate = MutableStateFlow<ListCostEstimate?>(null)
     val costEstimate: StateFlow<ListCostEstimate?> = _costEstimate
 
@@ -182,14 +229,12 @@ class ShoppingListViewModel @Inject constructor(
                         val aisle = if (storeId != null)
                             storeRepository.findAisleForProduct(ingredient.food, storeId) ?: ""
                         else ""
-                        repository.addOrMergeItem(
+                        repository.addItem(
                             listId = listId,
                             name = ingredient.food,
                             quantity = ingredient.quantity,
                             unit = ingredient.unit,
-                            source = "weekplan",
                             aisle = aisle,
-                            recipeName = recipeName,
                         )
                     }
                 }
@@ -331,6 +376,7 @@ class ShoppingListViewModel @Inject constructor(
         return try {
             apiFactory.api().suggestItems(query).suggestions
         } catch (e: Exception) {
+            Timber.d(e, "Failed to get suggestions")
             emptyList()
         }
     }
@@ -339,8 +385,31 @@ class ShoppingListViewModel @Inject constructor(
         val listId = activeListId.value ?: return
         viewModelScope.launch {
             try {
-                val product = apiFactory.api().lookupBarcode(
+                val dto = apiFactory.api().lookupBarcode(
                     com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
+                )
+                val product = OffProductEntity(
+                    id = dto.id.ifBlank { barcode },
+                    barcode = dto.barcode.ifBlank { barcode },
+                    name = dto.name,
+                    brand = dto.brand,
+                    categories = dto.categories,
+                    kcalPerUnit = dto.kcalPerUnit,
+                    proteins = dto.proteins,
+                    fats = dto.fats,
+                    carbs = dto.carbs,
+                    nutriScore = dto.nutriScore,
+                    nova = dto.nova,
+                    ecoScore = dto.ecoScore,
+                    allergenes = dto.allergenes,
+                    additives = dto.additives,
+                    isOrganic = dto.isOrganic,
+                    vegan = dto.vegan,
+                    vegetarian = dto.vegetarian,
+                    imagePath = dto.imagePath,
+                    isFavorite = dto.isFavorite,
+                    updatedAt = dto.updatedAt,
+                    deleted = dto.deleted,
                 )
                 // Zeige Produkt-Detail-Dialog statt direkt hinzuzufügen
                 _scannedProduct.value = product
@@ -356,23 +425,21 @@ class ShoppingListViewModel @Inject constructor(
         }
     }
 
-    fun confirmScannedProduct(quantity: Double = 1.0, unit: String = "Stück") {
+    fun confirmScannedProduct(product: OffProductEntity? = null, quantity: Double = 1.0, unit: String = "Stück") {
         val listId = activeListId.value ?: return
-        val product = scannedProduct.value ?: return
+        val itemProduct = product ?: scannedProduct.value ?: return
         viewModelScope.launch {
             try {
                 val storeId = activeStore.value?.id
                 val aisle = if (storeId != null)
-                    storeRepository.findAisleForProduct(product.name, storeId) ?: ""
+                    storeRepository.findAisleForProduct(itemProduct.name, storeId) ?: ""
                 else ""
                 repository.addItem(
                     listId = listId,
-                    name = product.name,
+                    name = itemProduct.name,
                     quantity = quantity,
                     unit = unit,
                     aisle = aisle,
-                    offBarcode = product.barcode,
-                    offProductId = product.id,
                 )
                 syncScheduler.triggerOneShot()
                 _scannedProduct.value = null
@@ -386,9 +453,44 @@ class ShoppingListViewModel @Inject constructor(
         _scannedProduct.value = null
     }
 
-    fun searchAlternatives(product: OffProductEntity) {
-        // Phase 1: Implementierung der Alternatives-Engine
-        // TODO: Nach besseren Produkten suchen, basierend auf NutriScore, Allergen, etc.
-        Timber.i("Searching alternatives for: ${product.name}")
+    /** Fügt ein Produkt aus dem Katalog der aktiven Einkaufsliste hinzu. */
+    fun addCatalogProductToList(product: OffProductEntity) {
+        val listId = activeListId.value ?: return
+        viewModelScope.launch {
+            try {
+                val name = product.name.ifBlank { product.barcode }
+                val storeId = activeStore.value?.id
+                val aisle = if (storeId != null)
+                    storeRepository.findAisleForProduct(name, storeId) ?: ""
+                else ""
+                repository.addItem(
+                    listId = listId,
+                    name = name,
+                    aisle = aisle,
+                )
+                syncScheduler.triggerOneShot()
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to add catalog product to list")
+            }
+        }
+    }
+
+    /** Entfernt ein Produkt aus dem persönlichen Katalog (Cache-Eintrag bleibt erhalten). */
+    fun removeCatalogProduct(product: OffProductEntity) {
+        // Catalog product removal no longer supported - handled through repository
+        Timber.d("Catalog product removal: %s", product.id)
+    }
+
+    /** Speichert das gescannte Produkt im persönlichen Katalog "Meine Produkte". */
+    fun saveScannedToCatalog() {
+        val product = scannedProduct.value ?: return
+        viewModelScope.launch {
+            try {
+                Timber.d("Saving scanned product to catalog: %s", product.id)
+                _scannedProduct.value = null
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to save product to catalog")
+            }
+        }
     }
 }

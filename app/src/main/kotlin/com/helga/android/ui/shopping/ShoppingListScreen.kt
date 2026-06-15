@@ -31,12 +31,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -103,6 +106,8 @@ import kotlin.math.roundToInt
 fun ShoppingListScreen(
     bottomPadding: Dp = 0.dp,
     onNavigateToWeekplan: () -> Unit = {},
+    onNavigateToReceiptScan: (String?) -> Unit = {},
+    onNavigateToReceipts: () -> Unit = {},
     viewModel: ShoppingListViewModel = hiltViewModel(),
 ) {
     val lists by viewModel.lists.collectAsStateWithLifecycle()
@@ -117,9 +122,11 @@ fun ShoppingListScreen(
     val allStores by viewModel.allStores.collectAsStateWithLifecycle()
     val weekplanHasRecipes by viewModel.weekplanHasRecipes.collectAsStateWithLifecycle()
     val currentListEmpty by viewModel.currentListEmpty.collectAsStateWithLifecycle()
+    val showScanReminder by viewModel.showScanReminder.collectAsStateWithLifecycle()
     val costEstimate by viewModel.costEstimate.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val scannedProduct by viewModel.scannedProduct.collectAsStateWithLifecycle()
+    val catalogProducts by viewModel.catalogProducts.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
     var showListDropdown by remember { mutableStateOf(false) }
@@ -130,6 +137,7 @@ fun ShoppingListScreen(
     var editItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
     var showStoreDropdown by remember { mutableStateOf(false) }
     var showBarcodeScanner by remember { mutableStateOf(false) }
+    var showMyProductsSheet by remember { mutableStateOf(false) }
 
     if (showNewListDialog) {
         NewListDialog(
@@ -177,21 +185,27 @@ fun ShoppingListScreen(
         )
     }
 
+    if (showMyProductsSheet) {
+        MyProductsSheet(
+            products = catalogProducts,
+            onDismiss = { showMyProductsSheet = false },
+            onAddToList = { viewModel.addCatalogProductToList(it) },
+            onRemove = { viewModel.removeCatalogProduct(it) },
+            onScan = {
+                showMyProductsSheet = false
+                showBarcodeScanner = true
+            },
+        )
+    }
+
     // Product Detail Dialog nach dem Scannen
     scannedProduct?.let { product ->
         ScannedProductDialog(
             product = product,
             activeStore = activeStore,
-            onConfirm = {
-                viewModel.confirmScannedProduct()
-            },
-            onSearchAlternatives = {
-                viewModel.searchAlternatives(product)
-                // Phase 1: Alternatives-Dialog würde hier gezeigt
-            },
-            onDismiss = {
-                viewModel.clearScannedProduct()
-            },
+            onAddToList = { viewModel.confirmScannedProduct() },
+            onSaveToCatalog = { viewModel.saveScannedToCatalog() },
+            onDismiss = { viewModel.clearScannedProduct() },
         )
     }
 
@@ -272,6 +286,22 @@ fun ShoppingListScreen(
                                 )
                             }
                             DropdownMenuItem(
+                                text = { Text("Meine Produkte") },
+                                leadingIcon = { Icon(Icons.Filled.Inventory2, null) },
+                                onClick = {
+                                    showOverflow = false
+                                    showMyProductsSheet = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Kassenzettel") },
+                                leadingIcon = { Icon(Icons.Filled.ReceiptLong, null) },
+                                onClick = {
+                                    showOverflow = false
+                                    onNavigateToReceipts()
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.shopping_staples)) },
                                 onClick = {
                                     showOverflow = false
@@ -348,6 +378,37 @@ fun ShoppingListScreen(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f),
                         )
+                    }
+                }
+            }
+            // Kassenzettel-Scan-Erinnerung (Phase 3)
+            if (showScanReminder) {
+                Card(
+                    onClick = { onNavigateToReceiptScan(activeListId) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("🧾", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.widthIn(min = 8.dp))
+                        Text(
+                            text = stringResource(R.string.shopping_scan_reminder_banner),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { viewModel.dismissScanReminder() }) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = stringResource(R.string.action_dismiss),
+                            )
+                        }
                     }
                 }
             }
@@ -1278,12 +1339,167 @@ private fun CostEstimateCard(estimate: com.helga.android.data.model.ListCostEsti
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MyProductsSheet(
+    products: List<OffProductEntity>,
+    onDismiss: () -> Unit,
+    onAddToList: (OffProductEntity) -> Unit,
+    onRemove: (OffProductEntity) -> Unit,
+    onScan: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Meine Produkte",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                TextButton(onClick = onScan) {
+                    Icon(
+                        imageVector = Icons.Filled.QrCodeScanner,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.widthIn(min = 6.dp))
+                    Text("Produkt scannen")
+                }
+            }
+            HorizontalDivider()
+            if (products.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Noch keine Produkte im Katalog. Scanne deine regelmäßig " +
+                            "gekauften Artikel, um sie hier mit Nährwerten zu sammeln.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    items(products, key = { it.id }) { product ->
+                        CatalogProductCard(
+                            product = product,
+                            onAddToList = { onAddToList(product) },
+                            onRemove = { onRemove(product) },
+                        )
+                    }
+                    item { Spacer(Modifier.height(24.dp)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CatalogProductCard(
+    product: OffProductEntity,
+    onAddToList: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (product.nutriScore.isNotBlank()) {
+                NutriScoreBadge(product.nutriScore)
+                Spacer(Modifier.widthIn(min = 12.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = product.name.ifBlank { product.barcode },
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (product.brand.isNotBlank()) {
+                    Text(
+                        text = product.brand,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = buildString {
+                        if (product.kcalPerUnit > 0) append("${product.kcalPerUnit.toInt()} kcal · ")
+                        append("Eiweiß ${product.proteins.toInt()}g · ")
+                        append("Fett ${product.fats.toInt()}g · ")
+                        append("KH ${product.carbs.toInt()}g")
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onAddToList) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Zur Liste hinzufügen",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            IconButton(onClick = onRemove) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Aus Katalog entfernen",
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NutriScoreBadge(score: String) {
+    Surface(
+        modifier = Modifier.size(36.dp),
+        shape = RoundedCornerShape(4.dp),
+        color = when (score.uppercase()) {
+            "A" -> Color(0xFF4CAF50)
+            "B" -> Color(0xFF8BC34A)
+            "C" -> Color(0xFFFFC107)
+            "D" -> Color(0xFFFF9800)
+            "E" -> Color(0xFFF44336)
+            else -> MaterialTheme.colorScheme.surfaceVariant
+        },
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = score.uppercase(),
+                color = Color.White,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            )
+        }
+    }
+}
+
 @Composable
 fun ScannedProductDialog(
     product: OffProductEntity,
     activeStore: StoreEntity?,
-    onConfirm: () -> Unit,
-    onSearchAlternatives: () -> Unit,
+    onAddToList: () -> Unit,
+    onSaveToCatalog: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -1328,24 +1544,35 @@ fun ScannedProductDialog(
                     }
                 }
 
-                // Kcal
-                if (product.kcalPerUnit > 0) {
-                    Row(
+                // Nährwerte (pro 100 g) – übersichtlich in einer Karte gruppiert
+                if (product.kcalPerUnit > 0 || product.proteins > 0 ||
+                    product.fats > 0 || product.carbs > 0
+                ) {
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                            .padding(vertical = 8.dp),
                     ) {
-                        Text(
-                            text = "Kcal/100g:",
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Text(
-                            text = "${product.kcalPerUnit.toInt()} kcal",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "Nährwerte (pro 100 g)",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            if (product.kcalPerUnit > 0) {
+                                NutrientRow(label = "🔥 Energie", value = "${product.kcalPerUnit.toInt()} kcal")
+                            }
+                            if (product.proteins > 0) {
+                                NutrientRow(label = "🥚 Eiweiß", value = "${product.proteins.toInt()} g")
+                            }
+                            if (product.fats > 0) {
+                                NutrientRow(label = "🧈 Fett", value = "${product.fats.toInt()} g")
+                            }
+                            if (product.carbs > 0) {
+                                NutrientRow(label = "🍞 Kohlenhydrate", value = "${product.carbs.toInt()} g")
+                            }
+                        }
                     }
                 }
 
@@ -1427,15 +1654,36 @@ fun ScannedProductDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("✅ Zur Liste hinzufügen")
+            TextButton(onClick = onSaveToCatalog) {
+                Text(if (product.isFavorite == 1) "⭐ Im Katalog" else "⭐ Zu meinen Produkten")
             }
         },
         dismissButton = {
-            TextButton(onClick = onSearchAlternatives) {
-                Text("⚡ Alternativen")
+            TextButton(onClick = onAddToList) {
+                Text("✅ Zur Liste")
             }
         },
         modifier = Modifier.widthIn(max = 400.dp),
     )
+}
+
+@Composable
+private fun NutrientRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }

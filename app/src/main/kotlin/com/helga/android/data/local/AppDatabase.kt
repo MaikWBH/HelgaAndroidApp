@@ -6,9 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.helga.android.data.local.dao.OffProductDao
-import com.helga.android.data.local.dao.ProductPriceDao
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
@@ -23,9 +22,9 @@ import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
-import com.helga.android.data.local.entity.OffProductEntity
-import com.helga.android.data.local.entity.ProductPriceEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
+import com.helga.android.data.local.entity.ReceiptEntity
+import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.RecipeHistoryEntity
@@ -42,11 +41,9 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
-import com.helga.android.data.local.entity.PantryItemEntity
-import com.helga.android.data.local.dao.PantryDao
 
 @Database(
-    version = 21,
+    version = 24,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -70,9 +67,8 @@ import com.helga.android.data.local.dao.PantryDao
         WeekplanTemplateEntryEntity::class,
         RecipeHistoryEntity::class,
         RecipeFeedbackEntity::class,
-        PantryItemEntity::class,
-        OffProductEntity::class,
-        ProductPriceEntity::class,
+        ReceiptEntity::class,
+        ReceiptItemEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -88,9 +84,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun weekplanTemplateDao(): WeekplanTemplateDao
     abstract fun recipeHistoryDao(): RecipeHistoryDao
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
-    abstract fun pantryDao(): PantryDao
-    abstract fun offProductDao(): OffProductDao
-    abstract fun productPriceDao(): ProductPriceDao
+    abstract fun receiptDao(): ReceiptDao
 
     companion object {
         const val NAME = "helga.db"
@@ -537,6 +531,30 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Persönlicher Katalog: Favoriten-Flag auf OFF-Produkten
+                db.execSQL("ALTER TABLE off_products ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+
+                // Globales Zutat→Produkt-Mapping
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS ingredient_product_mappings (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        ingredientName TEXT NOT NULL DEFAULT '',
+                        offProductId TEXT NOT NULL DEFAULT '',
+                        offBarcode TEXT NOT NULL DEFAULT '',
+                        displayName TEXT NOT NULL DEFAULT '',
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_ingredient_product_mappings_ingredientName ON ingredient_product_mappings(ingredientName)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_ingredient_product_mappings_updatedAt ON ingredient_product_mappings(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_ingredient_product_mappings_deleted ON ingredient_product_mappings(deleted)")
+            }
+        }
+
         private val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Create product_prices table
@@ -561,10 +579,85 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_22_23 = object : Migration(22, 23) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS product_purchases (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        shopping_item_id TEXT NOT NULL DEFAULT '',
+                        off_product_id TEXT NOT NULL,
+                        quantity_purchased REAL NOT NULL DEFAULT 1.0,
+                        price_paid REAL NOT NULL DEFAULT 0.0,
+                        store_name TEXT NOT NULL DEFAULT '',
+                        purchase_date INTEGER NOT NULL DEFAULT 0,
+                        updated_at INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_pp_shopping_item ON product_purchases(shopping_item_id)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_pp_off_product ON product_purchases(off_product_id)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_pp_off_product_date ON product_purchases(off_product_id, purchase_date)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_pp_updated ON product_purchases(updated_at)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_pp_deleted ON product_purchases(deleted)")
+            }
+        }
+
+        private val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS receipts (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        storeId TEXT NOT NULL DEFAULT '',
+                        storeName TEXT NOT NULL DEFAULT '',
+                        shoppingListId TEXT NOT NULL DEFAULT '',
+                        purchaseDate INTEGER NOT NULL DEFAULT 0,
+                        totalAmount REAL NOT NULL DEFAULT 0.0,
+                        currency TEXT NOT NULL DEFAULT 'EUR',
+                        imagePath TEXT NOT NULL DEFAULT '',
+                        localImageUri TEXT NOT NULL DEFAULT '',
+                        rawOcrText TEXT NOT NULL DEFAULT '',
+                        status TEXT NOT NULL DEFAULT 'scanned',
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS receipt_items (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        receiptId TEXT NOT NULL,
+                        position INTEGER NOT NULL DEFAULT 0,
+                        rawText TEXT NOT NULL DEFAULT '',
+                        name TEXT NOT NULL DEFAULT '',
+                        quantity REAL NOT NULL DEFAULT 1.0,
+                        unitPrice REAL NOT NULL DEFAULT 0.0,
+                        totalPrice REAL NOT NULL DEFAULT 0.0,
+                        matchedShoppingItemId TEXT NOT NULL DEFAULT '',
+                        matchStatus TEXT NOT NULL DEFAULT '',
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY (receiptId) REFERENCES receipts(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                // Index-Namen müssen Rooms Konvention (index_<tabelle>_<spalte>) folgen,
+                // sonst schlägt die Schema-Validierung beim Öffnen fehl.
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_storeId ON receipts(storeId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_shoppingListId ON receipts(shoppingListId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_purchaseDate ON receipts(purchaseDate)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_updatedAt ON receipts(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_deleted ON receipts(deleted)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_items_receiptId ON receipt_items(receiptId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_items_updatedAt ON receipt_items(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_items_deleted ON receipt_items(deleted)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
                 .build()
     }
 }

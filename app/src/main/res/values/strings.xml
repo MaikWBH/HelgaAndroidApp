@@ -36,6 +36,7 @@
     <string name="recipes_today_cook">Heute kochen</string>
 
     <!-- Rezept-Detail -->
+    <string name="recipe_actions">Aktionen</string>
     <string name="recipe_detail_back">Zurück</string>
     <string name="recipe_detail_ingredients">Zutaten</string>
     <string name="recipe_detail_instructions">Zubereitung</string>
@@ -132,6 +133,7 @@
     <string name="action_retry">Erneut versuchen</string>
     <string name="action_back">Zurück</string>
     <string name="action_settings">Einstellungen</string>
+    <string name="action_dismiss">Schließen</string>
 
     <!-- FAB Speed-Dial -->
     <string name="fab_create">Erstellen</string>
@@ -197,6 +199,7 @@
     <string name="shopping_no_store">Kein Markt</string>
     <string name="shopping_weekplan_export_banner">Wochenplan bereit – Zutaten zur Einkaufsliste hinzufügen</string>
     <string name="shopping_weekplan_create_banner">Noch kein Wochenplan – jetzt erstellen</string>
+    <string name="shopping_scan_reminder_banner">Fertig mit dem Einkauf? Kassenzettel scannen 🧾</string>
 
     <!-- Märkte -->
     <string name="stores_title">Märkte</string>
@@ -219,6 +222,9 @@
     <string name="settings_check_mode">Abhak-Modus</string>
     <string name="settings_check_mode_keep">Behalten</string>
     <string name="settings_check_mode_move">Verschieben</string>
+    <string name="settings_scan_reminder_threshold">Kassenzettel-Hinweis ab %1$d%% abgehakt</string>
+    <string name="settings_receipt_reconcile">KI-Abgleich Bon ↔ Liste</string>
+    <string name="settings_receipt_reconcile_hint">Vergleicht den Bon mit der Einkaufsliste (nutzt Server-KI, nur auf Knopfdruck)</string>
     <string name="shopping_checked_section">Abgehakt</string>
     <string name="shopping_finish">Einkauf beenden</string>
     <string name="settings_shopping_lists_manage">Einkaufslisten verwalten</string>
@@ -313,6 +319,10 @@
     <string name="pantry_unit">Einheit</string>
     <string name="pantry_category">Kategorie</string>
 
+    <!-- Meine Produkte / Zutaten-Mapping -->
+    <string name="my_products_title">Meine Produkte</string>
+    <string name="ingredient_mapping_title">Zutaten zuordnen</string>
+
     <!-- Statistik -->
     <string name="stats_title">Monats-Report</string>
     <string name="stats_cooked">%1$d Rezepte gekocht</string>
@@ -329,4 +339,15 @@
     <string name="barcode_scanner_grant">Kamera erlauben</string>
     <string name="shopping_scanner_button">Barcode scannen</string>
     <string name="pantry_scanner_button">Barcode scannen</string>
+
+    <!-- Phase 2: Kostenübersicht -->
+    <string name="cost_overview_title">Kostenübersicht</string>
+    <string name="cost_overview_total">Gesamtausgaben</string>
+    <string name="cost_overview_receipts">Kassenbons</string>
+    <string name="cost_overview_by_store">Ausgaben pro Markt</string>
+    <string name="cost_overview_by_date">Verlauf nach Datum</string>
+    <string name="cost_overview_period_week">Woche</string>
+    <string name="cost_overview_period_month">Monat</string>
+    <string name="cost_overview_period_all">Alle</string>
+    <string name="cost_overview_empty">Keine Kassenbons vorhanden</string>
 </resources>

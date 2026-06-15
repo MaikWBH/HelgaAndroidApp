@@ -38,6 +38,11 @@ SYNC_TABLES = [
     "weekplan_settings",
     "weekplan_constraints",
     "off_products",
+    "ingredient_product_mappings",
+    "product_prices",
+    "product_purchases",
+    "receipts",
+    "receipt_items",
 ]
 
 SCHEMA = """
@@ -282,9 +287,84 @@ CREATE TABLE IF NOT EXISTS off_products (
     vegan               INTEGER NOT NULL DEFAULT 0,
     vegetarian          INTEGER NOT NULL DEFAULT 0,
     image_path          TEXT NOT NULL DEFAULT '',
+    is_favorite         INTEGER NOT NULL DEFAULT 0,
     updated_at          INTEGER NOT NULL DEFAULT 0,
     deleted             INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS ingredient_product_mappings (
+    id                  TEXT PRIMARY KEY,
+    ingredient_name     TEXT NOT NULL DEFAULT '',
+    off_product_id      TEXT NOT NULL DEFAULT '',
+    off_barcode         TEXT NOT NULL DEFAULT '',
+    display_name        TEXT NOT NULL DEFAULT '',
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS product_prices (
+    id                  TEXT PRIMARY KEY,
+    off_product_id      TEXT NOT NULL DEFAULT '',
+    store_name          TEXT NOT NULL DEFAULT '',
+    currency            TEXT NOT NULL DEFAULT 'EUR',
+    price               REAL NOT NULL DEFAULT 0.0,
+    unit                TEXT NOT NULL DEFAULT '',
+    last_checked_at     INTEGER NOT NULL DEFAULT 0,
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS product_purchases (
+    id                  TEXT PRIMARY KEY,
+    shopping_item_id    TEXT NOT NULL DEFAULT '',
+    off_product_id      TEXT NOT NULL DEFAULT '',
+    quantity_purchased  REAL NOT NULL DEFAULT 1.0,
+    price_paid          REAL NOT NULL DEFAULT 0.0,
+    store_name          TEXT NOT NULL DEFAULT '',
+    purchase_date       INTEGER NOT NULL DEFAULT 0,
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS receipts (
+    id                  TEXT PRIMARY KEY,
+    store_id            TEXT NOT NULL DEFAULT '',
+    store_name          TEXT NOT NULL DEFAULT '',
+    shopping_list_id    TEXT NOT NULL DEFAULT '',
+    purchase_date       INTEGER NOT NULL DEFAULT 0,
+    total_amount        REAL NOT NULL DEFAULT 0.0,
+    currency            TEXT NOT NULL DEFAULT 'EUR',
+    image_path          TEXT NOT NULL DEFAULT '',
+    local_image_uri     TEXT NOT NULL DEFAULT '',
+    raw_ocr_text        TEXT NOT NULL DEFAULT '',
+    status              TEXT NOT NULL DEFAULT 'scanned',
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS receipt_items (
+    id                      TEXT PRIMARY KEY,
+    receipt_id              TEXT NOT NULL,
+    position                INTEGER NOT NULL DEFAULT 0,
+    raw_text                TEXT NOT NULL DEFAULT '',
+    name                    TEXT NOT NULL DEFAULT '',
+    quantity                REAL NOT NULL DEFAULT 1.0,
+    unit_price              REAL NOT NULL DEFAULT 0.0,
+    total_price             REAL NOT NULL DEFAULT 0.0,
+    matched_shopping_item_id TEXT NOT NULL DEFAULT '',
+    match_status            TEXT NOT NULL DEFAULT '',
+    updated_at              INTEGER NOT NULL DEFAULT 0,
+    deleted                 INTEGER NOT NULL DEFAULT 0
+);
+
+-- Globaler Monotonzähler für den Sync-Cursor (entkoppelt Auslieferung von
+-- der Bearbeitungs-Zeit/Client-Uhr). Wird bei jedem Push hochgezählt; jeder
+-- akzeptierte Schreibvorgang erhält die aktuelle Commit-Sequenz als server_seq.
+CREATE TABLE IF NOT EXISTS sync_state (
+    id  INTEGER PRIMARY KEY CHECK (id = 0),
+    seq INTEGER NOT NULL DEFAULT 0
+);
+INSERT OR IGNORE INTO sync_state (id, seq) VALUES (0, 0);
 """
 
 INDICES = [
@@ -306,6 +386,21 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_weekplan_constraints_updated ON weekplan_constraints(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_off_products_barcode ON off_products(barcode)",
     "CREATE INDEX IF NOT EXISTS idx_off_products_updated ON off_products(updated_at)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_ingredient_mappings_name ON ingredient_product_mappings(ingredient_name)",
+    "CREATE INDEX IF NOT EXISTS idx_ingredient_mappings_updated ON ingredient_product_mappings(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_product_prices_off_product ON product_prices(off_product_id)",
+    "CREATE INDEX IF NOT EXISTS idx_product_prices_store ON product_prices(store_name)",
+    "CREATE INDEX IF NOT EXISTS idx_product_prices_updated ON product_prices(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_product_purchases_shopping_item ON product_purchases(shopping_item_id)",
+    "CREATE INDEX IF NOT EXISTS idx_product_purchases_off_product ON product_purchases(off_product_id)",
+    "CREATE INDEX IF NOT EXISTS idx_product_purchases_date ON product_purchases(purchase_date)",
+    "CREATE INDEX IF NOT EXISTS idx_product_purchases_updated ON product_purchases(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_store ON receipts(store_id)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_shopping_list ON receipts(shopping_list_id)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_date ON receipts(purchase_date)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_updated ON receipts(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_receipt_items_receipt ON receipt_items(receipt_id)",
+    "CREATE INDEX IF NOT EXISTS idx_receipt_items_updated ON receipt_items(updated_at)",
 ]
 
 
@@ -325,6 +420,9 @@ ADDED_COLUMNS = {
     ],
     "recipes": [
         ("meal_slot", "TEXT NOT NULL DEFAULT 'other'"),
+    ],
+    "off_products": [
+        ("is_favorite", "INTEGER NOT NULL DEFAULT 0"),
     ],
 }
 
@@ -364,11 +462,45 @@ async def _ensure_columns(db):
                     await db.execute(backfill)
 
 
+async def _ensure_server_seq(db):
+    """Ergänzt non-destruktiv die server_seq-Spalte (Sync-Cursor) auf allen
+    Sync-Tabellen und setzt den globalen Zähler auf das aktuelle Maximum.
+
+    Bestehende Zeilen werden mit ihrem updated_at vorbefüllt, damit historische
+    Daten weiterhin in sinnvoller Reihenfolge geliefert werden. Neue Schreib-
+    vorgänge erhalten ab dann eine monotone Commit-Sequenz (siehe push_records).
+    """
+    for table in SYNC_TABLES:
+        async with db.execute(f"PRAGMA table_info({table})") as cursor:
+            existing = {row[1] for row in await cursor.fetchall()}
+        if "server_seq" not in existing:
+            await db.execute(
+                f"ALTER TABLE {table} ADD COLUMN server_seq INTEGER NOT NULL DEFAULT 0"
+            )
+            await db.execute(f"UPDATE {table} SET server_seq = updated_at")
+        await db.execute(
+            f"CREATE INDEX IF NOT EXISTS idx_{table}_server_seq ON {table}(server_seq)"
+        )
+
+    # Globalen Zähler auf das Maximum aller server_seq heben, damit die nächste
+    # Commit-Sequenz garantiert über allen bestehenden Werten liegt.
+    global_max = 0
+    for table in SYNC_TABLES:
+        async with db.execute(f"SELECT COALESCE(MAX(server_seq), 0) FROM {table}") as cur:
+            value = (await cur.fetchone())[0] or 0
+            if value > global_max:
+                global_max = value
+    await db.execute(
+        "UPDATE sync_state SET seq = MAX(seq, ?) WHERE id = 0", (global_max,)
+    )
+
+
 async def init_db():
     os.makedirs(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".", exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(SCHEMA)
         await _ensure_columns(db)
+        await _ensure_server_seq(db)
         for idx in INDICES:
             await db.execute(idx)
         await db.commit()

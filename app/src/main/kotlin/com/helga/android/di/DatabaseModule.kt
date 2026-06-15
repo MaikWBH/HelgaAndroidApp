@@ -2,16 +2,15 @@ package com.helga.android.di
 
 import android.content.Context
 import com.helga.android.data.local.AppDatabase
+import com.helga.android.data.local.ReceiptScanner
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.dao.StoreDao
 import com.helga.android.data.local.dao.SyncDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
-import com.helga.android.data.local.dao.OffProductDao
-import com.helga.android.data.local.dao.PantryDao
-import com.helga.android.data.local.dao.ProductPriceDao
 import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
@@ -66,11 +65,10 @@ object DatabaseModule {
     fun provideRecipeFeedbackDao(db: AppDatabase): RecipeFeedbackDao = db.recipeFeedbackDao()
 
     @Provides
-    fun providePantryDao(db: AppDatabase): PantryDao = db.pantryDao()
+    fun provideReceiptDao(db: AppDatabase): ReceiptDao = db.receiptDao()
 
     @Provides
-    fun provideOffProductDao(db: AppDatabase): OffProductDao = db.offProductDao()
-
-    @Provides
-    fun provideProductPriceDao(db: AppDatabase): ProductPriceDao = db.productPriceDao()
+    @javax.inject.Singleton
+    fun provideReceiptScanner(@ApplicationContext context: Context): ReceiptScanner =
+        ReceiptScanner(context)
 }

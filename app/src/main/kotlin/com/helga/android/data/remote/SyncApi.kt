@@ -11,6 +11,8 @@ import com.helga.android.data.remote.dto.OffSearchRequest
 import com.helga.android.data.remote.dto.OffSearchResponse
 import com.helga.android.data.remote.dto.OpenPricesLookupRequest
 import com.helga.android.data.remote.dto.OpenPricesLookupResponse
+import com.helga.android.data.remote.dto.ReceiptReconcileRequest
+import com.helga.android.data.remote.dto.ReceiptReconcileResponse
 import com.helga.android.data.remote.dto.SuggestionsResponse
 import com.helga.android.data.remote.dto.SyncPullResponse
 import com.helga.android.data.remote.dto.SyncPushRequest
@@ -60,4 +62,7 @@ interface SyncApi {
 
     @POST("api/open-prices/lookup")
     suspend fun lookupPrices(@Body req: OpenPricesLookupRequest): OpenPricesLookupResponse
+
+    @POST("api/receipts/reconcile")
+    suspend fun reconcileReceipt(@Body req: ReceiptReconcileRequest): ReceiptReconcileResponse
 }

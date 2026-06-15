@@ -1,7 +1,7 @@
 from typing import Any, Dict, List
 import aiosqlite
 
-from .db import get_db, now_ms, SYNC_TABLES
+from .db import get_db, SYNC_TABLES
 from .models import SyncPayload, SyncPullResponse, SyncPushRequest
 
 # Spalten pro Tabelle (muss mit Schema in db.py übereinstimmen)
@@ -73,7 +73,27 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "barcode", "name", "brand", "categories", "kcal_per_unit",
         "proteins", "fats", "carbs", "nutri_score", "nova", "eco_score",
         "allergenes", "additives", "is_organic", "vegan", "vegetarian",
-        "image_path", "updated_at", "deleted",
+        "image_path", "is_favorite", "updated_at", "deleted",
+    ],
+    "ingredient_product_mappings": [
+        "id", "ingredient_name", "off_product_id", "off_barcode", "display_name",
+        "updated_at", "deleted",
+    ],
+    "product_prices": [
+        "id", "off_product_id", "store_name", "currency", "price", "unit",
+        "last_checked_at", "updated_at", "deleted",
+    ],
+    "product_purchases": [
+        "id", "shopping_item_id", "off_product_id", "quantity_purchased", "price_paid",
+        "store_name", "purchase_date", "updated_at", "deleted",
+    ],
+    "receipts": [
+        "id", "store_id", "store_name", "shopping_list_id", "purchase_date", "total_amount",
+        "currency", "image_path", "local_image_uri", "raw_ocr_text", "status", "updated_at", "deleted",
+    ],
+    "receipt_items": [
+        "id", "receipt_id", "position", "raw_text", "name", "quantity", "unit_price", "total_price",
+        "matched_shopping_item_id", "match_status", "updated_at", "deleted",
     ],
 }
 
@@ -102,21 +122,36 @@ PAYLOAD_FIELD = {
     "weekplan_settings": "weekplan_settings",
     "weekplan_constraints": "weekplan_constraints",
     "off_products": "off_products",
+    "ingredient_product_mappings": "ingredient_product_mappings",
+    "product_prices": "product_prices",
+    "product_purchases": "product_purchases",
+    "receipts": "receipts",
+    "receipt_items": "receipt_items",
 }
 
 
-async def pull_since(since_ts: int) -> SyncPullResponse:
-    """Gibt alle Datensätze zurück, die nach since_ts geändert wurden."""
-    server_ts = now_ms()
+async def pull_since(since_seq: int) -> SyncPullResponse:
+    """Gibt alle Datensätze zurück, deren server_seq > since_seq ist.
+
+    Der Cursor (server_ts im Response) ist die globale Commit-Sequenz, NICHT die
+    Wanduhr. Dadurch kann kein Datensatz mehr unsichtbar werden, nur weil sein
+    updated_at (Client-Bearbeitungszeit) unter dem Cursor eines anderen Geräts
+    liegt. Der Zähler wird zuerst gelesen, damit später committete Zeilen
+    garantiert beim nächsten Pull (server_seq > Cursor) ausgeliefert werden.
+    """
     result: Dict[str, List[Dict]] = {t: [] for t in SYNC_TABLES}
 
     async with get_db() as db:
+        async with db.execute("SELECT seq FROM sync_state WHERE id = 0") as cursor:
+            row = await cursor.fetchone()
+            server_seq = row[0] if row else 0
+
         for table in SYNC_TABLES:
             cols = TABLE_COLUMNS[table]
             col_list = ", ".join(cols)
             async with db.execute(
-                f"SELECT {col_list} FROM {table} WHERE updated_at > ?",
-                (since_ts,),
+                f"SELECT {col_list} FROM {table} WHERE server_seq > ?",
+                (since_seq,),
             ) as cursor:
                 rows = await cursor.fetchall()
                 result[table] = [
@@ -124,18 +159,24 @@ async def pull_since(since_ts: int) -> SyncPullResponse:
                     for row in rows
                 ]
 
-    return SyncPullResponse(server_ts=server_ts, **result)
+    return SyncPullResponse(server_ts=server_seq, **result)
 
 
 async def push_records(payload: SyncPushRequest) -> SyncPullResponse:
     """
-    Upsert aller Client-Datensätze nach LWW.
+    Upsert aller Client-Datensätze nach LWW (Vergleich über updated_at).
+    Jeder akzeptierte Schreibvorgang erhält die neue Commit-Sequenz als
+    server_seq, sodass andere Geräte ihn beim nächsten Pull garantiert erhalten.
     Gibt die serverseitig gewonnenen Records zurück (client muss diese übernehmen).
     """
-    server_ts = now_ms()
     server_wins: Dict[str, List[Dict]] = {t: [] for t in SYNC_TABLES}
 
     async with get_db() as db:
+        # Neue Commit-Sequenz reservieren (SQLite serialisiert Writer → eindeutig)
+        await db.execute("UPDATE sync_state SET seq = seq + 1 WHERE id = 0")
+        async with db.execute("SELECT seq FROM sync_state WHERE id = 0") as cursor:
+            commit_seq = (await cursor.fetchone())[0]
+
         for table in SYNC_TABLES:
             field = PAYLOAD_FIELD[table]
             client_records: List[Any] = getattr(payload, field, [])
@@ -143,6 +184,7 @@ async def push_records(payload: SyncPushRequest) -> SyncPullResponse:
                 continue
 
             cols = TABLE_COLUMNS[table]
+            insert_cols = cols + ["server_seq"]
 
             for record in client_records:
                 rec_dict = record.model_dump()
@@ -164,18 +206,18 @@ async def push_records(payload: SyncPushRequest) -> SyncPullResponse:
                         if row:
                             server_wins[table].append(dict(zip(cols, row)))
                 else:
-                    # Client ist neuer oder Record ist neu → upsert
-                    placeholders = ", ".join("?" * len(cols))
+                    # Client ist neuer oder Record ist neu → upsert + server_seq stempeln
+                    placeholders = ", ".join("?" * len(insert_cols))
                     update_set = ", ".join(
-                        f"{c} = excluded.{c}" for c in cols if c != "id"
+                        f"{c} = excluded.{c}" for c in insert_cols if c != "id"
                     )
-                    values = [rec_dict.get(c) for c in cols]
+                    values = [rec_dict.get(c) for c in cols] + [commit_seq]
                     await db.execute(
-                        f"INSERT INTO {table} ({', '.join(cols)}) VALUES ({placeholders}) "
+                        f"INSERT INTO {table} ({', '.join(insert_cols)}) VALUES ({placeholders}) "
                         f"ON CONFLICT(id) DO UPDATE SET {update_set}",
                         values,
                     )
 
         await db.commit()
 
-    return SyncPullResponse(server_ts=server_ts, **server_wins)
+    return SyncPullResponse(server_ts=commit_seq, **server_wins)

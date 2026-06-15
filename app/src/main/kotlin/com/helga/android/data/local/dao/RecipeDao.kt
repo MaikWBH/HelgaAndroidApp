@@ -105,6 +105,9 @@ interface RecipeDao {
     @Query("SELECT * FROM recipe_ingredients WHERE recipeId = :recipeId")
     suspend fun ingredientsByRecipeId(recipeId: String): List<IngredientEntity>
 
+    @Query("SELECT DISTINCT food FROM recipe_ingredients WHERE deleted = 0 AND food != '' ORDER BY food COLLATE NOCASE")
+    fun observeDistinctIngredientNames(): Flow<List<String>>
+
     @Query("SELECT * FROM recipe_instructions WHERE recipeId = :recipeId")
     suspend fun instructionsByRecipeId(recipeId: String): List<InstructionEntity>
 

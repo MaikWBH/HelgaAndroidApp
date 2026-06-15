@@ -80,8 +80,6 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLoggedOut: () -> Unit,
     onStoresClick: () -> Unit = {},
-    onPantryClick: () -> Unit = {},
-    onStatsClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -380,20 +378,6 @@ fun SettingsScreen(
             }
 
             OutlinedButton(
-                onClick = onPantryClick,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.pantry_title))
-            }
-
-            OutlinedButton(
-                onClick = onStatsClick,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.stats_title))
-            }
-
-            OutlinedButton(
                 onClick = { viewModel.exportAllData() },
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -434,6 +418,46 @@ fun SettingsScreen(
                         label = { Text(checkModeLabels[index]) },
                     )
                 }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(
+                    R.string.settings_scan_reminder_threshold,
+                    (state.scanReminderThreshold * 100).toInt(),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            androidx.compose.material3.Slider(
+                value = state.scanReminderThreshold,
+                onValueChange = viewModel::setScanReminderThreshold,
+                valueRange = 0.1f..1f,
+                steps = 8,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_receipt_reconcile),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_receipt_reconcile_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.receiptReconciliationEnabled,
+                    onCheckedChange = { viewModel.setReceiptReconciliationEnabled(it) },
+                )
             }
 
             OutlinedButton(
