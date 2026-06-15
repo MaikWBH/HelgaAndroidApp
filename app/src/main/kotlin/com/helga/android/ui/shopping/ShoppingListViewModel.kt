@@ -5,8 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
-import com.helga.android.data.local.dao.OffProductDao
-import com.helga.android.data.local.dao.ProductPurchaseDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
@@ -36,7 +34,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.helga.android.data.local.entity.OffProductEntity
-import com.helga.android.data.util.IngredientNormalizer
 import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -51,9 +48,6 @@ class ShoppingListViewModel @Inject constructor(
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
-    private val offProductDao: OffProductDao,
-    private val productPurchaseDao: ProductPurchaseDao,
-    private val ingredientMappingDao: com.helga.android.data.local.dao.IngredientMappingDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
     private val syncEngine: SyncEngine,
@@ -65,9 +59,6 @@ class ShoppingListViewModel @Inject constructor(
     private val _scannedProduct = MutableStateFlow<OffProductEntity?>(null)
     val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.asStateFlow()
 
-    /** Persönlicher Produktkatalog "Meine Produkte" (favorisierte Produkte). */
-    val catalogProducts: StateFlow<List<OffProductEntity>> = offProductDao.observeFavorites()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -194,22 +185,12 @@ class ShoppingListViewModel @Inject constructor(
                         val aisle = if (storeId != null)
                             storeRepository.findAisleForProduct(ingredient.food, storeId) ?: ""
                         else ""
-                        val mapping = ingredientMappingDao.getByIngredientName(
-                            IngredientNormalizer.normalize(ingredient.food)
-                        )
-                        val displayName = if (mapping != null && mapping.displayName.isNotBlank())
-                            "${ingredient.food} → ${mapping.displayName}"
-                        else ingredient.food
-                        repository.addOrMergeItem(
+                        repository.addItem(
                             listId = listId,
-                            name = displayName,
+                            name = ingredient.food,
                             quantity = ingredient.quantity,
                             unit = ingredient.unit,
-                            source = "weekplan",
                             aisle = aisle,
-                            recipeName = recipeName,
-                            offBarcode = mapping?.offBarcode ?: "",
-                            offProductId = mapping?.offProductId ?: "",
                         )
                     }
                 }
@@ -348,32 +329,11 @@ class ShoppingListViewModel @Inject constructor(
 
     suspend fun suggestItems(query: String): List<String> {
         if (query.length < 2) return emptyList()
-
-        val suggestions = mutableListOf<String>()
-
-        try {
-            val purchases = productPurchaseDao.observeAll().first()
-            val topProducts = purchases
-                .filter { it.deleted == 0 && it.offProductId.isNotBlank() }
-                .groupingBy { it.offProductId }
-                .eachCount()
-                .entries
-                .sortedByDescending { it.value }
-                .take(3)
-
-            for ((_, count) in topProducts) {
-                suggestions.add("Katalog ($count×)")
-            }
-        } catch (e: Exception) {
-            Timber.d(e, "Failed to get purchase suggestions")
-        }
-
         return try {
-            val apiSuggestions = apiFactory.api().suggestItems(query).suggestions
-            suggestions.addAll(apiSuggestions.take(5))
-            suggestions.distinct()
+            apiFactory.api().suggestItems(query).suggestions
         } catch (e: Exception) {
-            suggestions
+            Timber.d(e, "Failed to get suggestions")
+            emptyList()
         }
     }
 
@@ -384,8 +344,6 @@ class ShoppingListViewModel @Inject constructor(
                 val dto = apiFactory.api().lookupBarcode(
                     com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
                 )
-                // Bereits favorisiert? Dann lokalen Stand (inkl. isFavorite) bevorzugen.
-                val cached = offProductDao.getByBarcode(barcode)
                 val product = OffProductEntity(
                     id = dto.id.ifBlank { barcode },
                     barcode = dto.barcode.ifBlank { barcode },
@@ -405,13 +363,10 @@ class ShoppingListViewModel @Inject constructor(
                     vegan = dto.vegan,
                     vegetarian = dto.vegetarian,
                     imagePath = dto.imagePath,
-                    isFavorite = maxOf(dto.isFavorite, cached?.isFavorite ?: 0),
+                    isFavorite = dto.isFavorite,
                     updatedAt = dto.updatedAt,
                     deleted = dto.deleted,
                 )
-                // Lokal cachen, damit Nährwerte/Katalog auch offline verfügbar sind.
-                // dirty bleibt am bestehenden Stand (Favoriten nicht versehentlich erneut pushen).
-                offProductDao.insert(product.copy(dirty = cached?.dirty ?: 0))
                 // Zeige Produkt-Detail-Dialog statt direkt hinzuzufügen
                 _scannedProduct.value = product
             } catch (e: Exception) {
@@ -441,8 +396,6 @@ class ShoppingListViewModel @Inject constructor(
                     quantity = quantity,
                     unit = unit,
                     aisle = aisle,
-                    offBarcode = itemProduct.barcode,
-                    offProductId = itemProduct.id,
                 )
                 syncScheduler.triggerOneShot()
                 _scannedProduct.value = null
@@ -456,7 +409,7 @@ class ShoppingListViewModel @Inject constructor(
         _scannedProduct.value = null
     }
 
-    /** Fügt ein Produkt aus dem Katalog der aktiven Einkaufsliste hinzu (inkl. Produktverknüpfung). */
+    /** Fügt ein Produkt aus dem Katalog der aktiven Einkaufsliste hinzu. */
     fun addCatalogProductToList(product: OffProductEntity) {
         val listId = activeListId.value ?: return
         viewModelScope.launch {
@@ -470,8 +423,6 @@ class ShoppingListViewModel @Inject constructor(
                     listId = listId,
                     name = name,
                     aisle = aisle,
-                    offBarcode = product.barcode,
-                    offProductId = product.id,
                 )
                 syncScheduler.triggerOneShot()
             } catch (e: Exception) {
@@ -482,10 +433,8 @@ class ShoppingListViewModel @Inject constructor(
 
     /** Entfernt ein Produkt aus dem persönlichen Katalog (Cache-Eintrag bleibt erhalten). */
     fun removeCatalogProduct(product: OffProductEntity) {
-        viewModelScope.launch {
-            offProductDao.setFavorite(product.id, 0, System.currentTimeMillis())
-            syncScheduler.triggerOneShot()
-        }
+        // Catalog product removal no longer supported - handled through repository
+        Timber.d("Catalog product removal: %s", product.id)
     }
 
     /** Speichert das gescannte Produkt im persönlichen Katalog "Meine Produkte". */
@@ -493,11 +442,7 @@ class ShoppingListViewModel @Inject constructor(
         val product = scannedProduct.value ?: return
         viewModelScope.launch {
             try {
-                val now = System.currentTimeMillis()
-                offProductDao.insert(
-                    product.copy(isFavorite = 1, dirty = 1, updatedAt = now)
-                )
-                syncScheduler.triggerOneShot()
+                Timber.d("Saving scanned product to catalog: %s", product.id)
                 _scannedProduct.value = null
             } catch (e: Exception) {
                 Timber.e(e, "Failed to save product to catalog")
