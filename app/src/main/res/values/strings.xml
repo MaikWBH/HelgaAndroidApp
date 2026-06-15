@@ -334,4 +334,15 @@
     <string name="barcode_scanner_grant">Kamera erlauben</string>
     <string name="shopping_scanner_button">Barcode scannen</string>
     <string name="pantry_scanner_button">Barcode scannen</string>
+
+    <!-- Phase 2: Kostenübersicht -->
+    <string name="cost_overview_title">Kostenübersicht</string>
+    <string name="cost_overview_total">Gesamtausgaben</string>
+    <string name="cost_overview_receipts">Kassenbons</string>
+    <string name="cost_overview_by_store">Ausgaben pro Markt</string>
+    <string name="cost_overview_by_date">Verlauf nach Datum</string>
+    <string name="cost_overview_period_week">Woche</string>
+    <string name="cost_overview_period_month">Monat</string>
+    <string name="cost_overview_period_all">Alle</string>
+    <string name="cost_overview_empty">Keine Kassenbons vorhanden</string>
 </resources>

@@ -25,6 +25,7 @@ import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.ui.ai.AiGenerateScreen
 import com.helga.android.ui.ai.AiRemixScreen
 import com.helga.android.ui.onboarding.OnboardingScreen
+import com.helga.android.ui.recipes.CostOverviewScreen
 import com.helga.android.ui.recipes.RecipeCookScreen
 import com.helga.android.ui.recipes.RecipeDetailScreen
 import com.helga.android.ui.recipes.RecipeFormScreen
@@ -42,6 +43,7 @@ internal const val ROUTE_RECIPES = "recipes"
 internal const val ROUTE_SHOPPING = "shopping"
 internal const val ROUTE_STORES = "stores"
 internal const val ROUTE_WEEKPLAN = "weekplan"
+internal const val ROUTE_RECEIPTS_COST_OVERVIEW = "receipts/cost-overview"
 internal const val ROUTE_RECIPE_DETAIL = "recipe/{recipeId}"
 internal const val ROUTE_RECIPE_CREATE = "recipe/new"
 internal const val ROUTE_RECIPE_EDIT = "recipe/{recipeId}/edit"
@@ -188,6 +190,9 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                 }
                 composable(ROUTE_STORES) {
                     StoreListScreen(onBack = { navController.popBackStack() })
+                }
+                composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
+                    CostOverviewScreen()
                 }
                 composable(
                     route = ROUTE_RECIPE_DETAIL,

@@ -49,4 +49,112 @@ interface ReceiptDao {
 
     @Query("UPDATE receipt_items SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearItemDirty(ids: List<String>)
+
+    // ── Cost Overview Queries (Phase 2) ──────────────────────────────────────
+
+    /**
+     * Aggregates total spending by store (storeId).
+     * Returns (storeId, storeName, totalAmount) sorted by amount descending.
+     */
+    @Query("""
+        SELECT
+            storeId,
+            storeName,
+            SUM(totalAmount) as totalAmount,
+            COUNT(*) as receiptCount
+        FROM receipts
+        WHERE deleted = 0
+        GROUP BY storeId, storeName
+        ORDER BY totalAmount DESC
+    """)
+    suspend fun costByStore(): List<CostByStore>
+
+    /**
+     * Aggregates total spending by date (purchaseDate).
+     * purchaseDate is stored as epoch day * 86400 * 1000, convert to date string.
+     */
+    @Query("""
+        SELECT
+            datetime(purchaseDate / 1000, 'unixepoch') as date,
+            SUM(totalAmount) as totalAmount,
+            COUNT(*) as receiptCount
+        FROM receipts
+        WHERE deleted = 0
+        GROUP BY date(purchaseDate / 1000, 'unixepoch')
+        ORDER BY date DESC
+    """)
+    suspend fun costByDate(): List<CostByDate>
+
+    /**
+     * Aggregates total spending by date within a date range.
+     */
+    @Query("""
+        SELECT
+            datetime(purchaseDate / 1000, 'unixepoch') as date,
+            SUM(totalAmount) as totalAmount,
+            COUNT(*) as receiptCount
+        FROM receipts
+        WHERE deleted = 0
+            AND purchaseDate / 1000 >= :startEpochSec
+            AND purchaseDate / 1000 < :endEpochSec
+        GROUP BY date(purchaseDate / 1000, 'unixepoch')
+        ORDER BY date DESC
+    """)
+    suspend fun costByDateRange(startEpochSec: Long, endEpochSec: Long): List<CostByDate>
+
+    /**
+     * Total spending in a given date range.
+     */
+    @Query("""
+        SELECT
+            SUM(totalAmount) as totalAmount,
+            COUNT(*) as receiptCount
+        FROM receipts
+        WHERE deleted = 0
+            AND purchaseDate / 1000 >= :startEpochSec
+            AND purchaseDate / 1000 < :endEpochSec
+    """)
+    suspend fun totalCostForRange(startEpochSec: Long, endEpochSec: Long): CostSummary
+
+    /**
+     * Receipts for a given store, ordered by date descending.
+     */
+    @Query("""
+        SELECT * FROM receipts
+        WHERE storeId = :storeId AND deleted = 0
+        ORDER BY purchaseDate DESC
+    """)
+    fun observeReceiptsForStore(storeId: String): Flow<List<ReceiptEntity>>
+
+    /**
+     * All receipts within a date range, ordered by date descending.
+     */
+    @Query("""
+        SELECT * FROM receipts
+        WHERE deleted = 0
+            AND purchaseDate / 1000 >= :startEpochSec
+            AND purchaseDate / 1000 < :endEpochSec
+        ORDER BY purchaseDate DESC
+    """)
+    suspend fun receiptsInRange(startEpochSec: Long, endEpochSec: Long): List<ReceiptEntity>
 }
+
+// ── Data classes for aggregation queries ──────────────────────────────────────
+
+data class CostByStore(
+    val storeId: String,
+    val storeName: String,
+    val totalAmount: Double,
+    val receiptCount: Int,
+)
+
+data class CostByDate(
+    val date: String, // "2026-06-15 HH:MM:SS"
+    val totalAmount: Double,
+    val receiptCount: Int,
+)
+
+data class CostSummary(
+    val totalAmount: Double,
+    val receiptCount: Int,
+)
