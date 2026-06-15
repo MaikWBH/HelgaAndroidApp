@@ -223,6 +223,8 @@
     <string name="settings_check_mode_keep">Behalten</string>
     <string name="settings_check_mode_move">Verschieben</string>
     <string name="settings_scan_reminder_threshold">Kassenzettel-Hinweis ab %1$d%% abgehakt</string>
+    <string name="settings_receipt_reconcile">KI-Abgleich Bon ↔ Liste</string>
+    <string name="settings_receipt_reconcile_hint">Vergleicht den Bon mit der Einkaufsliste (nutzt Server-KI, nur auf Knopfdruck)</string>
     <string name="shopping_checked_section">Abgehakt</string>
     <string name="shopping_finish">Einkauf beenden</string>
     <string name="settings_shopping_lists_manage">Einkaufslisten verwalten</string>

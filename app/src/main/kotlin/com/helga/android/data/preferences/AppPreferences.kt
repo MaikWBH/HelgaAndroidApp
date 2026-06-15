@@ -61,6 +61,11 @@ class AppPreferences @Inject constructor(
     val scanReminderThreshold: Flow<Float> = ds.data.map { prefs ->
         (prefs[KEY_SCAN_REMINDER_THRESHOLD] ?: 0.6f).coerceIn(0f, 1f)
     }
+
+    /** KI-Abgleich Bon ↔ Einkaufsliste (nutzt Server-KI). Default an, nie automatisch. */
+    val receiptReconciliationEnabled: Flow<Boolean> = ds.data.map {
+        it[KEY_RECEIPT_RECONCILE] ?: true
+    }
     val allergies: Flow<List<String>> = ds.data.map { prefs ->
         val json = prefs[KEY_ALLERGIES].orEmpty()
         if (json.isBlank()) emptyList()
@@ -145,6 +150,10 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_SCAN_REMINDER_THRESHOLD] = threshold.coerceIn(0f, 1f) }
     }
 
+    suspend fun saveReceiptReconciliationEnabled(enabled: Boolean) {
+        ds.edit { it[KEY_RECEIPT_RECONCILE] = enabled }
+    }
+
     suspend fun saveAllergies(allergies: List<String>) {
         ds.edit {
             if (allergies.isEmpty()) it.remove(KEY_ALLERGIES)
@@ -184,5 +193,6 @@ class AppPreferences @Inject constructor(
         val KEY_NOTIFY_COOK = booleanPreferencesKey("notify_cook_reminder")
         val KEY_ALLERGIES = stringPreferencesKey("allergies")
         val KEY_SCAN_REMINDER_THRESHOLD = floatPreferencesKey("scan_reminder_threshold")
+        val KEY_RECEIPT_RECONCILE = booleanPreferencesKey("receipt_reconciliation_enabled")
     }
 }

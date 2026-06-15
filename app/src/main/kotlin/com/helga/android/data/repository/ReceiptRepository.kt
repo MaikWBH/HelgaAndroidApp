@@ -4,16 +4,30 @@ import android.graphics.Bitmap
 import com.helga.android.data.local.ReceiptScanner
 import com.helga.android.data.local.ReceiptScanResult
 import com.helga.android.data.local.dao.ReceiptDao
+import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
+import com.helga.android.data.remote.SyncApiFactory
+import com.helga.android.data.remote.dto.ReceiptReconcileRequest
+import com.helga.android.data.remote.dto.ReconcileReceiptItemDto
+import com.helga.android.data.remote.dto.ReconcileShoppingItemDto
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Ergebnis eines KI-Abgleichs für die Anzeige (Namen statt IDs). */
+data class ReconcileOutcome(
+    val matchedCount: Int,
+    val unexpectedNames: List<String>,
+    val missingNames: List<String>,
+)
 
 @Singleton
 class ReceiptRepository @Inject constructor(
     private val receiptDao: ReceiptDao,
     private val receiptScanner: ReceiptScanner,
+    private val shoppingDao: ShoppingDao,
+    private val apiFactory: SyncApiFactory,
 ) {
 
     fun observeReceipts(): Flow<List<ReceiptEntity>> = receiptDao.observeReceipts()
@@ -100,6 +114,63 @@ class ReceiptRepository @Inject constructor(
                 updatedAt = System.currentTimeMillis(),
                 dirty = 1,
             )
+        )
+    }
+
+    /**
+     * KI-Abgleich (Phase 4): vergleicht die abgehakten Items der verknüpften
+     * Einkaufsliste mit den Bon-Positionen. Schreibt matchStatus/matchedShoppingItemId
+     * zurück und setzt receipt.status = "reconciled".
+     */
+    suspend fun reconcile(receiptId: String): ReconcileOutcome {
+        val receipt = receiptDao.findById(receiptId)
+            ?: return ReconcileOutcome(0, emptyList(), emptyList())
+
+        val checked = if (receipt.shoppingListId.isNotBlank()) {
+            shoppingDao.checkedItems(receipt.shoppingListId)
+        } else emptyList()
+        val items = receiptDao.itemsForReceipt(receiptId)
+
+        val request = ReceiptReconcileRequest(
+            checkedItems = checked.map {
+                ReconcileShoppingItemDto(id = it.id, name = it.name, quantity = it.quantity, unit = it.unit)
+            },
+            receiptItems = items.map {
+                ReconcileReceiptItemDto(id = it.id, name = it.name, rawText = it.rawText, totalPrice = it.totalPrice)
+            },
+        )
+
+        val response = apiFactory.api().reconcileReceipt(request)
+
+        val matchByReceiptId = response.matches.associate { it.receiptItemId to it.shoppingItemId }
+        val unexpectedIds = response.unexpected.toSet()
+        val now = System.currentTimeMillis()
+
+        val updatedItems = items.map { item ->
+            val matchedShoppingId = matchByReceiptId[item.id]
+            val status = when {
+                matchedShoppingId != null -> "matched"
+                item.id in unexpectedIds -> "unexpected"
+                else -> ""
+            }
+            item.copy(
+                matchedShoppingItemId = matchedShoppingId ?: "",
+                matchStatus = status,
+                updatedAt = now,
+                dirty = 1,
+            )
+        }
+        if (updatedItems.isNotEmpty()) receiptDao.upsertItems(updatedItems)
+        receiptDao.upsertReceipt(receipt.copy(status = "reconciled", updatedAt = now, dirty = 1))
+
+        val missingIds = response.missing.toSet()
+        val missingNames = checked.filter { it.id in missingIds }.map { it.name }
+        val unexpectedNames = items.filter { it.id in unexpectedIds }.map { it.name.ifBlank { it.rawText } }
+
+        return ReconcileOutcome(
+            matchedCount = matchByReceiptId.size,
+            unexpectedNames = unexpectedNames,
+            missingNames = missingNames,
         )
     }
 }

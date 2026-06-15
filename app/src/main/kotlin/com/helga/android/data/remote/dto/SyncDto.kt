@@ -315,6 +315,43 @@ data class OffSearchRequest(
     val limit: Int = 5,
 )
 
+// ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
+
+@JsonClass(generateAdapter = true)
+data class ReconcileShoppingItemDto(
+    val id: String,
+    val name: String = "",
+    val quantity: Double = 1.0,
+    val unit: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class ReconcileReceiptItemDto(
+    val id: String,
+    val name: String = "",
+    @Json(name = "raw_text") val rawText: String = "",
+    @Json(name = "total_price") val totalPrice: Double = 0.0,
+)
+
+@JsonClass(generateAdapter = true)
+data class ReceiptReconcileRequest(
+    @Json(name = "checked_items") val checkedItems: List<ReconcileShoppingItemDto> = emptyList(),
+    @Json(name = "receipt_items") val receiptItems: List<ReconcileReceiptItemDto> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class ReconcileMatchDto(
+    @Json(name = "shopping_item_id") val shoppingItemId: String = "",
+    @Json(name = "receipt_item_id") val receiptItemId: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class ReceiptReconcileResponse(
+    val matches: List<ReconcileMatchDto> = emptyList(),
+    val unexpected: List<String> = emptyList(),
+    val missing: List<String> = emptyList(),
+)
+
 @JsonClass(generateAdapter = true)
 data class OffSearchResponse(
     val products: List<OffProductDto> = emptyList(),

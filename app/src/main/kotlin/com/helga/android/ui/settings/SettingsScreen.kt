@@ -437,6 +437,29 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_receipt_reconcile),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_receipt_reconcile_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.receiptReconciliationEnabled,
+                    onCheckedChange = { viewModel.setReceiptReconciliationEnabled(it) },
+                )
+            }
+
             OutlinedButton(
                 onClick = viewModel::saveFeatureSettings,
                 modifier = Modifier.fillMaxWidth(),

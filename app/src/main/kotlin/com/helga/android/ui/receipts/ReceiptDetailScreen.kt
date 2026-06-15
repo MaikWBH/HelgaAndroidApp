@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -52,6 +54,8 @@ fun ReceiptDetailScreen(
     val receipt = viewModel.receipt.collectAsState().value
     val items = viewModel.items.collectAsState().value
     val serverUrl = viewModel.serverUrl.collectAsState().value
+    val reconcileEnabled = viewModel.reconcileEnabled.collectAsState().value
+    val reconcileState = viewModel.reconcileState.collectAsState().value
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
@@ -104,8 +108,17 @@ fun ReceiptDetailScreen(
                 }
                 item {
                     SummarySection(receipt = receipt, itemCount = items.size)
-                    HorizontalDivider()
                 }
+                if (reconcileEnabled && receipt.shoppingListId.isNotBlank()) {
+                    item {
+                        ReconcileSection(
+                            state = reconcileState,
+                            alreadyReconciled = receipt.status == "reconciled",
+                            onReconcile = viewModel::reconcile,
+                        )
+                    }
+                }
+                item { HorizontalDivider() }
                 items(items, key = { it.id }) { item ->
                     ReceiptItemRow(item = item)
                 }
@@ -179,7 +192,75 @@ private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
 }
 
 @Composable
+private fun ReconcileSection(
+    state: ReconcileState,
+    alreadyReconciled: Boolean,
+    onReconcile: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Button(
+            onClick = onReconcile,
+            enabled = state !is ReconcileState.Running,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (state is ReconcileState.Running) {
+                CircularProgressIndicator(
+                    modifier = Modifier.height(18.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+            } else {
+                Text(if (alreadyReconciled) "Erneut mit Einkaufsliste abgleichen" else "Mit Einkaufsliste abgleichen")
+            }
+        }
+        when (state) {
+            is ReconcileState.Error -> Text(
+                state.message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            is ReconcileState.Done -> ReconcileResult(state.outcome)
+            else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun ReconcileResult(outcome: com.helga.android.data.repository.ReconcileOutcome) {
+    Column(modifier = Modifier.padding(top = 12.dp)) {
+        Text(
+            "✓ ${outcome.matchedCount} Treffer",
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (outcome.unexpectedNames.isNotEmpty()) {
+            Text(
+                "Ungeplant gekauft:",
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            outcome.unexpectedNames.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+        }
+        if (outcome.missingNames.isNotEmpty()) {
+            Text(
+                "Nicht gefunden (abgehakt, fehlt auf Bon):",
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            outcome.missingNames.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+        }
+    }
+}
+
+@Composable
 private fun ReceiptItemRow(item: ReceiptItemEntity) {
+    // Farbcodierung nach Abgleich-Status (persistiert in matchStatus)
+    val accent = when (item.matchStatus) {
+        "matched" -> MaterialTheme.colorScheme.primary
+        "unexpected" -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.onSurface
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -190,6 +271,7 @@ private fun ReceiptItemRow(item: ReceiptItemEntity) {
         Text(
             item.name.ifBlank { item.rawText },
             style = MaterialTheme.typography.bodyMedium,
+            color = accent,
             modifier = Modifier.weight(1f),
         )
         Text(

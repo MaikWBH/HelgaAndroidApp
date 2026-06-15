@@ -365,3 +365,35 @@ class OffSearchRequest(BaseModel):
 
 class OffSearchResponse(BaseModel):
     products: List[OffProductRecord] = []
+
+
+# ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
+
+class ReconcileShoppingItem(BaseModel):
+    id: str
+    name: str = ""
+    quantity: float = 1.0
+    unit: str = ""
+
+
+class ReconcileReceiptItem(BaseModel):
+    id: str
+    name: str = ""
+    raw_text: str = ""
+    total_price: float = 0.0
+
+
+class ReceiptReconcileRequest(BaseModel):
+    checked_items: List[ReconcileShoppingItem] = []
+    receipt_items: List[ReconcileReceiptItem] = []
+
+
+class ReconcileMatch(BaseModel):
+    shopping_item_id: str = ""
+    receipt_item_id: str = ""
+
+
+class ReceiptReconcileResponse(BaseModel):
+    matches: List[ReconcileMatch] = []
+    unexpected: List[str] = []
+    missing: List[str] = []

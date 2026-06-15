@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from .db import init_db, get_db, now_ms
 from .models import (
     AiClassifyRequest, AiGenerateRequest, AiRemixRequest, AiUrlImportRequest,
-    OffLookupBarcodeRequest, OffSearchRequest,
+    OffLookupBarcodeRequest, OffSearchRequest, ReceiptReconcileRequest,
     SyncPullResponse, SyncPushRequest, WeekplanGenerateRequest,
 )
 from .sync import pull_since, push_records
@@ -101,6 +101,12 @@ async def ai_import_url(req: AiUrlImportRequest):
 @app.post("/api/weekplan/generate", dependencies=[Depends(require_auth)])
 async def weekplan_generate(req: WeekplanGenerateRequest):
     return await ai_module.generate_weekplan(req)
+
+
+@app.post("/api/receipts/reconcile", dependencies=[Depends(require_auth)])
+async def receipts_reconcile(req: ReceiptReconcileRequest):
+    """Gleicht die abgehakte Einkaufsliste mit den Bon-Positionen per KI ab."""
+    return await ai_module.reconcile_receipt(req.checked_items, req.receipt_items)
 
 
 # ── Bilder ────────────────────────────────────────────────────────────────────
