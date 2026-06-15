@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -55,6 +56,11 @@ class AppPreferences @Inject constructor(
     val checkMode: Flow<String> = ds.data.map { it[KEY_CHECK_MODE] ?: "keep" }
     val notifyShoppingDay: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_SHOPPING] ?: false }
     val notifyCookReminder: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_COOK] ?: false }
+
+    /** Anteil abgehakter Items (0.0–1.0), ab dem der Kassenzettel-Scan-Hinweis erscheint. */
+    val scanReminderThreshold: Flow<Float> = ds.data.map { prefs ->
+        (prefs[KEY_SCAN_REMINDER_THRESHOLD] ?: 0.6f).coerceIn(0f, 1f)
+    }
     val allergies: Flow<List<String>> = ds.data.map { prefs ->
         val json = prefs[KEY_ALLERGIES].orEmpty()
         if (json.isBlank()) emptyList()
@@ -135,6 +141,10 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_NOTIFY_COOK] = enabled }
     }
 
+    suspend fun saveScanReminderThreshold(threshold: Float) {
+        ds.edit { it[KEY_SCAN_REMINDER_THRESHOLD] = threshold.coerceIn(0f, 1f) }
+    }
+
     suspend fun saveAllergies(allergies: List<String>) {
         ds.edit {
             if (allergies.isEmpty()) it.remove(KEY_ALLERGIES)
@@ -173,5 +183,6 @@ class AppPreferences @Inject constructor(
         val KEY_NOTIFY_SHOPPING = booleanPreferencesKey("notify_shopping_day")
         val KEY_NOTIFY_COOK = booleanPreferencesKey("notify_cook_reminder")
         val KEY_ALLERGIES = stringPreferencesKey("allergies")
+        val KEY_SCAN_REMINDER_THRESHOLD = floatPreferencesKey("scan_reminder_threshold")
     }
 }

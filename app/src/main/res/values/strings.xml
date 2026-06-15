@@ -133,6 +133,7 @@
     <string name="action_retry">Erneut versuchen</string>
     <string name="action_back">Zurück</string>
     <string name="action_settings">Einstellungen</string>
+    <string name="action_dismiss">Schließen</string>
 
     <!-- FAB Speed-Dial -->
     <string name="fab_create">Erstellen</string>
@@ -198,6 +199,7 @@
     <string name="shopping_no_store">Kein Markt</string>
     <string name="shopping_weekplan_export_banner">Wochenplan bereit – Zutaten zur Einkaufsliste hinzufügen</string>
     <string name="shopping_weekplan_create_banner">Noch kein Wochenplan – jetzt erstellen</string>
+    <string name="shopping_scan_reminder_banner">Fertig mit dem Einkauf? Kassenzettel scannen 🧾</string>
 
     <!-- Märkte -->
     <string name="stores_title">Märkte</string>
@@ -220,6 +222,7 @@
     <string name="settings_check_mode">Abhak-Modus</string>
     <string name="settings_check_mode_keep">Behalten</string>
     <string name="settings_check_mode_move">Verschieben</string>
+    <string name="settings_scan_reminder_threshold">Kassenzettel-Hinweis ab %1$d%% abgehakt</string>
     <string name="shopping_checked_section">Abgehakt</string>
     <string name="shopping_finish">Einkauf beenden</string>
     <string name="settings_shopping_lists_manage">Einkaufslisten verwalten</string>

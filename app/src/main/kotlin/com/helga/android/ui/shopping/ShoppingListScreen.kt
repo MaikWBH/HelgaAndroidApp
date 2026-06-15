@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -104,6 +105,7 @@ import kotlin.math.roundToInt
 fun ShoppingListScreen(
     bottomPadding: Dp = 0.dp,
     onNavigateToWeekplan: () -> Unit = {},
+    onNavigateToReceiptScan: (String?) -> Unit = {},
     viewModel: ShoppingListViewModel = hiltViewModel(),
 ) {
     val lists by viewModel.lists.collectAsStateWithLifecycle()
@@ -118,6 +120,7 @@ fun ShoppingListScreen(
     val allStores by viewModel.allStores.collectAsStateWithLifecycle()
     val weekplanHasRecipes by viewModel.weekplanHasRecipes.collectAsStateWithLifecycle()
     val currentListEmpty by viewModel.currentListEmpty.collectAsStateWithLifecycle()
+    val showScanReminder by viewModel.showScanReminder.collectAsStateWithLifecycle()
     val costEstimate by viewModel.costEstimate.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val scannedProduct by viewModel.scannedProduct.collectAsStateWithLifecycle()
@@ -365,6 +368,37 @@ fun ShoppingListScreen(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f),
                         )
+                    }
+                }
+            }
+            // Kassenzettel-Scan-Erinnerung (Phase 3)
+            if (showScanReminder) {
+                Card(
+                    onClick = { onNavigateToReceiptScan(activeListId) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("🧾", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.widthIn(min = 8.dp))
+                        Text(
+                            text = stringResource(R.string.shopping_scan_reminder_banner),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { viewModel.dismissScanReminder() }) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = stringResource(R.string.action_dismiss),
+                            )
+                        }
                     }
                 }
             }

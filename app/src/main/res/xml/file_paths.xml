@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Temporäre Kamera-Aufnahmen für Kassenzettel-Scan -->
+    <cache-path name="receipt_captures" path="receipts/" />
+    <files-path name="receipt_images" path="receipts/" />
+</paths>

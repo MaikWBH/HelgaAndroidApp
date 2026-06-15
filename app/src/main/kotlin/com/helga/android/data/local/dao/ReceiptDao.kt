@@ -137,6 +137,19 @@ interface ReceiptDao {
         ORDER BY purchaseDate DESC
     """)
     suspend fun receiptsInRange(startEpochSec: Long, endEpochSec: Long): List<ReceiptEntity>
+
+    // ── Scan Reminder (Phase 3) ──────────────────────────────────────────────
+
+    /**
+     * Observes whether a receipt was already scanned today for the given list.
+     * purchaseDate is stored in Unix-ms. Used by the in-app scan reminder banner.
+     */
+    @Query("""
+        SELECT COUNT(*) FROM receipts
+        WHERE shoppingListId = :listId AND deleted = 0
+            AND purchaseDate >= :startMs AND purchaseDate < :endMs
+    """)
+    fun observeReceiptCountForListToday(listId: String, startMs: Long, endMs: Long): Flow<Int>
 }
 
 // ── Data classes for aggregation queries ──────────────────────────────────────

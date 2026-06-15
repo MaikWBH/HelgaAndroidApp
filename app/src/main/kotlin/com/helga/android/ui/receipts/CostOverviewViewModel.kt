@@ -85,8 +85,9 @@ class CostOverviewViewModel @Inject constructor(
             TimePeriod.ALL -> LocalDate.ofEpochDay(0) // very old date
         }
 
-        val startEpoch = startDate.atStartOfDay().toEpochSecond()
-        val endEpoch = today.plusDays(1).atStartOfDay().toEpochSecond()
+        val zone = java.time.ZoneId.systemDefault()
+        val startEpoch = startDate.atStartOfDay(zone).toEpochSecond()
+        val endEpoch = today.plusDays(1).atStartOfDay(zone).toEpochSecond()
 
         return startEpoch to endEpoch
     }

@@ -15,6 +15,12 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Ergebnis eines lokalen Kassenzettel-Scans (vor dem Speichern). */
+data class ReceiptScanResult(
+    val receipt: ReceiptEntity,
+    val items: List<ReceiptItemEntity>,
+)
+
 @Singleton
 class ReceiptScanner @Inject constructor(
     private val context: Context,
@@ -24,20 +30,19 @@ class ReceiptScanner @Inject constructor(
     /**
      * Scans a receipt image locally using ML Kit Text Recognition.
      * Parses the OCR text to extract store name, items, and total amount.
-     * Returns a ReceiptEntity with parsed data (no server call).
+     * Returns the parsed receipt + items (no DB write, no server call).
      */
-    suspend fun scanReceiptImage(bitmap: Bitmap): ReceiptEntity = withContext(Dispatchers.Default) {
+    suspend fun scanReceiptImage(bitmap: Bitmap): ReceiptScanResult = withContext(Dispatchers.Default) {
         val inputImage = InputImage.fromBitmap(bitmap, 0)
         val result = recognizer.process(inputImage).await()
 
         val fullText = result.text
-        val items = parseReceiptItems(fullText)
         val (storeName, totalAmount) = parseReceiptHeader(fullText)
 
         val now = System.currentTimeMillis()
         val receiptId = UUID.randomUUID().toString()
 
-        return@withContext ReceiptEntity(
+        val receipt = ReceiptEntity(
             id = receiptId,
             storeId = "",
             storeName = storeName,
@@ -53,6 +58,11 @@ class ReceiptScanner @Inject constructor(
             deleted = 0,
             dirty = 1,
         )
+
+        // Items mit der frisch erzeugten receiptId verknüpfen
+        val items = parseReceiptItems(fullText).map { it.copy(receiptId = receiptId) }
+
+        return@withContext ReceiptScanResult(receipt = receipt, items = items)
     }
 
     /**

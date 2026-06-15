@@ -2,11 +2,11 @@ package com.helga.android.data.repository
 
 import android.graphics.Bitmap
 import com.helga.android.data.local.ReceiptScanner
+import com.helga.android.data.local.ReceiptScanResult
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import kotlinx.coroutines.flow.Flow
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,17 +25,15 @@ class ReceiptRepository @Inject constructor(
 
     suspend fun findReceipt(id: String): ReceiptEntity? = receiptDao.findById(id)
 
+    /** Scannt lokal per ML Kit (kein DB-Write, kein Server) — für die Vorschau. */
+    suspend fun scanReceipt(bitmap: Bitmap): ReceiptScanResult =
+        receiptScanner.scanReceiptImage(bitmap)
+
+    /** Scannt und speichert in einem Schritt (Direkt-Speicherung ohne Vorschau). */
     suspend fun scanAndSaveReceipt(bitmap: Bitmap): String {
-        // Scan using ML Kit locally (no server call)
-        val receipt = receiptScanner.scanReceiptImage(bitmap)
-
-        // Save receipt
-        receiptDao.upsertReceipt(receipt)
-
-        // Note: Receipt items will be added once receipt items parsing is finalized
-        // For now, items are optional in this flow
-
-        return receipt.id
+        val result = receiptScanner.scanReceiptImage(bitmap)
+        saveReceipt(result.receipt, result.items)
+        return result.receipt.id
     }
 
     suspend fun saveReceipt(receipt: ReceiptEntity, items: List<ReceiptItemEntity> = emptyList()) {

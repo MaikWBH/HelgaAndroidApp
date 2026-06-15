@@ -3,6 +3,7 @@ package com.helga.android.ui.shopping
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
@@ -48,6 +49,7 @@ class ShoppingListViewModel @Inject constructor(
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
+    private val receiptDao: ReceiptDao,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
     private val syncEngine: SyncEngine,
@@ -128,6 +130,48 @@ class ShoppingListViewModel @Inject constructor(
     val currentListEmpty: StateFlow<Boolean> = itemsByAisle
         .map { it.values.flatten().isEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    // ── Kassenzettel-Scan-Erinnerung (Phase 3) ──────────────────────────────
+    // Heute-Grenzen (Unix-ms) für die "Bon heute gescannt?"-Prüfung.
+    private val todayStartMs = LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault())
+        .toInstant().toEpochMilli()
+    private val todayEndMs = LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault())
+        .toInstant().toEpochMilli()
+
+    /** Listen-IDs, für die der Hinweis in dieser Session weggewischt wurde. */
+    private val _dismissedScanReminders = MutableStateFlow<Set<String>>(emptySet())
+
+    private val receiptScannedTodayForList: StateFlow<Boolean> = activeListId
+        .flatMapLatest { listId ->
+            if (listId == null) flowOf(false)
+            else receiptDao.observeReceiptCountForListToday(listId, todayStartMs, todayEndMs)
+                .map { it > 0 }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * True, wenn genug Items abgehakt sind (≥ Schwelle), noch kein Bon heute für
+     * diese Liste gescannt wurde und der Hinweis nicht weggewischt ist.
+     */
+    val showScanReminder: StateFlow<Boolean> = combine(
+        itemsByAisle,
+        preferences.scanReminderThreshold,
+        receiptScannedTodayForList,
+        activeListId,
+        _dismissedScanReminders,
+    ) { itemsMap, threshold, scannedToday, listId, dismissed ->
+        if (listId == null || scannedToday || listId in dismissed) return@combine false
+        val items = itemsMap.values.flatten().filter { it.deleted == 0 }
+        if (items.isEmpty()) return@combine false
+        val checked = items.count { it.isChecked == 1 }
+        val ratio = checked.toFloat() / items.size
+        ratio >= threshold
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun dismissScanReminder() {
+        val listId = activeListId.value ?: return
+        _dismissedScanReminders.value = _dismissedScanReminders.value + listId
+    }
 
     private val _costEstimate = MutableStateFlow<ListCostEstimate?>(null)
     val costEstimate: StateFlow<ListCostEstimate?> = _costEstimate

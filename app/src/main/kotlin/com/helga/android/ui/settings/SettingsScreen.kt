@@ -420,6 +420,23 @@ fun SettingsScreen(
                 }
             }
 
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(
+                    R.string.settings_scan_reminder_threshold,
+                    (state.scanReminderThreshold * 100).toInt(),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            androidx.compose.material3.Slider(
+                value = state.scanReminderThreshold,
+                onValueChange = viewModel::setScanReminderThreshold,
+                valueRange = 0.1f..1f,
+                steps = 8,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             OutlinedButton(
                 onClick = viewModel::saveFeatureSettings,
                 modifier = Modifier.fillMaxWidth(),
