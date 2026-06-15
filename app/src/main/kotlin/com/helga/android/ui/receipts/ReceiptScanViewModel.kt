@@ -1,6 +1,8 @@
 package com.helga.android.ui.receipts
 
-import android.graphics.Bitmap
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.ReceiptItemEntity
@@ -9,12 +11,16 @@ import com.helga.android.data.repository.ReceiptRepository
 import com.helga.android.data.repository.StoreRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.io.File
 import javax.inject.Inject
 
 sealed interface ReceiptScanUiState {
@@ -34,6 +40,7 @@ sealed interface ReceiptScanUiState {
 
 @HiltViewModel
 class ReceiptScanViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val receiptRepository: ReceiptRepository,
     private val storeRepository: StoreRepository,
     private val syncScheduler: SyncScheduler,
@@ -48,15 +55,22 @@ class ReceiptScanViewModel @Inject constructor(
     // Während des Scans aufbewahrt, um beim Speichern den Original-Receipt zu behalten.
     private var scannedReceiptId: String = ""
     private var shoppingListId: String = ""
+    // Quelle des aufgenommenen Bildes – wird beim Speichern in den App-Speicher kopiert.
+    private var sourceImageUri: Uri? = null
 
     fun setShoppingListId(listId: String?) {
         shoppingListId = listId.orEmpty()
     }
 
-    fun scanBitmap(bitmap: Bitmap) {
+    fun scanImage(uri: Uri) {
         viewModelScope.launch {
             _uiState.value = ReceiptScanUiState.Scanning
             try {
+                sourceImageUri = uri
+                val bitmap = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                } ?: throw IllegalStateException("Bild konnte nicht geladen werden")
+
                 val result = receiptRepository.scanReceipt(bitmap)
                 scannedReceiptId = result.receipt.id
                 _uiState.value = ReceiptScanUiState.Preview(
@@ -71,6 +85,22 @@ class ReceiptScanViewModel @Inject constructor(
                 Timber.e(e, "Receipt scan failed")
                 _uiState.value = ReceiptScanUiState.Error("Kassenzettel konnte nicht gelesen werden")
             }
+        }
+    }
+
+    /** Kopiert das aufgenommene Bild nach filesDir/receipts/{id}.jpg und gibt den Pfad zurück. */
+    private fun persistImage(receiptId: String): String {
+        val uri = sourceImageUri ?: return ""
+        return try {
+            val dir = File(context.filesDir, "receipts").also { it.mkdirs() }
+            val dest = File(dir, "$receiptId.jpg")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                dest.outputStream().use { output -> input.copyTo(output) }
+            }
+            dest.absolutePath
+        } catch (e: Exception) {
+            Timber.w(e, "Receipt image persist failed")
+            ""
         }
     }
 
@@ -98,6 +128,7 @@ class ReceiptScanViewModel @Inject constructor(
         val current = _uiState.value as? ReceiptScanUiState.Preview ?: return
         viewModelScope.launch {
             try {
+                val localImageUri = withContext(Dispatchers.IO) { persistImage(scannedReceiptId) }
                 val receipt = com.helga.android.data.local.entity.ReceiptEntity(
                     id = scannedReceiptId,
                     storeId = current.storeId,
@@ -106,6 +137,7 @@ class ReceiptScanViewModel @Inject constructor(
                     purchaseDate = current.purchaseDate,
                     totalAmount = current.totalAmount,
                     currency = "EUR",
+                    localImageUri = localImageUri,
                     rawOcrText = current.rawOcrText,
                     status = "scanned",
                     updatedAt = System.currentTimeMillis(),

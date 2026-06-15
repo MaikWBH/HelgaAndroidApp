@@ -26,6 +26,8 @@ import com.helga.android.ui.ai.AiGenerateScreen
 import com.helga.android.ui.ai.AiRemixScreen
 import com.helga.android.ui.onboarding.OnboardingScreen
 import com.helga.android.ui.receipts.CostOverviewScreen
+import com.helga.android.ui.receipts.ReceiptDetailScreen
+import com.helga.android.ui.receipts.ReceiptListScreen
 import com.helga.android.ui.receipts.ReceiptScanScreen
 import com.helga.android.ui.recipes.RecipeCookScreen
 import com.helga.android.ui.recipes.RecipeDetailScreen
@@ -44,8 +46,10 @@ internal const val ROUTE_RECIPES = "recipes"
 internal const val ROUTE_SHOPPING = "shopping"
 internal const val ROUTE_STORES = "stores"
 internal const val ROUTE_WEEKPLAN = "weekplan"
+internal const val ROUTE_RECEIPTS = "receipts"
 internal const val ROUTE_RECEIPTS_COST_OVERVIEW = "receipts/cost-overview"
 internal const val ROUTE_RECEIPT_SCAN = "receipts/scan?listId={listId}"
+internal const val ROUTE_RECEIPT_DETAIL = "receipts/detail/{receiptId}"
 internal const val ROUTE_RECIPE_DETAIL = "recipe/{recipeId}"
 internal const val ROUTE_RECIPE_CREATE = "recipe/new"
 internal const val ROUTE_RECIPE_EDIT = "recipe/{recipeId}/edit"
@@ -63,6 +67,7 @@ internal fun recipeRemixRoute(id: String) = "recipe/$id/remix"
 internal fun weekplanPickRecipeRoute(dayId: String) = "weekplan/pick-recipe/$dayId"
 internal fun receiptScanRoute(listId: String? = null) =
     if (listId.isNullOrBlank()) "receipts/scan?listId=" else "receipts/scan?listId=$listId"
+internal fun receiptDetailRoute(receiptId: String) = "receipts/detail/$receiptId"
 
 private val ROOT_ROUTES = setOf(ROUTE_SHOPPING, ROUTE_RECIPES, ROUTE_WEEKPLAN)
 
@@ -137,6 +142,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                         onNavigateToReceiptScan = { listId ->
                             navController.navigate(receiptScanRoute(listId))
                         },
+                        onNavigateToReceipts = { navController.navigate(ROUTE_RECEIPTS) },
                     )
                 }
                 composable(ROUTE_RECIPES) {
@@ -197,6 +203,20 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                 }
                 composable(ROUTE_STORES) {
                     StoreListScreen(onBack = { navController.popBackStack() })
+                }
+                composable(ROUTE_RECEIPTS) {
+                    ReceiptListScreen(
+                        onBack = { navController.popBackStack() },
+                        onReceiptClick = { id -> navController.navigate(receiptDetailRoute(id)) },
+                        onScanClick = { navController.navigate(receiptScanRoute(null)) },
+                        onCostOverviewClick = { navController.navigate(ROUTE_RECEIPTS_COST_OVERVIEW) },
+                    )
+                }
+                composable(
+                    route = ROUTE_RECEIPT_DETAIL,
+                    arguments = listOf(navArgument("receiptId") { type = NavType.StringType }),
+                ) {
+                    ReceiptDetailScreen(onBack = { navController.popBackStack() })
                 }
                 composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
                     CostOverviewScreen()

@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -106,6 +107,7 @@ fun ShoppingListScreen(
     bottomPadding: Dp = 0.dp,
     onNavigateToWeekplan: () -> Unit = {},
     onNavigateToReceiptScan: (String?) -> Unit = {},
+    onNavigateToReceipts: () -> Unit = {},
     viewModel: ShoppingListViewModel = hiltViewModel(),
 ) {
     val lists by viewModel.lists.collectAsStateWithLifecycle()
@@ -289,6 +291,14 @@ fun ShoppingListScreen(
                                 onClick = {
                                     showOverflow = false
                                     showMyProductsSheet = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Kassenzettel") },
+                                leadingIcon = { Icon(Icons.Filled.ReceiptLong, null) },
+                                onClick = {
+                                    showOverflow = false
+                                    onNavigateToReceipts()
                                 },
                             )
                             DropdownMenuItem(

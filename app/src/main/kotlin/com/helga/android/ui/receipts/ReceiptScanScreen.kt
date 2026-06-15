@@ -1,6 +1,5 @@
 package com.helga.android.ui.receipts
 
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,26 +69,16 @@ fun ReceiptScanScreen(
     // Temporäre Datei + FileProvider-URI für die Kamera-Aufnahme
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    fun decodeAndScan(uri: Uri) {
-        try {
-            val bitmap = context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it)
-            }
-            if (bitmap != null) viewModel.scanBitmap(bitmap)
-        } catch (_: Exception) {
-        }
-    }
-
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success) cameraImageUri?.let { decodeAndScan(it) }
+        if (success) cameraImageUri?.let { viewModel.scanImage(it) }
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        uri?.let { decodeAndScan(it) }
+        uri?.let { viewModel.scanImage(it) }
     }
 
     fun launchCamera() {
