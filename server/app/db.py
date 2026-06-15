@@ -297,6 +297,15 @@ CREATE TABLE IF NOT EXISTS ingredient_product_mappings (
     updated_at          INTEGER NOT NULL DEFAULT 0,
     deleted             INTEGER NOT NULL DEFAULT 0
 );
+
+-- Globaler Monotonzähler für den Sync-Cursor (entkoppelt Auslieferung von
+-- der Bearbeitungs-Zeit/Client-Uhr). Wird bei jedem Push hochgezählt; jeder
+-- akzeptierte Schreibvorgang erhält die aktuelle Commit-Sequenz als server_seq.
+CREATE TABLE IF NOT EXISTS sync_state (
+    id  INTEGER PRIMARY KEY CHECK (id = 0),
+    seq INTEGER NOT NULL DEFAULT 0
+);
+INSERT OR IGNORE INTO sync_state (id, seq) VALUES (0, 0);
 """
 
 INDICES = [
@@ -381,11 +390,45 @@ async def _ensure_columns(db):
                     await db.execute(backfill)
 
 
+async def _ensure_server_seq(db):
+    """Ergänzt non-destruktiv die server_seq-Spalte (Sync-Cursor) auf allen
+    Sync-Tabellen und setzt den globalen Zähler auf das aktuelle Maximum.
+
+    Bestehende Zeilen werden mit ihrem updated_at vorbefüllt, damit historische
+    Daten weiterhin in sinnvoller Reihenfolge geliefert werden. Neue Schreib-
+    vorgänge erhalten ab dann eine monotone Commit-Sequenz (siehe push_records).
+    """
+    for table in SYNC_TABLES:
+        async with db.execute(f"PRAGMA table_info({table})") as cursor:
+            existing = {row[1] for row in await cursor.fetchall()}
+        if "server_seq" not in existing:
+            await db.execute(
+                f"ALTER TABLE {table} ADD COLUMN server_seq INTEGER NOT NULL DEFAULT 0"
+            )
+            await db.execute(f"UPDATE {table} SET server_seq = updated_at")
+        await db.execute(
+            f"CREATE INDEX IF NOT EXISTS idx_{table}_server_seq ON {table}(server_seq)"
+        )
+
+    # Globalen Zähler auf das Maximum aller server_seq heben, damit die nächste
+    # Commit-Sequenz garantiert über allen bestehenden Werten liegt.
+    global_max = 0
+    for table in SYNC_TABLES:
+        async with db.execute(f"SELECT COALESCE(MAX(server_seq), 0) FROM {table}") as cur:
+            value = (await cur.fetchone())[0] or 0
+            if value > global_max:
+                global_max = value
+    await db.execute(
+        "UPDATE sync_state SET seq = MAX(seq, ?) WHERE id = 0", (global_max,)
+    )
+
+
 async def init_db():
     os.makedirs(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".", exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(SCHEMA)
         await _ensure_columns(db)
+        await _ensure_server_seq(db)
         for idx in INDICES:
             await db.execute(idx)
         await db.commit()

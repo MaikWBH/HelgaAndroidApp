@@ -93,6 +93,10 @@ class SyncEngine @Inject constructor(
     suspend fun runFullSync(): SyncOutcome {
         val api = apiFactory.api()
 
+        // Einmalige Migration auf server_seq-Cursor: erzwingt bei Bedarf einen
+        // vollen Re-Pull, um zuvor unsichtbare Einträge nachzuziehen.
+        preferences.ensureSyncProtocol()
+
         val lastSyncTs = preferences.currentLastSyncTs()
         val pull = api.pull(since = lastSyncTs)
         applyServerChanges(pull)

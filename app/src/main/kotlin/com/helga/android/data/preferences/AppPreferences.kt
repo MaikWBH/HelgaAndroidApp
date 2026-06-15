@@ -83,6 +83,22 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_LAST_SYNC_TS] = ts }
     }
 
+    /**
+     * Einmalige Migration auf das server_seq-basierte Sync-Protokoll.
+     * Setzt den Cursor einmalig auf 0, damit ein voller Re-Pull alle Einträge
+     * nachzieht, die zuvor durch den wanduhr-basierten Cursor unsichtbar waren.
+     * Idempotent – läuft nur, solange die gespeicherte Protokollversion < 1 ist.
+     */
+    suspend fun ensureSyncProtocol() {
+        ds.edit { prefs ->
+            val version = prefs[KEY_SYNC_PROTOCOL] ?: 0
+            if (version < SYNC_PROTOCOL_VERSION) {
+                prefs[KEY_LAST_SYNC_TS] = 0L
+                prefs[KEY_SYNC_PROTOCOL] = SYNC_PROTOCOL_VERSION
+            }
+        }
+    }
+
     suspend fun saveWeekplanDays(days: Int) {
         val valid = if (days in setOf(7, 10, 14)) days else 7
         ds.edit { it[KEY_WEEKPLAN_DAYS] = valid }
@@ -141,9 +157,13 @@ class AppPreferences @Inject constructor(
     }
 
     private companion object {
+        // Aktuelle Sync-Protokollversion. Erhöhen erzwingt einen einmaligen Voll-Resync.
+        const val SYNC_PROTOCOL_VERSION = 1
+
         val KEY_SERVER_URL = stringPreferencesKey("server_url")
         val KEY_API_KEY = stringPreferencesKey("api_key")
         val KEY_LAST_SYNC_TS = longPreferencesKey("last_sync_ts")
+        val KEY_SYNC_PROTOCOL = intPreferencesKey("sync_protocol_version")
         val KEY_WEEKPLAN_DAYS = intPreferencesKey("weekplan_days")
         val KEY_SHOPPING_DAY = intPreferencesKey("shopping_day")
         val KEY_DEFAULT_SHOPPING_LIST_ID = stringPreferencesKey("default_shopping_list_id")
