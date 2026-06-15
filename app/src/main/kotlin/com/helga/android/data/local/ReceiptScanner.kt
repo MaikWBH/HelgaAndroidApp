@@ -107,17 +107,15 @@ class ReceiptScanner @Inject constructor(
 
     /**
      * Parses a single receipt line to extract item name and price.
-     * Expects format like: "Productname                      9,99"
+     * Erlaubt am Zeilenende eine optionale Steuerklassen-Markierung (z. B. "3,49 A")
+     * oder ein Währungskürzel ("3,49 EUR").
      */
     private fun parseItemLine(line: String): Pair<String, Double>? {
-        // Pattern: text followed by price (e.g., "Milch 3,5%              3,49")
-        // Match: any text ending with digits and comma/dot
-        val pricePattern = Regex("""(\d+)[.,](\d{2})\s*$""")
-        val match = pricePattern.find(line) ?: return null
+        val match = ITEM_PRICE_REGEX.find(line) ?: return null
 
-        val priceStr = match.value.trim().replace(",", ".")
-        val price = priceStr.toDoubleOrNull() ?: return null
-
+        val price = match.groupValues[1].replace(",", ".").toDoubleOrNull() ?: return null
+        // Unplausible Beträge (z. B. Mengen wie "3,5%") aussortieren wäre möglich;
+        // hier reicht: der Name vor dem Preis darf nicht leer sein.
         val name = line.substring(0, match.range.first).trim()
         if (name.isEmpty()) return null
 
@@ -125,67 +123,64 @@ class ReceiptScanner @Inject constructor(
     }
 
     /**
-     * Identifies metadata lines (store info, date, payment method, etc.)
+     * Identifies metadata lines (store info, date, payment method, totals, etc.).
+     * Nutzt Wortgrenzen, damit Produktnamen wie "Rhabarber" (enthält "bar") oder
+     * "Becher" (enthält "ec") nicht fälschlich verworfen werden.
      */
     private fun isMetadataLine(line: String): Boolean {
-        val lowerLine = line.lowercase()
-
-        // Skip common receipt headers/footers
-        val skipPatterns = listOf(
-            "store", "markt", "supermarkt", "shop", "einkauf",
-            "date:", "zeit:", "time:", "uhrzeit:", "kasse:",
-            "kassierer:", "bon nr", "ticket nr", "receipt",
-            "subtotal", "total:", "summe:", "betrag:",
-            "danke", "thank you", "wiedersehen", "goodbye",
-            "zahlart", "payment", "bar", "card", "ec",
-            "mwst", "steuer", "tax", "euro", "eur",
-            "rabatt", "discount", "aktion", "angebot"
-        )
-
-        return skipPatterns.any { lowerLine.contains(it) }
+        val lower = line.lowercase()
+        return METADATA_REGEXES.any { it.containsMatchIn(lower) }
     }
 
     /**
-     * Extracts store name and total amount from receipt text.
+     * Extracts store name and grand total from receipt text.
+     * Der Gesamtbetrag wird aus echten Summen-Zeilen (summe/total) gewählt und
+     * gegen Zwischensummen sowie MwSt-Zeilen abgegrenzt; bei mehreren Kandidaten
+     * gewinnt der größte Betrag (= Gesamtsumme).
      */
     private fun parseReceiptHeader(text: String): Pair<String, Double> {
         val lines = text.split("\n").map { it.trim() }.filter { it.isNotBlank() }
 
         var storeName = ""
-        var totalAmount = 0.0
+        val totalCandidates = mutableListOf<Double>()
 
-        for (i in lines.indices) {
-            val line = lines[i]
-            val lowerLine = line.lowercase()
+        for (line in lines) {
+            val lower = line.lowercase()
 
-            // First non-metadata line is likely store name
-            if (storeName.isEmpty() && !isMetadataLine(line) && line.length in 3..50) {
+            // Erste plausible Kopfzeile (überwiegend Buchstaben) ist meist der Markt.
+            if (storeName.isEmpty() && !isMetadataLine(line) &&
+                line.length in 3..50 && line.any { it.isLetter() } &&
+                line.count { it.isDigit() } <= line.length / 2
+            ) {
                 storeName = line
             }
 
-            // Look for total/sum line
-            if (lowerLine.contains("total") || lowerLine.contains("summe") ||
-                lowerLine.contains("betrag")) {
-                val amount = extractPriceFromLine(line)
-                if (amount > 0) {
-                    totalAmount = amount
-                }
+            val isGrandTotal = (lower.contains("summe") || lower.contains("total")) &&
+                !lower.contains("zwischen") && !lower.contains("mwst") && !lower.contains("steuer")
+            if (isGrandTotal) {
+                lastPriceInLine(line)?.let { totalCandidates.add(it) }
             }
         }
 
-        return storeName to totalAmount
+        return storeName to (totalCandidates.maxOrNull() ?: 0.0)
     }
 
-    /**
-     * Extracts price value from a text line.
-     */
-    private fun extractPriceFromLine(line: String): Double {
-        val pricePattern = Regex("""(\d+)[.,](\d{2})""")
-        val match = pricePattern.find(line)
-        return if (match != null) {
-            match.value.replace(",", ".").toDoubleOrNull() ?: 0.0
-        } else {
-            0.0
-        }
+    /** Letzter preisartiger Token einer Zeile (Gesamtbetrag steht meist am Ende). */
+    private fun lastPriceInLine(line: String): Double? =
+        PRICE_REGEX.findAll(line).lastOrNull()?.value?.replace(",", ".")?.toDoubleOrNull()
+
+    private companion object {
+        val PRICE_REGEX = Regex("""\d+[.,]\d{2}""")
+        val ITEM_PRICE_REGEX = Regex("""(\d+[.,]\d{2})\s*(?:[A-Za-z]|€|EUR)?\s*$""")
+
+        // Schlüsselwörter, die eine Zeile als Metadaten (kein Artikel) kennzeichnen.
+        // Wortgrenzen verhindern Substring-Fehltreffer.
+        val METADATA_REGEXES: List<Regex> = listOf(
+            "summe", "zwischensumme", "total", "betrag", "mwst", "steuer", "ust",
+            "netto", "brutto", "rückgeld", "ruckgeld", "gegeben", "rückgabe",
+            "kartenzahlung", "karte", "bar", "kasse", "kassierer", "bon", "beleg",
+            "rechnung", "datum", "uhrzeit", "zeit", "danke", "wiedersehen",
+            "rabatt", "eur", "euro",
+        ).map { Regex("""\b""" + Regex.escape(it) + """\b""") }
     }
 }

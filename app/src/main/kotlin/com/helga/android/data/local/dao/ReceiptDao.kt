@@ -69,6 +69,22 @@ interface ReceiptDao {
     """)
     suspend fun costByStore(): List<CostByStore>
 
+    /** Wie costByStore, aber auf einen Zeitraum begrenzt (für die Periodenauswahl). */
+    @Query("""
+        SELECT
+            storeId,
+            storeName,
+            SUM(totalAmount) as totalAmount,
+            COUNT(*) as receiptCount
+        FROM receipts
+        WHERE deleted = 0
+            AND purchaseDate / 1000 >= :startEpochSec
+            AND purchaseDate / 1000 < :endEpochSec
+        GROUP BY storeId, storeName
+        ORDER BY totalAmount DESC
+    """)
+    suspend fun costByStoreRange(startEpochSec: Long, endEpochSec: Long): List<CostByStore>
+
     /**
      * Aggregates total spending by date (purchaseDate).
      * purchaseDate is stored as epoch day * 86400 * 1000, convert to date string.
@@ -107,7 +123,7 @@ interface ReceiptDao {
      */
     @Query("""
         SELECT
-            SUM(totalAmount) as totalAmount,
+            COALESCE(SUM(totalAmount), 0.0) as totalAmount,
             COUNT(*) as receiptCount
         FROM receipts
         WHERE deleted = 0

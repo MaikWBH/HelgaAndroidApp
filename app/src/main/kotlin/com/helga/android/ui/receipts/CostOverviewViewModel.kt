@@ -54,18 +54,21 @@ class CostOverviewViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 val (startEpoch, endEpoch) = getEpochRange(_period.value)
+                val isAll = _period.value == TimePeriod.ALL
 
-                // Load cost by store (all time for context)
-                val stores = receiptDao.costByStore()
-                _costByStore.value = stores
+                // Ausgaben pro Markt – konsistent zum gewählten Zeitraum
+                _costByStore.value = if (isAll) {
+                    receiptDao.costByStore()
+                } else {
+                    receiptDao.costByStoreRange(startEpoch, endEpoch)
+                }
 
-                // Load cost by date (within range)
-                val dates = if (_period.value == TimePeriod.ALL) {
+                // Verlauf nach Datum – ebenfalls zeitraum-gefiltert
+                _costByDate.value = if (isAll) {
                     receiptDao.costByDate()
                 } else {
                     receiptDao.costByDateRange(startEpoch, endEpoch)
                 }
-                _costByDate.value = dates
 
                 // Load summary
                 val summary = receiptDao.totalCostForRange(startEpoch, endEpoch)

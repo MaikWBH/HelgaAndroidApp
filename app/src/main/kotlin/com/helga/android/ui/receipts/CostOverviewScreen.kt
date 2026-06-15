@@ -99,7 +99,7 @@ fun CostOverviewScreen(
 
                     costByStore.forEach { store ->
                         CostBarItem(
-                            label = store.storeName.ifEmpty { store.storeId },
+                            label = store.storeName.ifBlank { store.storeId.ifBlank { "Unbekannter Markt" } },
                             amount = viewModel.formatCurrency(store.totalAmount),
                             progress = store.totalAmount / maxCost,
                             receiptCount = store.receiptCount,

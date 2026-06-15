@@ -641,14 +641,16 @@ abstract class AppDatabase : RoomDatabase() {
                         FOREIGN KEY (receiptId) REFERENCES receipts(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_receipts_storeId ON receipts(storeId)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_receipts_shoppingListId ON receipts(shoppingListId)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_receipts_purchaseDate ON receipts(purchaseDate)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_receipts_updatedAt ON receipts(updatedAt)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_receipts_deleted ON receipts(deleted)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_receipt_items_receiptId ON receipt_items(receiptId)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_receipt_items_updatedAt ON receipt_items(updatedAt)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_receipt_items_deleted ON receipt_items(deleted)")
+                // Index-Namen müssen Rooms Konvention (index_<tabelle>_<spalte>) folgen,
+                // sonst schlägt die Schema-Validierung beim Öffnen fehl.
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_storeId ON receipts(storeId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_shoppingListId ON receipts(shoppingListId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_purchaseDate ON receipts(purchaseDate)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_updatedAt ON receipts(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_deleted ON receipts(deleted)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_items_receiptId ON receipt_items(receiptId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_items_updatedAt ON receipt_items(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_items_deleted ON receipt_items(deleted)")
             }
         }
 
