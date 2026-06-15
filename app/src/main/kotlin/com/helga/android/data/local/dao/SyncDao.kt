@@ -71,7 +71,7 @@ interface SyncDao {
     @Query("SELECT id, updatedAt FROM ingredient_product_mappings")
     suspend fun ingredientMappingTimestamps(): List<TimestampRow>
 
-    @Query("SELECT id, updated_at FROM product_purchases WHERE deleted = 0")
+    @Query("SELECT id, updatedAt FROM product_purchases")
     suspend fun productPurchaseTimestamps(): List<TimestampRow>
 }
 

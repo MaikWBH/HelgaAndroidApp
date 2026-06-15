@@ -188,6 +188,24 @@ class IngredientMappingRecord(SyncRecord):
     display_name: str = ""
 
 
+class ProductPriceRecord(SyncRecord):
+    off_product_id: str = ""
+    store_name: str = ""
+    currency: str = "EUR"
+    price: float = 0.0
+    unit: str = ""
+    last_checked_at: int = 0
+
+
+class ProductPurchaseRecord(SyncRecord):
+    shopping_item_id: str = ""
+    off_product_id: str = ""
+    quantity_purchased: float = 1.0
+    price_paid: float = 0.0
+    store_name: str = ""
+    purchase_date: int = 0
+
+
 # ── Sync-Payload ────────────────────────────────────────────────────────────
 
 class SyncPayload(BaseModel):
@@ -215,6 +233,8 @@ class SyncPayload(BaseModel):
     weekplan_constraints: List[WeekplanConstraintsRecord] = []
     off_products: List[OffProductRecord] = []
     ingredient_product_mappings: List[IngredientMappingRecord] = []
+    product_prices: List[ProductPriceRecord] = []
+    product_purchases: List[ProductPurchaseRecord] = []
 
 
 class SyncPullResponse(SyncPayload):

@@ -39,6 +39,8 @@ SYNC_TABLES = [
     "weekplan_constraints",
     "off_products",
     "ingredient_product_mappings",
+    "product_prices",
+    "product_purchases",
 ]
 
 SCHEMA = """
@@ -298,6 +300,30 @@ CREATE TABLE IF NOT EXISTS ingredient_product_mappings (
     deleted             INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS product_prices (
+    id                  TEXT PRIMARY KEY,
+    off_product_id      TEXT NOT NULL DEFAULT '',
+    store_name          TEXT NOT NULL DEFAULT '',
+    currency            TEXT NOT NULL DEFAULT 'EUR',
+    price               REAL NOT NULL DEFAULT 0.0,
+    unit                TEXT NOT NULL DEFAULT '',
+    last_checked_at     INTEGER NOT NULL DEFAULT 0,
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS product_purchases (
+    id                  TEXT PRIMARY KEY,
+    shopping_item_id    TEXT NOT NULL DEFAULT '',
+    off_product_id      TEXT NOT NULL DEFAULT '',
+    quantity_purchased  REAL NOT NULL DEFAULT 1.0,
+    price_paid          REAL NOT NULL DEFAULT 0.0,
+    store_name          TEXT NOT NULL DEFAULT '',
+    purchase_date       INTEGER NOT NULL DEFAULT 0,
+    updated_at          INTEGER NOT NULL DEFAULT 0,
+    deleted             INTEGER NOT NULL DEFAULT 0
+);
+
 -- Globaler Monotonzähler für den Sync-Cursor (entkoppelt Auslieferung von
 -- der Bearbeitungs-Zeit/Client-Uhr). Wird bei jedem Push hochgezählt; jeder
 -- akzeptierte Schreibvorgang erhält die aktuelle Commit-Sequenz als server_seq.
@@ -329,6 +355,13 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_off_products_updated ON off_products(updated_at)",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_ingredient_mappings_name ON ingredient_product_mappings(ingredient_name)",
     "CREATE INDEX IF NOT EXISTS idx_ingredient_mappings_updated ON ingredient_product_mappings(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_product_prices_off_product ON product_prices(off_product_id)",
+    "CREATE INDEX IF NOT EXISTS idx_product_prices_store ON product_prices(store_name)",
+    "CREATE INDEX IF NOT EXISTS idx_product_prices_updated ON product_prices(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_product_purchases_shopping_item ON product_purchases(shopping_item_id)",
+    "CREATE INDEX IF NOT EXISTS idx_product_purchases_off_product ON product_purchases(off_product_id)",
+    "CREATE INDEX IF NOT EXISTS idx_product_purchases_date ON product_purchases(purchase_date)",
+    "CREATE INDEX IF NOT EXISTS idx_product_purchases_updated ON product_purchases(updated_at)",
 ]
 
 
