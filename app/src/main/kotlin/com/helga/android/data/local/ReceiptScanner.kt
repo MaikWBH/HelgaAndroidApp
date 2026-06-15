@@ -38,6 +38,7 @@ class ReceiptScanner @Inject constructor(
 
         val fullText = result.text
         val (storeName, totalAmount) = parseReceiptHeader(fullText)
+        val purchaseDate = parseReceiptDate(fullText) ?: LocalDate.now()
 
         val now = System.currentTimeMillis()
         val receiptId = UUID.randomUUID().toString()
@@ -47,7 +48,7 @@ class ReceiptScanner @Inject constructor(
             storeId = "",
             storeName = storeName,
             shoppingListId = "",
-            purchaseDate = LocalDate.now().toEpochDay() * 86400 * 1000,
+            purchaseDate = purchaseDate.toEpochDay() * 86400 * 1000,
             totalAmount = totalAmount,
             currency = "EUR",
             imagePath = "",
@@ -169,9 +170,54 @@ class ReceiptScanner @Inject constructor(
     private fun lastPriceInLine(line: String): Double? =
         PRICE_REGEX.findAll(line).lastOrNull()?.value?.replace(",", ".")?.toDoubleOrNull()
 
+    /**
+     * Versucht das Kaufdatum aus dem Bon-Text zu lesen. Erkennt deutsche Formate
+     * (TT.MM.JJJJ / TT.MM.JJ, auch mit "-" oder "/" als Trenner) sowie ISO (JJJJ-MM-TT).
+     * Liefert den ersten plausiblen Treffer (nicht in der Zukunft, nicht vor 2000) –
+     * sonst `null`, damit der Aufrufer auf "heute" zurückfallen kann.
+     */
+    private fun parseReceiptDate(text: String): LocalDate? {
+        val today = LocalDate.now()
+
+        // Deutsche Formate zuerst (häufiger auf DE-Bons), dann ISO als Fallback.
+        val dmyCandidates = DATE_DMY_REGEX.findAll(text).mapNotNull { m ->
+            val day = m.groupValues[1].toIntOrNull() ?: return@mapNotNull null
+            val month = m.groupValues[2].toIntOrNull() ?: return@mapNotNull null
+            val year = normalizeYear(m.groupValues[3].toIntOrNull() ?: return@mapNotNull null)
+            safeDate(year, month, day)
+        }
+        val isoCandidates = DATE_ISO_REGEX.findAll(text).mapNotNull { m ->
+            val year = m.groupValues[1].toIntOrNull() ?: return@mapNotNull null
+            val month = m.groupValues[2].toIntOrNull() ?: return@mapNotNull null
+            val day = m.groupValues[3].toIntOrNull() ?: return@mapNotNull null
+            safeDate(year, month, day)
+        }
+
+        return (dmyCandidates + isoCandidates)
+            .firstOrNull { !it.isBefore(MIN_PLAUSIBLE_DATE) && !it.isAfter(today) }
+    }
+
+    /** Zweistellige Jahre als 20xx interpretieren (Kassenbons sind aktuell). */
+    private fun normalizeYear(year: Int): Int = if (year < 100) 2000 + year else year
+
+    /** LocalDate.of mit Bereichsprüfung; ungültige Werte (z. B. 31.02.) ergeben null. */
+    private fun safeDate(year: Int, month: Int, day: Int): LocalDate? =
+        try {
+            LocalDate.of(year, month, day)
+        } catch (e: java.time.DateTimeException) {
+            null
+        }
+
     private companion object {
         val PRICE_REGEX = Regex("""\d+[.,]\d{2}""")
         val ITEM_PRICE_REGEX = Regex("""(\d+[.,]\d{2})\s*(?:[A-Za-z]|€|EUR)?\s*$""")
+
+        // Kaufdatum: TT.MM.JJJJ / TT.MM.JJ (Trenner . - /) und ISO JJJJ-MM-TT.
+        val DATE_DMY_REGEX = Regex("""\b(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})\b""")
+        val DATE_ISO_REGEX = Regex("""\b(\d{4})-(\d{1,2})-(\d{1,2})\b""")
+
+        // Bons älter als 2000 sind unplausibel (meist Fehl-Treffer aus Artikelnummern).
+        val MIN_PLAUSIBLE_DATE: LocalDate = LocalDate.of(2000, 1, 1)
 
         // Schlüsselwörter, die eine Zeile als Metadaten (kein Artikel) kennzeichnen.
         // Wortgrenzen verhindern Substring-Fehltreffer.
