@@ -50,6 +50,12 @@ interface ReceiptDao {
     @Query("UPDATE receipt_items SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearItemDirty(ids: List<String>)
 
+    @Query("SELECT * FROM receipts WHERE localImageUri != '' AND deleted = 0")
+    suspend fun receiptsWithLocalImage(): List<ReceiptEntity>
+
+    @Query("UPDATE receipts SET imagePath = :imagePath, localImageUri = '', updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
+    suspend fun setImagePathAndClearLocal(id: String, imagePath: String, updatedAt: Long)
+
     // ── Cost Overview Queries (Phase 2) ──────────────────────────────────────
 
     /**
