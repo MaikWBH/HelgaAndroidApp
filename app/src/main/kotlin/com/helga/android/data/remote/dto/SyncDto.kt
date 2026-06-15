@@ -264,18 +264,6 @@ data class ReceiptItemDto(
 
 
 @JsonClass(generateAdapter = true)
-data class OpenPricesLookupRequest(
-    @Json(name = "off_product_id") val offProductId: String,
-    val stores: List<String> = emptyList(),
-)
-
-@JsonClass(generateAdapter = true)
-data class OpenPricesLookupResponse(
-    @Json(name = "product_name") val productName: String = "",
-    val prices: List<ProductPriceDto> = emptyList(),
-)
-
-@JsonClass(generateAdapter = true)
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
@@ -306,12 +294,6 @@ data class OffLookupBarcodeResponse(
     val vegetarian: Int = 0,
     @Json(name = "image_path") val imagePath: String = "",
     @Json(name = "is_favorite") val isFavorite: Int = 0,
-)
-
-@JsonClass(generateAdapter = true)
-data class OffSearchRequest(
-    val query: String,
-    val limit: Int = 5,
 )
 
 // ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
@@ -350,12 +332,6 @@ data class ReceiptReconcileResponse(
     val unexpected: List<String> = emptyList(),
     val missing: List<String> = emptyList(),
 )
-
-@JsonClass(generateAdapter = true)
-data class OffSearchResponse(
-    val products: List<OffProductDto> = emptyList(),
-)
-
 
 @JsonClass(generateAdapter = true)
 data class SyncPullResponse(
