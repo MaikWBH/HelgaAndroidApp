@@ -129,8 +129,9 @@ dependencies {
 
     implementation(libs.androidx.profileinstaller)
 
-    // Barcode scanning
+    // ML Kit (Text Recognition & Barcode Scanning)
     implementation(libs.google.mlkit.barcode.scanning)
+    implementation(libs.google.mlkit.text.recognition)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)

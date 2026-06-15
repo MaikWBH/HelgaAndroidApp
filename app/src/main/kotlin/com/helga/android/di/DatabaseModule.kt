@@ -2,6 +2,7 @@ package com.helga.android.di
 
 import android.content.Context
 import com.helga.android.data.local.AppDatabase
+import com.helga.android.data.local.ReceiptScanner
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
@@ -65,4 +66,9 @@ object DatabaseModule {
 
     @Provides
     fun provideReceiptDao(db: AppDatabase): ReceiptDao = db.receiptDao()
+
+    @Provides
+    @javax.inject.Singleton
+    fun provideReceiptScanner(@ApplicationContext context: Context): ReceiptScanner =
+        ReceiptScanner(context)
 }

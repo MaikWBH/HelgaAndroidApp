@@ -368,121 +368,14 @@ async def _call_once(system: str, user: str) -> str:
 
 
 # ── Receipt Analysis (Vision) ───────────────────────────────────────────────
-
-async def _stream_openai_vision(system: str, user: str, image_b64: str, media_type: str) -> AsyncIterator[str]:
-    base = AI_API_BASE or "https://api.openai.com/v1"
-    headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": _model(),
-        "messages": [
-            {"role": "system", "content": system},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": user},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{media_type};base64,{image_b64}"}
-                    }
-                ]
-            }
-        ],
-        "temperature": 0.7,
-        "stream": True,
-    }
-    async with httpx.AsyncClient(timeout=120) as client:
-        async with client.stream("POST", f"{base}/chat/completions",
-                                 headers=headers, json=payload) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                if not line.startswith("data:"):
-                    continue
-                data = line[5:].strip()
-                if data == "[DONE]":
-                    break
-                try:
-                    obj = json.loads(data)
-                    delta = obj["choices"][0]["delta"].get("content", "")
-                    if delta:
-                        yield delta
-                except (json.JSONDecodeError, KeyError, IndexError):
-                    continue
-
-
-async def _stream_anthropic_vision(system: str, user: str, image_b64: str, media_type: str) -> AsyncIterator[str]:
-    headers = {
-        "x-api-key": AI_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": _model(),
-        "system": system,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": user},
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": image_b64
-                        }
-                    }
-                ]
-            }
-        ],
-        "max_tokens": 4096,
-        "temperature": 0.7,
-        "stream": True,
-    }
-    async with httpx.AsyncClient(timeout=120) as client:
-        async with client.stream("POST", f"{ANTHROPIC_BASE}/messages",
-                                 headers=headers, json=payload) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                if not line.startswith("data:"):
-                    continue
-                data = line[5:].strip()
-                try:
-                    obj = json.loads(data)
-                    if obj.get("type") == "content_block_delta":
-                        delta = obj.get("delta", {}).get("text", "")
-                        if delta:
-                            yield delta
-                except (json.JSONDecodeError, KeyError):
-                    continue
-
-
-async def analyze_receipt(image_b64: str, media_type: str = "image/jpeg") -> str:
-    """Analyzes a receipt image and returns JSON with extracted data.
-
-    Returns JSON: {store_name, purchase_date, currency, total_amount, items:[...]}
-    """
-    system = """Du bist ein OCR-Spezialist für Kassenbons. Lies das Bild aus und extrahiere strukturierte Daten.
-Antworte NUR mit validem JSON — kein Markdown, keine Erklärungen.
-
-JSON-Format (zwingend):
-{
-  "store_name": "Name des Marktes",
-  "purchase_date": "YYYY-MM-DD",
-  "currency": "EUR",
-  "total_amount": 0.0,
-  "items": [
-    {"raw_text": "Originalzeile", "name": "Produktname", "quantity": 1.0, "unit_price": 0.0, "total_price": 0.0}
-  ]
-}"""
-
-    user = "Lese diesen Kassenbon aus und gib die Daten als JSON zurück."
-
-    chunks = []
-    if AI_PROVIDER == "anthropic":
-        async for chunk in _stream_anthropic_vision(system, user, image_b64, media_type):
-            chunks.append(chunk)
-    else:
-        async for chunk in _stream_openai_vision(system, user, image_b64, media_type):
-            chunks.append(chunk)
-
-    return "".join(chunks)
+# PHASE 4 (KI-Abgleich): Vision AI functions reserved for receipt reconciliation.
+# Phase 1 uses Google ML Kit on-device OCR (no server call).
+#
+# Vision functions below are preserved for future use in reconcile_receipt():
+#
+# async def _stream_openai_vision(system: str, user: str, image_b64: str, media_type: str) -> AsyncIterator[str]:
+#     ...payload with vision_url content...
+#
+# async def analyze_receipt(image_b64: str, media_type: str = "image/jpeg") -> str:
+#     """PHASE 4: Analyzes receipt + shopping list and returns reconciliation data."""
+#     ...calls KI to match items...
