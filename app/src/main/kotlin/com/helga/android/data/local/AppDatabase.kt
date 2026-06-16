@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
@@ -22,6 +23,7 @@ import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
+import com.helga.android.data.local.entity.MonthlyBudgetEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
@@ -43,7 +45,7 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 
 @Database(
-    version = 24,
+    version = 25,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -69,6 +71,7 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
         RecipeFeedbackEntity::class,
         ReceiptEntity::class,
         ReceiptItemEntity::class,
+        MonthlyBudgetEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -85,6 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recipeHistoryDao(): RecipeHistoryDao
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
     abstract fun receiptDao(): ReceiptDao
+    abstract fun monthlyBudgetDao(): MonthlyBudgetDao
 
     companion object {
         const val NAME = "helga.db"
@@ -654,10 +658,34 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_24_25 = object : Migration(24, 25) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS monthly_budgets (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        amount REAL NOT NULL DEFAULT 0.0,
+                        warnThreshold REAL NOT NULL DEFAULT 0.8,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_monthly_budgets_updatedAt ON monthly_budgets(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_monthly_budgets_deleted ON monthly_budgets(deleted)")
+                // Lokaler Default mit dirty = 0 → wird erst beim ersten Bearbeiten gepusht.
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO monthly_budgets (id, amount, warnThreshold, updatedAt, deleted, dirty)
+                    VALUES ('global', 0.0, 0.8, 0, 0, 0)
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25)
                 .build()
     }
 }

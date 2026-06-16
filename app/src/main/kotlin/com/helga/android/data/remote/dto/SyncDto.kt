@@ -264,6 +264,15 @@ data class ReceiptItemDto(
 
 
 @JsonClass(generateAdapter = true)
+data class MonthlyBudgetDto(
+    val id: String = "global",
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    val amount: Double = 0.0,
+    @Json(name = "warn_threshold") val warnThreshold: Double = 0.8,
+)
+
+@JsonClass(generateAdapter = true)
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
@@ -357,6 +366,7 @@ data class SyncPullResponse(
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
+    @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -383,6 +393,7 @@ data class SyncPushRequest(
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
+    @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

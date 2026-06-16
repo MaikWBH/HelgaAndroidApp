@@ -43,6 +43,7 @@ SYNC_TABLES = [
     "product_purchases",
     "receipts",
     "receipt_items",
+    "monthly_budgets",
 ]
 
 SCHEMA = """
@@ -357,6 +358,16 @@ CREATE TABLE IF NOT EXISTS receipt_items (
     deleted                 INTEGER NOT NULL DEFAULT 0
 );
 
+-- Gemeinsames Monatsbudget der Familie (Singleton id = 'global'). Wird wie
+-- weekplan_constraints zentral gehalten, damit beide Handys denselben Wert sehen.
+CREATE TABLE IF NOT EXISTS monthly_budgets (
+    id              TEXT PRIMARY KEY,
+    amount          REAL NOT NULL DEFAULT 0.0,
+    warn_threshold  REAL NOT NULL DEFAULT 0.8,
+    updated_at      INTEGER NOT NULL DEFAULT 0,
+    deleted         INTEGER NOT NULL DEFAULT 0
+);
+
 -- Globaler Monotonzähler für den Sync-Cursor (entkoppelt Auslieferung von
 -- der Bearbeitungs-Zeit/Client-Uhr). Wird bei jedem Push hochgezählt; jeder
 -- akzeptierte Schreibvorgang erhält die aktuelle Commit-Sequenz als server_seq.
@@ -401,6 +412,7 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_receipts_updated ON receipts(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_receipt ON receipt_items(receipt_id)",
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_updated ON receipt_items(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_monthly_budgets_updated ON monthly_budgets(updated_at)",
 ]
 
 

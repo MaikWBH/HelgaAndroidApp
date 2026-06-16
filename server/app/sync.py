@@ -97,6 +97,9 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "receipt_id", "position", "raw_text", "name", "quantity", "unit_price", "total_price",
         "matched_shopping_item_id", "match_status", "updated_at", "deleted",
     ],
+    "monthly_budgets": [
+        "id", "amount", "warn_threshold", "updated_at", "deleted",
+    ],
 }
 
 # Mapping Tabellenname → Feldname im SyncPayload
@@ -129,6 +132,7 @@ PAYLOAD_FIELD = {
     "product_purchases": "product_purchases",
     "receipts": "receipts",
     "receipt_items": "receipt_items",
+    "monthly_budgets": "monthly_budgets",
 }
 
 

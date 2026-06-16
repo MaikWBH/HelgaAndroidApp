@@ -160,6 +160,11 @@ class WeekplanConstraintsRecord(SyncRecord):
     max_repeat_days: int = 14
 
 
+class MonthlyBudgetRecord(SyncRecord):
+    amount: float = 0.0
+    warn_threshold: float = 0.8
+
+
 class OffProductRecord(SyncRecord):
     barcode: str = ""
     name: str = ""
@@ -262,6 +267,7 @@ class SyncPayload(BaseModel):
     product_purchases: List[ProductPurchaseRecord] = []
     receipts: List[ReceiptRecord] = []
     receipt_items: List[ReceiptItemRecord] = []
+    monthly_budgets: List[MonthlyBudgetRecord] = []
 
 
 class SyncPullResponse(SyncPayload):
