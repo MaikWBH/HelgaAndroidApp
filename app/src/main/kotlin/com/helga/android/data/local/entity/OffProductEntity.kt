@@ -1,0 +1,26 @@
+package com.helga.android.data.local.entity
+
+data class OffProductEntity(
+    val id: String,
+    val barcode: String = "",
+    val name: String = "",
+    val brand: String = "",
+    val categories: String = "[]",
+    val kcalPerUnit: Double = 0.0,
+    val proteins: Double = 0.0,
+    val fats: Double = 0.0,
+    val carbs: Double = 0.0,
+    val nutriScore: String = "",
+    val nova: Int = 0,
+    val ecoScore: String = "",
+    val allergenes: String = "[]",
+    val additives: String = "[]",
+    val isOrganic: Int = 0,
+    val vegan: Int = 0,
+    val vegetarian: Int = 0,
+    val imagePath: String = "",
+    val isFavorite: Int = 0,
+    val updatedAt: Long = 0L,
+    val deleted: Int = 0,
+    val dirty: Int = 0,
+)
