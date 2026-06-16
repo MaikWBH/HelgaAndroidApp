@@ -172,9 +172,26 @@ interface ReceiptDao {
             AND purchaseDate >= :startMs AND purchaseDate < :endMs
     """)
     fun observeReceiptCountForListToday(listId: String, startMs: Long, endMs: Long): Flow<Int>
+
+    // ── Price History (Phase 5) ──────────────────────────────────────────────
+
+    /**
+     * Returns all non-deleted receipt items joined with their receipt, ordered by
+     * purchase date descending. Used to build the product price history offline.
+     */
+    @Query("""
+        SELECT ri.name AS name, r.storeId AS storeId, r.storeName AS storeName,
+               r.purchaseDate AS purchaseDate, ri.unitPrice AS unitPrice,
+               ri.totalPrice AS totalPrice, ri.quantity AS quantity
+        FROM receipt_items ri
+        JOIN receipts r ON ri.receiptId = r.id
+        WHERE ri.deleted = 0 AND r.deleted = 0 AND ri.name != ''
+        ORDER BY r.purchaseDate DESC
+    """)
+    suspend fun allPricePoints(): List<PricePoint>
 }
 
-// ── Data classes for aggregation queries ──────────────────────────────────────
+// ── Data classes for DAO queries ──────────────────────────────────────────────
 
 data class CostByStore(
     val storeId: String,
@@ -192,4 +209,14 @@ data class CostByDate(
 data class CostSummary(
     val totalAmount: Double,
     val receiptCount: Int,
+)
+
+data class PricePoint(
+    val name: String,
+    val storeId: String,
+    val storeName: String,
+    val purchaseDate: Long,
+    val unitPrice: Double,
+    val totalPrice: Double,
+    val quantity: Double,
 )

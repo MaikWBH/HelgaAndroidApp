@@ -340,6 +340,16 @@
     <string name="shopping_scanner_button">Barcode scannen</string>
     <string name="pantry_scanner_button">Barcode scannen</string>
 
+    <!-- Phase 5: Preisverlauf -->
+    <string name="product_prices_title">Preise</string>
+    <string name="product_prices_search">Produkt suchen…</string>
+    <string name="product_prices_empty">Noch keine Produkte gescannt</string>
+    <string name="product_prices_no_results">Keine Produkte gefunden</string>
+    <string name="product_prices_cheapest_store">Günstigster Markt</string>
+    <string name="product_prices_sparkline_title">Preisverlauf</string>
+    <string name="product_prices_store_comparison">Marktvergleich</string>
+    <string name="product_prices_history_title">Kaufverlauf</string>
+
     <!-- Phase 2: Kostenübersicht -->
     <string name="cost_overview_title">Kostenübersicht</string>
     <string name="cost_overview_total">Gesamtausgaben</string>

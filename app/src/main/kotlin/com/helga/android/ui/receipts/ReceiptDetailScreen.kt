@@ -1,6 +1,7 @@
 package com.helga.android.ui.receipts
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,11 +45,13 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
+import com.helga.android.data.util.ReceiptItemNormalizer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiptDetailScreen(
     onBack: () -> Unit,
+    onProductClick: (String) -> Unit = {},
     viewModel: ReceiptDetailViewModel = hiltViewModel(),
 ) {
     val receipt = viewModel.receipt.collectAsState().value
@@ -120,7 +123,7 @@ fun ReceiptDetailScreen(
                 }
                 item { HorizontalDivider() }
                 items(items, key = { it.id }) { item ->
-                    ReceiptItemRow(item = item)
+                    ReceiptItemRow(item = item, onProductClick = onProductClick)
                 }
             }
         }
@@ -254,8 +257,10 @@ private fun ReconcileResult(outcome: com.helga.android.data.repository.Reconcile
 }
 
 @Composable
-private fun ReceiptItemRow(item: ReceiptItemEntity) {
-    // Farbcodierung nach Abgleich-Status (persistiert in matchStatus)
+private fun ReceiptItemRow(
+    item: ReceiptItemEntity,
+    onProductClick: (String) -> Unit = {},
+) {
     val accent = when (item.matchStatus) {
         "matched" -> MaterialTheme.colorScheme.primary
         "unexpected" -> MaterialTheme.colorScheme.tertiary
@@ -264,6 +269,10 @@ private fun ReceiptItemRow(item: ReceiptItemEntity) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable {
+                val key = ReceiptItemNormalizer.normalize(item.name.ifBlank { item.rawText })
+                if (key.isNotBlank()) onProductClick(key)
+            }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

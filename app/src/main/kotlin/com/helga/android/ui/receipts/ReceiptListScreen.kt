@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -47,6 +48,7 @@ fun ReceiptListScreen(
     onReceiptClick: (String) -> Unit,
     onScanClick: () -> Unit,
     onCostOverviewClick: () -> Unit,
+    onProductsClick: () -> Unit,
     viewModel: ReceiptListViewModel = hiltViewModel(),
 ) {
     val receipts = viewModel.receipts.collectAsState().value
@@ -61,6 +63,9 @@ fun ReceiptListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onProductsClick) {
+                        Icon(Icons.Filled.TrendingUp, contentDescription = "Preise")
+                    }
                     IconButton(onClick = onCostOverviewClick) {
                         Icon(Icons.Filled.BarChart, contentDescription = "Kostenübersicht")
                     }

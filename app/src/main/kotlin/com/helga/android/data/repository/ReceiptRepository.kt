@@ -7,6 +7,7 @@ import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
+import com.helga.android.data.util.ReceiptItemNormalizer
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.ReceiptReconcileRequest
 import com.helga.android.data.remote.dto.ReconcileReceiptItemDto
@@ -14,6 +15,40 @@ import com.helga.android.data.remote.dto.ReconcileShoppingItemDto
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+
+// ── Price history domain models ───────────────────────────────────────────────
+
+data class ProductSummary(
+    val normalizedKey: String,
+    val displayName: String,
+    val buyCount: Int,
+    val lastPrice: Double,
+    val cheapestPrice: Double,
+    val storeCount: Int,
+)
+
+data class StoreBestPrice(
+    val storeId: String,
+    val storeName: String,
+    val bestPrice: Double,
+    val isCheapest: Boolean,
+)
+
+data class ProductPricePoint(
+    val purchaseDate: Long,
+    val storeId: String,
+    val storeName: String,
+    val unitPrice: Double,
+)
+
+data class ProductPriceHistory(
+    val displayName: String,
+    val points: List<ProductPricePoint>,
+    val storeComparison: List<StoreBestPrice>,
+    val avgPrice: Double,
+    val minPrice: Double,
+    val maxPrice: Double,
+)
 
 /** Ergebnis eines KI-Abgleichs für die Anzeige (Namen statt IDs). */
 data class ReconcileOutcome(
@@ -114,6 +149,71 @@ class ReceiptRepository @Inject constructor(
                 updatedAt = System.currentTimeMillis(),
                 dirty = 1,
             )
+        )
+    }
+
+    // ── Price History ─────────────────────────────────────────────────────────
+
+    /**
+     * Groups all purchased items by normalized name and returns one summary per product.
+     * Grouping uses Kotlin lowercase() so German umlauts are handled correctly.
+     */
+    suspend fun productSummaries(): List<ProductSummary> {
+        val points = receiptDao.allPricePoints()
+        if (points.isEmpty()) return emptyList()
+
+        val grouped = points.groupBy { ReceiptItemNormalizer.normalize(it.name) }
+
+        return grouped.map { (key, group) ->
+            val displayName = group.groupBy { it.name }.maxBy { it.value.size }.key
+            ProductSummary(
+                normalizedKey = key,
+                displayName = displayName,
+                buyCount = group.size,
+                lastPrice = group.first().unitPrice, // already sorted by purchaseDate DESC
+                cheapestPrice = group.minOf { it.unitPrice },
+                storeCount = group.map { it.storeId.ifBlank { it.storeName } }.distinct().size,
+            )
+        }.sortedBy { it.displayName }
+    }
+
+    /**
+     * Returns the full price history for a single product identified by its normalized key.
+     */
+    suspend fun productPriceHistory(normalizedKey: String): ProductPriceHistory? {
+        val points = receiptDao.allPricePoints()
+        val group = points.filter { ReceiptItemNormalizer.normalize(it.name) == normalizedKey }
+        if (group.isEmpty()) return null
+
+        val displayName = group.groupBy { it.name }.maxBy { it.value.size }.key
+
+        // Best (minimum) price per store
+        val byStore = group.groupBy { it.storeId.ifBlank { it.storeName } }
+        val storePrices = byStore.map { (_, entries) ->
+            val sample = entries.first()
+            val best = entries.minOf { it.unitPrice }
+            Triple(sample.storeId, sample.storeName, best)
+        }
+        val globalMin = storePrices.minOf { it.third }
+
+        val storeComparison = storePrices.map { (storeId, storeName, best) ->
+            StoreBestPrice(
+                storeId = storeId,
+                storeName = storeName.ifBlank { storeId.ifBlank { "Unbekannter Markt" } },
+                bestPrice = best,
+                isCheapest = best == globalMin,
+            )
+        }.sortedBy { it.bestPrice }
+
+        val priceList = group.map { it.unitPrice }
+
+        return ProductPriceHistory(
+            displayName = displayName,
+            points = group.map { ProductPricePoint(it.purchaseDate, it.storeId, it.storeName, it.unitPrice) },
+            storeComparison = storeComparison,
+            avgPrice = priceList.average(),
+            minPrice = priceList.min(),
+            maxPrice = priceList.max(),
         )
     }
 
