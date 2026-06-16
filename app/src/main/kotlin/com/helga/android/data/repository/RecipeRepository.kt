@@ -8,6 +8,8 @@ import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.model.RecipeNutrition
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
 
 data class IngredientMapping(val ingredientName: String, val productName: String)
 
@@ -16,8 +18,6 @@ data class RecipeNutritionWithMappings(
     val ingredientMappings: List<IngredientMapping>,
     val unmappedIngredients: List<String>,
 )
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class RecipeRepository @Inject constructor(
