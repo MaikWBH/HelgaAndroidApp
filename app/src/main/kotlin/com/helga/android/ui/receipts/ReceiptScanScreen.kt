@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import android.Manifest
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,8 +42,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.content.pm.PackageManager
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,7 +84,9 @@ fun ReceiptScanScreen(
         uri?.let { viewModel.scanImage(it) }
     }
 
-    fun launchCamera() {
+    // Erstellt die temporäre Datei und startet den Kamera-Intent.
+    // Wird erst nach Permission-Grant aufgerufen.
+    fun doLaunchCamera() {
         val dir = File(context.cacheDir, "receipts").apply { mkdirs() }
         val file = File(dir, "capture_${System.currentTimeMillis()}.jpg")
         val uri = FileProvider.getUriForFile(
@@ -89,6 +94,19 @@ fun ReceiptScanScreen(
         )
         cameraImageUri = uri
         cameraLauncher.launch(uri)
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) doLaunchCamera()
+    }
+
+    fun launchCamera() {
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) doLaunchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
     Scaffold(
