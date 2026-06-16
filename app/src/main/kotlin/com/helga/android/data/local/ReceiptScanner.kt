@@ -44,7 +44,7 @@ class ReceiptScanner @Inject constructor(
         val rows = reconstructRows(result)
         val parseText = rows.joinToString("\n")
 
-        val (storeName, totalAmount) = parseReceiptHeader(rows)
+        val (storeName, totalAmount) = parseReceiptHeader(rows, fullText)
         val purchaseDate = parseReceiptDate(parseText) ?: LocalDate.now()
 
         val now = System.currentTimeMillis()
@@ -67,8 +67,14 @@ class ReceiptScanner @Inject constructor(
             dirty = 1,
         )
 
-        // Items mit der frisch erzeugten receiptId verknüpfen
-        val items = parseReceiptItems(rows).map { it.copy(receiptId = receiptId) }
+        // Items aus rekonstruierten Zeilen; Fallback auf Adjacent-Line-Pairing im Roh-Text.
+        val reconstructedItems = parseReceiptItems(rows)
+        val items = if (reconstructedItems.isNotEmpty()) {
+            reconstructedItems
+        } else {
+            val rawLines = fullText.split("\n").map { it.trim() }.filter { it.isNotBlank() }
+            parseReceiptItemsAdjacentLines(rawLines)
+        }.map { it.copy(receiptId = receiptId) }
 
         return@withContext ReceiptScanResult(receipt = receipt, items = items)
     }
@@ -80,34 +86,53 @@ class ReceiptScanner @Inject constructor(
      * verschiedenen Text-Zeilen und ließen sich nicht paaren. OCR-Zeilen mit
      * ähnlicher vertikaler Position werden zu einer Zeile zusammengeführt und
      * links → rechts sortiert.
+     *
+     * Robustheit:
+     * - Zeilen ohne eigene BoundingBox erhalten die Box des übergeordneten Blocks
+     *   (geschätzte Position innerhalb des Blocks).
+     * - Toleranz = max(Zeilenhöhe × 0.9, 12 px), damit Name + Preis auch bei
+     *   leicht versetzter vertikaler Ausrichtung noch zusammengeführt werden.
      */
     private fun reconstructRows(visionText: Text): List<String> {
-        val lines = mutableListOf<OcrRowLine>()
+        val ocrLines = mutableListOf<OcrRowLine>()
         for (block in visionText.textBlocks) {
-            for (line in block.lines) {
-                val box = line.boundingBox ?: continue
-                lines.add(
-                    OcrRowLine(
-                        text = line.text,
-                        centerY = (box.top + box.bottom) / 2,
-                        height = (box.bottom - box.top).coerceAtLeast(1),
-                        left = box.left,
+            val blockBox = block.boundingBox
+            val blockLineCount = block.lines.size.coerceAtLeast(1)
+            for ((lineIdx, line) in block.lines.withIndex()) {
+                val box = line.boundingBox
+                val (centerY, height, left) = when {
+                    box != null -> Triple(
+                        (box.top + box.bottom) / 2,
+                        (box.bottom - box.top).coerceAtLeast(1),
+                        box.left,
                     )
-                )
+                    blockBox != null -> {
+                        // Schätzung: Block gleichmäßig auf Zeilen aufteilen.
+                        val blockH = (blockBox.bottom - blockBox.top).coerceAtLeast(1)
+                        val estH = blockH / blockLineCount
+                        val estTop = blockBox.top + lineIdx * estH
+                        Triple(estTop + estH / 2, estH, blockBox.left)
+                    }
+                    else -> continue
+                }
+                ocrLines.add(OcrRowLine(text = line.text, centerY = centerY, height = height, left = left))
             }
         }
-        // Fallback, falls keine Bounding-Boxes vorliegen: roher Text zeilenweise.
-        if (lines.isEmpty()) {
+
+        // Letzter Ausweg: rohen Text zeilenweise zurückgeben.
+        if (ocrLines.isEmpty()) {
             return visionText.text.split("\n").map { it.trim() }.filter { it.isNotBlank() }
         }
 
-        val sorted = lines.sortedBy { it.centerY }
+        val sorted = ocrLines.sortedBy { it.centerY }
         val rows = mutableListOf<MutableList<OcrRowLine>>()
         for (l in sorted) {
             val row = rows.lastOrNull()
             if (row != null) {
                 val rowCenter = row.sumOf { it.centerY } / row.size
-                val tolerance = (row.first().height * 0.6).toInt().coerceAtLeast(6)
+                // Großzügige Toleranz (0.9× Höhe, mind. 12 px) damit Name (links)
+                // und Preis (rechts) trotz leichtem vertikalem Versatz gepaart werden.
+                val tolerance = (row.first().height * 0.9).toInt().coerceAtLeast(12)
                 if (kotlin.math.abs(l.centerY - rowCenter) <= tolerance) {
                     row.add(l)
                     continue
@@ -135,23 +160,7 @@ class ReceiptScanner @Inject constructor(
             val parsed = parseItemLine(line)
             if (parsed != null) {
                 val (name, price) = parsed
-                items.add(
-                    ReceiptItemEntity(
-                        id = UUID.randomUUID().toString(),
-                        receiptId = "", // Will be set after receipt is created
-                        position = position++,
-                        rawText = line,
-                        name = name,
-                        quantity = 1.0,
-                        unitPrice = price,
-                        totalPrice = price,
-                        matchedShoppingItemId = "",
-                        matchStatus = "",
-                        updatedAt = System.currentTimeMillis(),
-                        deleted = 0,
-                        dirty = 1,
-                    )
-                )
+                items.add(makeItem(position++, line, name, price))
             }
         }
 
@@ -191,15 +200,27 @@ class ReceiptScanner @Inject constructor(
      * gegen Zwischensummen sowie MwSt-Zeilen abgegrenzt; bei mehreren Kandidaten
      * gewinnt der größte Betrag (= Gesamtsumme).
      */
-    private fun parseReceiptHeader(lines: List<String>): Pair<String, Double> {
+    /**
+     * Sucht Marktname und Gesamtsumme. [rows] sind die rekonstruierten Zeilen,
+     * [rawText] ist der unverarbeitete ML-Kit-Text der als Fallback für den
+     * Marktnamen dient, falls die rekonstruierten Zeilen ihn nicht enthalten
+     * (z. B. weil die Kopfzeile keine BoundingBox hatte und herausgefiltert wurde).
+     */
+    private fun parseReceiptHeader(rows: List<String>, rawText: String = ""): Pair<String, Double> {
         var storeName = ""
         val totalCandidates = mutableListOf<Double>()
         val allPrices = mutableListOf<Double>()
 
-        for (line in lines) {
+        // Alle Zeilen prüfen (rekonstruierte Zeilen + rohe Zeilen für Marktname-Suche).
+        val candidateLines = if (rawText.isNotBlank()) {
+            val rawLines = rawText.split("\n").map { it.trim() }.filter { it.isNotBlank() }
+            // Rohe Zeilen zuerst für den Marktnamen, dann rekonstruierte für Summen.
+            (rawLines + rows).distinctBy { it }
+        } else rows
+
+        for (line in candidateLines) {
             val lower = line.lowercase()
 
-            // Erste plausible Kopfzeile (überwiegend Buchstaben) ist meist der Markt.
             if (storeName.isEmpty() && !isMetadataLine(line) &&
                 line.length in 3..50 && line.any { it.isLetter() } &&
                 line.count { it.isDigit() } <= line.length / 2
@@ -207,13 +228,11 @@ class ReceiptScanner @Inject constructor(
                 storeName = line
             }
 
-            // Alle Preise sammeln – dient als Fallback für die Gesamtsumme.
+            // Alle Preise für den Fallback auf die größte Zahl sammeln.
             PRICE_REGEX.findAll(line).forEach { m ->
                 m.value.replace(",", ".").toDoubleOrNull()?.let { allPrices.add(it) }
             }
 
-            // Gesamtsummen-Zeile: erkennt deutsche Varianten und grenzt Zwischensummen,
-            // MwSt-/Steuer-/Netto-Zeilen ab.
             val isGrandTotal = TOTAL_KEYWORDS.any { lower.contains(it) } &&
                 !lower.contains("zwischen") && !lower.contains("mwst") &&
                 !lower.contains("steuer") && !lower.contains("netto")
@@ -222,11 +241,69 @@ class ReceiptScanner @Inject constructor(
             }
         }
 
-        // Bei mehreren Summen-Kandidaten gewinnt der größte Betrag (= Gesamtsumme).
-        // Ohne expliziten Treffer fällt die Heuristik auf den größten Preis zurück.
         val total = totalCandidates.maxOrNull() ?: allPrices.maxOrNull() ?: 0.0
         return storeName to total
     }
+
+    /**
+     * Fallback-Parser: paart benachbarte Zeilen, wenn Name (Zeile N) und Preis
+     * (Zeile N+1) getrennt vorliegen – typisch wenn die Bounding-Box-Rekonstruktion
+     * die Spalten nicht zusammenführen konnte.
+     */
+    private fun parseReceiptItemsAdjacentLines(rawLines: List<String>): List<ReceiptItemEntity> {
+        val items = mutableListOf<ReceiptItemEntity>()
+        var position = 0
+        var i = 0
+        while (i < rawLines.size) {
+            val line = rawLines[i]
+            if (isMetadataLine(line)) { i++; continue }
+
+            // Versuche, diese Zeile direkt zu parsen (Name + Preis zusammen).
+            val direct = parseItemLine(line)
+            if (direct != null) {
+                val (name, price) = direct
+                items.add(makeItem(position++, line, name, price))
+                i++
+                continue
+            }
+
+            // Name-only Zeile? Dann prüfen ob die nächste Zeile ein reiner Preis ist.
+            val nextLine = rawLines.getOrNull(i + 1)?.trim() ?: ""
+            val nextPrice = if (nextLine.isNotBlank() && !isMetadataLine(nextLine)) {
+                // Nächste Zeile ist ein reiner Preis, wenn sie fast nur aus einer Preis-Angabe besteht.
+                ITEM_PRICE_REGEX.find(nextLine)?.let { m ->
+                    val before = nextLine.substring(0, m.range.first).trim()
+                    if (before.isEmpty()) m.groupValues[1].replace(",", ".").toDoubleOrNull() else null
+                }
+            } else null
+
+            if (nextPrice != null && line.any { it.isLetter() } && !isMetadataLine(line)) {
+                val name = line.trim()
+                items.add(makeItem(position++, "$line $nextLine", name, nextPrice))
+                i += 2 // beide Zeilen verbraucht
+            } else {
+                i++
+            }
+        }
+        return items
+    }
+
+    private fun makeItem(position: Int, rawText: String, name: String, price: Double) =
+        ReceiptItemEntity(
+            id = UUID.randomUUID().toString(),
+            receiptId = "",
+            position = position,
+            rawText = rawText,
+            name = name,
+            quantity = 1.0,
+            unitPrice = price,
+            totalPrice = price,
+            matchedShoppingItemId = "",
+            matchStatus = "",
+            updatedAt = System.currentTimeMillis(),
+            deleted = 0,
+            dirty = 1,
+        )
 
     /** Letzter preisartiger Token einer Zeile (Gesamtbetrag steht meist am Ende). */
     private fun lastPriceInLine(line: String): Double? =
