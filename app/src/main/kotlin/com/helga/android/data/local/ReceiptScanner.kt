@@ -3,6 +3,7 @@ package com.helga.android.data.local
 import android.content.Context
 import android.graphics.Bitmap
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.helga.android.data.local.entity.ReceiptEntity
@@ -36,9 +37,15 @@ class ReceiptScanner @Inject constructor(
         val inputImage = InputImage.fromBitmap(bitmap, 0)
         val result = recognizer.process(inputImage).await()
 
+        // Roher OCR-Text wird unverändert gespeichert (Debug/Nachvollziehbarkeit).
         val fullText = result.text
-        val (storeName, totalAmount) = parseReceiptHeader(fullText)
-        val purchaseDate = parseReceiptDate(fullText) ?: LocalDate.now()
+        // Für die Auswertung visuelle Zeilen aus den Bounding-Boxes rekonstruieren:
+        // ML Kit liefert Name (linke Spalte) und Preis (rechte Spalte) oft getrennt.
+        val rows = reconstructRows(result)
+        val parseText = rows.joinToString("\n")
+
+        val (storeName, totalAmount) = parseReceiptHeader(rows)
+        val purchaseDate = parseReceiptDate(parseText) ?: LocalDate.now()
 
         val now = System.currentTimeMillis()
         val receiptId = UUID.randomUUID().toString()
@@ -61,20 +68,65 @@ class ReceiptScanner @Inject constructor(
         )
 
         // Items mit der frisch erzeugten receiptId verknüpfen
-        val items = parseReceiptItems(fullText).map { it.copy(receiptId = receiptId) }
+        val items = parseReceiptItems(rows).map { it.copy(receiptId = receiptId) }
 
         return@withContext ReceiptScanResult(receipt = receipt, items = items)
+    }
+
+    /**
+     * Rekonstruiert visuelle Bon-Zeilen aus den Bounding-Boxes der OCR-Zeilen.
+     * ML Kit gruppiert Artikelname (linke Spalte) und Preis (rechte Spalte) häufig
+     * in getrennte Blöcke; ohne Rekonstruktion stünden Name und Preis auf
+     * verschiedenen Text-Zeilen und ließen sich nicht paaren. OCR-Zeilen mit
+     * ähnlicher vertikaler Position werden zu einer Zeile zusammengeführt und
+     * links → rechts sortiert.
+     */
+    private fun reconstructRows(visionText: Text): List<String> {
+        val lines = mutableListOf<OcrRowLine>()
+        for (block in visionText.textBlocks) {
+            for (line in block.lines) {
+                val box = line.boundingBox ?: continue
+                lines.add(
+                    OcrRowLine(
+                        text = line.text,
+                        centerY = (box.top + box.bottom) / 2,
+                        height = (box.bottom - box.top).coerceAtLeast(1),
+                        left = box.left,
+                    )
+                )
+            }
+        }
+        // Fallback, falls keine Bounding-Boxes vorliegen: roher Text zeilenweise.
+        if (lines.isEmpty()) {
+            return visionText.text.split("\n").map { it.trim() }.filter { it.isNotBlank() }
+        }
+
+        val sorted = lines.sortedBy { it.centerY }
+        val rows = mutableListOf<MutableList<OcrRowLine>>()
+        for (l in sorted) {
+            val row = rows.lastOrNull()
+            if (row != null) {
+                val rowCenter = row.sumOf { it.centerY } / row.size
+                val tolerance = (row.first().height * 0.6).toInt().coerceAtLeast(6)
+                if (kotlin.math.abs(l.centerY - rowCenter) <= tolerance) {
+                    row.add(l)
+                    continue
+                }
+            }
+            rows.add(mutableListOf(l))
+        }
+        return rows
+            .map { row -> row.sortedBy { it.left }.joinToString(" ") { it.text.trim() }.trim() }
+            .filter { it.isNotBlank() }
     }
 
     /**
      * Parses OCR text to extract items (name, price).
      * Returns list of ReceiptItemEntity with parsed data.
      */
-    private fun parseReceiptItems(text: String): List<ReceiptItemEntity> {
+    private fun parseReceiptItems(lines: List<String>): List<ReceiptItemEntity> {
         val items = mutableListOf<ReceiptItemEntity>()
         var position = 0
-
-        val lines = text.split("\n").map { it.trim() }.filter { it.isNotBlank() }
 
         for (line in lines) {
             // Skip headers, footers, metadata
@@ -139,11 +191,10 @@ class ReceiptScanner @Inject constructor(
      * gegen Zwischensummen sowie MwSt-Zeilen abgegrenzt; bei mehreren Kandidaten
      * gewinnt der größte Betrag (= Gesamtsumme).
      */
-    private fun parseReceiptHeader(text: String): Pair<String, Double> {
-        val lines = text.split("\n").map { it.trim() }.filter { it.isNotBlank() }
-
+    private fun parseReceiptHeader(lines: List<String>): Pair<String, Double> {
         var storeName = ""
         val totalCandidates = mutableListOf<Double>()
+        val allPrices = mutableListOf<Double>()
 
         for (line in lines) {
             val lower = line.lowercase()
@@ -156,14 +207,25 @@ class ReceiptScanner @Inject constructor(
                 storeName = line
             }
 
-            val isGrandTotal = (lower.contains("summe") || lower.contains("total")) &&
-                !lower.contains("zwischen") && !lower.contains("mwst") && !lower.contains("steuer")
+            // Alle Preise sammeln – dient als Fallback für die Gesamtsumme.
+            PRICE_REGEX.findAll(line).forEach { m ->
+                m.value.replace(",", ".").toDoubleOrNull()?.let { allPrices.add(it) }
+            }
+
+            // Gesamtsummen-Zeile: erkennt deutsche Varianten und grenzt Zwischensummen,
+            // MwSt-/Steuer-/Netto-Zeilen ab.
+            val isGrandTotal = TOTAL_KEYWORDS.any { lower.contains(it) } &&
+                !lower.contains("zwischen") && !lower.contains("mwst") &&
+                !lower.contains("steuer") && !lower.contains("netto")
             if (isGrandTotal) {
                 lastPriceInLine(line)?.let { totalCandidates.add(it) }
             }
         }
 
-        return storeName to (totalCandidates.maxOrNull() ?: 0.0)
+        // Bei mehreren Summen-Kandidaten gewinnt der größte Betrag (= Gesamtsumme).
+        // Ohne expliziten Treffer fällt die Heuristik auf den größten Preis zurück.
+        val total = totalCandidates.maxOrNull() ?: allPrices.maxOrNull() ?: 0.0
+        return storeName to total
     }
 
     /** Letzter preisartiger Token einer Zeile (Gesamtbetrag steht meist am Ende). */
@@ -208,9 +270,20 @@ class ReceiptScanner @Inject constructor(
             null
         }
 
+    /** Eine OCR-Zeile mit Lage-Info zur Rekonstruktion visueller Bon-Zeilen. */
+    private data class OcrRowLine(
+        val text: String,
+        val centerY: Int,
+        val height: Int,
+        val left: Int,
+    )
+
     private companion object {
         val PRICE_REGEX = Regex("""\d+[.,]\d{2}""")
         val ITEM_PRICE_REGEX = Regex("""(\d+[.,]\d{2})\s*(?:[A-Za-z]|€|EUR)?\s*$""")
+
+        // Schlüsselwörter für die Gesamtsummen-Zeile (deutsche Bon-Varianten).
+        val TOTAL_KEYWORDS = listOf("summe", "gesamt", "total", "zu zahlen", "zahlbetrag")
 
         // Kaufdatum: TT.MM.JJJJ / TT.MM.JJ (Trenner . - /) und ISO JJJJ-MM-TT.
         val DATE_DMY_REGEX = Regex("""\b(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})\b""")
@@ -220,13 +293,15 @@ class ReceiptScanner @Inject constructor(
         val MIN_PLAUSIBLE_DATE: LocalDate = LocalDate.of(2000, 1, 1)
 
         // Schlüsselwörter, die eine Zeile als Metadaten (kein Artikel) kennzeichnen.
-        // Wortgrenzen verhindern Substring-Fehltreffer.
+        // Wortgrenzen verhindern Substring-Fehltreffer. "eur"/"euro" sind bewusst
+        // NICHT enthalten, da Preisspalten oft "EUR" tragen (z. B. "1,99 EUR/kg").
         val METADATA_REGEXES: List<Regex> = listOf(
-            "summe", "zwischensumme", "total", "betrag", "mwst", "steuer", "ust",
+            "summe", "zwischensumme", "total", "gesamt", "zahlen", "zahlbetrag",
+            "betrag", "mwst", "steuer", "ust",
             "netto", "brutto", "rückgeld", "ruckgeld", "gegeben", "rückgabe",
             "kartenzahlung", "karte", "bar", "kasse", "kassierer", "bon", "beleg",
             "rechnung", "datum", "uhrzeit", "zeit", "danke", "wiedersehen",
-            "rabatt", "eur", "euro",
+            "rabatt",
         ).map { Regex("""\b""" + Regex.escape(it) + """\b""") }
     }
 }
