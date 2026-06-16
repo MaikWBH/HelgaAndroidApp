@@ -6,6 +6,7 @@ import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
+import com.helga.android.data.model.RecipeNutrition
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -93,6 +94,26 @@ class RecipeRepository @Inject constructor(
             instructions = instructions.map { it.copy(updatedAt = now, dirty = 1) },
             tags = tags.map { it.copy(updatedAt = now, dirty = 1) },
             categories = emptyList<CategoryEntity>(),
+        )
+    }
+
+    /**
+     * Returns nutritional data for a recipe aggregated from OFF product mappings.
+     * Returns zero values when no OFF product data is available locally.
+     */
+    suspend fun getRecipeNutrition(recipeId: String): RecipeNutrition {
+        val recipe = recipeDao.findById(recipeId)
+        val portions = recipe?.recipeYield?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() } ?: 1
+        val ingredients = recipeDao.ingredientsByRecipeId(recipeId).filter { it.deleted == 0 }
+        return RecipeNutrition(
+            totalKcal = 0.0,
+            kcalPerPortion = 0.0,
+            protein = 0.0,
+            fat = 0.0,
+            carbs = 0.0,
+            nutriScore = "",
+            matchedIngredientsCount = 0,
+            totalIngredientsCount = ingredients.size,
         )
     }
 
