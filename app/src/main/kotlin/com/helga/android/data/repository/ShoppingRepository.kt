@@ -3,8 +3,10 @@ package com.helga.android.data.repository
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
+import com.helga.android.data.model.ItemCostEstimate
 import com.helga.android.data.model.ItemOrigin
 import com.helga.android.data.model.ItemOrigins
+import com.helga.android.data.model.ListCostEstimate
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
@@ -119,6 +121,32 @@ class ShoppingRepository @Inject constructor(
         if (checked.isNotEmpty()) {
             shoppingDao.upsertItems(checked.map { it.copy(deleted = 1, updatedAt = now, dirty = 1) })
         }
+    }
+
+    /**
+     * Estimates the total cost of a shopping list based on stored price data.
+     * Returns zero costs when no price data is available yet (priceEstimate not
+     * yet in ShoppingItemEntity schema).
+     */
+    suspend fun estimateListCosts(listId: String): ListCostEstimate {
+        val items = shoppingDao.itemsByList(listId).filter { it.deleted == 0 }
+        val itemEstimates = items.map { item ->
+            ItemCostEstimate(
+                itemId = item.id,
+                name = item.name,
+                quantity = item.quantity,
+                unit = item.unit,
+                price = null,
+                totalPrice = null,
+            )
+        }
+        return ListCostEstimate(
+            listId = listId,
+            items = itemEstimates,
+            totalCost = 0.0,
+            estimatedAccuracy = 0.0,
+            storeComparison = emptyList(),
+        )
     }
 
     suspend fun addOrMergeItem(

@@ -8,6 +8,14 @@ import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.model.RecipeNutrition
 import kotlinx.coroutines.flow.Flow
+
+data class IngredientMapping(val ingredientName: String, val productName: String)
+
+data class RecipeNutritionWithMappings(
+    val nutrition: RecipeNutrition,
+    val ingredientMappings: List<IngredientMapping>,
+    val unmappedIngredients: List<String>,
+)
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -114,6 +122,21 @@ class RecipeRepository @Inject constructor(
             nutriScore = "",
             matchedIngredientsCount = 0,
             totalIngredientsCount = ingredients.size,
+        )
+    }
+
+    /**
+     * Returns nutrition data with ingredient→product mappings.
+     * Returns zero nutrition and all ingredients as unmapped until an
+     * OffProduct DAO is wired up.
+     */
+    suspend fun getRecipeNutritionWithTopProducts(recipeId: String): RecipeNutritionWithMappings {
+        val nutrition = getRecipeNutrition(recipeId)
+        val ingredients = recipeDao.ingredientsByRecipeId(recipeId).filter { it.deleted == 0 }
+        return RecipeNutritionWithMappings(
+            nutrition = nutrition,
+            ingredientMappings = emptyList(),
+            unmappedIngredients = ingredients.map { it.food }.filter { it.isNotBlank() },
         )
     }
 
