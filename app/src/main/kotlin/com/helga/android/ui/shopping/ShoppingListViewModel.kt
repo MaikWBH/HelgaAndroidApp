@@ -61,6 +61,9 @@ class ShoppingListViewModel @Inject constructor(
     private val _scannedProduct = MutableStateFlow<OffProductEntity?>(null)
     val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.asStateFlow()
 
+    private val _catalogProducts = MutableStateFlow<List<OffProductEntity>>(emptyList())
+    val catalogProducts: StateFlow<List<OffProductEntity>> = _catalogProducts.asStateFlow()
+
 
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
