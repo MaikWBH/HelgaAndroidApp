@@ -33,6 +33,8 @@ sealed interface ReceiptScanUiState {
         val purchaseDate: Long,
         val rawOcrText: String,
         val items: List<ReceiptItemEntity>,
+        val lowConfidenceItemIds: Set<String> = emptySet(),
+        val needsReview: Boolean = false,
     ) : ReceiptScanUiState
     data object Saved : ReceiptScanUiState
     data class Error(val message: String) : ReceiptScanUiState
@@ -80,6 +82,8 @@ class ReceiptScanViewModel @Inject constructor(
                     purchaseDate = result.receipt.purchaseDate,
                     rawOcrText = result.receipt.rawOcrText,
                     items = result.items,
+                    lowConfidenceItemIds = result.lowConfidenceItemIds,
+                    needsReview = result.needsReview,
                 )
             } catch (e: Exception) {
                 Timber.e(e, "Receipt scan failed")

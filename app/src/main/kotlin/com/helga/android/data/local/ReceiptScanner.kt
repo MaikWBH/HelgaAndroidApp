@@ -16,10 +16,18 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Ergebnis eines lokalen Kassenzettel-Scans (vor dem Speichern). */
+/**
+ * Ergebnis eines Kassenzettel-Scans (vor dem Speichern).
+ *
+ * [lowConfidenceItemIds] und [needsReview] markieren unsichere Erkennungen, damit
+ * die Vorschau den Nutzer gezielt prüfen lässt (Inspiration: Smart Receipts'
+ * Pro-Feld-Konfidenz). Defaults leer → der On-Device-Scan bleibt unverändert.
+ */
 data class ReceiptScanResult(
     val receipt: ReceiptEntity,
     val items: List<ReceiptItemEntity>,
+    val lowConfidenceItemIds: Set<String> = emptySet(),
+    val needsReview: Boolean = false,
 )
 
 @Singleton

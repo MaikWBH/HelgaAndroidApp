@@ -448,6 +448,9 @@ RECEIPT_PARSE_USER = (
     "    - unit_price: Einzel-/Grundpreis pro Stück bzw. pro Einheit. "
     "Falls nur ein Preis erkennbar ist, setze unit_price = total_price.\n"
     "    - total_price: Gesamtpreis dieser Position.\n"
+    "    - confidence: Wie sicher du dir bei dieser Position bist (0.0–1.0). "
+    "Niedrig wählen, wenn Name oder Preis verschwommen/unleserlich sind.\n"
+    "- confidence: Gesamt-Sicherheit über den ganzen Bon (0.0–1.0).\n"
     "WICHTIG:\n"
     "- Deutsche Preise nutzen Komma (1,99) – wandle sie in Punkt-Notation um (1.99).\n"
     "- Pfand ('PFAND', 'LEERGUT') als eigene Position aufnehmen (Leergut-Rückgabe negativ).\n"
@@ -456,7 +459,8 @@ RECEIPT_PARSE_USER = (
     "- Bei Gewichtsabrechnung ('0,512 kg x 2,99 €/kg'): quantity=Gewicht, "
     "unit_price=Preis pro Einheit, total_price=berechneter Betrag.\n\n"
     'Antworte mit exakt diesem Format: {"store_name":"...","purchase_date":"YYYY-MM-DD",'
-    '"total_amount":0.00,"items":[{"name":"...","quantity":1,"unit_price":0.00,"total_price":0.00}]}'
+    '"total_amount":0.00,"confidence":0.0,"items":[{"name":"...","quantity":1,'
+    '"unit_price":0.00,"total_price":0.00,"confidence":0.0}]}'
 )
 
 
@@ -495,7 +499,8 @@ async def parse_receipt(image_b64: str, mime_type: str = "image/jpeg") -> dict:
 
     Gibt einen Dict im Format der ReceiptParseResponse zurück.
     """
-    empty = {"store_name": "", "purchase_date": 0, "total_amount": 0.0, "items": []}
+    empty = {"store_name": "", "purchase_date": 0, "total_amount": 0.0,
+             "confidence": 0.0, "items": []}
 
     raw = (await _vision_once(RECEIPT_PARSE_SYSTEM, RECEIPT_PARSE_USER, image_b64, mime_type)).strip()
     if raw.startswith("```"):
@@ -522,17 +527,23 @@ async def parse_receipt(image_b64: str, mime_type: str = "image/jpeg") -> dict:
             total = round(unit * qty, 2)
         if unit == 0.0 and total != 0.0:
             unit = round(total / qty, 2) if qty else total
+        conf = _to_float(it.get("confidence"), 1.0)
+        conf = min(max(conf, 0.0), 1.0)
         items.append({
             "name": name,
             "quantity": qty,
             "unit_price": unit,
             "total_price": total,
+            "confidence": conf,
         })
+
+    overall = min(max(_to_float(data.get("confidence"), 1.0), 0.0), 1.0)
 
     return {
         "store_name": str(data.get("store_name", "")).strip(),
         "purchase_date": _iso_to_ms(data.get("purchase_date", "")),
         "total_amount": _to_float(data.get("total_amount"), 0.0),
+        "confidence": overall,
         "items": items,
     }
 

@@ -419,10 +419,12 @@ class ReceiptParseItem(BaseModel):
     quantity: float = 1.0
     unit_price: float = 0.0
     total_price: float = 0.0
+    confidence: float = 1.0  # 0.0–1.0, Modell-Sicherheit für diese Position
 
 
 class ReceiptParseResponse(BaseModel):
     store_name: str = ""
     purchase_date: int = 0  # Unix-ms, 0 wenn nicht erkennbar
     total_amount: float = 0.0
+    confidence: float = 1.0  # 0.0–1.0, Gesamt-Sicherheit
     items: List[ReceiptParseItem] = []

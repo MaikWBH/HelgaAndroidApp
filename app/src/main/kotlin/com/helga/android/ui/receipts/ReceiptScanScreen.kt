@@ -16,10 +16,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -214,6 +219,31 @@ private fun CaptureButtons(
 }
 
 @Composable
+private fun ReviewBanner() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.Warning,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(end = 8.dp),
+        )
+        Text(
+            "Einige Angaben sind unsicher. Bitte die markierten Positionen und den " +
+                "Gesamtbetrag prüfen, bevor du speicherst.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
 private fun PreviewContent(
     state: ReceiptScanUiState.Preview,
     onStoreNameChange: (String) -> Unit,
@@ -228,6 +258,12 @@ private fun PreviewContent(
 
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.weight(1f)) {
+            if (state.needsReview) {
+                item {
+                    ReviewBanner()
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
             item {
                 OutlinedTextField(
                     value = state.storeName,
@@ -257,13 +293,29 @@ private fun PreviewContent(
             }
 
             items(state.items, key = { it.id }) { item ->
+                val uncertain = item.id in state.lowConfidenceItemIds
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 4.dp)
+                        .then(
+                            if (uncertain) Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                            else Modifier
+                        ),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (uncertain) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = "Bitte prüfen",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(end = 6.dp),
+                        )
+                    }
                     Text(
                         item.name.ifEmpty { item.rawText },
                         modifier = Modifier.weight(1f),

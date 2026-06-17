@@ -134,11 +134,17 @@ class ReceiptRepository @Inject constructor(
             deleted = 0,
             dirty = 0,
         )
+        val lowConfidenceIds = mutableSetOf<String>()
         val items = response.items.mapIndexed { index, dto ->
             val total = if (dto.totalPrice != 0.0) dto.totalPrice else dto.unitPrice * dto.quantity
             val qty = if (dto.quantity != 0.0) dto.quantity else 1.0
+            val itemId = UUID.randomUUID().toString()
+            // Unsicher, wenn das Modell wenig Vertrauen meldet oder kein Preis erkannt wurde.
+            if (dto.confidence < CONFIDENCE_THRESHOLD || total <= 0.0) {
+                lowConfidenceIds += itemId
+            }
             ReceiptItemEntity(
-                id = UUID.randomUUID().toString(),
+                id = itemId,
                 receiptId = receiptId,
                 position = index,
                 rawText = dto.name,
@@ -151,7 +157,19 @@ class ReceiptRepository @Inject constructor(
                 dirty = 0,
             )
         }
-        return ReceiptScanResult(receipt, items)
+
+        // Deterministischer Gegencheck: Summe der Positionen vs. Bon-Gesamtbetrag.
+        // Das kann Smart Receipts nicht (nur Kopfdaten) – wir haben die Positionen.
+        val itemsSum = items.sumOf { it.totalPrice }
+        val sumMismatch = response.totalAmount > 0.0 &&
+            kotlin.math.abs(itemsSum - response.totalAmount) >
+            maxOf(response.totalAmount * 0.05, 0.10)
+
+        val needsReview = lowConfidenceIds.isNotEmpty() ||
+            response.confidence < CONFIDENCE_THRESHOLD ||
+            sumMismatch
+
+        return ReceiptScanResult(receipt, items, lowConfidenceIds, needsReview)
     }
 
     /** Skaliert das Bild herunter und kodiert es als Base64-JPEG für die KI-Anfrage. */
@@ -365,5 +383,7 @@ class ReceiptRepository @Inject constructor(
         // Längste Bildkante für die KI-Anfrage; begrenzt Payload-Größe und Latenz,
         // ohne dass Bon-Text unleserlich wird.
         const val MAX_AI_IMAGE_DIM = 1600
+        // Unter diesem Konfidenz-Wert wird eine Position zur Prüfung markiert.
+        const val CONFIDENCE_THRESHOLD = 0.7
     }
 }

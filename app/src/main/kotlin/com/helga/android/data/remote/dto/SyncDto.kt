@@ -356,6 +356,7 @@ data class ReceiptParseItemDto(
     val quantity: Double = 1.0,
     @Json(name = "unit_price") val unitPrice: Double = 0.0,
     @Json(name = "total_price") val totalPrice: Double = 0.0,
+    val confidence: Double = 1.0,
 )
 
 @JsonClass(generateAdapter = true)
@@ -363,6 +364,7 @@ data class ReceiptParseResponse(
     @Json(name = "store_name") val storeName: String = "",
     @Json(name = "purchase_date") val purchaseDate: Long = 0L,
     @Json(name = "total_amount") val totalAmount: Double = 0.0,
+    val confidence: Double = 1.0,
     val items: List<ReceiptParseItemDto> = emptyList(),
 )
 
