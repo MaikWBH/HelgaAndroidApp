@@ -2,7 +2,9 @@ package com.helga.android.ui.components
 
 import android.util.Size
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -60,27 +62,7 @@ fun BarcodeScanner(
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
                     analysis.setAnalyzer(executor) { imageProxy ->
-                        @androidx.camera.core.ExperimentalGetImage
-                        val mediaImage = imageProxy.image
-                        if (mediaImage != null && !detected.get()) {
-                            val image = InputImage.fromMediaImage(
-                                mediaImage,
-                                imageProxy.imageInfo.rotationDegrees,
-                            )
-                            scanner.process(image)
-                                .addOnSuccessListener { barcodes ->
-                                    barcodes.firstOrNull { it.valueType == Barcode.TYPE_PRODUCT || it.rawValue != null }
-                                        ?.rawValue
-                                        ?.let { value ->
-                                            if (detected.compareAndSet(false, true)) {
-                                                onBarcodeDetected(value)
-                                            }
-                                        }
-                                }
-                                .addOnCompleteListener { imageProxy.close() }
-                        } else {
-                            imageProxy.close()
-                        }
+                        analyzeBarcodeImage(imageProxy, scanner, detected, onBarcodeDetected)
                     }
                     try {
                         cameraProvider.unbindAll()
@@ -109,5 +91,34 @@ fun BarcodeScanner(
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
+    }
+}
+
+@OptIn(ExperimentalGetImage::class)
+private fun analyzeBarcodeImage(
+    imageProxy: ImageProxy,
+    scanner: com.google.mlkit.vision.barcode.BarcodeScanner,
+    detected: AtomicBoolean,
+    onBarcodeDetected: (String) -> Unit,
+) {
+    val mediaImage = imageProxy.image
+    if (mediaImage != null && !detected.get()) {
+        val image = InputImage.fromMediaImage(
+            mediaImage,
+            imageProxy.imageInfo.rotationDegrees,
+        )
+        scanner.process(image)
+            .addOnSuccessListener { barcodes ->
+                barcodes.firstOrNull { it.valueType == Barcode.TYPE_PRODUCT || it.rawValue != null }
+                    ?.rawValue
+                    ?.let { value ->
+                        if (detected.compareAndSet(false, true)) {
+                            onBarcodeDetected(value)
+                        }
+                    }
+            }
+            .addOnCompleteListener { imageProxy.close() }
+    } else {
+        imageProxy.close()
     }
 }
