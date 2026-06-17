@@ -51,7 +51,7 @@ class SyncLwwTest {
     }
 
     @Test
-    fun `equal timestamps: client wins (no update needed)`() {
+    fun `equal timestamps - client wins (no update needed)`() {
         val ts = 100L
         val remote = listOf(RemoteRecord("a", ts))
         val local = listOf(LocalTimestamp("a", ts))
