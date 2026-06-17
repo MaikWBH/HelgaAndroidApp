@@ -367,6 +367,176 @@ async def _call_once(system: str, user: str) -> str:
     return "".join(chunks)
 
 
+# ── Vision (Bild-Eingabe, einmaliger Aufruf) ─────────────────────────────────
+
+async def _vision_once(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
+    if AI_PROVIDER == "anthropic":
+        return await _vision_anthropic(system, user_text, image_b64, mime_type)
+    return await _vision_openai(system, user_text, image_b64, mime_type)
+
+
+async def _vision_openai(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
+    base = AI_API_BASE or "https://api.openai.com/v1"
+    headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": _model(),
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": [
+                {"type": "text", "text": user_text},
+                {"type": "image_url",
+                 "image_url": {"url": f"data:{mime_type};base64,{image_b64}"}},
+            ]},
+        ],
+        "temperature": 0,
+    }
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(f"{base}/chat/completions", headers=headers, json=payload)
+        resp.raise_for_status()
+        obj = resp.json()
+        return obj["choices"][0]["message"].get("content") or ""
+
+
+async def _vision_anthropic(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
+    headers = {
+        "x-api-key": AI_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    payload = {
+        "model": _model(),
+        "system": system,
+        "max_tokens": 4096,
+        "temperature": 0,
+        "messages": [
+            {"role": "user", "content": [
+                {"type": "image", "source": {
+                    "type": "base64", "media_type": mime_type, "data": image_b64}},
+                {"type": "text", "text": user_text},
+            ]},
+        ],
+    }
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(f"{ANTHROPIC_BASE}/messages", headers=headers, json=payload)
+        resp.raise_for_status()
+        obj = resp.json()
+        return "".join(p.get("text", "") for p in obj.get("content", []) if p.get("type") == "text")
+
+
+# ── Receipt Parsing (KI-Vision) ──────────────────────────────────────────────
+# Liest einen fotografierten Kassenbon direkt aus dem Bild. Deutlich robuster als
+# die On-Device-OCR, weil das Vision-Modell Spalten-Layout, Mengen und Preise
+# im Zusammenhang versteht (z. B. Gewichtsabrechnung "0,512 kg x 2,99").
+
+RECEIPT_PARSE_SYSTEM = (
+    "Du bist ein Experte für das Auslesen deutscher Kassenbons (Supermarkt-Quittungen). "
+    "Du erhältst ein Foto eines Kassenbons und extrahierst die Daten strukturiert. "
+    "Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt – kein Markdown, keine Erklärungen."
+)
+
+RECEIPT_PARSE_USER = (
+    "Lies diesen Kassenbon vollständig aus und gib die Daten als JSON zurück.\n\n"
+    "REGELN:\n"
+    "- store_name: Name des Markts/Geschäfts (z. B. 'REWE', 'ALDI', 'EDEKA', 'Lidl'). "
+    "Leer lassen, wenn nicht erkennbar.\n"
+    "- purchase_date: Kaufdatum im Format 'YYYY-MM-DD'. Leer lassen, wenn nicht erkennbar.\n"
+    "- total_amount: Gesamtbetrag (Summe/zu zahlen) als Zahl mit Punkt als Dezimaltrennzeichen.\n"
+    "- items: Liste ALLER gekauften Artikel. Pro Artikel:\n"
+    "    - name: Produktname wie auf dem Bon, ohne nachgestelltes Steuerkennzeichen "
+    "(z. B. einzelnes 'A'/'B' am Zeilenende) und ohne den Preis.\n"
+    "    - quantity: Menge/Anzahl (Standard 1; bei Gewicht das Gewicht, z. B. 0.512).\n"
+    "    - unit_price: Einzel-/Grundpreis pro Stück bzw. pro Einheit. "
+    "Falls nur ein Preis erkennbar ist, setze unit_price = total_price.\n"
+    "    - total_price: Gesamtpreis dieser Position.\n"
+    "WICHTIG:\n"
+    "- Deutsche Preise nutzen Komma (1,99) – wandle sie in Punkt-Notation um (1.99).\n"
+    "- Pfand ('PFAND', 'LEERGUT') als eigene Position aufnehmen (Leergut-Rückgabe negativ).\n"
+    "- Ignoriere Zwischensummen, MwSt-/Steuer-Zeilen, Zahlart (EC/BAR/Kartenzahlung), "
+    "Rückgeld, Kundenkarten-/Payback-Punkte, Bon-Nummern, Uhrzeit und Adresse.\n"
+    "- Bei Gewichtsabrechnung ('0,512 kg x 2,99 €/kg'): quantity=Gewicht, "
+    "unit_price=Preis pro Einheit, total_price=berechneter Betrag.\n\n"
+    'Antworte mit exakt diesem Format: {"store_name":"...","purchase_date":"YYYY-MM-DD",'
+    '"total_amount":0.00,"items":[{"name":"...","quantity":1,"unit_price":0.00,"total_price":0.00}]}'
+)
+
+
+def _to_float(v, default: float = 0.0) -> float:
+    if v is None:
+        return default
+    if isinstance(v, bool):
+        return default
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v).strip().replace("€", "").replace(" ", "")
+    # Deutsches Komma → Punkt (nur wenn kein Punkt als Dezimaltrenner vorhanden)
+    if "," in s and "." not in s:
+        s = s.replace(",", ".")
+    else:
+        s = s.replace(",", "")
+    try:
+        return float(s)
+    except ValueError:
+        return default
+
+
+def _iso_to_ms(s) -> int:
+    if not s:
+        return 0
+    try:
+        from datetime import datetime
+        d = date.fromisoformat(str(s)[:10])
+        return int(datetime(d.year, d.month, d.day).timestamp() * 1000)
+    except (ValueError, TypeError):
+        return 0
+
+
+async def parse_receipt(image_b64: str, mime_type: str = "image/jpeg") -> dict:
+    """Extrahiert Markt, Datum, Gesamtbetrag und Positionen aus einem Bon-Foto.
+
+    Gibt einen Dict im Format der ReceiptParseResponse zurück.
+    """
+    empty = {"store_name": "", "purchase_date": 0, "total_amount": 0.0, "items": []}
+
+    raw = (await _vision_once(RECEIPT_PARSE_SYSTEM, RECEIPT_PARSE_USER, image_b64, mime_type)).strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1].lstrip("json").strip()
+    start, end = raw.find("{"), raw.rfind("}") + 1
+    if start == -1 or end == 0:
+        return empty
+    try:
+        data = json.loads(raw[start:end])
+    except json.JSONDecodeError:
+        return empty
+
+    items = []
+    for it in data.get("items", []):
+        if not isinstance(it, dict):
+            continue
+        name = str(it.get("name", "")).strip()
+        if not name:
+            continue
+        qty = _to_float(it.get("quantity"), 1.0) or 1.0
+        unit = _to_float(it.get("unit_price"), 0.0)
+        total = _to_float(it.get("total_price"), 0.0)
+        if total == 0.0 and unit != 0.0:
+            total = round(unit * qty, 2)
+        if unit == 0.0 and total != 0.0:
+            unit = round(total / qty, 2) if qty else total
+        items.append({
+            "name": name,
+            "quantity": qty,
+            "unit_price": unit,
+            "total_price": total,
+        })
+
+    return {
+        "store_name": str(data.get("store_name", "")).strip(),
+        "purchase_date": _iso_to_ms(data.get("purchase_date", "")),
+        "total_amount": _to_float(data.get("total_amount"), 0.0),
+        "items": items,
+    }
+
+
 # ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
 # OCR läuft on-device (Google ML Kit). Der KI-Abgleich vergleicht die abgehakte
 # Einkaufsliste mit den erkannten Bon-Positionen – robust gegen kryptische

@@ -403,3 +403,26 @@ class ReceiptReconcileResponse(BaseModel):
     matches: List[ReconcileMatch] = []
     unexpected: List[str] = []
     missing: List[str] = []
+
+
+# ── Receipt Parsing (KI-Vision) ──────────────────────────────────────────────
+# Liest einen fotografierten Kassenbon per Vision-Modell aus. Robuster als die
+# On-Device-OCR, weil das Modell Layout, Mengen und Preise direkt versteht.
+
+class ReceiptParseRequest(BaseModel):
+    image_base64: str
+    mime_type: str = "image/jpeg"
+
+
+class ReceiptParseItem(BaseModel):
+    name: str = ""
+    quantity: float = 1.0
+    unit_price: float = 0.0
+    total_price: float = 0.0
+
+
+class ReceiptParseResponse(BaseModel):
+    store_name: str = ""
+    purchase_date: int = 0  # Unix-ms, 0 wenn nicht erkennbar
+    total_amount: float = 0.0
+    items: List[ReceiptParseItem] = []

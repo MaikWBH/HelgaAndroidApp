@@ -7,6 +7,8 @@ import com.helga.android.data.remote.dto.ImageUploadResponse
 import com.helga.android.data.remote.dto.ImportedRecipeDto
 import com.helga.android.data.remote.dto.OffLookupBarcodeRequest
 import com.helga.android.data.remote.dto.OffLookupBarcodeResponse
+import com.helga.android.data.remote.dto.ReceiptParseRequest
+import com.helga.android.data.remote.dto.ReceiptParseResponse
 import com.helga.android.data.remote.dto.ReceiptReconcileRequest
 import com.helga.android.data.remote.dto.ReceiptReconcileResponse
 import com.helga.android.data.remote.dto.SuggestionsResponse
@@ -55,4 +57,7 @@ interface SyncApi {
 
     @POST("api/receipts/reconcile")
     suspend fun reconcileReceipt(@Body req: ReceiptReconcileRequest): ReceiptReconcileResponse
+
+    @POST("api/ai/parse-receipt")
+    suspend fun parseReceipt(@Body req: ReceiptParseRequest): ReceiptParseResponse
 }

@@ -11,7 +11,8 @@ from dotenv import load_dotenv
 from .db import init_db, get_db, now_ms
 from .models import (
     AiClassifyRequest, AiGenerateRequest, AiRemixRequest, AiUrlImportRequest,
-    OffLookupBarcodeRequest, OffSearchRequest, ReceiptReconcileRequest,
+    OffLookupBarcodeRequest, OffSearchRequest, ReceiptParseRequest,
+    ReceiptParseResponse, ReceiptReconcileRequest,
     SyncPullResponse, SyncPushRequest, WeekplanGenerateRequest,
 )
 from .sync import pull_since, push_records
@@ -107,6 +108,14 @@ async def weekplan_generate(req: WeekplanGenerateRequest):
 async def receipts_reconcile(req: ReceiptReconcileRequest):
     """Gleicht die abgehakte Einkaufsliste mit den Bon-Positionen per KI ab."""
     return await ai_module.reconcile_receipt(req.checked_items, req.receipt_items)
+
+
+@app.post("/api/ai/parse-receipt", response_model=ReceiptParseResponse,
+          dependencies=[Depends(require_auth)])
+async def ai_parse_receipt(req: ReceiptParseRequest):
+    """Liest einen fotografierten Kassenbon per Vision-Modell aus."""
+    data = await ai_module.parse_receipt(req.image_base64, req.mime_type)
+    return ReceiptParseResponse(**data)
 
 
 # ── Bilder ────────────────────────────────────────────────────────────────────

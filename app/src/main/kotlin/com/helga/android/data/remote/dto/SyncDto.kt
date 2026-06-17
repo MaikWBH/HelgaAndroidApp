@@ -342,6 +342,30 @@ data class ReceiptReconcileResponse(
     val missing: List<String> = emptyList(),
 )
 
+// ── Receipt Parsing (KI-Vision) ──────────────────────────────────────────────
+
+@JsonClass(generateAdapter = true)
+data class ReceiptParseRequest(
+    @Json(name = "image_base64") val imageBase64: String,
+    @Json(name = "mime_type") val mimeType: String = "image/jpeg",
+)
+
+@JsonClass(generateAdapter = true)
+data class ReceiptParseItemDto(
+    val name: String = "",
+    val quantity: Double = 1.0,
+    @Json(name = "unit_price") val unitPrice: Double = 0.0,
+    @Json(name = "total_price") val totalPrice: Double = 0.0,
+)
+
+@JsonClass(generateAdapter = true)
+data class ReceiptParseResponse(
+    @Json(name = "store_name") val storeName: String = "",
+    @Json(name = "purchase_date") val purchaseDate: Long = 0L,
+    @Json(name = "total_amount") val totalAmount: Double = 0.0,
+    val items: List<ReceiptParseItemDto> = emptyList(),
+)
+
 @JsonClass(generateAdapter = true)
 data class SyncPullResponse(
     @Json(name = "server_ts") val serverTs: Long,
