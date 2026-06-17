@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.util.Base64
 import com.helga.android.data.local.ReceiptScanner
 import com.helga.android.data.local.ReceiptScanResult
+import com.helga.android.data.local.ScanSource
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ReceiptEntity
@@ -169,14 +170,16 @@ class ReceiptRepository @Inject constructor(
             response.confidence < CONFIDENCE_THRESHOLD ||
             sumMismatch
 
-        return ReceiptScanResult(receipt, items, lowConfidenceIds, needsReview)
+        return ReceiptScanResult(receipt, items, lowConfidenceIds, needsReview, ScanSource.AI)
     }
 
     /** Skaliert das Bild herunter und kodiert es als Base64-JPEG für die KI-Anfrage. */
     private fun encodeJpegBase64(bitmap: Bitmap): String {
         val scaled = downscale(bitmap, MAX_AI_IMAGE_DIM)
         val baos = ByteArrayOutputStream()
-        scaled.compress(Bitmap.CompressFormat.JPEG, 85, baos)
+        // Höhere Qualität: kleiner Bon-Druck darf durch JPEG-Artefakte nicht
+        // verschmieren – das Vision-Modell liest sonst Preise/Namen falsch.
+        scaled.compress(Bitmap.CompressFormat.JPEG, AI_JPEG_QUALITY, baos)
         if (scaled !== bitmap) scaled.recycle()
         return Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
     }
@@ -381,8 +384,11 @@ class ReceiptRepository @Inject constructor(
 
     private companion object {
         // Längste Bildkante für die KI-Anfrage; begrenzt Payload-Größe und Latenz,
-        // ohne dass Bon-Text unleserlich wird.
-        const val MAX_AI_IMAGE_DIM = 1600
+        // ohne dass Bon-Text unleserlich wird. Bewusst höher als zuvor (1600),
+        // damit kleiner Druck auf langen Bons für das Vision-Modell lesbar bleibt.
+        const val MAX_AI_IMAGE_DIM = 2000
+        // JPEG-Qualität für die KI-Anfrage (höher = schärferer Text, größere Payload).
+        const val AI_JPEG_QUALITY = 90
         // Unter diesem Konfidenz-Wert wird eine Position zur Prüfung markiert.
         const val CONFIDENCE_THRESHOLD = 0.7
     }

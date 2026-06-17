@@ -18,6 +18,8 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "openai")
 AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_MODEL = os.getenv("AI_MODEL", "")
 AI_API_BASE = os.getenv("AI_API_BASE", "")
+# Eigenes (starkes) Vision-Modell für die Bon-Erkennung. Siehe _vision_model().
+AI_VISION_MODEL = os.getenv("AI_VISION_MODEL", "")
 
 OPENAI_BASE = AI_API_BASE or "https://api.openai.com/v1"
 ANTHROPIC_BASE = "https://api.anthropic.com/v1"
@@ -25,6 +27,14 @@ ANTHROPIC_BASE = "https://api.anthropic.com/v1"
 DEFAULT_MODEL = {
     "openai": "gpt-4o-mini",
     "anthropic": "claude-haiku-4-5-20251001",
+}
+
+# Vision-Tasks (Kassenbon-Erkennung) brauchen ein deutlich stärkeres, bild-fähiges
+# Modell als die günstigen Text-Defaults: dichte deutsche Bons mit kleinem Druck
+# überfordern Mini-/Haiku-Modelle (Belege: Sonnet ~97 % vs. Mini deutlich darunter).
+DEFAULT_VISION_MODEL = {
+    "openai": "gpt-4o",
+    "anthropic": "claude-sonnet-4-6",
 }
 
 CLASSIFY_VALUES = {
@@ -76,6 +86,18 @@ KRITISCH: Nur rohes HTML ausgeben — kein Markdown, keine Erklärungen."""
 
 def _model() -> str:
     return AI_MODEL or DEFAULT_MODEL.get(AI_PROVIDER, "gpt-4o-mini")
+
+
+def _vision_model() -> str:
+    """Modell für Bild-Eingaben (Kassenbon-Erkennung).
+
+    Reihenfolge:
+    1. AI_VISION_MODEL – explizite Wahl (empfohlen, um z. B. Sonnet zu erzwingen).
+    2. AI_MODEL – falls bewusst gesetzt, respektieren wir die Nutzerwahl.
+    3. Starker Provider-Default (NICHT der günstige Text-Default), weil dichte
+       deutsche Bons sonst unzuverlässig erkannt werden.
+    """
+    return AI_VISION_MODEL or AI_MODEL or DEFAULT_VISION_MODEL.get(AI_PROVIDER, "gpt-4o")
 
 
 def _openai_headers() -> dict:
@@ -379,13 +401,16 @@ async def _vision_openai(system: str, user_text: str, image_b64: str, mime_type:
     base = AI_API_BASE or "https://api.openai.com/v1"
     headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
     payload = {
-        "model": _model(),
+        "model": _vision_model(),
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": [
                 {"type": "text", "text": user_text},
                 {"type": "image_url",
-                 "image_url": {"url": f"data:{mime_type};base64,{image_b64}"}},
+                 # "high" erzwingt die hochauflösende Bildanalyse – wichtig, damit
+                 # kleiner Bon-Druck (Artikelnamen/Preise) nicht verschluckt wird.
+                 "image_url": {"url": f"data:{mime_type};base64,{image_b64}",
+                               "detail": "high"}},
             ]},
         ],
         "temperature": 0,
@@ -404,9 +429,9 @@ async def _vision_anthropic(system: str, user_text: str, image_b64: str, mime_ty
         "content-type": "application/json",
     }
     payload = {
-        "model": _model(),
+        "model": _vision_model(),
         "system": system,
-        "max_tokens": 4096,
+        "max_tokens": 8192,
         "temperature": 0,
         "messages": [
             {"role": "user", "content": [
@@ -436,7 +461,15 @@ RECEIPT_PARSE_SYSTEM = (
 
 RECEIPT_PARSE_USER = (
     "Lies diesen Kassenbon vollständig aus und gib die Daten als JSON zurück.\n\n"
-    "REGELN:\n"
+    "VORGEHEN (wichtig für Vollständigkeit):\n"
+    "- Gehe den Bon Zeile für Zeile von OBEN nach UNTEN durch.\n"
+    "- Erfasse JEDE Artikelzeile zwischen Kopf (Markt/Adresse) und Summenblock. "
+    "Überspringe oder kürze nichts, auch wenn es viele Positionen sind.\n"
+    "- Ein Artikelname kann über ZWEI Zeilen gehen (z. B. Marke in Zeile 1, "
+    "Produkt in Zeile 2) – fasse ihn zu EINEM Eintrag zusammen.\n"
+    "- Wenn ein Name oder Preis teils unleserlich ist: trage trotzdem deine BESTE "
+    "Schätzung ein und setze eine niedrige confidence. Lasse die Position NICHT weg.\n\n"
+    "FELDER:\n"
     "- store_name: Name des Markts/Geschäfts (z. B. 'REWE', 'ALDI', 'EDEKA', 'Lidl'). "
     "Leer lassen, wenn nicht erkennbar.\n"
     "- purchase_date: Kaufdatum im Format 'YYYY-MM-DD'. Leer lassen, wenn nicht erkennbar.\n"
@@ -450,15 +483,26 @@ RECEIPT_PARSE_USER = (
     "    - total_price: Gesamtpreis dieser Position.\n"
     "    - confidence: Wie sicher du dir bei dieser Position bist (0.0–1.0). "
     "Niedrig wählen, wenn Name oder Preis verschwommen/unleserlich sind.\n"
-    "- confidence: Gesamt-Sicherheit über den ganzen Bon (0.0–1.0).\n"
+    "- confidence: Gesamt-Sicherheit über den ganzen Bon (0.0–1.0).\n\n"
     "WICHTIG:\n"
     "- Deutsche Preise nutzen Komma (1,99) – wandle sie in Punkt-Notation um (1.99).\n"
     "- Pfand ('PFAND', 'LEERGUT') als eigene Position aufnehmen (Leergut-Rückgabe negativ).\n"
+    "- Mengenzeilen wie '2 x 1,99' oder '3 Stk x 0,89': quantity=Anzahl, "
+    "unit_price=Stückpreis, total_price=Summe.\n"
+    "- Bei Gewichtsabrechnung ('0,512 kg x 2,99 €/kg'): quantity=Gewicht, "
+    "unit_price=Preis pro Einheit, total_price=berechneter Betrag.\n"
     "- Ignoriere Zwischensummen, MwSt-/Steuer-Zeilen, Zahlart (EC/BAR/Kartenzahlung), "
     "Rückgeld, Kundenkarten-/Payback-Punkte, Bon-Nummern, Uhrzeit und Adresse.\n"
-    "- Bei Gewichtsabrechnung ('0,512 kg x 2,99 €/kg'): quantity=Gewicht, "
-    "unit_price=Preis pro Einheit, total_price=berechneter Betrag.\n\n"
-    'Antworte mit exakt diesem Format: {"store_name":"...","purchase_date":"YYYY-MM-DD",'
+    "- Plausibilitätscheck: Die Summe der total_price aller items sollte ungefähr "
+    "total_amount ergeben (abzüglich evtl. Rabatte). Weicht sie stark ab, hast du "
+    "vermutlich Positionen übersehen – lies noch einmal genau.\n\n"
+    "BEISPIEL (nur Format, nicht den Inhalt übernehmen):\n"
+    'Bon-Zeilen "G&G H-MILCH 3,5% 0,95 A" und "2 x BANANE 1,98 B" werden zu '
+    '[{"name":"G&G H-Milch 3,5%","quantity":1,"unit_price":0.95,"total_price":0.95,'
+    '"confidence":0.95},{"name":"Banane","quantity":2,"unit_price":0.99,'
+    '"total_price":1.98,"confidence":0.9}]\n\n'
+    'Antworte mit EXAKT diesem Format (nur JSON, kein Markdown): '
+    '{"store_name":"...","purchase_date":"YYYY-MM-DD",'
     '"total_amount":0.00,"confidence":0.0,"items":[{"name":"...","quantity":1,'
     '"unit_price":0.00,"total_price":0.00,"confidence":0.0}]}'
 )

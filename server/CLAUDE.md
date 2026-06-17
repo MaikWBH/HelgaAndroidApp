@@ -60,9 +60,16 @@ Neue Tabellen im Schema erfordern:
 | `POST /api/ai/classify` | JSON: 5 Felder (protein_type, effort, cuisine, meal_slot, season_fit) |
 | `POST /api/ai/parse-receipt` | JSON: Kassenbon-Foto (base64) per Vision-Modell auslesen → store_name, purchase_date, total_amount, items[] |
 
-**Hinweis Vision:** `parse-receipt` sendet das Bild an ein vision-fähiges Modell
-(Default `gpt-4o-mini` bzw. `claude-haiku-4-5-20251001`). Bei eigenem `AI_MODEL`
-muss dieses Bilder unterstützen, sonst greift in der App der On-Device-OCR-Fallback.
+**Hinweis Vision:** `parse-receipt` nutzt ein **eigenes, stärkeres** Modell als die
+günstigen Text-Defaults, weil dichte deutsche Kassenbons Mini-/Haiku-Modelle
+überfordern. Modellwahl in `_vision_model()`:
+1. `AI_VISION_MODEL` (env) – explizite Wahl, empfohlen (z. B. `claude-sonnet-4-6`).
+2. `AI_MODEL` (env) – falls bewusst gesetzt, wird es respektiert.
+3. Starker Provider-Default: OpenAI `gpt-4o`, Anthropic `claude-sonnet-4-6`.
+
+Das Modell muss bild-fähig sein, sonst greift in der App der On-Device-OCR-Fallback.
+Bilder werden mit `detail: high` (OpenAI) bzw. in voller Auflösung (Anthropic)
+gesendet, damit kleiner Bon-Druck lesbar bleibt.
 
 SSE-Format: `data: <chunk>\n\n`, Abschluss: `data: [DONE]\n\n`. Zeilenumbrüche im Chunk als `\n` escaped.
 

@@ -8,6 +8,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
+import com.helga.android.data.util.ReceiptImagePreprocessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -28,7 +29,11 @@ data class ReceiptScanResult(
     val items: List<ReceiptItemEntity>,
     val lowConfidenceItemIds: Set<String> = emptySet(),
     val needsReview: Boolean = false,
+    val source: ScanSource = ScanSource.ON_DEVICE,
 )
+
+/** Woher die Bon-Daten stammen – für Transparenz/Debugging in der Vorschau. */
+enum class ScanSource { AI, ON_DEVICE }
 
 @Singleton
 class ReceiptScanner @Inject constructor(
@@ -42,8 +47,14 @@ class ReceiptScanner @Inject constructor(
      * Returns the parsed receipt + items (no DB write, no server call).
      */
     suspend fun scanReceiptImage(bitmap: Bitmap): ReceiptScanResult = withContext(Dispatchers.Default) {
-        val inputImage = InputImage.fromBitmap(bitmap, 0)
-        val result = recognizer.process(inputImage).await()
+        // Kontrast/Graustufen vor der OCR verbessern die Texterkennung deutlich.
+        val enhanced = ReceiptImagePreprocessor.enhanceForOcr(bitmap)
+        val inputImage = InputImage.fromBitmap(enhanced, 0)
+        val result = try {
+            recognizer.process(inputImage).await()
+        } finally {
+            if (enhanced !== bitmap) enhanced.recycle()
+        }
 
         // Roher OCR-Text wird unverändert gespeichert (Debug/Nachvollziehbarkeit).
         val fullText = result.text

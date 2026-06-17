@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,6 +35,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +53,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.pm.PackageManager
+import com.helga.android.data.local.ScanSource
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -243,6 +246,47 @@ private fun ReviewBanner() {
     }
 }
 
+/**
+ * Zeigt transparent, wie der Bon gelesen wurde (KI-Vision vs. On-Device-OCR) und
+ * macht den rohen OCR-Text bei Bedarf einsehbar – hilft beim Nachvollziehen,
+ * warum Positionen evtl. nicht erkannt wurden.
+ */
+@Composable
+private fun ScanSourceInfo(source: ScanSource, rawOcrText: String) {
+    var showRaw by remember { mutableStateOf(false) }
+    val label = when (source) {
+        ScanSource.AI -> "Gelesen per KI-Vision (Server)"
+        ScanSource.ON_DEVICE -> "Gelesen per On-Device-OCR (offline)"
+    }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (rawOcrText.isNotBlank()) {
+            TextButton(
+                onClick = { showRaw = !showRaw },
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+            ) {
+                Text(if (showRaw) "Roh-Text ausblenden" else "Roh-Text anzeigen")
+            }
+            if (showRaw) {
+                Text(
+                    rawOcrText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(8.dp),
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun PreviewContent(
     state: ReceiptScanUiState.Preview,
@@ -258,6 +302,10 @@ private fun PreviewContent(
 
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.weight(1f)) {
+            item {
+                ScanSourceInfo(source = state.source, rawOcrText = state.rawOcrText)
+                Spacer(Modifier.height(12.dp))
+            }
             if (state.needsReview) {
                 item {
                     ReviewBanner()
