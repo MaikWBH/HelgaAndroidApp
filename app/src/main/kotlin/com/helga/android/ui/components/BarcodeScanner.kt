@@ -1,6 +1,7 @@
 package com.helga.android.ui.components
 
 import android.util.Size
+import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
@@ -94,7 +95,7 @@ fun BarcodeScanner(
     }
 }
 
-@OptIn(ExperimentalGetImage::class)
+@OptIn(markerClass = [ExperimentalGetImage::class])
 private fun analyzeBarcodeImage(
     imageProxy: ImageProxy,
     scanner: com.google.mlkit.vision.barcode.BarcodeScanner,
