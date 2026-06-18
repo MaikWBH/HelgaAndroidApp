@@ -60,6 +60,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.util.ImageUrls
 import com.helga.android.ui.recipes.SortOrder
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -145,7 +146,7 @@ fun WeekplanRecipePickerScreen(
                             when {
                                 recipe.localImageUri.isNotBlank() -> recipe.localImageUri
                                 recipe.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
-                                    "${serverUrl.trimEnd('/')}/api/images/${recipe.imagePath}"
+                                    ImageUrls.serverImageUrl(serverUrl, recipe.imagePath)
                                 else -> null
                             }
                         }

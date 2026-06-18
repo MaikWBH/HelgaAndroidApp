@@ -47,6 +47,7 @@ import com.helga.android.data.local.ScanSource
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.local.toScanSource
+import com.helga.android.data.util.ImageUrls
 import com.helga.android.data.util.ReceiptItemNormalizer
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -137,7 +138,7 @@ private fun ReceiptPhoto(receipt: ReceiptEntity, serverUrl: String) {
     val imageModel: Any? = when {
         receipt.localImageUri.isNotBlank() -> receipt.localImageUri
         receipt.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
-            "${serverUrl.trimEnd('/')}/api/images/${receipt.imagePath}"
+            ImageUrls.serverImageUrl(serverUrl, receipt.imagePath)
         else -> null
     }
 

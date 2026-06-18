@@ -86,6 +86,7 @@ import coil.request.ImageRequest
 import com.helga.android.R
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
+import com.helga.android.data.util.ImageUrls
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
@@ -462,7 +463,7 @@ private fun DayCard(
                         when {
                             localUri.isNotBlank() -> localUri
                             path.isNotBlank() && serverUrl.isNotBlank() ->
-                                "${serverUrl.trimEnd('/')}/api/images/$path"
+                                ImageUrls.serverImageUrl(serverUrl, path)
                             else -> null
                         }
                     }
@@ -590,7 +591,7 @@ private fun DayCard(
                         when {
                             localUri.isNotBlank() -> localUri
                             path.isNotBlank() && serverUrl.isNotBlank() ->
-                                "${serverUrl.trimEnd('/')}/api/images/$path"
+                                ImageUrls.serverImageUrl(serverUrl, path)
                             else -> null
                         }
                     }
@@ -1056,7 +1057,7 @@ private fun ProposalSheet(
                     when {
                         localUri.isNotBlank() -> localUri
                         path.isNotBlank() && serverUrl.isNotBlank() ->
-                            "${serverUrl.trimEnd('/')}/api/images/$path"
+                            ImageUrls.serverImageUrl(serverUrl, path)
                         else -> null
                     }
                 }
