@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LocalDining
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -55,6 +56,7 @@ import com.helga.android.data.util.ReceiptItemNormalizer
 fun ReceiptDetailScreen(
     onBack: () -> Unit,
     onProductClick: (String) -> Unit = {},
+    onArticleLinkClick: (String) -> Unit = {},
     viewModel: ReceiptDetailViewModel = hiltViewModel(),
 ) {
     val receipt = viewModel.receipt.collectAsState().value
@@ -126,7 +128,11 @@ fun ReceiptDetailScreen(
                 }
                 item { HorizontalDivider() }
                 items(items, key = { it.id }) { item ->
-                    ReceiptItemRow(item = item, onProductClick = onProductClick)
+                    ReceiptItemRow(
+                        item = item,
+                        onProductClick = onProductClick,
+                        onArticleLinkClick = onArticleLinkClick,
+                    )
                 }
             }
         }
@@ -272,6 +278,7 @@ private fun ReconcileResult(outcome: com.helga.android.data.repository.Reconcile
 private fun ReceiptItemRow(
     item: ReceiptItemEntity,
     onProductClick: (String) -> Unit = {},
+    onArticleLinkClick: (String) -> Unit = {},
 ) {
     val accent = when (item.matchStatus) {
         "matched" -> MaterialTheme.colorScheme.primary
@@ -305,6 +312,10 @@ private fun ReceiptItemRow(
             String.format("€%.2f", item.totalPrice),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(end = 4.dp),
         )
+        IconButton(onClick = { onArticleLinkClick(item.name.ifBlank { item.rawText }) }) {
+            Icon(Icons.Filled.LocalDining, contentDescription = "Nährwerte zuordnen")
+        }
     }
 }

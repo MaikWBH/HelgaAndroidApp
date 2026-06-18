@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,11 +38,13 @@ import com.helga.android.data.repository.ProductSummary
 fun ProductPriceListScreen(
     onBack: () -> Unit,
     onProductClick: (String) -> Unit,
+    onArticleLinkClick: (String) -> Unit = {},
     viewModel: ProductPriceListViewModel = hiltViewModel(),
 ) {
     val products = viewModel.products.collectAsState().value
     val query = viewModel.query.collectAsState().value
     val isLoading = viewModel.isLoading.collectAsState().value
+    val linkedKeys = viewModel.linkedKeys.collectAsState().value
 
     Scaffold(
         topBar = {
@@ -100,6 +103,8 @@ fun ProductPriceListScreen(
                             product = product,
                             onClick = { onProductClick(product.normalizedKey) },
                             formatCurrency = viewModel::formatCurrency,
+                            showLinkAction = product.normalizedKey !in linkedKeys,
+                            onLinkClick = { onArticleLinkClick(product.displayName) },
                         )
                     }
                 }
@@ -114,6 +119,8 @@ private fun ProductSummaryCard(
     product: ProductSummary,
     onClick: () -> Unit,
     formatCurrency: (Double) -> String,
+    showLinkAction: Boolean,
+    onLinkClick: () -> Unit,
 ) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -144,6 +151,11 @@ private fun ProductSummaryCard(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                 )
+            }
+            if (showLinkAction) {
+                TextButton(onClick = onLinkClick, modifier = Modifier.padding(top = 4.dp)) {
+                    Text("Nährwerte zuordnen")
+                }
             }
         }
     }

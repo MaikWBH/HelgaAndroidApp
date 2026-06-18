@@ -184,6 +184,28 @@ async def classify(req: AiClassifyRequest) -> dict:
     }
 
 
+CLEAN_ARTICLE_SYSTEM = (
+    "Du bist Experte für deutsche Supermarkt-Kassenbons. Du verwandelst einen "
+    "kryptischen Bon-Artikelnamen in einen kurzen, generischen deutschen "
+    "Lebensmittel-Suchbegriff. Entferne Marken-Kürzel, Mengen-/Gewichtsangaben "
+    "und Steuerkennzeichen (einzelne Buchstaben wie 'A'/'B' am Ende). "
+    "Antworte AUSSCHLIESSLICH mit dem bereinigten Begriff – ohne Anführungszeichen, "
+    "ohne Erklärung. Beispiel: 'G&G H-MILCH 3,5% A' -> 'Milch'."
+)
+
+
+async def clean_article_name(raw_name: str) -> str:
+    """Bereinigt einen kryptischen Bon-Artikelnamen zu einem generischen
+    deutschen Suchbegriff. Bei Fehler oder leerer Antwort: raw_name unverändert.
+    """
+    try:
+        text = (await _call_once(CLEAN_ARTICLE_SYSTEM, raw_name)).strip()
+        text = text.strip('"').strip()
+        return text or raw_name
+    except Exception:
+        return raw_name
+
+
 def _mins_to_iso(mins) -> str:
     try:
         m = int(mins)

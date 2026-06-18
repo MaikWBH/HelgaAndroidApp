@@ -25,7 +25,9 @@ import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.ui.ai.AiGenerateScreen
 import com.helga.android.ui.ai.AiRemixScreen
 import com.helga.android.ui.onboarding.OnboardingScreen
+import com.helga.android.ui.receipts.ArticleLinkConfirmScreen
 import com.helga.android.ui.receipts.CostOverviewScreen
+import com.helga.android.ui.receipts.NutritionOverviewScreen
 import com.helga.android.ui.receipts.ProductPriceDetailScreen
 import com.helga.android.ui.receipts.ProductPriceListScreen
 import com.helga.android.ui.receipts.ReceiptDetailScreen
@@ -55,6 +57,8 @@ internal const val ROUTE_RECEIPTS_PRODUCTS = "receipts/products"
 internal const val ROUTE_PRODUCT_PRICE_DETAIL = "receipts/products/{productKey}"
 internal const val ROUTE_RECEIPT_SCAN = "receipts/scan?listId={listId}"
 internal const val ROUTE_RECEIPT_DETAIL = "receipts/detail/{receiptId}"
+internal const val ROUTE_RECEIPTS_NUTRITION_OVERVIEW = "receipts/nutrition-overview"
+internal const val ROUTE_ARTICLE_LINK_CONFIRM = "receipts/article-link/{articleName}"
 internal const val ROUTE_RECIPE_DETAIL = "recipe/{recipeId}"
 internal const val ROUTE_RECIPE_CREATE = "recipe/new"
 internal const val ROUTE_RECIPE_EDIT = "recipe/{recipeId}/edit"
@@ -75,6 +79,8 @@ internal fun receiptScanRoute(listId: String? = null) =
 internal fun receiptDetailRoute(receiptId: String) = "receipts/detail/$receiptId"
 internal fun productPriceDetailRoute(key: String) =
     "receipts/products/${URLEncoder.encode(key, "UTF-8").replace("+", "%20")}"
+internal fun articleLinkConfirmRoute(articleName: String) =
+    "receipts/article-link/${URLEncoder.encode(articleName, "UTF-8").replace("+", "%20")}"
 
 private val ROOT_ROUTES = setOf(ROUTE_SHOPPING, ROUTE_RECIPES, ROUTE_WEEKPLAN)
 
@@ -218,6 +224,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                         onScanClick = { navController.navigate(receiptScanRoute(null)) },
                         onCostOverviewClick = { navController.navigate(ROUTE_RECEIPTS_COST_OVERVIEW) },
                         onProductsClick = { navController.navigate(ROUTE_RECEIPTS_PRODUCTS) },
+                        onNutritionOverviewClick = { navController.navigate(ROUTE_RECEIPTS_NUTRITION_OVERVIEW) },
                     )
                 }
                 composable(
@@ -227,6 +234,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                     ReceiptDetailScreen(
                         onBack = { navController.popBackStack() },
                         onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
+                        onArticleLinkClick = { name -> navController.navigate(articleLinkConfirmRoute(name)) },
                     )
                 }
                 composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
@@ -236,6 +244,22 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                     ProductPriceListScreen(
                         onBack = { navController.popBackStack() },
                         onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
+                        onArticleLinkClick = { name -> navController.navigate(articleLinkConfirmRoute(name)) },
+                    )
+                }
+                composable(ROUTE_RECEIPTS_NUTRITION_OVERVIEW) {
+                    NutritionOverviewScreen(
+                        onBack = { navController.popBackStack() },
+                        onUnmatchedClick = { navController.navigate(ROUTE_RECEIPTS_PRODUCTS) },
+                    )
+                }
+                composable(
+                    route = ROUTE_ARTICLE_LINK_CONFIRM,
+                    arguments = listOf(navArgument("articleName") { type = NavType.StringType }),
+                ) {
+                    ArticleLinkConfirmScreen(
+                        onBack = { navController.popBackStack() },
+                        onDone = { navController.popBackStack() },
                     )
                 }
                 composable(

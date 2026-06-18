@@ -273,6 +273,19 @@ data class MonthlyBudgetDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class ReceiptArticleLinkDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "normalized_name") val normalizedName: String = "",
+    @Json(name = "display_name") val displayName: String = "",
+    @Json(name = "off_product_id") val offProductId: String = "",
+    @Json(name = "off_barcode") val offBarcode: String = "",
+    val confirmed: Int = 0,
+    @Json(name = "confirmed_at") val confirmedAt: Long = 0L,
+)
+
+@JsonClass(generateAdapter = true)
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
@@ -303,6 +316,33 @@ data class OffLookupBarcodeResponse(
     val vegetarian: Int = 0,
     @Json(name = "image_path") val imagePath: String = "",
     @Json(name = "is_favorite") val isFavorite: Int = 0,
+    @Json(name = "package_grams") val packageGrams: Double = 0.0,
+    @Json(name = "package_grams_manual") val packageGramsManual: Int = 0,
+)
+
+// ── Open Food Facts: Suche & KI-Vorschlag (Phase 6) ──────────────────────────
+
+@JsonClass(generateAdapter = true)
+data class OffSearchRequest(
+    val query: String,
+    val limit: Int = 5,
+)
+
+@JsonClass(generateAdapter = true)
+data class OffSearchResponse(
+    val products: List<OffLookupBarcodeResponse> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class OffSuggestMatchRequest(
+    @Json(name = "raw_name") val rawName: String,
+    val limit: Int = 5,
+)
+
+@JsonClass(generateAdapter = true)
+data class OffSuggestMatchResponse(
+    @Json(name = "cleaned_name") val cleanedName: String = "",
+    val products: List<OffLookupBarcodeResponse> = emptyList(),
 )
 
 // ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
@@ -393,6 +433,7 @@ data class SyncPullResponse(
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
     @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
+    @Json(name = "receipt_article_links") val receiptArticleLinks: List<ReceiptArticleLinkDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -420,6 +461,7 @@ data class SyncPushRequest(
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
     @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
+    @Json(name = "receipt_article_links") val receiptArticleLinks: List<ReceiptArticleLinkDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

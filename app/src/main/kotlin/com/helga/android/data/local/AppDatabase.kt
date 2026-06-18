@@ -7,7 +7,9 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.helga.android.data.local.dao.MonthlyBudgetDao
+import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptArticleLinkDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeDao
@@ -24,7 +26,9 @@ import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
+import com.helga.android.data.local.entity.OffProductEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
+import com.helga.android.data.local.entity.ReceiptArticleLinkEntity
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
@@ -45,7 +49,7 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 
 @Database(
-    version = 26,
+    version = 27,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -72,6 +76,8 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
         ReceiptEntity::class,
         ReceiptItemEntity::class,
         MonthlyBudgetEntity::class,
+        OffProductEntity::class,
+        ReceiptArticleLinkEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -89,6 +95,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
     abstract fun receiptDao(): ReceiptDao
     abstract fun monthlyBudgetDao(): MonthlyBudgetDao
+    abstract fun offProductDao(): OffProductDao
+    abstract fun receiptArticleLinkDao(): ReceiptArticleLinkDao
 
     companion object {
         const val NAME = "helga.db"
@@ -690,10 +698,37 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_26_27 = object : Migration(26, 27) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Packungsgröße (aus OFF-Rohdaten geparst) + Flag für manuelle Korrektur.
+                db.execSQL("ALTER TABLE off_products ADD COLUMN packageGrams REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE off_products ADD COLUMN packageGramsManual INTEGER NOT NULL DEFAULT 0")
+
+                // Persönliche DB: Bon-Artikelname → OFF-Produkt (synchronisiert).
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS receipt_article_links (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        normalizedName TEXT NOT NULL DEFAULT '',
+                        displayName TEXT NOT NULL DEFAULT '',
+                        offProductId TEXT NOT NULL DEFAULT '',
+                        offBarcode TEXT NOT NULL DEFAULT '',
+                        confirmed INTEGER NOT NULL DEFAULT 0,
+                        confirmedAt INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_receipt_article_links_normalizedName ON receipt_article_links(normalizedName)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_article_links_updatedAt ON receipt_article_links(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_article_links_deleted ON receipt_article_links(deleted)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27)
                 .build()
     }
 }

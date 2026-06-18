@@ -360,4 +360,17 @@
     <string name="cost_overview_period_month">Monat</string>
     <string name="cost_overview_period_all">Alle</string>
     <string name="cost_overview_empty">Keine Kassenbons vorhanden</string>
+
+    <!-- Phase 6: Nährwerte -->
+    <string name="nutrition_overview_title">Nährwerte aus Einkäufen</string>
+    <string name="nutrition_overview_total">Gesamt</string>
+    <string name="nutrition_overview_top_contributors">Größte Beitragende</string>
+    <string name="nutrition_overview_unmatched_hint">Artikel ohne Zuordnung</string>
+    <string name="article_link_title">Nährwerte zuordnen</string>
+    <string name="article_link_ai_suggestion">KI-Vorschlag für</string>
+    <string name="article_link_confirm">Bestätigen</string>
+    <string name="article_link_reject">Anderes Produkt suchen</string>
+    <string name="article_link_package_size_missing">Packungsgröße konnte nicht automatisch ermittelt werden</string>
+    <string name="article_link_package_size_manual_label">Packungsgröße (g)</string>
+    <string name="receipt_item_link_action">Nährwerte zuordnen</string>
 </resources>

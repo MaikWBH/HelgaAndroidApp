@@ -4,7 +4,9 @@ import android.content.Context
 import com.helga.android.data.local.AppDatabase
 import com.helga.android.data.local.ReceiptScanner
 import com.helga.android.data.local.dao.MonthlyBudgetDao
+import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptArticleLinkDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.ShoppingDao
@@ -70,6 +72,13 @@ object DatabaseModule {
 
     @Provides
     fun provideMonthlyBudgetDao(db: AppDatabase): MonthlyBudgetDao = db.monthlyBudgetDao()
+
+    @Provides
+    fun provideOffProductDao(db: AppDatabase): OffProductDao = db.offProductDao()
+
+    @Provides
+    fun provideReceiptArticleLinkDao(db: AppDatabase): ReceiptArticleLinkDao =
+        db.receiptArticleLinkDao()
 
     @Provides
     @javax.inject.Singleton

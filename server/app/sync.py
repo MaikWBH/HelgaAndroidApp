@@ -73,7 +73,8 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "barcode", "name", "brand", "categories", "kcal_per_unit",
         "proteins", "fats", "carbs", "nutri_score", "nova", "eco_score",
         "allergenes", "additives", "is_organic", "vegan", "vegetarian",
-        "image_path", "is_favorite", "updated_at", "deleted",
+        "image_path", "is_favorite", "package_grams", "package_grams_manual",
+        "updated_at", "deleted",
     ],
     "ingredient_product_mappings": [
         "id", "ingredient_name", "off_product_id", "off_barcode", "display_name",
@@ -99,6 +100,10 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     ],
     "monthly_budgets": [
         "id", "amount", "warn_threshold", "updated_at", "deleted",
+    ],
+    "receipt_article_links": [
+        "id", "normalized_name", "display_name", "off_product_id", "off_barcode",
+        "confirmed", "confirmed_at", "updated_at", "deleted",
     ],
 }
 
@@ -133,6 +138,7 @@ PAYLOAD_FIELD = {
     "receipts": "receipts",
     "receipt_items": "receipt_items",
     "monthly_budgets": "monthly_budgets",
+    "receipt_article_links": "receipt_article_links",
 }
 
 

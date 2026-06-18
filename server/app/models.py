@@ -165,6 +165,15 @@ class MonthlyBudgetRecord(SyncRecord):
     warn_threshold: float = 0.8
 
 
+class ReceiptArticleLinkRecord(SyncRecord):
+    normalized_name: str = ""
+    display_name: str = ""
+    off_product_id: str = ""
+    off_barcode: str = ""
+    confirmed: int = 0
+    confirmed_at: int = 0
+
+
 class OffProductRecord(SyncRecord):
     barcode: str = ""
     name: str = ""
@@ -184,6 +193,8 @@ class OffProductRecord(SyncRecord):
     vegetarian: int = 0
     image_path: str = ""
     is_favorite: int = 0
+    package_grams: float = 0.0
+    package_grams_manual: int = 0
 
 
 class IngredientMappingRecord(SyncRecord):
@@ -268,6 +279,7 @@ class SyncPayload(BaseModel):
     receipts: List[ReceiptRecord] = []
     receipt_items: List[ReceiptItemRecord] = []
     monthly_budgets: List[MonthlyBudgetRecord] = []
+    receipt_article_links: List[ReceiptArticleLinkRecord] = []
 
 
 class SyncPullResponse(SyncPayload):
@@ -370,6 +382,16 @@ class OffSearchRequest(BaseModel):
 
 
 class OffSearchResponse(BaseModel):
+    products: List[OffProductRecord] = []
+
+
+class OffSuggestMatchRequest(BaseModel):
+    raw_name: str
+    limit: int = 5
+
+
+class OffSuggestMatchResponse(BaseModel):
+    cleaned_name: str = ""
     products: List[OffProductRecord] = []
 
 
