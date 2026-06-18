@@ -43,8 +43,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.helga.android.data.local.ScanSource
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
+import com.helga.android.data.local.toScanSource
 import com.helga.android.data.util.ReceiptItemNormalizer
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -180,6 +182,15 @@ private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Text(
+            when (receipt.source.toScanSource()) {
+                ScanSource.AI -> "Gelesen per KI-Vision"
+                ScanSource.ON_DEVICE -> "Gelesen per On-Device-OCR"
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
+        )
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -277,12 +288,18 @@ private fun ReceiptItemRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            item.name.ifBlank { item.rawText },
-            style = MaterialTheme.typography.bodyMedium,
-            color = accent,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                item.name.ifBlank { item.rawText },
+                style = MaterialTheme.typography.bodyMedium,
+                color = accent,
+            )
+            Text(
+                "${formatQuantity(item.quantity)} × ${String.format("€%.2f", item.unitPrice)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
             String.format("€%.2f", item.totalPrice),
             style = MaterialTheme.typography.bodyMedium,

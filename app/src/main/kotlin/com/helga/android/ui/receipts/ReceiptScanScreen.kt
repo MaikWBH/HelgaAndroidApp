@@ -364,10 +364,14 @@ private fun PreviewContent(
                             modifier = Modifier.padding(end = 6.dp),
                         )
                     }
-                    Text(
-                        item.name.ifEmpty { item.rawText },
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(item.name.ifEmpty { item.rawText })
+                        Text(
+                            "${formatQuantity(item.quantity)} × ${String.format("€%.2f", item.unitPrice)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Text(
                         String.format("€%.2f", item.totalPrice),
                         fontWeight = FontWeight.SemiBold,

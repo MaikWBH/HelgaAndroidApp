@@ -321,13 +321,14 @@ private fun PricePointRow(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                point.storeName.ifBlank { "Unbekannter Markt" },
+                "${point.storeName.ifBlank { "Unbekannter Markt" }} · ${formatQuantity(point.quantity)}× " +
+                    "à ${formatCurrency(point.unitPrice)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
-            formatCurrency(point.unitPrice),
+            formatCurrency(point.totalPrice),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
         )

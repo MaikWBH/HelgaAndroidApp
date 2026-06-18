@@ -35,6 +35,14 @@ data class ReceiptScanResult(
 /** Woher die Bon-Daten stammen – für Transparenz/Debugging in der Vorschau. */
 enum class ScanSource { AI, ON_DEVICE }
 
+/** Für das Speichern in [ReceiptEntity.source] (lokales DB-Feld, kein DTO). */
+fun ScanSource.toDbValue(): String = when (this) {
+    ScanSource.AI -> "ai"
+    ScanSource.ON_DEVICE -> "on_device"
+}
+
+fun String.toScanSource(): ScanSource = if (this == "ai") ScanSource.AI else ScanSource.ON_DEVICE
+
 @Singleton
 class ReceiptScanner @Inject constructor(
     private val context: Context,

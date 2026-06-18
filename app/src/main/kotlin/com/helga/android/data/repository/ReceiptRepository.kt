@@ -5,6 +5,7 @@ import android.util.Base64
 import com.helga.android.data.local.ReceiptScanner
 import com.helga.android.data.local.ReceiptScanResult
 import com.helga.android.data.local.ScanSource
+import com.helga.android.data.local.toDbValue
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ReceiptEntity
@@ -47,6 +48,8 @@ data class ProductPricePoint(
     val storeId: String,
     val storeName: String,
     val unitPrice: Double,
+    val quantity: Double = 1.0,
+    val totalPrice: Double = 0.0,
 )
 
 data class ProductPriceHistory(
@@ -131,6 +134,7 @@ class ReceiptRepository @Inject constructor(
             currency = "EUR",
             rawOcrText = "",
             status = "scanned",
+            source = ScanSource.AI.toDbValue(),
             updatedAt = now,
             deleted = 0,
             dirty = 0,
@@ -317,7 +321,9 @@ class ReceiptRepository @Inject constructor(
 
         return ProductPriceHistory(
             displayName = displayName,
-            points = group.map { ProductPricePoint(it.purchaseDate, it.storeId, it.storeName, it.unitPrice) },
+            points = group.map {
+                ProductPricePoint(it.purchaseDate, it.storeId, it.storeName, it.unitPrice, it.quantity, it.totalPrice)
+            },
             storeComparison = storeComparison,
             avgPrice = priceList.average(),
             minPrice = priceList.min(),

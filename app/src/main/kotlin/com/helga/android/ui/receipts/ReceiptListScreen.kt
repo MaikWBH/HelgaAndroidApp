@@ -41,6 +41,10 @@ internal fun formatReceiptDate(epochMs: Long): String =
     if (epochMs <= 0) "—"
     else dateFormatter.format(Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()))
 
+/** Ganze Mengen ohne Nachkommastellen ("2"), sonst mit zwei ("0.5"). */
+internal fun formatQuantity(value: Double): String =
+    if (value == value.toLong().toDouble()) value.toLong().toString() else String.format("%.2f", value)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiptListScreen(

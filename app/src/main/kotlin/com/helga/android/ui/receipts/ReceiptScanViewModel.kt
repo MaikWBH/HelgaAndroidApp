@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.ScanSource
+import com.helga.android.data.local.toDbValue
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.repository.ReceiptRepository
@@ -149,6 +150,7 @@ class ReceiptScanViewModel @Inject constructor(
                     localImageUri = localImageUri,
                     rawOcrText = current.rawOcrText,
                     status = "scanned",
+                    source = current.source.toDbValue(),
                     updatedAt = System.currentTimeMillis(),
                     deleted = 0,
                     dirty = 1,
