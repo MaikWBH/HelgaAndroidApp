@@ -147,7 +147,7 @@ private fun SuggestionContent(
                 "Anderes Produkt suchen",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp, bottom = 8.dp),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
             OutlinedTextField(
                 value = searchQuery,
