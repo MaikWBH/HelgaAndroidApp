@@ -134,6 +134,20 @@ class ReceiptScanViewModel @Inject constructor(
         _uiState.value = current.copy(items = current.items - item)
     }
 
+    /**
+     * Ersetzt eine Position durch die vom Nutzer korrigierte Version (gleiche id).
+     * Nach manueller Korrektur gilt die Position nicht mehr als unsicher, daher
+     * wird ihre Markierung entfernt.
+     */
+    fun updateItem(updated: ReceiptItemEntity) {
+        val current = _uiState.value as? ReceiptScanUiState.Preview ?: return
+        val newItems = current.items.map { if (it.id == updated.id) updated else it }
+        _uiState.value = current.copy(
+            items = newItems,
+            lowConfidenceItemIds = current.lowConfidenceItemIds - updated.id,
+        )
+    }
+
     fun save() {
         val current = _uiState.value as? ReceiptScanUiState.Preview ?: return
         viewModelScope.launch {

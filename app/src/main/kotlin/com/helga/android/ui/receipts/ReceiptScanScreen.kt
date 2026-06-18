@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,8 +26,10 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +58,7 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.pm.PackageManager
 import com.helga.android.data.local.ScanSource
+import com.helga.android.data.local.entity.ReceiptItemEntity
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -165,6 +170,7 @@ fun ReceiptScanScreen(
                         onStoreNameChange = viewModel::updateStoreName,
                         onTotalChange = viewModel::updateTotal,
                         onRemoveItem = viewModel::removeItem,
+                        onUpdateItem = viewModel::updateItem,
                         onSave = viewModel::save,
                         onRetry = viewModel::reset,
                     )
@@ -292,12 +298,26 @@ private fun PreviewContent(
     state: ReceiptScanUiState.Preview,
     onStoreNameChange: (String) -> Unit,
     onTotalChange: (Double) -> Unit,
-    onRemoveItem: (com.helga.android.data.local.entity.ReceiptItemEntity) -> Unit,
+    onRemoveItem: (ReceiptItemEntity) -> Unit,
+    onUpdateItem: (ReceiptItemEntity) -> Unit,
     onSave: () -> Unit,
     onRetry: () -> Unit,
 ) {
     var totalText by remember(state.totalAmount) {
         mutableStateOf(if (state.totalAmount > 0) String.format("%.2f", state.totalAmount) else "")
+    }
+    // Aktuell zur Korrektur geöffnete Position (null = kein Dialog offen).
+    var editingItem by remember { mutableStateOf<ReceiptItemEntity?>(null) }
+
+    editingItem?.let { item ->
+        EditItemDialog(
+            item = item,
+            onDismiss = { editingItem = null },
+            onConfirm = {
+                onUpdateItem(it)
+                editingItem = null
+            },
+        )
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -337,6 +357,11 @@ private fun PreviewContent(
                     style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
+                Text(
+                    "Zum Korrigieren auf eine Position tippen.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(Modifier.height(8.dp))
             }
 
@@ -364,7 +389,11 @@ private fun PreviewContent(
                             modifier = Modifier.padding(end = 6.dp),
                         )
                     }
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { editingItem = item },
+                    ) {
                         Text(item.name.ifEmpty { item.rawText })
                         Text(
                             "${formatQuantity(item.quantity)} × ${String.format("€%.2f", item.unitPrice)}",
@@ -375,6 +404,7 @@ private fun PreviewContent(
                     Text(
                         String.format("€%.2f", item.totalPrice),
                         fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable { editingItem = item },
                     )
                     IconButton(onClick = { onRemoveItem(item) }) {
                         Icon(Icons.Filled.Close, contentDescription = "Entfernen")
@@ -408,4 +438,93 @@ private fun PreviewContent(
             ) { Text("Speichern") }
         }
     }
+}
+
+/**
+ * Dialog zum manuellen Korrigieren einer erkannten Position. Der Gesamtpreis wird
+ * automatisch aus Menge × Einzelpreis berechnet, solange er nicht von Hand
+ * überschrieben wurde (z. B. bei Rabatten oder Pfand auf dem Bon).
+ */
+@Composable
+private fun EditItemDialog(
+    item: ReceiptItemEntity,
+    onDismiss: () -> Unit,
+    onConfirm: (ReceiptItemEntity) -> Unit,
+) {
+    var name by remember { mutableStateOf(item.name.ifEmpty { item.rawText }) }
+    var quantityText by remember { mutableStateOf(formatQuantity(item.quantity)) }
+    var unitPriceText by remember { mutableStateOf(String.format("%.2f", item.unitPrice)) }
+    var totalText by remember { mutableStateOf(String.format("%.2f", item.totalPrice)) }
+    // Solange true, folgt der Gesamtpreis automatisch Menge × Einzelpreis.
+    var autoTotal by remember { mutableStateOf(true) }
+
+    fun parse(value: String): Double? = value.replace(",", ".").toDoubleOrNull()
+
+    fun recomputeTotal() {
+        if (!autoTotal) return
+        val q = parse(quantityText)
+        val u = parse(unitPriceText)
+        if (q != null && u != null) totalText = String.format("%.2f", q * u)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Position bearbeiten") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Bezeichnung") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = quantityText,
+                    onValueChange = { quantityText = it; recomputeTotal() },
+                    label = { Text("Menge") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = unitPriceText,
+                    onValueChange = { unitPriceText = it; recomputeTotal() },
+                    label = { Text("Einzelpreis (€)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = totalText,
+                    onValueChange = { totalText = it; autoTotal = false },
+                    label = { Text("Gesamtpreis (€)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val q = parse(quantityText) ?: item.quantity
+                val u = parse(unitPriceText) ?: item.unitPrice
+                val t = parse(totalText) ?: (q * u)
+                onConfirm(
+                    item.copy(
+                        name = name.trim(),
+                        quantity = q,
+                        unitPrice = u,
+                        totalPrice = t,
+                    )
+                )
+            }) { Text("Übernehmen") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+        },
+    )
 }
