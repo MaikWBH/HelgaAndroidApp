@@ -123,6 +123,7 @@ fun WeekplanScreen(
     val generateStatus by viewModel.generateStatus.collectAsStateWithLifecycle()
     val feedbackMap by viewModel.feedbackForSelectedDay.collectAsStateWithLifecycle()
     val weekBalance by viewModel.weekBalance.collectAsStateWithLifecycle()
+    val weekNutrition by viewModel.weekNutrition.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
@@ -285,6 +286,29 @@ fun WeekplanScreen(
                                         MaterialTheme.colorScheme.error
                                     else
                                         MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
+                    }
+                }
+                item(key = "week_nutrition") {
+                    val nutrition = weekNutrition
+                    if (nutrition != null && nutrition.totalRecipes > 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "🔥 Ø ${nutrition.weekAvgKcal.toInt()} kcal/Tag",
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                            if (nutrition.weekAvgNutriScore.isNotBlank()) {
+                                Text(
+                                    "Nutri-Score ${nutrition.weekAvgNutriScore.uppercase()}",
+                                    style = MaterialTheme.typography.labelMedium,
                                 )
                             }
                         }

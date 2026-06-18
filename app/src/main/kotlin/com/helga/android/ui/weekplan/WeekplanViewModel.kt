@@ -12,6 +12,7 @@ import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
+import com.helga.android.data.model.WeekplanNutrition
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
@@ -169,6 +170,11 @@ class WeekplanViewModel @Inject constructor(
         }
         WeekBalance(meat, fish, veg, other)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekBalance())
+
+    val weekNutrition: StateFlow<WeekplanNutrition?> = combine(days, weekRecipes) { dayList, _ ->
+        if (dayList.isEmpty()) null
+        else repository.getWeekplanNutrition(dayList.first().planDate, dayList.last().planDate)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _exportEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val exportEvent = _exportEvent
