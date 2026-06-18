@@ -39,7 +39,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.helga.android.data.local.entity.OffProductEntity
-import com.helga.android.data.repository.SuggestedMatch
 import com.helga.android.data.util.AllergyChecker
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,10 +87,11 @@ fun ArticleLinkConfirmScreen(
                 Text("Bereits zugeordnet zu „${uiState.linkedDisplayName}“")
             }
             uiState is ArticleLinkUiState.Error -> Box(contentModifier, Alignment.Center) {
-                Text("KI-Vorschlag fehlgeschlagen. Bitte später erneut versuchen.")
+                Text("Online-Suche fehlgeschlagen. Bitte später erneut versuchen.")
             }
             uiState is ArticleLinkUiState.Suggestion -> SuggestionContent(
-                match = uiState.match,
+                displayName = viewModel.displayName,
+                products = uiState.products,
                 allergies = allergies,
                 searchQuery = searchQuery,
                 searchResults = searchResults,
@@ -105,7 +105,8 @@ fun ArticleLinkConfirmScreen(
 
 @Composable
 private fun SuggestionContent(
-    match: SuggestedMatch,
+    displayName: String,
+    products: List<OffProductEntity>,
     allergies: List<String>,
     searchQuery: String,
     searchResults: List<OffProductEntity>,
@@ -114,17 +115,17 @@ private fun SuggestionContent(
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(modifier = modifier) {
-        if (match.cleanedName.isNotBlank()) {
+        if (displayName.isNotBlank()) {
             item {
                 Text(
-                    "KI-Vorschlag für: „${match.cleanedName}“",
+                    "Online-Suche nach: „$displayName“",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
                 )
             }
         }
-        if (match.products.isEmpty()) {
+        if (products.isEmpty()) {
             item {
                 Text(
                     "Keine Treffer gefunden",
@@ -133,7 +134,7 @@ private fun SuggestionContent(
                 )
             }
         }
-        items(match.products) { product ->
+        items(products) { product ->
             CandidateCard(
                 product = product,
                 allergenWarnings = AllergyChecker.hasAllergens(product, allergies),

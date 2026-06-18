@@ -8,18 +8,12 @@ import com.helga.android.data.local.entity.ReceiptArticleLinkEntity
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.OffLookupBarcodeResponse
 import com.helga.android.data.remote.dto.OffSearchRequest
-import com.helga.android.data.remote.dto.OffSuggestMatchRequest
 import com.helga.android.data.util.ReceiptItemNormalizer
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-
-data class SuggestedMatch(
-    val cleanedName: String,
-    val products: List<OffProductEntity>,
-)
 
 data class NutritionContributor(
     val displayName: String,
@@ -53,13 +47,6 @@ class NutritionRepository @Inject constructor(
 
     fun confirmedNormalizedNames(): Flow<Set<String>> = receiptArticleLinkDao.observeAll()
         .map { links -> links.filter { it.confirmed == 1 }.map { it.normalizedName }.toSet() }
-
-    suspend fun suggestMatch(rawArticleName: String): SuggestedMatch {
-        val response = apiFactory.api().suggestOffMatch(OffSuggestMatchRequest(rawName = rawArticleName))
-        val entities = response.products.map { it.toEntity() }
-        cacheProducts(entities)
-        return SuggestedMatch(cleanedName = response.cleanedName, products = entities)
-    }
 
     suspend fun manualSearch(query: String): List<OffProductEntity> {
         val response = apiFactory.api().searchOffProducts(OffSearchRequest(query = query))

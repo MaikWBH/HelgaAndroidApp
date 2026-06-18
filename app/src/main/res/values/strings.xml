@@ -367,7 +367,7 @@
     <string name="nutrition_overview_top_contributors">Größte Beitragende</string>
     <string name="nutrition_overview_unmatched_hint">Artikel ohne Zuordnung</string>
     <string name="article_link_title">Nährwerte zuordnen</string>
-    <string name="article_link_ai_suggestion">KI-Vorschlag für</string>
+    <string name="article_link_search_label">Online-Suche nach</string>
     <string name="article_link_confirm">Bestätigen</string>
     <string name="article_link_reject">Anderes Produkt suchen</string>
     <string name="article_link_package_size_missing">Packungsgröße konnte nicht automatisch ermittelt werden</string>

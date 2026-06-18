@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.OffProductEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.repository.NutritionRepository
-import com.helga.android.data.repository.SuggestedMatch
 import com.helga.android.data.util.ReceiptItemNormalizer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +16,7 @@ import javax.inject.Inject
 sealed interface ArticleLinkUiState {
     data object Loading : ArticleLinkUiState
     data class AlreadyLinked(val linkedDisplayName: String) : ArticleLinkUiState
-    data class Suggestion(val match: SuggestedMatch) : ArticleLinkUiState
+    data class Suggestion(val products: List<OffProductEntity>) : ArticleLinkUiState
     data object Error : ArticleLinkUiState
 }
 
@@ -54,7 +53,7 @@ class ArticleLinkConfirmViewModel @Inject constructor(
                 ArticleLinkUiState.AlreadyLinked(existing.displayName.ifBlank { displayName })
             } else {
                 try {
-                    ArticleLinkUiState.Suggestion(repository.suggestMatch(displayName))
+                    ArticleLinkUiState.Suggestion(repository.manualSearch(normalizedName))
                 } catch (e: Exception) {
                     ArticleLinkUiState.Error
                 }

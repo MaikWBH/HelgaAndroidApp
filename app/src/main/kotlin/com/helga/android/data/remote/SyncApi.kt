@@ -9,8 +9,6 @@ import com.helga.android.data.remote.dto.OffLookupBarcodeRequest
 import com.helga.android.data.remote.dto.OffLookupBarcodeResponse
 import com.helga.android.data.remote.dto.OffSearchRequest
 import com.helga.android.data.remote.dto.OffSearchResponse
-import com.helga.android.data.remote.dto.OffSuggestMatchRequest
-import com.helga.android.data.remote.dto.OffSuggestMatchResponse
 import com.helga.android.data.remote.dto.ReceiptParseRequest
 import com.helga.android.data.remote.dto.ReceiptParseResponse
 import com.helga.android.data.remote.dto.ReceiptReconcileRequest
@@ -61,9 +59,6 @@ interface SyncApi {
 
     @POST("api/off/search")
     suspend fun searchOffProducts(@Body req: OffSearchRequest): OffSearchResponse
-
-    @POST("api/off/suggest-match")
-    suspend fun suggestOffMatch(@Body req: OffSuggestMatchRequest): OffSuggestMatchResponse
 
     @POST("api/receipts/reconcile")
     suspend fun reconcileReceipt(@Body req: ReceiptReconcileRequest): ReceiptReconcileResponse

@@ -385,16 +385,6 @@ class OffSearchResponse(BaseModel):
     products: List[OffProductRecord] = []
 
 
-class OffSuggestMatchRequest(BaseModel):
-    raw_name: str
-    limit: int = 5
-
-
-class OffSuggestMatchResponse(BaseModel):
-    cleaned_name: str = ""
-    products: List[OffProductRecord] = []
-
-
 # ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
 
 class ReconcileShoppingItem(BaseModel):

@@ -320,7 +320,7 @@ data class OffLookupBarcodeResponse(
     @Json(name = "package_grams_manual") val packageGramsManual: Int = 0,
 )
 
-// ── Open Food Facts: Suche & KI-Vorschlag (Phase 6) ──────────────────────────
+// ── Open Food Facts: Suche (Phase 6) ──────────────────────────────────────────
 
 @JsonClass(generateAdapter = true)
 data class OffSearchRequest(
@@ -330,18 +330,6 @@ data class OffSearchRequest(
 
 @JsonClass(generateAdapter = true)
 data class OffSearchResponse(
-    val products: List<OffLookupBarcodeResponse> = emptyList(),
-)
-
-@JsonClass(generateAdapter = true)
-data class OffSuggestMatchRequest(
-    @Json(name = "raw_name") val rawName: String,
-    val limit: Int = 5,
-)
-
-@JsonClass(generateAdapter = true)
-data class OffSuggestMatchResponse(
-    @Json(name = "cleaned_name") val cleanedName: String = "",
     val products: List<OffLookupBarcodeResponse> = emptyList(),
 )
 

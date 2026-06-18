@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from .db import init_db, get_db, now_ms
 from .models import (
     AiClassifyRequest, AiGenerateRequest, AiRemixRequest, AiUrlImportRequest,
-    OffLookupBarcodeRequest, OffSearchRequest, OffSuggestMatchRequest,
+    OffLookupBarcodeRequest, OffSearchRequest,
     ReceiptParseRequest,
     ReceiptParseResponse, ReceiptReconcileRequest,
     SyncPullResponse, SyncPushRequest, WeekplanGenerateRequest,
@@ -157,16 +157,6 @@ async def off_lookup_barcode(req: OffLookupBarcodeRequest):
 async def off_search(req: OffSearchRequest):
     from . import off as off_module
     return await off_module.search_products(req.query, req.limit)
-
-
-@app.post("/api/off/suggest-match", dependencies=[Depends(require_auth)])
-async def off_suggest_match(req: OffSuggestMatchRequest):
-    """Bereinigt einen kryptischen Bon-Artikelnamen per KI und sucht passende
-    OFF-Produkte dazu."""
-    from . import off as off_module
-    cleaned = await ai_module.clean_article_name(req.raw_name)
-    result = await off_module.search_products(cleaned, req.limit)
-    return {"cleaned_name": cleaned, "products": result["products"]}
 
 
 # ── Vorschläge (Autocomplete) ─────────────────────────────────────────────────
