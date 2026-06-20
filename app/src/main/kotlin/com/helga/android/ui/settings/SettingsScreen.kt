@@ -390,7 +390,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !bulkAiState.isRunning,
             ) {
-                if (bulkAiState.isRunning) {
+                if (bulkAiState.isRunning && bulkAiState.mode == BulkAiMode.BOTH) {
                     CircularProgressIndicator(
                         modifier = Modifier.height(20.dp),
                         strokeWidth = 2.dp,

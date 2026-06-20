@@ -43,7 +43,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -860,20 +859,6 @@ private fun InstructionRow(instruction: InstructionEntity) {
             modifier = Modifier.weight(1f),
         )
     }
-}
-
-private fun IngredientEntity.displayText(scaleFactor: Float = 1f): String = buildString {
-    if (quantity > 0.0) {
-        val scaled = quantity * scaleFactor
-        val q = if (scaled % 1.0 < 0.01) "${scaled.toInt()}"
-                else String.format(java.util.Locale.getDefault(), "%.1f", scaled)
-                    .trimEnd('0').trimEnd(',').trimEnd('.')
-        append(q)
-        if (unit.isNotBlank()) append(" $unit")
-        append(" ")
-    }
-    append(food)
-    if (note.isNotBlank()) append(" ($note)")
 }
 
 private fun IngredientEntity.quantityText(scaleFactor: Float = 1f): String = buildString {
