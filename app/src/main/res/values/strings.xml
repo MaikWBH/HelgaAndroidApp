@@ -361,16 +361,25 @@
     <string name="cost_overview_period_all">Alle</string>
     <string name="cost_overview_empty">Keine Kassenbons vorhanden</string>
 
-    <!-- Phase 6: Nährwerte -->
-    <string name="nutrition_overview_title">Nährwerte aus Einkäufen</string>
-    <string name="nutrition_overview_total">Gesamt</string>
-    <string name="nutrition_overview_top_contributors">Größte Beitragende</string>
-    <string name="nutrition_overview_unmatched_hint">Artikel ohne Zuordnung</string>
-    <string name="article_link_title">Nährwerte zuordnen</string>
-    <string name="article_link_search_label">Online-Suche nach</string>
-    <string name="article_link_confirm">Bestätigen</string>
-    <string name="article_link_reject">Anderes Produkt suchen</string>
-    <string name="article_link_package_size_missing">Packungsgröße konnte nicht automatisch ermittelt werden</string>
-    <string name="article_link_package_size_manual_label">Packungsgröße (g)</string>
-    <string name="receipt_item_link_action">Nährwerte zuordnen</string>
+    <!-- Rezept-Nährwerte: manuell oder per KI, immer für 4 Portionen -->
+    <string name="recipe_nutrition_calculate_ai">KI berechnet Nährwerte</string>
+    <string name="recipe_nutrition_edit_manual">Nährwerte eintragen</string>
+    <string name="recipe_nutrition_baseline_hint">Werte gelten für 4 Portionen</string>
+    <string name="recipe_nutrition_source_ai">per KI ermittelt</string>
+    <string name="recipe_nutrition_source_manual">manuell eingetragen</string>
+    <string name="recipe_nutrition_dialog_title">Nährwerte für 4 Portionen</string>
+    <string name="recipe_nutrition_kcal_label">Kalorien (kcal)</string>
+    <string name="recipe_nutrition_protein_label">Protein (g)</string>
+    <string name="recipe_nutrition_fat_label">Fett (g)</string>
+    <string name="recipe_nutrition_carbs_label">Kohlenhydrate (g)</string>
+    <string name="recipe_nutrition_nutriscore_label">Nutri-Score (A–E, optional)</string>
+    <string name="recipe_nutrition_save">Speichern</string>
+
+    <!-- Settings: globale KI-Sammelaktionen für alle Rezepte -->
+    <string name="settings_ai_bulk_title">KI-Sammelaktionen</string>
+    <string name="settings_ai_bulk_nutrition">Nährwerte für alle Rezepte berechnen</string>
+    <string name="settings_ai_bulk_classify">Alle Rezepte klassifizieren</string>
+    <string name="settings_ai_bulk_both">Beides für alle Rezepte ausführen</string>
+    <string name="settings_ai_bulk_progress">%1$d / %2$d verarbeitet</string>
+    <string name="settings_ai_bulk_done">Fertig: %1$d aktualisiert, %2$d fehlgeschlagen</string>
 </resources>

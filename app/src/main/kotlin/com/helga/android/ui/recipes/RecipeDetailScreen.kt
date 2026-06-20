@@ -42,8 +42,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -69,7 +67,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -81,7 +78,6 @@ import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.util.ImageUrls
-import com.helga.android.data.repository.RecipeNutritionWithMappings
 import com.helga.android.ui.components.CreateFab
 import com.helga.android.ui.components.MealSlots
 import com.helga.android.ui.components.mealSlotLabel
@@ -116,10 +112,13 @@ fun RecipeDetailScreen(
     val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
     val nutrition by viewModel.nutrition.collectAsStateWithLifecycle()
-    val nutritionWithMappings by viewModel.nutritionWithMappings.collectAsStateWithLifecycle()
+    var showNutritionDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.classifyError) {
         uiState.classifyError?.let { snackbarHostState.showSnackbar(it) }
+    }
+    LaunchedEffect(uiState.nutritionError) {
+        uiState.nutritionError?.let { snackbarHostState.showSnackbar(it) }
     }
     LaunchedEffect(Unit) {
         viewModel.snackbarMessage.collect { snackbarHostState.showSnackbar(it) }
@@ -164,6 +163,17 @@ fun RecipeDetailScreen(
             onPick = { dayId ->
                 showWeekplanPicker = false
                 viewModel.addToWeekplanDay(dayId)
+            },
+        )
+    }
+
+    if (showNutritionDialog) {
+        NutritionEditDialog(
+            nutrition = nutrition,
+            onDismiss = { showNutritionDialog = false },
+            onSave = { kcal, protein, fat, carbs, nutriScore ->
+                showNutritionDialog = false
+                viewModel.saveManualNutrition(kcal, protein, fat, carbs, nutriScore)
             },
         )
     }
@@ -346,26 +356,13 @@ fun RecipeDetailScreen(
                     item { TagsSection(tags = uiState.tags) }
                 }
                 item { MetadataSection(recipe = recipe) }
-                if (nutrition != null) {
-                    item { NutritionSection(nutrition = nutrition!!) }
-                }
                 item {
-                    Button(
-                        onClick = { viewModel.calculateNutritionWithProducts() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                    ) {
-                        Text("📊 Nährwerte berechnen mit Katalog")
-                    }
-                }
-                if (nutritionWithMappings != null) {
-                    item {
-                        NutritionSectionWithMappings(
-                            data = nutritionWithMappings!!,
-                            onScanClick = { }
-                        )
-                    }
+                    NutritionSection(
+                        nutrition = nutrition,
+                        isCalculating = uiState.isCalculatingNutrition,
+                        onCalculateWithAi = { viewModel.calculateNutritionWithAi() },
+                        onEditManual = { showNutritionDialog = true },
+                    )
                 }
                 if (recipe.description.isNotBlank()) {
                     item { DescriptionSection(description = recipe.description) }
@@ -527,7 +524,12 @@ private fun MetadataSection(recipe: RecipeEntity) {
 }
 
 @Composable
-private fun NutritionSection(nutrition: com.helga.android.data.model.RecipeNutrition) {
+private fun NutritionSection(
+    nutrition: com.helga.android.data.model.RecipeNutrition?,
+    isCalculating: Boolean,
+    onCalculateWithAi: () -> Unit,
+    onEditManual: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -539,51 +541,145 @@ private fun NutritionSection(nutrition: com.helga.android.data.model.RecipeNutri
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 8.dp),
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-        ) {
-            NutritionItem(value = String.format("%.0f", nutrition.kcalPerPortion), unit = "kcal")
-            NutritionItem(value = String.format("%.1f", nutrition.protein), unit = "g Protein")
-            NutritionItem(value = String.format("%.1f", nutrition.fat), unit = "g Fett")
-            NutritionItem(value = String.format("%.1f", nutrition.carbs), unit = "g KH")
-        }
-        if (nutrition.nutriScore.isNotBlank()) {
+        if (nutrition != null && nutrition.source.isNotBlank()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                    .background(MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
             ) {
-                Text(
-                    text = "Nutri-Score:",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = nutrition.nutriScore.uppercase(),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = when (nutrition.nutriScore.lowercase()) {
-                        "a" -> androidx.compose.ui.graphics.Color(0xFF22863A)
-                        "b" -> androidx.compose.ui.graphics.Color(0xFF28A745)
-                        "c" -> androidx.compose.ui.graphics.Color(0xFFFFC107)
-                        "d" -> androidx.compose.ui.graphics.Color(0xFFFF9800)
-                        else -> androidx.compose.ui.graphics.Color(0xFFD32F2F)
-                    },
-                )
+                NutritionItem(value = String.format("%.0f", nutrition.kcalPerPortion), unit = "kcal")
+                NutritionItem(value = String.format("%.1f", nutrition.protein), unit = "g Protein")
+                NutritionItem(value = String.format("%.1f", nutrition.fat), unit = "g Fett")
+                NutritionItem(value = String.format("%.1f", nutrition.carbs), unit = "g KH")
+            }
+            if (nutrition.nutriScore.isNotBlank()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Nutri-Score:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = nutrition.nutriScore.uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = when (nutrition.nutriScore.lowercase()) {
+                            "a" -> androidx.compose.ui.graphics.Color(0xFF22863A)
+                            "b" -> androidx.compose.ui.graphics.Color(0xFF28A745)
+                            "c" -> androidx.compose.ui.graphics.Color(0xFFFFC107)
+                            "d" -> androidx.compose.ui.graphics.Color(0xFFFF9800)
+                            else -> androidx.compose.ui.graphics.Color(0xFFD32F2F)
+                        },
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.recipe_nutrition_baseline_hint) + " · " + stringResource(
+                    if (nutrition.source == "ai") R.string.recipe_nutrition_source_ai
+                    else R.string.recipe_nutrition_source_manual
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(onClick = onCalculateWithAi, enabled = !isCalculating) {
+                if (isCalculating) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(stringResource(R.string.recipe_nutrition_calculate_ai))
+                }
+            }
+            TextButton(onClick = onEditManual, enabled = !isCalculating) {
+                Text(stringResource(R.string.recipe_nutrition_edit_manual))
             }
         }
-        Text(
-            text = "${nutrition.matchedIngredientsCount}/${nutrition.totalIngredientsCount} Zutaten mit Nährwerten",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
     }
+}
+
+@Composable
+private fun NutritionEditDialog(
+    nutrition: com.helga.android.data.model.RecipeNutrition?,
+    onDismiss: () -> Unit,
+    onSave: (kcal: Double, protein: Double, fat: Double, carbs: Double, nutriScore: String) -> Unit,
+) {
+    var kcal by remember { mutableStateOf(nutrition?.totalKcal?.takeIf { it > 0 }?.toString() ?: "") }
+    var protein by remember { mutableStateOf(nutrition?.protein?.takeIf { it > 0 }?.toString() ?: "") }
+    var fat by remember { mutableStateOf(nutrition?.fat?.takeIf { it > 0 }?.toString() ?: "") }
+    var carbs by remember { mutableStateOf(nutrition?.carbs?.takeIf { it > 0 }?.toString() ?: "") }
+    var nutriScore by remember { mutableStateOf(nutrition?.nutriScore ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.recipe_nutrition_dialog_title)) },
+        text = {
+            Column {
+                androidx.compose.material3.OutlinedTextField(
+                    value = kcal,
+                    onValueChange = { kcal = it },
+                    label = { Text(stringResource(R.string.recipe_nutrition_kcal_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.material3.OutlinedTextField(
+                    value = protein,
+                    onValueChange = { protein = it },
+                    label = { Text(stringResource(R.string.recipe_nutrition_protein_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.material3.OutlinedTextField(
+                    value = fat,
+                    onValueChange = { fat = it },
+                    label = { Text(stringResource(R.string.recipe_nutrition_fat_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.material3.OutlinedTextField(
+                    value = carbs,
+                    onValueChange = { carbs = it },
+                    label = { Text(stringResource(R.string.recipe_nutrition_carbs_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.material3.OutlinedTextField(
+                    value = nutriScore,
+                    onValueChange = { nutriScore = it },
+                    label = { Text(stringResource(R.string.recipe_nutrition_nutriscore_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onSave(
+                    kcal.toDoubleOrNull() ?: 0.0,
+                    protein.toDoubleOrNull() ?: 0.0,
+                    fat.toDoubleOrNull() ?: 0.0,
+                    carbs.toDoubleOrNull() ?: 0.0,
+                    nutriScore,
+                )
+            }) {
+                Text(stringResource(R.string.recipe_nutrition_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.recipe_delete_confirm_cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -601,81 +697,6 @@ private fun NutritionItem(value: String, unit: String) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun NutritionSectionWithMappings(
-    data: RecipeNutritionWithMappings,
-    onScanClick: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("📊 Nährwerte", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    NutritionItem(value = String.format("%.0f", data.nutrition.kcalPerPortion), unit = "kcal")
-                    NutritionItem(value = String.format("%.1f", data.nutrition.protein), unit = "g Protein")
-                    NutritionItem(value = String.format("%.1f", data.nutrition.fat), unit = "g Fett")
-                    NutritionItem(value = String.format("%.1f", data.nutrition.carbs), unit = "g KH")
-                }
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        if (data.ingredientMappings.isNotEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Verwendet: ${data.ingredientMappings.joinToString(", ") { it.productName }}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-
-        if (data.unmappedIngredients.isNotEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    data.unmappedIngredients.forEach { ingredient ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = "⚠ $ingredient",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                            Button(
-                                onClick = onScanClick,
-                                modifier = Modifier.height(32.dp),
-                            ) {
-                                Text("Jetzt scannen", fontSize = 10.sp)
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

@@ -2,13 +2,13 @@ package com.helga.android.data.remote
 
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.remote.dto.AiClassifyResponse
+import com.helga.android.data.remote.dto.AiNutritionRequest
+import com.helga.android.data.remote.dto.AiNutritionResponse
 import com.helga.android.data.remote.dto.HealthResponse
 import com.helga.android.data.remote.dto.ImageUploadResponse
 import com.helga.android.data.remote.dto.ImportedRecipeDto
 import com.helga.android.data.remote.dto.OffLookupBarcodeRequest
 import com.helga.android.data.remote.dto.OffLookupBarcodeResponse
-import com.helga.android.data.remote.dto.OffSearchRequest
-import com.helga.android.data.remote.dto.OffSearchResponse
 import com.helga.android.data.remote.dto.ReceiptParseRequest
 import com.helga.android.data.remote.dto.ReceiptParseResponse
 import com.helga.android.data.remote.dto.ReceiptReconcileRequest
@@ -48,6 +48,9 @@ interface SyncApi {
     @POST("api/ai/classify")
     suspend fun classifyRecipe(@Body req: AiClassifyRequest): AiClassifyResponse
 
+    @POST("api/ai/nutrition")
+    suspend fun estimateNutrition(@Body req: AiNutritionRequest): AiNutritionResponse
+
     @GET("api/suggestions/items")
     suspend fun suggestItems(@Query("q") q: String): SuggestionsResponse
 
@@ -56,9 +59,6 @@ interface SyncApi {
 
     @POST("api/off/lookup-barcode")
     suspend fun lookupBarcode(@Body req: OffLookupBarcodeRequest): OffLookupBarcodeResponse
-
-    @POST("api/off/search")
-    suspend fun searchOffProducts(@Body req: OffSearchRequest): OffSearchResponse
 
     @POST("api/receipts/reconcile")
     suspend fun reconcileReceipt(@Body req: ReceiptReconcileRequest): ReceiptReconcileResponse

@@ -3,7 +3,6 @@ package com.helga.android.data.sync
 import com.helga.android.data.local.AppDatabase
 import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.QuickEmojiDao
-import com.helga.android.data.local.dao.ReceiptArticleLinkDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
@@ -20,7 +19,6 @@ import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
-import com.helga.android.data.local.entity.ReceiptArticleLinkEntity
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.local.entity.RecipeEntity
@@ -45,7 +43,6 @@ import com.helga.android.data.remote.dto.IngredientDto
 import com.helga.android.data.remote.dto.InstructionDto
 import com.helga.android.data.remote.dto.MonthlyBudgetDto
 import com.helga.android.data.remote.dto.QuickEmojiDto
-import com.helga.android.data.remote.dto.ReceiptArticleLinkDto
 import com.helga.android.data.remote.dto.ReceiptDto
 import com.helga.android.data.remote.dto.ReceiptItemDto
 import com.helga.android.data.remote.dto.RecipeDto
@@ -83,7 +80,6 @@ class SyncEngine @Inject constructor(
     private val recipeFeedbackDao: RecipeFeedbackDao,
     private val receiptDao: ReceiptDao,
     private val monthlyBudgetDao: MonthlyBudgetDao,
-    private val receiptArticleLinkDao: ReceiptArticleLinkDao,
     private val apiFactory: SyncApiFactory,
     private val preferences: AppPreferences,
 ) {
@@ -139,7 +135,6 @@ class SyncEngine @Inject constructor(
         val receiptWinners = filterServerWins(response.receipts, syncDao.receiptTimestamps()) { it.id to it.updatedAt }
         val receiptItemWinners = filterServerWins(response.receiptItems, syncDao.receiptItemTimestamps()) { it.id to it.updatedAt }
         val budgetWinners = filterServerWins(response.monthlyBudgets, syncDao.monthlyBudgetTimestamps()) { it.id to it.updatedAt }
-        val articleLinkWinners = filterServerWins(response.receiptArticleLinks, syncDao.articleLinkTimestamps()) { it.id to it.updatedAt }
 
         if (recipeWinners.isEmpty() && ingredientWinners.isEmpty() &&
             instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty() &&
@@ -149,7 +144,7 @@ class SyncEngine @Inject constructor(
             wpDayWinners.isEmpty() && wpRecipeWinners.isEmpty() && wpExtraWinners.isEmpty() &&
             wpSettingsWinners.isEmpty() && wpConstraintsWinners.isEmpty() && historyWinners.isEmpty() &&
             feedbackWinners.isEmpty() && receiptWinners.isEmpty() && receiptItemWinners.isEmpty() &&
-            budgetWinners.isEmpty() && articleLinkWinners.isEmpty()
+            budgetWinners.isEmpty()
         ) return
 
         database.withTransaction {
@@ -175,7 +170,6 @@ class SyncEngine @Inject constructor(
             if (receiptWinners.isNotEmpty()) receiptDao.upsertReceipts(receiptWinners.map { it.toEntity() })
             if (receiptItemWinners.isNotEmpty()) receiptDao.upsertItems(receiptItemWinners.map { it.toEntity() })
             if (budgetWinners.isNotEmpty()) monthlyBudgetDao.upsert(budgetWinners.first().toEntity())
-            if (articleLinkWinners.isNotEmpty()) receiptArticleLinkDao.upsertAll(articleLinkWinners.map { it.toEntity() })
         }
     }
 
@@ -203,7 +197,6 @@ class SyncEngine @Inject constructor(
         receipts = receiptDao.dirtyReceipts().map { it.toDto() },
         receiptItems = receiptDao.dirtyItems().map { it.toDto() },
         monthlyBudgets = monthlyBudgetDao.dirty().map { it.toDto() },
-        receiptArticleLinks = receiptArticleLinkDao.dirtyLinks().map { it.toDto() },
     )
 
     private suspend fun clearDirtyFlagsExcept(
@@ -232,7 +225,6 @@ class SyncEngine @Inject constructor(
         val receiptIds = pushed.receipts.map { it.id } - serverWins.receipts.map { it.id }.toSet()
         val receiptItemIds = pushed.receiptItems.map { it.id } - serverWins.receiptItems.map { it.id }.toSet()
         val budgetIds = pushed.monthlyBudgets.map { it.id } - serverWins.monthlyBudgets.map { it.id }.toSet()
-        val articleLinkIds = pushed.receiptArticleLinks.map { it.id } - serverWins.receiptArticleLinks.map { it.id }.toSet()
 
         database.withTransaction {
             if (recipeIds.isNotEmpty()) recipeDao.clearRecipeDirty(recipeIds)
@@ -257,7 +249,6 @@ class SyncEngine @Inject constructor(
             if (receiptIds.isNotEmpty()) receiptDao.clearReceiptDirty(receiptIds)
             if (receiptItemIds.isNotEmpty()) receiptDao.clearItemDirty(receiptItemIds)
             if (budgetIds.isNotEmpty()) monthlyBudgetDao.clearDirty(budgetIds.toList())
-            if (articleLinkIds.isNotEmpty()) receiptArticleLinkDao.clearDirty(articleLinkIds.toList())
         }
     }
 
@@ -285,6 +276,9 @@ private fun RecipeDto.toEntity(): RecipeEntity = RecipeEntity(
     totalTime = totalTime, imagePath = imagePath, sourceUrl = sourceUrl,
     rating = rating, proteinType = proteinType, effort = effort,
     cuisine = cuisine, mealSlot = mealSlot, seasonFit = seasonFit,
+    nutritionKcal = nutritionKcal, nutritionProtein = nutritionProtein,
+    nutritionFat = nutritionFat, nutritionCarbs = nutritionCarbs,
+    nutritionNutriScore = nutritionNutriScore, nutritionSource = nutritionSource,
     createdAt = createdAt, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
@@ -349,6 +343,9 @@ private fun RecipeEntity.toDto(): RecipeDto = RecipeDto(
     cookTime = cookTime, totalTime = totalTime, imagePath = imagePath,
     sourceUrl = sourceUrl, rating = rating, proteinType = proteinType,
     effort = effort, cuisine = cuisine, mealSlot = mealSlot, seasonFit = seasonFit,
+    nutritionKcal = nutritionKcal, nutritionProtein = nutritionProtein,
+    nutritionFat = nutritionFat, nutritionCarbs = nutritionCarbs,
+    nutritionNutriScore = nutritionNutriScore, nutritionSource = nutritionSource,
     createdAt = createdAt,
 )
 
@@ -531,16 +528,4 @@ private fun MonthlyBudgetDto.toEntity(): MonthlyBudgetEntity = MonthlyBudgetEnti
 private fun MonthlyBudgetEntity.toDto(): MonthlyBudgetDto = MonthlyBudgetDto(
     id = id, updatedAt = updatedAt, deleted = deleted,
     amount = amount, warnThreshold = warnThreshold,
-)
-
-private fun ReceiptArticleLinkDto.toEntity(): ReceiptArticleLinkEntity = ReceiptArticleLinkEntity(
-    id = id, normalizedName = normalizedName, displayName = displayName,
-    offProductId = offProductId, offBarcode = offBarcode, confirmed = confirmed,
-    confirmedAt = confirmedAt, updatedAt = updatedAt, deleted = deleted, dirty = 0,
-)
-
-private fun ReceiptArticleLinkEntity.toDto(): ReceiptArticleLinkDto = ReceiptArticleLinkDto(
-    id = id, updatedAt = updatedAt, deleted = deleted, normalizedName = normalizedName,
-    displayName = displayName, offProductId = offProductId, offBarcode = offBarcode,
-    confirmed = confirmed, confirmedAt = confirmedAt,
 )

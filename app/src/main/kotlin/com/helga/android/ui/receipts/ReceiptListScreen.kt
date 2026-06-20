@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.LocalDining
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,7 +53,6 @@ fun ReceiptListScreen(
     onScanClick: () -> Unit,
     onCostOverviewClick: () -> Unit,
     onProductsClick: () -> Unit,
-    onNutritionOverviewClick: () -> Unit = {},
     viewModel: ReceiptListViewModel = hiltViewModel(),
 ) {
     val receipts = viewModel.receipts.collectAsState().value
@@ -74,9 +72,6 @@ fun ReceiptListScreen(
                     }
                     IconButton(onClick = onCostOverviewClick) {
                         Icon(Icons.Filled.BarChart, contentDescription = "Kostenübersicht")
-                    }
-                    IconButton(onClick = onNutritionOverviewClick) {
-                        Icon(Icons.Filled.LocalDining, contentDescription = "Nährwerte")
                     }
                 },
             )

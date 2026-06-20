@@ -10,6 +10,8 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "slug", "name", "description", "recipe_yield", "prep_time",
         "cook_time", "total_time", "image_path", "source_url", "rating",
         "protein_type", "effort", "cuisine", "meal_type", "meal_slot", "season_fit",
+        "nutrition_kcal", "nutrition_protein", "nutrition_fat", "nutrition_carbs",
+        "nutrition_nutri_score", "nutrition_source",
         "created_at", "updated_at", "deleted",
     ],
     "recipe_ingredients": [
@@ -101,10 +103,6 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     "monthly_budgets": [
         "id", "amount", "warn_threshold", "updated_at", "deleted",
     ],
-    "receipt_article_links": [
-        "id", "normalized_name", "display_name", "off_product_id", "off_barcode",
-        "confirmed", "confirmed_at", "updated_at", "deleted",
-    ],
 }
 
 # Mapping Tabellenname → Feldname im SyncPayload
@@ -138,7 +136,6 @@ PAYLOAD_FIELD = {
     "receipts": "receipts",
     "receipt_items": "receipt_items",
     "monthly_budgets": "monthly_budgets",
-    "receipt_article_links": "receipt_article_links",
 }
 
 

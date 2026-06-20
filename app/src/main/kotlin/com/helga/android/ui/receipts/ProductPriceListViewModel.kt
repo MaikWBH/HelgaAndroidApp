@@ -2,7 +2,6 @@ package com.helga.android.ui.receipts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.repository.NutritionRepository
 import com.helga.android.data.repository.ProductSummary
 import com.helga.android.data.repository.ReceiptRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +16,6 @@ import javax.inject.Inject
 @HiltViewModel
 class ProductPriceListViewModel @Inject constructor(
     private val repository: ReceiptRepository,
-    private val nutritionRepository: NutritionRepository,
 ) : ViewModel() {
 
     private val _allProducts = MutableStateFlow<List<ProductSummary>>(emptyList())
@@ -31,9 +29,6 @@ class ProductPriceListViewModel @Inject constructor(
         if (q.isBlank()) all
         else all.filter { it.displayName.contains(q, ignoreCase = true) }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
-    val linkedKeys: StateFlow<Set<String>> = nutritionRepository.confirmedNormalizedNames()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     init {
         loadProducts()

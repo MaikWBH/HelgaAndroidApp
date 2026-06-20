@@ -1,14 +1,17 @@
 package com.helga.android.data.model
 
+/** Feste Portionsbasis: Nährwerte werden immer für diese Anzahl Portionen
+ * berechnet/erfasst, unabhängig von der im UI angezeigten Portionenanzahl. */
+const val NUTRITION_BASELINE_PORTIONS = 4
+
 data class RecipeNutrition(
-    val totalKcal: Double,          // Gesamtkalorien für alle Zutaten
-    val kcalPerPortion: Double,     // pro Portion (basierend auf recipeYield)
-    val protein: Double,            // g
-    val fat: Double,                // g
-    val carbs: Double,              // g
-    val nutriScore: String,         // "a"-"e", beste Score der Zutaten
-    val matchedIngredientsCount: Int, // Wie viele Zutaten mit OFF-Daten gefunden
-    val totalIngredientsCount: Int,   // Gesamt-Zutaten
+    val totalKcal: Double,          // Gesamtkalorien für NUTRITION_BASELINE_PORTIONS Portionen
+    val kcalPerPortion: Double,     // totalKcal / NUTRITION_BASELINE_PORTIONS
+    val protein: Double,            // g, für NUTRITION_BASELINE_PORTIONS Portionen
+    val fat: Double,                // g, für NUTRITION_BASELINE_PORTIONS Portionen
+    val carbs: Double,              // g, für NUTRITION_BASELINE_PORTIONS Portionen
+    val nutriScore: String,         // "a"-"e"
+    val source: String,             // "manual", "ai" oder "" (noch nicht ermittelt)
 )
 
 data class DayNutrition(

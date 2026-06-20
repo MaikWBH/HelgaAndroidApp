@@ -1,35 +1,21 @@
 package com.helga.android.data.repository
 
-import com.helga.android.data.local.dao.OffProductDao
-import com.helga.android.data.local.dao.ReceiptArticleLinkDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
-import com.helga.android.data.local.entity.ReceiptArticleLinkEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
+import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.model.RecipeNutrition
-import com.helga.android.data.util.IngredientNormalizer
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
-
-data class IngredientMapping(val ingredientName: String, val productName: String)
-
-data class RecipeNutritionWithMappings(
-    val nutrition: RecipeNutrition,
-    val ingredientMappings: List<IngredientMapping>,
-    val unmappedIngredients: List<String>,
-)
 
 @Singleton
 class RecipeRepository @Inject constructor(
     private val recipeDao: RecipeDao,
     private val shoppingRepository: ShoppingRepository,
-    private val receiptArticleLinkDao: ReceiptArticleLinkDao,
-    private val offProductDao: OffProductDao,
-    private val receiptRepository: ReceiptRepository,
 ) {
     fun observeAll(): Flow<List<RecipeEntity>> = recipeDao.observeAll()
     fun observeById(id: String): Flow<RecipeEntity?> = recipeDao.observeById(id)
@@ -113,127 +99,49 @@ class RecipeRepository @Inject constructor(
     }
 
     /**
-     * Aggregiert die Nährwerte eines Rezepts aus den in Phase 1 bestätigten
-     * Bon-Artikel-Verknüpfungen ([ReceiptArticleLinkEntity]) und den dazugehörigen
-     * OFF-Produkten. Zutaten ohne auflösbare Verknüpfung bleiben ungezählt.
+     * Liest die am Rezept hinterlegten Nährwerte (manuell oder per KI ermittelt,
+     * siehe [RecipeEntity.nutritionSource]). Werte gelten immer für
+     * [NUTRITION_BASELINE_PORTIONS] Portionen, unabhängig von der im UI
+     * angezeigten Portionenanzahl.
      */
-    suspend fun getRecipeNutrition(recipeId: String): RecipeNutrition =
-        computeRecipeNutrition(recipeId).nutrition
-
-    /**
-     * Wie [getRecipeNutrition], liefert zusätzlich die konkreten
-     * Zutat→Produkt-Zuordnungen und die unverknüpften Zutaten für die UI.
-     */
-    suspend fun getRecipeNutritionWithTopProducts(recipeId: String): RecipeNutritionWithMappings =
-        computeRecipeNutrition(recipeId)
-
-    /**
-     * Kern-Berechnung: matched jede Zutat per [IngredientNormalizer] gegen die
-     * bestätigten Verknüpfungen (erst exakt, dann Contains-Kaskade mit
-     * Kaufhäufigkeit als Tie-Break), skaliert die OFF-Werte (pro 100 g) nur bei
-     * erkennbaren Gewichts-/Volumeneinheiten auf die Zutatenmenge und sammelt
-     * die Zuordnungen für die UI. Andere Einheiten (EL, Stück …) gelten als
-     * "gematcht", tragen aber bewusst nichts zur Gramm-Summe bei (kein Raten).
-     */
-    private suspend fun computeRecipeNutrition(recipeId: String): RecipeNutritionWithMappings {
+    suspend fun getRecipeNutrition(recipeId: String): RecipeNutrition {
         val recipe = recipeDao.findById(recipeId)
-        val portions = recipe?.recipeYield?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() } ?: 1
-        val ingredients = recipeDao.ingredientsByRecipeId(recipeId).filter { it.deleted == 0 }
-
-        val confirmedLinks = receiptArticleLinkDao.allActive()
-            .filter { it.confirmed == 1 && it.normalizedName.isNotBlank() }
-        val productsById = offProductDao.allActive().associateBy { it.id }
-        // Kaufhäufigkeit pro normalisiertem Bon-Schlüssel (Phase-1-Logik wiederverwendet).
-        val buyCounts = receiptRepository.productSummaries().associate { it.normalizedKey to it.buyCount }
-
-        var totalKcal = 0.0
-        var protein = 0.0
-        var fat = 0.0
-        var carbs = 0.0
-        var matched = 0
-        var bestNutriScore = ""
-        val mappings = mutableListOf<IngredientMapping>()
-        val unmapped = mutableListOf<String>()
-
-        for (ingredient in ingredients) {
-            val foodName = ingredient.food
-            val key = IngredientNormalizer.normalize(foodName)
-            val link = if (key.isBlank()) null else findLinkFor(key, confirmedLinks, buyCounts)
-            val product = link?.let { productsById[it.offProductId] }
-
-            if (product == null) {
-                if (foodName.isNotBlank()) unmapped += foodName
-                continue
-            }
-
-            matched++
-            mappings += IngredientMapping(
-                ingredientName = foodName,
-                productName = product.name.ifBlank { link.displayName.ifBlank { foodName } },
-            )
-            bestNutriScore = betterNutriScore(bestNutriScore, product.nutriScore)
-
-            val grams = unitToGrams(ingredient.unit)?.let { it * ingredient.quantity }
-            if (grams != null && grams > 0.0) {
-                val factor = grams / 100.0
-                totalKcal += factor * product.kcalPerUnit
-                protein += factor * product.proteins
-                fat += factor * product.fats
-                carbs += factor * product.carbs
-            }
-        }
-
-        val nutrition = RecipeNutrition(
+        val totalKcal = recipe?.nutritionKcal ?: 0.0
+        return RecipeNutrition(
             totalKcal = totalKcal,
-            kcalPerPortion = if (portions > 0) totalKcal / portions else totalKcal,
-            protein = protein,
-            fat = fat,
-            carbs = carbs,
-            nutriScore = bestNutriScore,
-            matchedIngredientsCount = matched,
-            totalIngredientsCount = ingredients.size,
-        )
-        return RecipeNutritionWithMappings(
-            nutrition = nutrition,
-            ingredientMappings = mappings,
-            unmappedIngredients = unmapped,
+            kcalPerPortion = totalKcal / NUTRITION_BASELINE_PORTIONS,
+            protein = recipe?.nutritionProtein ?: 0.0,
+            fat = recipe?.nutritionFat ?: 0.0,
+            carbs = recipe?.nutritionCarbs ?: 0.0,
+            nutriScore = recipe?.nutritionNutriScore ?: "",
+            source = recipe?.nutritionSource ?: "",
         )
     }
 
-    /**
-     * Matching-Kaskade: zuerst exakte Übereinstimmung, sonst Contains-Match
-     * (Zutatenname im Artikelnamen oder umgekehrt). Bei mehreren Kandidaten
-     * gewinnt der mit der höchsten Kaufhäufigkeit.
-     */
-    private fun findLinkFor(
-        key: String,
-        links: List<ReceiptArticleLinkEntity>,
-        buyCounts: Map<String, Int>,
-    ): ReceiptArticleLinkEntity? {
-        links.firstOrNull { it.normalizedName == key }?.let { return it }
-        return links
-            .filter { it.normalizedName.contains(key) || key.contains(it.normalizedName) }
-            .maxByOrNull { buyCounts[it.normalizedName] ?: 0 }
-    }
-
-    /** Behält den besseren (= alphabetisch kleineren) Nutri-Score "a".."e". */
-    private fun betterNutriScore(current: String, candidate: String): String {
-        val c = candidate.trim().lowercase().takeIf { it.length == 1 && it[0] in 'a'..'e' } ?: return current
-        return if (current.isBlank() || c < current) c else current
-    }
-
-    /**
-     * Umrechnung erkennbarer Gewichts-/Volumeneinheiten auf Gramm (Flüssigkeiten
-     * mit Dichte 1). Spiegelt die Allowlist des Server-Packungsgrößen-Parsers.
-     * `null` für unbekannte/Stück-Einheiten → kein Beitrag zur Gramm-Summe.
-     */
-    private fun unitToGrams(unit: String): Double? = when (unit.trim().lowercase()) {
-        "g", "gr", "gramm", "gram" -> 1.0
-        "kg", "kilogramm" -> 1000.0
-        "ml" -> 1.0
-        "cl" -> 10.0
-        "l", "liter" -> 1000.0
-        else -> null
+    /** Speichert Nährwerte für [NUTRITION_BASELINE_PORTIONS] Portionen, manuell oder per KI ermittelt. */
+    suspend fun saveNutrition(
+        recipeId: String,
+        kcal: Double,
+        protein: Double,
+        fat: Double,
+        carbs: Double,
+        nutriScore: String,
+        source: String,
+    ) {
+        val recipe = recipeDao.findById(recipeId) ?: return
+        val score = nutriScore.trim().lowercase().takeIf { it.length == 1 && it[0] in 'a'..'e' } ?: ""
+        recipeDao.upsertRecipe(
+            recipe.copy(
+                nutritionKcal = kcal,
+                nutritionProtein = protein,
+                nutritionFat = fat,
+                nutritionCarbs = carbs,
+                nutritionNutriScore = score,
+                nutritionSource = source,
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
+        )
     }
 
     suspend fun exportToShoppingList(recipeId: String, listId: String) {

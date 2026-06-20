@@ -9,7 +9,6 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
-import com.helga.android.data.local.dao.ReceiptArticleLinkDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeDao
@@ -28,7 +27,6 @@ import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
 import com.helga.android.data.local.entity.OffProductEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
-import com.helga.android.data.local.entity.ReceiptArticleLinkEntity
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
@@ -49,7 +47,7 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 
 @Database(
-    version = 27,
+    version = 28,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -77,7 +75,6 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
         ReceiptItemEntity::class,
         MonthlyBudgetEntity::class,
         OffProductEntity::class,
-        ReceiptArticleLinkEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -96,7 +93,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun receiptDao(): ReceiptDao
     abstract fun monthlyBudgetDao(): MonthlyBudgetDao
     abstract fun offProductDao(): OffProductDao
-    abstract fun receiptArticleLinkDao(): ReceiptArticleLinkDao
 
     companion object {
         const val NAME = "helga.db"
@@ -725,10 +721,28 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_27_28 = object : Migration(27, 28) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Pro-Artikel-Nährwertzuordnung (Phase 1/2) wurde vollständig entfernt:
+                // OFF-Produktsuche fand zwar Treffer, lieferte aber keine brauchbaren
+                // Nährwerte. Ersetzt durch Nährwerte direkt am Rezept (manuell/KI).
+                db.execSQL("DROP TABLE IF EXISTS receipt_article_links")
+
+                // Rezept-Nährwerte, immer für eine feste Basis von 4 Portionen berechnet
+                // (unabhängig von der Portionen-Anpassung im UI). source = "manual"/"ai"/"".
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionKcal REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionProtein REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionFat REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionCarbs REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionNutriScore TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionSource TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28)
                 .build()
     }
 }

@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 
 from .db import init_db, get_db, now_ms
 from .models import (
-    AiClassifyRequest, AiGenerateRequest, AiRemixRequest, AiUrlImportRequest,
+    AiClassifyRequest, AiGenerateRequest, AiNutritionRequest, AiRemixRequest,
+    AiUrlImportRequest,
     OffLookupBarcodeRequest, OffSearchRequest,
     ReceiptParseRequest,
     ReceiptParseResponse, ReceiptReconcileRequest,
@@ -92,6 +93,12 @@ async def ai_remix(req: AiRemixRequest):
 @app.post("/api/ai/classify", dependencies=[Depends(require_auth)])
 async def ai_classify(req: AiClassifyRequest):
     result = await ai_module.classify(req)
+    return result
+
+
+@app.post("/api/ai/nutrition", dependencies=[Depends(require_auth)])
+async def ai_nutrition(req: AiNutritionRequest):
+    result = await ai_module.estimate_nutrition(req)
     return result
 
 

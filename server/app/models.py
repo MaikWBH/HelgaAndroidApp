@@ -25,6 +25,12 @@ class RecipeRecord(SyncRecord):
     meal_type: str = ""
     meal_slot: str = "other"
     season_fit: str = ""
+    nutrition_kcal: float = 0.0
+    nutrition_protein: float = 0.0
+    nutrition_fat: float = 0.0
+    nutrition_carbs: float = 0.0
+    nutrition_nutri_score: str = ""
+    nutrition_source: str = ""
     created_at: int = 0
 
 
@@ -165,15 +171,6 @@ class MonthlyBudgetRecord(SyncRecord):
     warn_threshold: float = 0.8
 
 
-class ReceiptArticleLinkRecord(SyncRecord):
-    normalized_name: str = ""
-    display_name: str = ""
-    off_product_id: str = ""
-    off_barcode: str = ""
-    confirmed: int = 0
-    confirmed_at: int = 0
-
-
 class OffProductRecord(SyncRecord):
     barcode: str = ""
     name: str = ""
@@ -279,7 +276,6 @@ class SyncPayload(BaseModel):
     receipts: List[ReceiptRecord] = []
     receipt_items: List[ReceiptItemRecord] = []
     monthly_budgets: List[MonthlyBudgetRecord] = []
-    receipt_article_links: List[ReceiptArticleLinkRecord] = []
 
 
 class SyncPullResponse(SyncPayload):
@@ -312,6 +308,15 @@ class AiClassifyRequest(BaseModel):
     description: str = ""
     tags: List[str] = []
     ingredients: List[str] = []
+
+
+class AiNutritionRequest(BaseModel):
+    name: str
+    description: str = ""
+    # Zutaten als Freitext-Zeilen ("200g Mehl"), bereits auf die Nährwert-Basis
+    # von `portions` Portionen skaliert (siehe NUTRITION_BASELINE_PORTIONS).
+    ingredients: List[str] = []
+    portions: int = 4
 
 
 class AiUrlImportRequest(BaseModel):

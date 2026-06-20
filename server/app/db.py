@@ -44,7 +44,6 @@ SYNC_TABLES = [
     "receipts",
     "receipt_items",
     "monthly_budgets",
-    "receipt_article_links",
 ]
 
 SCHEMA = """
@@ -69,6 +68,12 @@ CREATE TABLE IF NOT EXISTS recipes (
     meal_type   TEXT DEFAULT '',
     meal_slot   TEXT NOT NULL DEFAULT 'other',
     season_fit  TEXT DEFAULT '',
+    nutrition_kcal        REAL NOT NULL DEFAULT 0.0,
+    nutrition_protein     REAL NOT NULL DEFAULT 0.0,
+    nutrition_fat         REAL NOT NULL DEFAULT 0.0,
+    nutrition_carbs       REAL NOT NULL DEFAULT 0.0,
+    nutrition_nutri_score TEXT NOT NULL DEFAULT '',
+    nutrition_source      TEXT NOT NULL DEFAULT '',
     created_at  INTEGER NOT NULL DEFAULT 0,
     updated_at  INTEGER NOT NULL DEFAULT 0,
     deleted     INTEGER NOT NULL DEFAULT 0
@@ -371,21 +376,6 @@ CREATE TABLE IF NOT EXISTS monthly_budgets (
     deleted         INTEGER NOT NULL DEFAULT 0
 );
 
--- Persönliche DB: verknüpft einen normalisierten Bon-Artikelnamen mit einem
--- OFF-Produkt, damit kryptische Kassenbon-Namen künftig automatisch zugeordnet
--- werden. Pro normalisiertem Namen genau ein Eintrag (unique index).
-CREATE TABLE IF NOT EXISTS receipt_article_links (
-    id              TEXT PRIMARY KEY,
-    normalized_name TEXT NOT NULL DEFAULT '',
-    display_name    TEXT NOT NULL DEFAULT '',
-    off_product_id  TEXT NOT NULL DEFAULT '',
-    off_barcode     TEXT NOT NULL DEFAULT '',
-    confirmed       INTEGER NOT NULL DEFAULT 0,
-    confirmed_at    INTEGER NOT NULL DEFAULT 0,
-    updated_at      INTEGER NOT NULL DEFAULT 0,
-    deleted         INTEGER NOT NULL DEFAULT 0
-);
-
 -- Globaler Monotonzähler für den Sync-Cursor (entkoppelt Auslieferung von
 -- der Bearbeitungs-Zeit/Client-Uhr). Wird bei jedem Push hochgezählt; jeder
 -- akzeptierte Schreibvorgang erhält die aktuelle Commit-Sequenz als server_seq.
@@ -431,8 +421,6 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_receipt ON receipt_items(receipt_id)",
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_updated ON receipt_items(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_monthly_budgets_updated ON monthly_budgets(updated_at)",
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_receipt_article_links_name ON receipt_article_links(normalized_name)",
-    "CREATE INDEX IF NOT EXISTS idx_receipt_article_links_updated ON receipt_article_links(updated_at)",
 ]
 
 
@@ -452,6 +440,12 @@ ADDED_COLUMNS = {
     ],
     "recipes": [
         ("meal_slot", "TEXT NOT NULL DEFAULT 'other'"),
+        ("nutrition_kcal", "REAL NOT NULL DEFAULT 0.0"),
+        ("nutrition_protein", "REAL NOT NULL DEFAULT 0.0"),
+        ("nutrition_fat", "REAL NOT NULL DEFAULT 0.0"),
+        ("nutrition_carbs", "REAL NOT NULL DEFAULT 0.0"),
+        ("nutrition_nutri_score", "TEXT NOT NULL DEFAULT ''"),
+        ("nutrition_source", "TEXT NOT NULL DEFAULT ''"),
     ],
     "off_products": [
         ("is_favorite", "INTEGER NOT NULL DEFAULT 0"),
