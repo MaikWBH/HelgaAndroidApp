@@ -141,6 +141,7 @@ class WeekplanExtraRecord(SyncRecord):
 class RecipeHistoryRecord(SyncRecord):
     recipe_id: str
     planned_date: str = ""
+    cooked: int = 0
 
 
 class QuickEmojiRecord(SyncRecord):
@@ -292,6 +293,7 @@ class AiGenerateRequest(BaseModel):
     prompt: str
     available_tags: List[str] = []
     custom_instructions: Optional[str] = None
+    exclude_allergens: List[str] = []
 
 
 class AiRemixRequest(BaseModel):
@@ -301,6 +303,7 @@ class AiRemixRequest(BaseModel):
     recipe_instructions: List[str] = []
     remix_prompt: str
     available_tags: List[str] = []
+    exclude_allergens: List[str] = []
 
 
 class AiClassifyRequest(BaseModel):

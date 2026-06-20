@@ -6,6 +6,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,6 +45,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -124,6 +127,7 @@ fun WeekplanScreen(
     val feedbackMap by viewModel.feedbackForSelectedDay.collectAsStateWithLifecycle()
     val weekBalance by viewModel.weekBalance.collectAsStateWithLifecycle()
     val weekNutrition by viewModel.weekNutrition.collectAsStateWithLifecycle()
+    val userAllergies by viewModel.userAllergies.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
@@ -161,7 +165,7 @@ fun WeekplanScreen(
     if (constraintsEditorVisible) {
         ConstraintsEditorSheet(
             constraints = constraints,
-            allergies = emptyList(), // TODO: load from preferences
+            allergies = userAllergies,
             onSave = { maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies ->
                 viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies)
                 constraintsEditorVisible = false
@@ -873,7 +877,15 @@ private fun ShoppingListPickerDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+fun parseAllergenJson(json: String): List<String> = json
+    .trim()
+    .removePrefix("[")
+    .removeSuffix("]")
+    .split(",")
+    .map { it.trim().trim('"') }
+    .filter { it.isNotBlank() }
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ConstraintsEditorSheet(
     constraints: WeekplanConstraintsEntity,
@@ -889,7 +901,9 @@ private fun ConstraintsEditorSheet(
     var maxKcal by remember(constraints.maxKcalPerPortion) { mutableFloatStateOf(constraints.maxKcalPerPortion.toFloat()) }
     var minNutriScore by remember(constraints.minNutriScore) { mutableStateOf(constraints.minNutriScore) }
     var preferOrganic by remember(constraints.preferOrganic) { mutableStateOf(constraints.preferOrganic == 1) }
-    var selectedAllergens by remember(constraints.excludeAllergens) { mutableStateOf(emptyList<String>()) }
+    var selectedAllergens by remember(constraints.excludeAllergens) {
+        mutableStateOf(parseAllergenJson(constraints.excludeAllergens))
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1016,6 +1030,34 @@ private fun ConstraintsEditorSheet(
                     checked = preferOrganic,
                     onCheckedChange = { preferOrganic = it },
                 )
+            }
+
+            if (allergies.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "🚫 Allergene ausschließen",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    allergies.forEach { allergen ->
+                        val selected = selectedAllergens.contains(allergen)
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                selectedAllergens = if (selected) {
+                                    selectedAllergens - allergen
+                                } else {
+                                    selectedAllergens + allergen
+                                }
+                            },
+                            label = { Text(allergen) },
+                        )
+                    }
+                }
             }
             Spacer(Modifier.height(16.dp))
 

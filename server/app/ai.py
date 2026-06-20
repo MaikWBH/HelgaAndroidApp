@@ -114,13 +114,22 @@ def _anthropic_headers() -> dict:
     }, ANTHROPIC_BASE
 
 
+def _allergen_hint(exclude_allergens: list[str]) -> str:
+    if not exclude_allergens:
+        return ""
+    return (
+        f"\n\nALLERGENE — PFLICHT: Das Rezept darf KEINE der folgenden Allergene/Zutaten "
+        f"enthalten, auch nicht in Spurenform: {', '.join(exclude_allergens)}."
+    )
+
+
 async def stream_generate(req: AiGenerateRequest) -> AsyncIterator[str]:
     tag_hint = (
         f"\n\nTAGS — PFLICHT: Verwende nur Tags aus dieser Liste: {', '.join(req.available_tags[:40])}"
         if req.available_tags else "\n\nVergib 2–4 deutsche Tags im 'keywords'-Feld."
     )
     custom = f"\n\nZUSÄTZLICHE ANWEISUNGEN:\n{req.custom_instructions}" if req.custom_instructions else ""
-    system = RECIPE_HTML_SYSTEM + tag_hint + custom
+    system = RECIPE_HTML_SYSTEM + tag_hint + custom + _allergen_hint(req.exclude_allergens)
 
     async for chunk in _stream(system, req.prompt):
         yield chunk
@@ -137,6 +146,7 @@ async def stream_remix(req: AiRemixRequest) -> AsyncIterator[str]:
         f"Du bist ein kreativer Profi-Koch. Wandle das folgende Rezept gemäß dem Kundenwunsch ab "
         f"und gib das Ergebnis als vollständiges HTML mit JSON-LD aus (gleiches Format wie bei neuen Rezepten)."
         f"{tag_hint}\nKRITISCH: Nur rohes HTML ausgeben."
+        f"{_allergen_hint(req.exclude_allergens)}"
     )
     user = (
         f"ORIGINAL:\nName: {req.recipe_name}\nBeschreibung: {req.recipe_description}\n"

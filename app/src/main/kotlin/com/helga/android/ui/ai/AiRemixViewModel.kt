@@ -7,6 +7,7 @@ import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
+import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SseClient
 import com.helga.android.data.remote.dto.AiRemixRequest
 import com.helga.android.data.repository.RecipeRepository
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -50,6 +52,7 @@ class AiRemixViewModel @Inject constructor(
     private val moshi: Moshi,
     private val repository: RecipeRepository,
     private val syncScheduler: SyncScheduler,
+    private val preferences: AppPreferences,
 ) : ViewModel() {
 
     private val recipeId: String = checkNotNull(savedStateHandle["recipeId"])
@@ -91,6 +94,7 @@ class AiRemixViewModel @Inject constructor(
                     recipeIngredients = src.ingredientStrings,
                     recipeInstructions = src.instructionStrings,
                     remixPrompt = remixPrompt,
+                    excludeAllergens = preferences.allergies.first(),
                 )
                 val bodyJson = remixAdapter.toJson(req)
                 val html = sseClient.collect("api/ai/remix", bodyJson)

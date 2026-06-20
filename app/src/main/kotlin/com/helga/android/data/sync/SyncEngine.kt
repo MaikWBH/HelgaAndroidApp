@@ -471,12 +471,12 @@ private fun WeekplanConstraintsEntity.toDto(): WeekplanConstraintsDto = Weekplan
 )
 
 private fun RecipeHistoryDto.toEntity(): RecipeHistoryEntity = RecipeHistoryEntity(
-    id = id, recipeId = recipeId, plannedDate = plannedDate,
+    id = id, recipeId = recipeId, plannedDate = plannedDate, cooked = cooked,
     updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun RecipeHistoryEntity.toDto(): RecipeHistoryDto = RecipeHistoryDto(
-    id = id, recipeId = recipeId, plannedDate = plannedDate,
+    id = id, recipeId = recipeId, plannedDate = plannedDate, cooked = cooked,
     updatedAt = updatedAt, deleted = deleted,
 )
 

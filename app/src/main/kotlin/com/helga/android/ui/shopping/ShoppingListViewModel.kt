@@ -115,6 +115,9 @@ class ShoppingListViewModel @Inject constructor(
     val checkMode: StateFlow<String> = preferences.checkMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "keep")
 
+    val userAllergies: StateFlow<List<String>> = preferences.allergies
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     // Banner: Wochenplan bereit zum Export?
     private val monday = LocalDate.now().with(DayOfWeek.MONDAY)
     private val sunday = monday.plusDays(6)

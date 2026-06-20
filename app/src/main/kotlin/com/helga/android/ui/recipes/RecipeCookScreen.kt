@@ -378,7 +378,10 @@ fun RecipeCookScreen(
             item(key = "done_button") {
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = onBack,
+                    onClick = {
+                        viewModel.confirmCooked()
+                        onBack()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.cook_done))

@@ -6,6 +6,7 @@ import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
+import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SseClient
 import com.helga.android.data.remote.dto.AiGenerateRequest
 import com.helga.android.data.repository.RecipeRepository
@@ -15,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -46,6 +48,7 @@ class AiGenerateViewModel @Inject constructor(
     private val moshi: Moshi,
     private val repository: RecipeRepository,
     private val syncScheduler: SyncScheduler,
+    private val preferences: AppPreferences,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AiGenerateState())
@@ -75,10 +78,12 @@ class AiGenerateViewModel @Inject constructor(
         _state.update { it.copy(status = AiGenerateStatus.Generating, feedbackVisible = false) }
         viewModelScope.launch {
             try {
+                val allergies = preferences.allergies.first()
                 val bodyJson = generateAdapter.toJson(
                     AiGenerateRequest(
                         prompt = prompt,
                         customInstructions = customInstructions,
+                        excludeAllergens = allergies,
                     )
                 )
                 val html = sseClient.collect("api/ai/generate", bodyJson)

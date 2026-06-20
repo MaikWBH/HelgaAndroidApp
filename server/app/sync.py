@@ -59,7 +59,7 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "weekplan_day_id", "item_text", "position", "updated_at", "deleted",
     ],
     "recipe_history": [
-        "id", "recipe_id", "planned_date", "updated_at", "deleted",
+        "id", "recipe_id", "planned_date", "cooked", "updated_at", "deleted",
     ],
     "quick_emojis": [
         "id", "emoji", "food", "quantity", "unit", "sort_order",

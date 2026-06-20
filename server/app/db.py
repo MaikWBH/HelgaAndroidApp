@@ -235,6 +235,7 @@ CREATE TABLE IF NOT EXISTS recipe_history (
     id           TEXT PRIMARY KEY,
     recipe_id    TEXT NOT NULL,
     planned_date TEXT NOT NULL DEFAULT '',
+    cooked       INTEGER NOT NULL DEFAULT 0,
     updated_at   INTEGER NOT NULL DEFAULT 0,
     deleted      INTEGER NOT NULL DEFAULT 0
 );
@@ -451,6 +452,9 @@ ADDED_COLUMNS = {
         ("is_favorite", "INTEGER NOT NULL DEFAULT 0"),
         ("package_grams", "REAL NOT NULL DEFAULT 0.0"),
         ("package_grams_manual", "INTEGER NOT NULL DEFAULT 0"),
+    ],
+    "recipe_history": [
+        ("cooked", "INTEGER NOT NULL DEFAULT 0"),
     ],
 }
 

@@ -19,12 +19,18 @@ interface RecipeHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(entries: List<RecipeHistoryEntity>)
 
-    @Query("SELECT * FROM recipe_history WHERE deleted = 0 AND plannedDate >= :since")
+    @Query("SELECT * FROM recipe_history WHERE deleted = 0 AND cooked = 1 AND plannedDate >= :since")
     fun observeSince(since: String): Flow<List<RecipeHistoryEntity>>
 
-    @Query("SELECT DISTINCT recipeId FROM recipe_history WHERE deleted = 0 AND plannedDate >= :since")
+    @Query("SELECT DISTINCT recipeId FROM recipe_history WHERE deleted = 0 AND cooked = 1 AND plannedDate >= :since")
     suspend fun getRecentRecipeIds(since: String): List<String>
 
-    @Query("SELECT DISTINCT recipeId FROM recipe_history WHERE deleted = 0 AND plannedDate < :before")
+    @Query("SELECT DISTINCT recipeId FROM recipe_history WHERE deleted = 0 AND cooked = 1 AND plannedDate < :before")
     suspend fun getRecipeIdsBefore(before: String): List<String>
+
+    @Query("""
+        UPDATE recipe_history SET cooked = 1, updatedAt = :updatedAt, dirty = 1
+        WHERE recipeId = :recipeId AND plannedDate = :date AND deleted = 0
+    """)
+    suspend fun markCooked(recipeId: String, date: String, updatedAt: Long): Int
 }

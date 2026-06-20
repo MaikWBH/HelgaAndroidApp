@@ -30,6 +30,7 @@ data class RecipeEntity(
     val proteinType: String = "",
     val effort: String = "",
     val cuisine: String = "",
+    // LEGACY: durch mealSlot ersetzt (siehe MIGRATION_20_21), nur für Alt-Sync-Kompatibilität.
     val mealType: String = "",
     @ColumnInfo(defaultValue = "other")
     val mealSlot: String = "other",  // "breakfast", "lunch", "dinner", "snack", "other"

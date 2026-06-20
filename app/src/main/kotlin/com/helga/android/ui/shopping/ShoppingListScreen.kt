@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -126,6 +127,7 @@ fun ShoppingListScreen(
     val costEstimate by viewModel.costEstimate.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val scannedProduct by viewModel.scannedProduct.collectAsStateWithLifecycle()
+    val userAllergies by viewModel.userAllergies.collectAsStateWithLifecycle()
     val catalogProducts by viewModel.catalogProducts.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
@@ -203,6 +205,7 @@ fun ShoppingListScreen(
         ScannedProductDialog(
             product = product,
             activeStore = activeStore,
+            userAllergies = userAllergies,
             onAddToList = { viewModel.confirmScannedProduct() },
             onSaveToCatalog = { viewModel.saveScannedToCatalog() },
             onDismiss = { viewModel.clearScannedProduct() },
@@ -1498,10 +1501,14 @@ private fun NutriScoreBadge(score: String) {
 fun ScannedProductDialog(
     product: OffProductEntity,
     activeStore: StoreEntity?,
+    userAllergies: List<String> = emptyList(),
     onAddToList: () -> Unit,
     onSaveToCatalog: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val matchedAllergens = remember(product, userAllergies) {
+        com.helga.android.data.util.AllergyChecker.hasAllergens(product, userAllergies)
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = "📦 ${product.name}") },
@@ -1622,10 +1629,67 @@ fun ScannedProductDialog(
                             label = { Text("🌿 Bio") },
                         )
                     }
+                    if (product.ecoScore.isNotBlank()) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("🌍 Eco-Score ${product.ecoScore.uppercase()}") },
+                        )
+                    }
+                    if (product.nova > 0) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("🏭 NOVA ${product.nova}") },
+                        )
+                    }
                 }
 
-                // Allergen Warning
-                if (product.allergenes.isNotBlank() && product.allergenes != "[]") {
+                // Additive
+                if (product.additives.isNotBlank() && product.additives != "[]") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Zusatzstoffe:",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            text = product.additives,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                // Persönliche Allergie-Warnung: prüft die enthaltenen Allergene gegen die
+                // in den Einstellungen hinterlegte Allergieliste des Nutzers.
+                if (matchedAllergens.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "⚠️ Enthält deine Allergene",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            )
+                            Text(
+                                text = matchedAllergens.joinToString(", "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                        }
+                    }
+                } else if (product.allergenes.isNotBlank() && product.allergenes != "[]") {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -222,6 +222,7 @@ data class RecipeHistoryDto(
     val id: String,
     @Json(name = "recipe_id") val recipeId: String,
     @Json(name = "planned_date") val plannedDate: String = "",
+    val cooked: Int = 0,
     @Json(name = "updated_at") val updatedAt: Long = 0,
     val deleted: Int = 0,
 )
@@ -449,6 +450,7 @@ data class AiGenerateRequest(
     val prompt: String,
     @Json(name = "custom_instructions") val customInstructions: String = "",
     @Json(name = "available_tags") val availableTags: List<String> = emptyList(),
+    @Json(name = "exclude_allergens") val excludeAllergens: List<String> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -459,6 +461,7 @@ data class AiRemixRequest(
     @Json(name = "recipe_instructions") val recipeInstructions: List<String> = emptyList(),
     @Json(name = "remix_prompt") val remixPrompt: String,
     @Json(name = "available_tags") val availableTags: List<String> = emptyList(),
+    @Json(name = "exclude_allergens") val excludeAllergens: List<String> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
