@@ -115,6 +115,8 @@
     <string name="cook_timer_pause">Pause</string>
     <string name="cook_timer_reset">Zurücksetzen</string>
     <string name="cook_timer_done">Zeit abgelaufen!</string>
+    <string name="cook_focus_mode_on">Fokusansicht aktivieren</string>
+    <string name="cook_focus_mode_off">Listenansicht aktivieren</string>
 
     <!-- Einstellungen -->
     <string name="settings_title">Einstellungen</string>
