@@ -15,6 +15,7 @@ import javax.inject.Singleton
 @Singleton
 class ShoppingRepository @Inject constructor(
     private val shoppingDao: ShoppingDao,
+    private val storeRepository: StoreRepository,
 ) {
 
     fun observeLists(): Flow<List<ShoppingListEntity>> = shoppingDao.observeLists()
@@ -149,12 +150,18 @@ class ShoppingRepository @Inject constructor(
         )
     }
 
+    /**
+     * Fügt eine Zutat zur Liste hinzu oder mergt sie in ein bestehendes, noch
+     * unabgehaktes Item mit gleichem Namen+Einheit (Mengen werden addiert).
+     * Gang-Zuordnung wird bei Neuanlage automatisch über die aktive Filiale
+     * nachgeschlagen. Gemeinsamer Pfad für Rezept- und Wochenplan-Export,
+     * damit beide identische Ergebnisse liefern.
+     */
     suspend fun addOrMergeItem(
         listId: String,
         name: String,
         quantity: Double,
         unit: String,
-        aisle: String = "",
         source: String = "recipe",
         recipeName: String = "",
     ) {
@@ -175,6 +182,9 @@ class ShoppingRepository @Inject constructor(
                 )
             )
         } else {
+            val aisle = storeRepository.findActiveStoreId()
+                ?.let { storeId -> storeRepository.findAisleForProduct(norm, storeId) }
+                ?: ""
             shoppingDao.upsertItem(
                 ShoppingItemEntity(
                     id = UUID.randomUUID().toString(),

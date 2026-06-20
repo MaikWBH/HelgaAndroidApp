@@ -19,6 +19,9 @@ interface StoreDao {
     @Query("SELECT * FROM stores WHERE isActive = 1 AND deleted = 0 LIMIT 1")
     fun observeActiveStore(): Flow<StoreEntity?>
 
+    @Query("SELECT * FROM stores WHERE isActive = 1 AND deleted = 0 LIMIT 1")
+    suspend fun findActiveStore(): StoreEntity?
+
     @Query("SELECT * FROM store_aisles WHERE storeId = :storeId AND deleted = 0 ORDER BY sortOrder ASC")
     fun observeAisles(storeId: String): Flow<List<StoreAisleEntity>>
 

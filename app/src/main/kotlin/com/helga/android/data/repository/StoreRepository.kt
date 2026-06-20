@@ -112,6 +112,8 @@ class StoreRepository @Inject constructor(
     suspend fun findAisleForProduct(productName: String, storeId: String): String? =
         storeDao.findAisleForProduct(productName.lowercase(), storeId)
 
+    suspend fun findActiveStoreId(): String? = storeDao.findActiveStore()?.id
+
     suspend fun addStaple(listId: String, name: String): String {
         val existing = storeDao.staplesForList(listId)
         val nextOrder = (existing.maxOfOrNull { it.sortOrder } ?: -1) + 1

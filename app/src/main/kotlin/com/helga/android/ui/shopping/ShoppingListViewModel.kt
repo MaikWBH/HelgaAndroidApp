@@ -231,16 +231,13 @@ class ShoppingListViewModel @Inject constructor(
                     val recipeName = recipeDao.findById(entry.recipeId)?.name ?: ""
                     val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
                     ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
-                        val storeId = activeStore.value?.id
-                        val aisle = if (storeId != null)
-                            storeRepository.findAisleForProduct(ingredient.food, storeId) ?: ""
-                        else ""
-                        repository.addItem(
+                        repository.addOrMergeItem(
                             listId = listId,
                             name = ingredient.food,
                             quantity = ingredient.quantity,
                             unit = ingredient.unit,
-                            aisle = aisle,
+                            source = "weekplan",
+                            recipeName = recipeName,
                         )
                     }
                 }
