@@ -7,6 +7,7 @@ import com.helga.android.data.model.ItemCostEstimate
 import com.helga.android.data.model.ItemOrigin
 import com.helga.android.data.model.ItemOrigins
 import com.helga.android.data.model.ListCostEstimate
+import com.helga.android.data.util.ShoppingUnitConverter
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
@@ -152,10 +153,13 @@ class ShoppingRepository @Inject constructor(
 
     /**
      * Fügt eine Zutat zur Liste hinzu oder mergt sie in ein bestehendes, noch
-     * unabgehaktes Item mit gleichem Namen+Einheit (Mengen werden addiert).
-     * Gang-Zuordnung wird bei Neuanlage automatisch über die aktive Filiale
-     * nachgeschlagen. Gemeinsamer Pfad für Rezept- und Wochenplan-Export,
-     * damit beide identische Ergebnisse liefern.
+     * unabgehaktes Item mit gleichem Namen. Einheiten aus derselben Umrechnungs-
+     * familie (g/kg, ml/l/cl, siehe [ShoppingUnitConverter]) werden dabei
+     * zusammengeführt statt als getrennte Positionen stehen zu bleiben; bei
+     * inkompatiblen Einheiten (z. B. "Stück" vs. "g") bleiben sie wie bisher
+     * getrennt. Gang-Zuordnung wird bei Neuanlage automatisch über die aktive
+     * Filiale nachgeschlagen. Gemeinsamer Pfad für Rezept- und Wochenplan-
+     * Export, damit beide identische Ergebnisse liefern.
      */
     suspend fun addOrMergeItem(
         listId: String,
@@ -168,14 +172,16 @@ class ShoppingRepository @Inject constructor(
         val norm = name.trim()
         if (norm.isBlank()) return
         val cleanUnit = unit.trim()
-        val existing = shoppingDao.findUncheckedItemByNameUnit(listId, norm, cleanUnit)
+        val existing = shoppingDao.findUncheckedItemsByName(listId, norm)
+            .firstOrNull { ShoppingUnitConverter.isCompatible(it.unit, cleanUnit) }
         val now = System.currentTimeMillis()
         val newOrigin = ItemOrigin(recipe = recipeName, quantity = quantity, unit = cleanUnit)
         if (existing != null) {
+            val convertedQuantity = ShoppingUnitConverter.convert(quantity, cleanUnit, existing.unit)
             val mergedOrigins = ItemOrigins.decode(existing.origins) + newOrigin
             shoppingDao.upsertItem(
                 existing.copy(
-                    quantity = existing.quantity + quantity,
+                    quantity = existing.quantity + convertedQuantity,
                     origins = ItemOrigins.encode(mergedOrigins),
                     updatedAt = now,
                     dirty = 1,
