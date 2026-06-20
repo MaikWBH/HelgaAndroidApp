@@ -315,24 +315,6 @@ class AiImportResponse(BaseModel):
     tags: List[str] = []
 
 
-class WeekplanGenerateRequest(BaseModel):
-    start_date: str
-    plan_days: int = 7
-    max_meat_per_week: int = 3
-    min_vegetarian_per_week: int = 2
-    max_repeat_days: int = 14
-
-
-class WeekplanAssignmentDto(BaseModel):
-    date: str
-    recipe_id: str
-    recipe_name: str = ""
-
-
-class WeekplanGenerateResponse(BaseModel):
-    assignments: List[WeekplanAssignmentDto] = []
-
-
 # ── OFF-Lookups ──────────────────────────────────────────────────────────────
 
 class OffLookupBarcodeRequest(BaseModel):

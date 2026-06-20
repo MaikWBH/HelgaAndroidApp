@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import date, timedelta
+from datetime import date
 from typing import AsyncIterator
 
 import httpx
@@ -11,7 +11,6 @@ from .models import (
     AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiNutritionRequest,
     AiUrlImportRequest,
     AiImportResponse, ImportedIngredient, ImportedInstruction,
-    WeekplanGenerateRequest, WeekplanGenerateResponse, WeekplanAssignmentDto,
 )
 
 load_dotenv()
@@ -299,72 +298,6 @@ async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
         instructions=instructions,
         tags=raw_tags[:20],
     )
-
-
-async def generate_weekplan(req: WeekplanGenerateRequest) -> WeekplanGenerateResponse:
-    from .db import get_db
-
-    async with get_db() as db:
-        async with db.execute(
-            "SELECT id, name, protein_type FROM recipes WHERE deleted = 0 AND name != ''",
-        ) as cursor:
-            all_recipes = [dict(r) for r in await cursor.fetchall()]
-
-        cutoff = (date.fromisoformat(req.start_date) - timedelta(days=req.max_repeat_days)).isoformat()
-        async with db.execute(
-            """SELECT DISTINCT wr.recipe_id
-               FROM weekplan_recipes wr
-               JOIN weekplan_days wd ON wr.weekplan_day_id = wd.id
-               WHERE wd.plan_date >= ? AND wr.deleted = 0""",
-            (cutoff,),
-        ) as cursor:
-            recent_ids = {row[0] for row in await cursor.fetchall()}
-
-    available = [r for r in all_recipes if r["id"] not in recent_ids]
-    if not available:
-        available = all_recipes
-    if not available:
-        return WeekplanGenerateResponse(assignments=[])
-
-    start = date.fromisoformat(req.start_date)
-    dates = [(start + timedelta(days=i)).isoformat() for i in range(req.plan_days)]
-    recipe_list = "\n".join(
-        f"- {r['id']}: {r['name']} ({r.get('protein_type') or 'unbekannt'})"
-        for r in available[:80]
-    )
-
-    system = "Du bist ein Ernährungsplaner. Wähle Rezepte für einen Wochenplan. Antworte NUR mit validem JSON."
-    user = (
-        f"Erstelle einen Wochenplan für {req.plan_days} Tage ab {req.start_date}.\n"
-        f"Constraints: max {req.max_meat_per_week} Fleisch-Tage, "
-        f"min {req.min_vegetarian_per_week} vegetarische Tage.\n"
-        f"Tage: {', '.join(dates)}\n\n"
-        f"Verfügbare Rezepte:\n{recipe_list}\n\n"
-        f'Antworte mit: {{"assignments": [{{"date": "2026-05-05", "recipe_id": "uuid"}}]}}\n'
-        f"Wähle für jeden Tag genau ein Rezept. Variiere Protein-Typen. Nur exakte IDs verwenden."
-    )
-
-    try:
-        raw = await _call_once(system, user)
-        raw = raw.strip()
-        start_idx, end_idx = raw.find("{"), raw.rfind("}") + 1
-        if start_idx == -1:
-            return WeekplanGenerateResponse(assignments=[])
-        data = json.loads(raw[start_idx:end_idx])
-    except Exception:
-        return WeekplanGenerateResponse(assignments=[])
-
-    recipe_map = {r["id"]: r["name"] for r in all_recipes}
-    assignments = [
-        WeekplanAssignmentDto(
-            date=a.get("date", ""),
-            recipe_id=a.get("recipe_id", ""),
-            recipe_name=recipe_map.get(a.get("recipe_id", ""), ""),
-        )
-        for a in data.get("assignments", [])
-        if a.get("recipe_id") in recipe_map and a.get("date")
-    ]
-    return WeekplanGenerateResponse(assignments=assignments)
 
 
 # ── Low-level streaming ──────────────────────────────────────────────────────

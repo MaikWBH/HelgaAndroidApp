@@ -15,7 +15,7 @@ from .models import (
     OffLookupBarcodeRequest, OffSearchRequest,
     ReceiptParseRequest,
     ReceiptParseResponse, ReceiptReconcileRequest,
-    SyncPullResponse, SyncPushRequest, WeekplanGenerateRequest,
+    SyncPullResponse, SyncPushRequest,
 )
 from .sync import pull_since, push_records
 from . import ai as ai_module
@@ -105,11 +105,6 @@ async def ai_nutrition(req: AiNutritionRequest):
 @app.post("/api/ai/import-url", dependencies=[Depends(require_auth)])
 async def ai_import_url(req: AiUrlImportRequest):
     return await ai_module.import_url(req)
-
-
-@app.post("/api/weekplan/generate", dependencies=[Depends(require_auth)])
-async def weekplan_generate(req: WeekplanGenerateRequest):
-    return await ai_module.generate_weekplan(req)
 
 
 @app.post("/api/receipts/reconcile", dependencies=[Depends(require_auth)])
