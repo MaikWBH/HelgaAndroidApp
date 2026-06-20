@@ -6,6 +6,7 @@ from typing import AsyncIterator
 import httpx
 from dotenv import load_dotenv
 
+from .ingredient_parser import parse_ingredient_line
 from .models import (
     AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiNutritionRequest,
     AiUrlImportRequest,
@@ -270,7 +271,9 @@ async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
     scraper = scrape_html(resp.text, org_url=req.url)
 
     raw_ingredients = _safe(scraper, "ingredients", [])
-    ingredients = [ImportedIngredient(food=s) for s in raw_ingredients if s.strip()]
+    ingredients = [
+        ImportedIngredient(**parse_ingredient_line(s)) for s in raw_ingredients if s.strip()
+    ]
 
     raw_instructions = _safe(scraper, "instructions_list", [])
     if not raw_instructions:

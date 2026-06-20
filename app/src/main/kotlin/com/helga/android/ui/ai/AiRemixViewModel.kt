@@ -12,6 +12,7 @@ import com.helga.android.data.remote.SseClient
 import com.helga.android.data.remote.dto.AiRemixRequest
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
+import com.helga.android.data.util.IngredientLineParser
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -130,12 +131,16 @@ class AiRemixViewModel @Inject constructor(
                 localImageUri = "",
                 createdAt = now,
             )
-            val ingredients = recipe.ingredients.mapIndexed { idx, food ->
+            val ingredients = recipe.ingredients.mapIndexed { idx, line ->
+                val parsed = IngredientLineParser.parse(line)
                 IngredientEntity(
                     id = UUID.randomUUID().toString(),
                     recipeId = id,
                     position = idx,
-                    food = food,
+                    quantity = parsed.quantity,
+                    unit = parsed.unit,
+                    food = parsed.food.ifBlank { line },
+                    note = parsed.note,
                 )
             }
             val instructions = recipe.instructions.mapIndexed { idx, text ->
