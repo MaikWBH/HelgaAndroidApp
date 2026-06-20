@@ -22,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -63,8 +64,9 @@ fun CostOverviewScreen(
     if (showBudgetDialog) {
         BudgetEditDialog(
             currentAmount = budget?.amount ?: 0.0,
-            onConfirm = { amount ->
-                viewModel.saveBudget(amount)
+            currentWarnThreshold = budget?.warnThreshold ?: 0.8,
+            onConfirm = { amount, warnThreshold ->
+                viewModel.saveBudget(amount, warnThreshold)
                 showBudgetDialog = false
             },
             onDismiss = { showBudgetDialog = false },
@@ -378,7 +380,8 @@ private fun BudgetCard(
 @Composable
 private fun BudgetEditDialog(
     currentAmount: Double,
-    onConfirm: (Double) -> Unit,
+    currentWarnThreshold: Double,
+    onConfirm: (amount: Double, warnThreshold: Double) -> Unit,
     onDismiss: () -> Unit,
 ) {
     // Vorbelegung ohne Nachkomma-Null, wenn ganzzahlig (z. B. "600" statt "600.0").
@@ -388,6 +391,7 @@ private fun BudgetEditDialog(
         else -> currentAmount.toString()
     }
     var text by remember { mutableStateOf(initial) }
+    var warnThreshold by remember { mutableStateOf(currentWarnThreshold.toFloat()) }
     val parsed = text.replace(',', '.').toDoubleOrNull()
     val valid = text.isBlank() || (parsed != null && parsed >= 0.0)
 
@@ -414,11 +418,24 @@ private fun BudgetEditDialog(
                     ),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Warnschwelle: ${(warnThreshold * 100).toInt()}% des Budgets",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Slider(
+                    value = warnThreshold,
+                    onValueChange = { warnThreshold = it },
+                    valueRange = 0.5f..1.0f,
+                    steps = 9,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(if (text.isBlank()) 0.0 else (parsed ?: 0.0)) },
+                onClick = { onConfirm(if (text.isBlank()) 0.0 else (parsed ?: 0.0), warnThreshold.toDouble()) },
                 enabled = valid,
             ) { Text("Speichern") }
         },

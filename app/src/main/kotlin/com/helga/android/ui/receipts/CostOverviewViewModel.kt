@@ -82,14 +82,13 @@ class CostOverviewViewModel @Inject constructor(
      * einen Sync an, damit der Wert zentral auf dem Server landet und das andere
      * Handy ihn erhält. [amount] = 0 löscht das Budget faktisch (keine Warnung mehr).
      */
-    fun saveBudget(amount: Double) {
+    fun saveBudget(amount: Double, warnThreshold: Double) {
         viewModelScope.launch {
-            val current = monthlyBudgetDao.get()
             monthlyBudgetDao.upsert(
                 MonthlyBudgetEntity(
                     id = "global",
                     amount = amount.coerceAtLeast(0.0),
-                    warnThreshold = current?.warnThreshold ?: 0.8,
+                    warnThreshold = warnThreshold.coerceIn(0.5, 1.0),
                     updatedAt = System.currentTimeMillis(),
                     dirty = 1,
                 )
