@@ -60,20 +60,6 @@ class CategoryRecord(SyncRecord):
     name: str = ""
 
 
-class FoodRecord(SyncRecord):
-    name: str = ""
-
-
-class UnitRecord(SyncRecord):
-    name: str = ""
-
-
-class ProductUnitRecord(SyncRecord):
-    product_name: str = ""
-    unit_name: str = ""
-    sort_order: int = 0
-
-
 class StoreRecord(SyncRecord):
     name: str = ""
     is_active: int = 0
@@ -124,6 +110,8 @@ class ShoppingListStapleRecord(SyncRecord):
 class WeekplanDayRecord(SyncRecord):
     plan_date: str = ""
     note: str = ""
+    is_quick_day: int = 0
+    is_guest_day: int = 0
 
 
 class WeekplanRecipeRecord(SyncRecord):
@@ -144,16 +132,18 @@ class RecipeHistoryRecord(SyncRecord):
     cooked: int = 0
 
 
+class RecipeFeedbackRecord(SyncRecord):
+    recipe_id: str
+    planned_date: str = ""
+    liked: int = 0
+
+
 class QuickEmojiRecord(SyncRecord):
     emoji: str = ""
     food: str = ""
     quantity: float = 1
     unit: str = ""
     sort_order: int = 0
-
-
-class AppSettingRecord(SyncRecord):
-    value: str = ""
 
 
 class WeekplanSettingsRecord(SyncRecord):
@@ -195,31 +185,6 @@ class OffProductRecord(SyncRecord):
     package_grams_manual: int = 0
 
 
-class IngredientMappingRecord(SyncRecord):
-    ingredient_name: str = ""
-    off_product_id: str = ""
-    off_barcode: str = ""
-    display_name: str = ""
-
-
-class ProductPriceRecord(SyncRecord):
-    off_product_id: str = ""
-    store_name: str = ""
-    currency: str = "EUR"
-    price: float = 0.0
-    unit: str = ""
-    last_checked_at: int = 0
-
-
-class ProductPurchaseRecord(SyncRecord):
-    shopping_item_id: str = ""
-    off_product_id: str = ""
-    quantity_purchased: float = 1.0
-    price_paid: float = 0.0
-    store_name: str = ""
-    purchase_date: int = 0
-
-
 class ReceiptRecord(SyncRecord):
     store_id: str = ""
     store_name: str = ""
@@ -253,9 +218,6 @@ class SyncPayload(BaseModel):
     recipe_instructions: List[InstructionRecord] = []
     recipe_tags: List[TagRecord] = []
     recipe_categories: List[CategoryRecord] = []
-    foods: List[FoodRecord] = []
-    units: List[UnitRecord] = []
-    product_units: List[ProductUnitRecord] = []
     stores: List[StoreRecord] = []
     store_aisles: List[StoreAisleRecord] = []
     aisle_products: List[AisleProductRecord] = []
@@ -266,14 +228,11 @@ class SyncPayload(BaseModel):
     weekplan_recipes: List[WeekplanRecipeRecord] = []
     weekplan_extras: List[WeekplanExtraRecord] = []
     recipe_history: List[RecipeHistoryRecord] = []
+    recipe_feedback: List[RecipeFeedbackRecord] = []
     quick_emojis: List[QuickEmojiRecord] = []
-    app_settings: List[AppSettingRecord] = []
     weekplan_settings: List[WeekplanSettingsRecord] = []
     weekplan_constraints: List[WeekplanConstraintsRecord] = []
     off_products: List[OffProductRecord] = []
-    ingredient_product_mappings: List[IngredientMappingRecord] = []
-    product_prices: List[ProductPriceRecord] = []
-    product_purchases: List[ProductPurchaseRecord] = []
     receipts: List[ReceiptRecord] = []
     receipt_items: List[ReceiptItemRecord] = []
     monthly_budgets: List[MonthlyBudgetRecord] = []
