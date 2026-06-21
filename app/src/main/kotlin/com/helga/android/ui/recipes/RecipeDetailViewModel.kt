@@ -41,6 +41,7 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.WeekFields
 import java.util.Locale
 import javax.inject.Inject
 
@@ -220,11 +221,44 @@ class RecipeDetailViewModel @Inject constructor(
     private val _weekplanDays = MutableStateFlow<List<WeekplanDayWithRecipes>>(emptyList())
     val weekplanDays: StateFlow<List<WeekplanDayWithRecipes>> = _weekplanDays.asStateFlow()
 
+    private val _weekOffset = MutableStateFlow(0)
+    val weekOffset: StateFlow<Int> = _weekOffset.asStateFlow()
+
+    private fun mondayForOffset(offset: Int): LocalDate =
+        LocalDate.now().with(DayOfWeek.MONDAY).plusWeeks(offset.toLong())
+
+    val weekLabel: StateFlow<String> = _weekOffset.map { offset ->
+        val monday = mondayForOffset(offset)
+        val sunday = monday.plusDays(6)
+        val kw = monday.get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear())
+        val fmt = DateTimeFormatter.ofPattern("dd.MM.")
+        "KW $kw · ${monday.format(fmt)}–${sunday.format(fmt)}"
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    fun nextWeek() {
+        _weekOffset.value++
+        loadWeekplanDays()
+    }
+
+    fun prevWeek() {
+        _weekOffset.value--
+        loadWeekplanDays()
+    }
+
+    fun goToCurrentWeek() {
+        _weekOffset.value = 0
+        loadWeekplanDays()
+    }
+
     fun loadWeekplanDays() {
         viewModelScope.launch {
-            val monday = LocalDate.now().with(DayOfWeek.MONDAY)
+            val monday = mondayForOffset(_weekOffset.value)
             val sunday = monday.plusDays(6)
             val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+            (0..6).forEach { offset ->
+                weekplanRepository.getOrCreateDay(monday.plusDays(offset.toLong()).format(fmt))
+            }
+            syncScheduler.triggerOneShot()
             val days = weekplanRepository.observeDaysBetween(
                 monday.format(fmt), sunday.format(fmt)
             ).first()

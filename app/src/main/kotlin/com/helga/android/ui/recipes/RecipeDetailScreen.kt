@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -112,6 +113,8 @@ fun RecipeDetailScreen(
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
     val nutrition by viewModel.nutrition.collectAsStateWithLifecycle()
     var showNutritionDialog by remember { mutableStateOf(false) }
+    val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
+    val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.classifyError) {
         uiState.classifyError?.let { snackbarHostState.showSnackbar(it) }
@@ -158,6 +161,11 @@ fun RecipeDetailScreen(
     if (showWeekplanPicker) {
         WeekplanDayPickerDialog(
             days = weekplanDays,
+            weekLabel = weekLabel,
+            weekOffset = weekOffset,
+            onPrevWeek = viewModel::prevWeek,
+            onNextWeek = viewModel::nextWeek,
+            onToday = viewModel::goToCurrentWeek,
             onDismiss = { showWeekplanPicker = false },
             onPick = { dayId ->
                 showWeekplanPicker = false
@@ -906,6 +914,11 @@ private fun ShoppingListSelectDialog(
 @Composable
 private fun WeekplanDayPickerDialog(
     days: List<RecipeDetailViewModel.WeekplanDayWithRecipes>,
+    weekLabel: String,
+    weekOffset: Int,
+    onPrevWeek: () -> Unit,
+    onNextWeek: () -> Unit,
+    onToday: () -> Unit,
     onDismiss: () -> Unit,
     onPick: (String) -> Unit,
 ) {
@@ -913,47 +926,69 @@ private fun WeekplanDayPickerDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.recipe_add_to_weekplan)) },
         text = {
-            if (days.isEmpty()) {
-                Text(stringResource(R.string.recipe_weekplan_no_days))
-            } else {
-                LazyColumn {
-                    items(days, key = { it.day.id }) { dayWithRecipes ->
-                        val date = runCatching {
-                            LocalDate.parse(dayWithRecipes.day.planDate, DateTimeFormatter.ISO_LOCAL_DATE)
-                        }.getOrNull()
-                        val dayLabel = date?.dayOfWeek
-                            ?.getDisplayName(TextStyle.FULL, Locale.getDefault())
-                            ?.replaceFirstChar { it.uppercase() }
-                            ?: dayWithRecipes.day.planDate
-                        val dateLabel = date?.format(DateTimeFormatter.ofPattern("dd.MM.")) ?: ""
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onPrevWeek) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.weekplan_prev_week))
+                    }
+                    Text(
+                        text = weekLabel,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall,
+                        textAlign = TextAlign.Center,
+                    )
+                    if (weekOffset != 0) {
+                        TextButton(onClick = onToday) { Text(stringResource(R.string.weekplan_today)) }
+                    }
+                    IconButton(onClick = onNextWeek) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.weekplan_next_week))
+                    }
+                }
+                if (days.isEmpty()) {
+                    Text(stringResource(R.string.recipe_weekplan_no_days))
+                } else {
+                    LazyColumn {
+                        items(days, key = { it.day.id }) { dayWithRecipes ->
+                            val date = runCatching {
+                                LocalDate.parse(dayWithRecipes.day.planDate, DateTimeFormatter.ISO_LOCAL_DATE)
+                            }.getOrNull()
+                            val dayLabel = date?.dayOfWeek
+                                ?.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                                ?.replaceFirstChar { it.uppercase() }
+                                ?: dayWithRecipes.day.planDate
+                            val dateLabel = date?.format(DateTimeFormatter.ofPattern("dd.MM.")) ?: ""
 
-                        TextButton(
-                            onClick = { onPick(dayWithRecipes.day.id) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Row {
-                                    Text(
-                                        text = dayLabel,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                    if (dateLabel.isNotBlank()) {
-                                        Spacer(Modifier.widthIn(min = 8.dp))
+                            TextButton(
+                                onClick = { onPick(dayWithRecipes.day.id) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row {
                                         Text(
-                                            text = dateLabel,
+                                            text = dayLabel,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                        )
+                                        if (dateLabel.isNotBlank()) {
+                                            Spacer(Modifier.widthIn(min = 8.dp))
+                                            Text(
+                                                text = dateLabel,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                    if (dayWithRecipes.recipeNames.isNotEmpty()) {
+                                        Text(
+                                            text = dayWithRecipes.recipeNames.joinToString(", "),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                     }
-                                }
-                                if (dayWithRecipes.recipeNames.isNotEmpty()) {
-                                    Text(
-                                        text = dayWithRecipes.recipeNames.joinToString(", "),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
                                 }
                             }
                         }

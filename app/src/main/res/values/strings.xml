@@ -193,6 +193,7 @@
     <string name="shopping_delete_checked">Erledigte löschen</string>
     <string name="shopping_no_aisle">Ohne Gang</string>
     <string name="shopping_assign_aisle">Gang zuweisen</string>
+    <string name="shopping_item_aisle">Gang</string>
     <string name="shopping_staples">Vorratsstapel</string>
     <string name="shopping_staples_add_all">Alle hinzufügen</string>
     <string name="shopping_staples_empty">Keine Vorratsstapel konfiguriert</string>

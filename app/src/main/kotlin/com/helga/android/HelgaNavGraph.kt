@@ -179,6 +179,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                     WeekplanRecipePickerScreen(
                         onBack = { navController.popBackStack() },
                         onRecipePicked = { navController.popBackStack() },
+                        onRecipeClick = { id -> navController.navigate(recipeDetailRoute(id)) },
                     )
                 }
                 composable(ROUTE_RECIPE_URL_IMPORT) {

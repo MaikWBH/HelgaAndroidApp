@@ -192,6 +192,12 @@ fun WeekplanScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.weekplan_title)) },
                 actions = {
+                    IconButton(onClick = { viewModel.generateWeekplan() }) {
+                        Icon(
+                            imageVector = Icons.Filled.Restaurant,
+                            contentDescription = stringResource(R.string.weekplan_generate),
+                        )
+                    }
                     IconButton(onClick = { constraintsEditorVisible = true }) {
                         Icon(
                             imageVector = Icons.Filled.Tune,

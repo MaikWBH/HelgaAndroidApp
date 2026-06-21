@@ -68,6 +68,7 @@ import com.helga.android.ui.recipes.SortOrder
 fun WeekplanRecipePickerScreen(
     onBack: () -> Unit,
     onRecipePicked: () -> Unit,
+    onRecipeClick: (String) -> Unit,
     viewModel: WeekplanRecipePickerViewModel = hiltViewModel(),
 ) {
     val recipes by viewModel.recipes.collectAsStateWithLifecycle()
@@ -153,6 +154,7 @@ fun WeekplanRecipePickerScreen(
                         PickerRecipeCard(
                             recipe = recipe,
                             imageUrl = imageUrl,
+                            onClick = { onRecipeClick(recipe.id) },
                             onPick = {
                                 viewModel.addRecipe(recipe.id)
                                 onRecipePicked()
@@ -238,10 +240,12 @@ private fun sortLabel(order: SortOrder) = stringResource(
 private fun PickerRecipeCard(
     recipe: RecipeEntity,
     imageUrl: String?,
+    onClick: () -> Unit,
     onPick: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
         colors = CardDefaults.cardColors(),
     ) {
         Row(

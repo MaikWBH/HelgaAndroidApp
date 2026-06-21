@@ -215,9 +215,11 @@ fun ShoppingListScreen(
     editItem?.let { item ->
         EditItemDialog(
             item = item,
+            aisles = storeAisles,
             onDismiss = { editItem = null },
-            onSave = { quantity, unit, name ->
+            onSave = { quantity, unit, name, newAisle ->
                 viewModel.updateItem(item.id, quantity, unit, name)
+                if (newAisle != item.aisle) viewModel.assignAisle(item, newAisle)
                 editItem = null
             },
         )
@@ -853,12 +855,26 @@ private fun formatQty(q: Double): String =
 @Composable
 private fun EditItemDialog(
     item: ShoppingItemEntity,
+    aisles: List<StoreAisleEntity>,
     onDismiss: () -> Unit,
-    onSave: (quantity: Double, unit: String, name: String) -> Unit,
+    onSave: (quantity: Double, unit: String, name: String, aisle: String) -> Unit,
 ) {
     var quantityText by remember(item.id) { mutableStateOf(item.quantity.toString()) }
     var unit by remember(item.id) { mutableStateOf(item.unit) }
     var name by remember(item.id) { mutableStateOf(item.name) }
+    var aisle by remember(item.id) { mutableStateOf(item.aisle) }
+    var showAislePicker by remember { mutableStateOf(false) }
+
+    if (showAislePicker) {
+        AislePickerDialog(
+            aisles = aisles,
+            onDismiss = { showAislePicker = false },
+            onPick = { picked ->
+                aisle = picked
+                showAislePicker = false
+            },
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -884,13 +900,40 @@ private fun EditItemDialog(
                     label = { Text(stringResource(R.string.recipe_form_unit)) },
                     singleLine = true,
                 )
+                if (aisles.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = { showAislePicker = true }),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.shopping_item_aisle),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            text = aisle.ifBlank { stringResource(R.string.shopping_no_aisle) },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { showAislePicker = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.LocalOffer,
+                                contentDescription = stringResource(R.string.shopping_assign_aisle),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     val quantity = quantityText.replace(',', '.').toDoubleOrNull() ?: item.quantity
-                    onSave(quantity, unit.trim(), name.trim())
+                    onSave(quantity, unit.trim(), name.trim(), aisle)
                 },
                 enabled = name.isNotBlank(),
             ) {
