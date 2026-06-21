@@ -36,6 +36,13 @@ jobs:
       - name: Assemble debug APK (compiles Kotlin, runs KSP/Room/Hilt codegen)
         run: ./gradlew :app:assembleDebug --no-daemon
 
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
       - name: Upload lint report
         if: failure()
         uses: actions/upload-artifact@v7
