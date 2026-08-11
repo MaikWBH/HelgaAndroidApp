@@ -1,15 +1,16 @@
 import json
 import os
-from datetime import date, timedelta
+from datetime import date
 from typing import AsyncIterator
 
 import httpx
 from dotenv import load_dotenv
 
+from .ingredient_parser import parse_ingredient_line
 from .models import (
-    AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiUrlImportRequest,
+    AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiNutritionRequest,
+    AiUrlImportRequest,
     AiImportResponse, ImportedIngredient, ImportedInstruction,
-    WeekplanGenerateRequest, WeekplanGenerateResponse, WeekplanAssignmentDto,
 )
 
 load_dotenv()
@@ -18,6 +19,8 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "openai")
 AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_MODEL = os.getenv("AI_MODEL", "")
 AI_API_BASE = os.getenv("AI_API_BASE", "")
+# Eigenes (starkes) Vision-Modell für die Bon-Erkennung. Siehe _vision_model().
+AI_VISION_MODEL = os.getenv("AI_VISION_MODEL", "")
 
 OPENAI_BASE = AI_API_BASE or "https://api.openai.com/v1"
 ANTHROPIC_BASE = "https://api.anthropic.com/v1"
@@ -25,6 +28,14 @@ ANTHROPIC_BASE = "https://api.anthropic.com/v1"
 DEFAULT_MODEL = {
     "openai": "gpt-4o-mini",
     "anthropic": "claude-haiku-4-5-20251001",
+}
+
+# Vision-Tasks (Kassenbon-Erkennung) brauchen ein deutlich stärkeres, bild-fähiges
+# Modell als die günstigen Text-Defaults: dichte deutsche Bons mit kleinem Druck
+# überfordern Mini-/Haiku-Modelle (Belege: Sonnet ~97 % vs. Mini deutlich darunter).
+DEFAULT_VISION_MODEL = {
+    "openai": "gpt-4o",
+    "anthropic": "claude-sonnet-4-6",
 }
 
 CLASSIFY_VALUES = {
@@ -78,6 +89,18 @@ def _model() -> str:
     return AI_MODEL or DEFAULT_MODEL.get(AI_PROVIDER, "gpt-4o-mini")
 
 
+def _vision_model() -> str:
+    """Modell für Bild-Eingaben (Kassenbon-Erkennung).
+
+    Reihenfolge:
+    1. AI_VISION_MODEL – explizite Wahl (empfohlen, um z. B. Sonnet zu erzwingen).
+    2. AI_MODEL – falls bewusst gesetzt, respektieren wir die Nutzerwahl.
+    3. Starker Provider-Default (NICHT der günstige Text-Default), weil dichte
+       deutsche Bons sonst unzuverlässig erkannt werden.
+    """
+    return AI_VISION_MODEL or AI_MODEL or DEFAULT_VISION_MODEL.get(AI_PROVIDER, "gpt-4o")
+
+
 def _openai_headers() -> dict:
     base = AI_API_BASE or "https://api.openai.com/v1"
     return {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}, base
@@ -91,13 +114,22 @@ def _anthropic_headers() -> dict:
     }, ANTHROPIC_BASE
 
 
+def _allergen_hint(exclude_allergens: list[str]) -> str:
+    if not exclude_allergens:
+        return ""
+    return (
+        f"\n\nALLERGENE — PFLICHT: Das Rezept darf KEINE der folgenden Allergene/Zutaten "
+        f"enthalten, auch nicht in Spurenform: {', '.join(exclude_allergens)}."
+    )
+
+
 async def stream_generate(req: AiGenerateRequest) -> AsyncIterator[str]:
     tag_hint = (
         f"\n\nTAGS — PFLICHT: Verwende nur Tags aus dieser Liste: {', '.join(req.available_tags[:40])}"
         if req.available_tags else "\n\nVergib 2–4 deutsche Tags im 'keywords'-Feld."
     )
     custom = f"\n\nZUSÄTZLICHE ANWEISUNGEN:\n{req.custom_instructions}" if req.custom_instructions else ""
-    system = RECIPE_HTML_SYSTEM + tag_hint + custom
+    system = RECIPE_HTML_SYSTEM + tag_hint + custom + _allergen_hint(req.exclude_allergens)
 
     async for chunk in _stream(system, req.prompt):
         yield chunk
@@ -114,6 +146,7 @@ async def stream_remix(req: AiRemixRequest) -> AsyncIterator[str]:
         f"Du bist ein kreativer Profi-Koch. Wandle das folgende Rezept gemäß dem Kundenwunsch ab "
         f"und gib das Ergebnis als vollständiges HTML mit JSON-LD aus (gleiches Format wie bei neuen Rezepten)."
         f"{tag_hint}\nKRITISCH: Nur rohes HTML ausgeben."
+        f"{_allergen_hint(req.exclude_allergens)}"
     )
     user = (
         f"ORIGINAL:\nName: {req.recipe_name}\nBeschreibung: {req.recipe_description}\n"
@@ -162,6 +195,49 @@ async def classify(req: AiClassifyRequest) -> dict:
     }
 
 
+async def estimate_nutrition(req: AiNutritionRequest) -> dict:
+    """Schätzt Nährwerte für ein ganzes Rezept (alle Zutaten zusammen, skaliert
+    auf `req.portions` Portionen). Antwortformat analog zu [classify]."""
+    ingredients_block = "\n".join(f"- {i}" for i in req.ingredients[:60]) or "(keine)"
+
+    system = ("Du bist Ernährungsexperte. Schätze die Nährwerte für ein GANZES Rezept "
+               "(Summe über alle Zutaten, nicht pro 100g). "
+               "Antworte NUR mit einem validen JSON-Objekt — kein Markdown, keine Erklärungen.")
+    user = (
+        f"REZEPT: {req.name}\nBESCHREIBUNG: {req.description or ''}\n"
+        f"PORTIONEN: {req.portions}\n"
+        f"ZUTATEN (bereits für {req.portions} Portionen bemessen):\n{ingredients_block}\n\n"
+        "Schätze die GESAMT-Nährwerte für das komplette Rezept (alle Zutaten zusammen):\n"
+        "- kcal: Gesamt-Kalorien\n- protein: Gesamt-Eiweiß in Gramm\n"
+        "- fat: Gesamt-Fett in Gramm\n- carbs: Gesamt-Kohlenhydrate in Gramm\n"
+        "- nutri_score: einer von [a, b, c, d, e] (a = am gesündesten)\n\n"
+        'Antworte mit: {"kcal":0,"protein":0,"fat":0,"carbs":0,"nutri_score":"c"}'
+    )
+
+    text = (await _call_once(system, user)).strip()
+    if text.startswith("```"):
+        text = text.split("```")[1].lstrip("json").strip()
+    start, end = text.find("{"), text.rfind("}") + 1
+    if start == -1 or end == 0:
+        return {}
+    try:
+        data = json.loads(text[start:end])
+    except json.JSONDecodeError:
+        return {}
+
+    nutri_score = str(data.get("nutri_score", "")).strip().lower()
+    if nutri_score not in ("a", "b", "c", "d", "e"):
+        nutri_score = ""
+
+    return {
+        "kcal": _to_float(data.get("kcal"), 0.0),
+        "protein": _to_float(data.get("protein"), 0.0),
+        "fat": _to_float(data.get("fat"), 0.0),
+        "carbs": _to_float(data.get("carbs"), 0.0),
+        "nutri_score": nutri_score,
+    }
+
+
 def _mins_to_iso(mins) -> str:
     try:
         m = int(mins)
@@ -194,7 +270,9 @@ async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
     scraper = scrape_html(resp.text, org_url=req.url)
 
     raw_ingredients = _safe(scraper, "ingredients", [])
-    ingredients = [ImportedIngredient(food=s) for s in raw_ingredients if s.strip()]
+    ingredients = [
+        ImportedIngredient(**parse_ingredient_line(s)) for s in raw_ingredients if s.strip()
+    ]
 
     raw_instructions = _safe(scraper, "instructions_list", [])
     if not raw_instructions:
@@ -220,72 +298,6 @@ async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
         instructions=instructions,
         tags=raw_tags[:20],
     )
-
-
-async def generate_weekplan(req: WeekplanGenerateRequest) -> WeekplanGenerateResponse:
-    from .db import get_db
-
-    async with get_db() as db:
-        async with db.execute(
-            "SELECT id, name, protein_type FROM recipes WHERE deleted = 0 AND name != ''",
-        ) as cursor:
-            all_recipes = [dict(r) for r in await cursor.fetchall()]
-
-        cutoff = (date.fromisoformat(req.start_date) - timedelta(days=req.max_repeat_days)).isoformat()
-        async with db.execute(
-            """SELECT DISTINCT wr.recipe_id
-               FROM weekplan_recipes wr
-               JOIN weekplan_days wd ON wr.weekplan_day_id = wd.id
-               WHERE wd.plan_date >= ? AND wr.deleted = 0""",
-            (cutoff,),
-        ) as cursor:
-            recent_ids = {row[0] for row in await cursor.fetchall()}
-
-    available = [r for r in all_recipes if r["id"] not in recent_ids]
-    if not available:
-        available = all_recipes
-    if not available:
-        return WeekplanGenerateResponse(assignments=[])
-
-    start = date.fromisoformat(req.start_date)
-    dates = [(start + timedelta(days=i)).isoformat() for i in range(req.plan_days)]
-    recipe_list = "\n".join(
-        f"- {r['id']}: {r['name']} ({r.get('protein_type') or 'unbekannt'})"
-        for r in available[:80]
-    )
-
-    system = "Du bist ein Ernährungsplaner. Wähle Rezepte für einen Wochenplan. Antworte NUR mit validem JSON."
-    user = (
-        f"Erstelle einen Wochenplan für {req.plan_days} Tage ab {req.start_date}.\n"
-        f"Constraints: max {req.max_meat_per_week} Fleisch-Tage, "
-        f"min {req.min_vegetarian_per_week} vegetarische Tage.\n"
-        f"Tage: {', '.join(dates)}\n\n"
-        f"Verfügbare Rezepte:\n{recipe_list}\n\n"
-        f'Antworte mit: {{"assignments": [{{"date": "2026-05-05", "recipe_id": "uuid"}}]}}\n'
-        f"Wähle für jeden Tag genau ein Rezept. Variiere Protein-Typen. Nur exakte IDs verwenden."
-    )
-
-    try:
-        raw = await _call_once(system, user)
-        raw = raw.strip()
-        start_idx, end_idx = raw.find("{"), raw.rfind("}") + 1
-        if start_idx == -1:
-            return WeekplanGenerateResponse(assignments=[])
-        data = json.loads(raw[start_idx:end_idx])
-    except Exception:
-        return WeekplanGenerateResponse(assignments=[])
-
-    recipe_map = {r["id"]: r["name"] for r in all_recipes}
-    assignments = [
-        WeekplanAssignmentDto(
-            date=a.get("date", ""),
-            recipe_id=a.get("recipe_id", ""),
-            recipe_name=recipe_map.get(a.get("recipe_id", ""), ""),
-        )
-        for a in data.get("assignments", [])
-        if a.get("recipe_id") in recipe_map and a.get("date")
-    ]
-    return WeekplanGenerateResponse(assignments=assignments)
 
 
 # ── Low-level streaming ──────────────────────────────────────────────────────
@@ -365,6 +377,209 @@ async def _call_once(system: str, user: str) -> str:
     async for chunk in _stream(system, user):
         chunks.append(chunk)
     return "".join(chunks)
+
+
+# ── Vision (Bild-Eingabe, einmaliger Aufruf) ─────────────────────────────────
+
+async def _vision_once(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
+    if AI_PROVIDER == "anthropic":
+        return await _vision_anthropic(system, user_text, image_b64, mime_type)
+    return await _vision_openai(system, user_text, image_b64, mime_type)
+
+
+async def _vision_openai(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
+    base = AI_API_BASE or "https://api.openai.com/v1"
+    headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": _vision_model(),
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": [
+                {"type": "text", "text": user_text},
+                {"type": "image_url",
+                 # "high" erzwingt die hochauflösende Bildanalyse – wichtig, damit
+                 # kleiner Bon-Druck (Artikelnamen/Preise) nicht verschluckt wird.
+                 "image_url": {"url": f"data:{mime_type};base64,{image_b64}",
+                               "detail": "high"}},
+            ]},
+        ],
+        "temperature": 0,
+    }
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(f"{base}/chat/completions", headers=headers, json=payload)
+        resp.raise_for_status()
+        obj = resp.json()
+        return obj["choices"][0]["message"].get("content") or ""
+
+
+async def _vision_anthropic(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
+    headers = {
+        "x-api-key": AI_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    payload = {
+        "model": _vision_model(),
+        "system": system,
+        "max_tokens": 8192,
+        "temperature": 0,
+        "messages": [
+            {"role": "user", "content": [
+                {"type": "image", "source": {
+                    "type": "base64", "media_type": mime_type, "data": image_b64}},
+                {"type": "text", "text": user_text},
+            ]},
+        ],
+    }
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(f"{ANTHROPIC_BASE}/messages", headers=headers, json=payload)
+        resp.raise_for_status()
+        obj = resp.json()
+        return "".join(p.get("text", "") for p in obj.get("content", []) if p.get("type") == "text")
+
+
+# ── Receipt Parsing (KI-Vision) ──────────────────────────────────────────────
+# Liest einen fotografierten Kassenbon direkt aus dem Bild. Deutlich robuster als
+# die On-Device-OCR, weil das Vision-Modell Spalten-Layout, Mengen und Preise
+# im Zusammenhang versteht (z. B. Gewichtsabrechnung "0,512 kg x 2,99").
+
+RECEIPT_PARSE_SYSTEM = (
+    "Du bist ein Experte für das Auslesen deutscher Kassenbons (Supermarkt-Quittungen). "
+    "Du erhältst ein Foto eines Kassenbons und extrahierst die Daten strukturiert. "
+    "Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt – kein Markdown, keine Erklärungen."
+)
+
+RECEIPT_PARSE_USER = (
+    "Lies diesen Kassenbon vollständig aus und gib die Daten als JSON zurück.\n\n"
+    "VORGEHEN (wichtig für Vollständigkeit):\n"
+    "- Gehe den Bon Zeile für Zeile von OBEN nach UNTEN durch.\n"
+    "- Erfasse JEDE Artikelzeile zwischen Kopf (Markt/Adresse) und Summenblock. "
+    "Überspringe oder kürze nichts, auch wenn es viele Positionen sind.\n"
+    "- Ein Artikelname kann über ZWEI Zeilen gehen (z. B. Marke in Zeile 1, "
+    "Produkt in Zeile 2) – fasse ihn zu EINEM Eintrag zusammen.\n"
+    "- Wenn ein Name oder Preis teils unleserlich ist: trage trotzdem deine BESTE "
+    "Schätzung ein und setze eine niedrige confidence. Lasse die Position NICHT weg.\n\n"
+    "FELDER:\n"
+    "- store_name: Name des Markts/Geschäfts (z. B. 'REWE', 'ALDI', 'EDEKA', 'Lidl'). "
+    "Leer lassen, wenn nicht erkennbar.\n"
+    "- purchase_date: Kaufdatum im Format 'YYYY-MM-DD'. Leer lassen, wenn nicht erkennbar.\n"
+    "- total_amount: Gesamtbetrag (Summe/zu zahlen) als Zahl mit Punkt als Dezimaltrennzeichen.\n"
+    "- items: Liste ALLER gekauften Artikel. Pro Artikel:\n"
+    "    - name: Produktname wie auf dem Bon, ohne nachgestelltes Steuerkennzeichen "
+    "(z. B. einzelnes 'A'/'B' am Zeilenende) und ohne den Preis.\n"
+    "    - quantity: Menge/Anzahl (Standard 1; bei Gewicht das Gewicht, z. B. 0.512).\n"
+    "    - unit_price: Einzel-/Grundpreis pro Stück bzw. pro Einheit. "
+    "Falls nur ein Preis erkennbar ist, setze unit_price = total_price.\n"
+    "    - total_price: Gesamtpreis dieser Position.\n"
+    "    - confidence: Wie sicher du dir bei dieser Position bist (0.0–1.0). "
+    "Niedrig wählen, wenn Name oder Preis verschwommen/unleserlich sind.\n"
+    "- confidence: Gesamt-Sicherheit über den ganzen Bon (0.0–1.0).\n\n"
+    "WICHTIG:\n"
+    "- Deutsche Preise nutzen Komma (1,99) – wandle sie in Punkt-Notation um (1.99).\n"
+    "- Pfand ('PFAND', 'LEERGUT') als eigene Position aufnehmen (Leergut-Rückgabe negativ).\n"
+    "- Mengenzeilen wie '2 x 1,99' oder '3 Stk x 0,89': quantity=Anzahl, "
+    "unit_price=Stückpreis, total_price=Summe.\n"
+    "- Bei Gewichtsabrechnung ('0,512 kg x 2,99 €/kg'): quantity=Gewicht, "
+    "unit_price=Preis pro Einheit, total_price=berechneter Betrag.\n"
+    "- Ignoriere Zwischensummen, MwSt-/Steuer-Zeilen, Zahlart (EC/BAR/Kartenzahlung), "
+    "Rückgeld, Kundenkarten-/Payback-Punkte, Bon-Nummern, Uhrzeit und Adresse.\n"
+    "- Plausibilitätscheck: Die Summe der total_price aller items sollte ungefähr "
+    "total_amount ergeben (abzüglich evtl. Rabatte). Weicht sie stark ab, hast du "
+    "vermutlich Positionen übersehen – lies noch einmal genau.\n\n"
+    "BEISPIEL (nur Format, nicht den Inhalt übernehmen):\n"
+    'Bon-Zeilen "G&G H-MILCH 3,5% 0,95 A" und "2 x BANANE 1,98 B" werden zu '
+    '[{"name":"G&G H-Milch 3,5%","quantity":1,"unit_price":0.95,"total_price":0.95,'
+    '"confidence":0.95},{"name":"Banane","quantity":2,"unit_price":0.99,'
+    '"total_price":1.98,"confidence":0.9}]\n\n'
+    'Antworte mit EXAKT diesem Format (nur JSON, kein Markdown): '
+    '{"store_name":"...","purchase_date":"YYYY-MM-DD",'
+    '"total_amount":0.00,"confidence":0.0,"items":[{"name":"...","quantity":1,'
+    '"unit_price":0.00,"total_price":0.00,"confidence":0.0}]}'
+)
+
+
+def _to_float(v, default: float = 0.0) -> float:
+    if v is None:
+        return default
+    if isinstance(v, bool):
+        return default
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v).strip().replace("€", "").replace(" ", "")
+    # Deutsches Komma → Punkt (nur wenn kein Punkt als Dezimaltrenner vorhanden)
+    if "," in s and "." not in s:
+        s = s.replace(",", ".")
+    else:
+        s = s.replace(",", "")
+    try:
+        return float(s)
+    except ValueError:
+        return default
+
+
+def _iso_to_ms(s) -> int:
+    if not s:
+        return 0
+    try:
+        from datetime import datetime
+        d = date.fromisoformat(str(s)[:10])
+        return int(datetime(d.year, d.month, d.day).timestamp() * 1000)
+    except (ValueError, TypeError):
+        return 0
+
+
+async def parse_receipt(image_b64: str, mime_type: str = "image/jpeg") -> dict:
+    """Extrahiert Markt, Datum, Gesamtbetrag und Positionen aus einem Bon-Foto.
+
+    Gibt einen Dict im Format der ReceiptParseResponse zurück.
+    """
+    empty = {"store_name": "", "purchase_date": 0, "total_amount": 0.0,
+             "confidence": 0.0, "items": []}
+
+    raw = (await _vision_once(RECEIPT_PARSE_SYSTEM, RECEIPT_PARSE_USER, image_b64, mime_type)).strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1].lstrip("json").strip()
+    start, end = raw.find("{"), raw.rfind("}") + 1
+    if start == -1 or end == 0:
+        return empty
+    try:
+        data = json.loads(raw[start:end])
+    except json.JSONDecodeError:
+        return empty
+
+    items = []
+    for it in data.get("items", []):
+        if not isinstance(it, dict):
+            continue
+        name = str(it.get("name", "")).strip()
+        if not name:
+            continue
+        qty = _to_float(it.get("quantity"), 1.0) or 1.0
+        unit = _to_float(it.get("unit_price"), 0.0)
+        total = _to_float(it.get("total_price"), 0.0)
+        if total == 0.0 and unit != 0.0:
+            total = round(unit * qty, 2)
+        if unit == 0.0 and total != 0.0:
+            unit = round(total / qty, 2) if qty else total
+        conf = _to_float(it.get("confidence"), 1.0)
+        conf = min(max(conf, 0.0), 1.0)
+        items.append({
+            "name": name,
+            "quantity": qty,
+            "unit_price": unit,
+            "total_price": total,
+            "confidence": conf,
+        })
+
+    overall = min(max(_to_float(data.get("confidence"), 1.0), 0.0), 1.0)
+
+    return {
+        "store_name": str(data.get("store_name", "")).strip(),
+        "purchase_date": _iso_to_ms(data.get("purchase_date", "")),
+        "total_amount": _to_float(data.get("total_amount"), 0.0),
+        "confidence": overall,
+        "items": items,
+    }
 
 
 # ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────

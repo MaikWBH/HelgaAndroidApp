@@ -6,6 +6,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,6 +45,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -86,6 +89,7 @@ import coil.request.ImageRequest
 import com.helga.android.R
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
+import com.helga.android.data.util.ImageUrls
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
@@ -122,6 +126,8 @@ fun WeekplanScreen(
     val generateStatus by viewModel.generateStatus.collectAsStateWithLifecycle()
     val feedbackMap by viewModel.feedbackForSelectedDay.collectAsStateWithLifecycle()
     val weekBalance by viewModel.weekBalance.collectAsStateWithLifecycle()
+    val weekNutrition by viewModel.weekNutrition.collectAsStateWithLifecycle()
+    val userAllergies by viewModel.userAllergies.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
@@ -159,7 +165,7 @@ fun WeekplanScreen(
     if (constraintsEditorVisible) {
         ConstraintsEditorSheet(
             constraints = constraints,
-            allergies = emptyList(), // TODO: load from preferences
+            allergies = userAllergies,
             onSave = { maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies ->
                 viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies)
                 constraintsEditorVisible = false
@@ -186,6 +192,12 @@ fun WeekplanScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.weekplan_title)) },
                 actions = {
+                    IconButton(onClick = { viewModel.generateWeekplan() }) {
+                        Icon(
+                            imageVector = Icons.Filled.Restaurant,
+                            contentDescription = stringResource(R.string.weekplan_generate),
+                        )
+                    }
                     IconButton(onClick = { constraintsEditorVisible = true }) {
                         Icon(
                             imageVector = Icons.Filled.Tune,
@@ -284,6 +296,29 @@ fun WeekplanScreen(
                                         MaterialTheme.colorScheme.error
                                     else
                                         MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
+                    }
+                }
+                item(key = "week_nutrition") {
+                    val nutrition = weekNutrition
+                    if (nutrition != null && nutrition.totalRecipes > 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "🔥 Ø ${nutrition.weekAvgKcal.toInt()} kcal/Tag",
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                            if (nutrition.weekAvgNutriScore.isNotBlank()) {
+                                Text(
+                                    "Nutri-Score ${nutrition.weekAvgNutriScore.uppercase()}",
+                                    style = MaterialTheme.typography.labelMedium,
                                 )
                             }
                         }
@@ -462,7 +497,7 @@ private fun DayCard(
                         when {
                             localUri.isNotBlank() -> localUri
                             path.isNotBlank() && serverUrl.isNotBlank() ->
-                                "${serverUrl.trimEnd('/')}/api/images/$path"
+                                ImageUrls.serverImageUrl(serverUrl, path)
                             else -> null
                         }
                     }
@@ -590,7 +625,7 @@ private fun DayCard(
                         when {
                             localUri.isNotBlank() -> localUri
                             path.isNotBlank() && serverUrl.isNotBlank() ->
-                                "${serverUrl.trimEnd('/')}/api/images/$path"
+                                ImageUrls.serverImageUrl(serverUrl, path)
                             else -> null
                         }
                     }
@@ -848,7 +883,15 @@ private fun ShoppingListPickerDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+fun parseAllergenJson(json: String): List<String> = json
+    .trim()
+    .removePrefix("[")
+    .removeSuffix("]")
+    .split(",")
+    .map { it.trim().trim('"') }
+    .filter { it.isNotBlank() }
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ConstraintsEditorSheet(
     constraints: WeekplanConstraintsEntity,
@@ -864,7 +907,9 @@ private fun ConstraintsEditorSheet(
     var maxKcal by remember(constraints.maxKcalPerPortion) { mutableFloatStateOf(constraints.maxKcalPerPortion.toFloat()) }
     var minNutriScore by remember(constraints.minNutriScore) { mutableStateOf(constraints.minNutriScore) }
     var preferOrganic by remember(constraints.preferOrganic) { mutableStateOf(constraints.preferOrganic == 1) }
-    var selectedAllergens by remember(constraints.excludeAllergens) { mutableStateOf(emptyList<String>()) }
+    var selectedAllergens by remember(constraints.excludeAllergens) {
+        mutableStateOf(parseAllergenJson(constraints.excludeAllergens))
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -992,6 +1037,34 @@ private fun ConstraintsEditorSheet(
                     onCheckedChange = { preferOrganic = it },
                 )
             }
+
+            if (allergies.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "🚫 Allergene ausschließen",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    allergies.forEach { allergen ->
+                        val selected = selectedAllergens.contains(allergen)
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                selectedAllergens = if (selected) {
+                                    selectedAllergens - allergen
+                                } else {
+                                    selectedAllergens + allergen
+                                }
+                            },
+                            label = { Text(allergen) },
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(16.dp))
 
             Button(
@@ -1056,7 +1129,7 @@ private fun ProposalSheet(
                     when {
                         localUri.isNotBlank() -> localUri
                         path.isNotBlank() && serverUrl.isNotBlank() ->
-                            "${serverUrl.trimEnd('/')}/api/images/$path"
+                            ImageUrls.serverImageUrl(serverUrl, path)
                         else -> null
                     }
                 }

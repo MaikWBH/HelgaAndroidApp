@@ -1,15 +1,17 @@
 package com.helga.android.ui.receipts
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.helga.android.data.local.ScanSource
+import com.helga.android.data.local.toDbValue
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.repository.ReceiptRepository
 import com.helga.android.data.repository.StoreRepository
 import com.helga.android.data.sync.SyncScheduler
+import com.helga.android.data.util.ReceiptImagePreprocessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +35,9 @@ sealed interface ReceiptScanUiState {
         val purchaseDate: Long,
         val rawOcrText: String,
         val items: List<ReceiptItemEntity>,
+        val lowConfidenceItemIds: Set<String> = emptySet(),
+        val needsReview: Boolean = false,
+        val source: ScanSource = ScanSource.ON_DEVICE,
     ) : ReceiptScanUiState
     data object Saved : ReceiptScanUiState
     data class Error(val message: String) : ReceiptScanUiState
@@ -67,8 +72,10 @@ class ReceiptScanViewModel @Inject constructor(
             _uiState.value = ReceiptScanUiState.Scanning
             try {
                 sourceImageUri = uri
+                // Aufrecht ausrichten (EXIF) + speicherschonend laden – entscheidend
+                // für die Erkennungsrate von OCR und KI-Vision.
                 val bitmap = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                    ReceiptImagePreprocessor.loadUprightBitmap(context, uri)
                 } ?: throw IllegalStateException("Bild konnte nicht geladen werden")
 
                 val result = receiptRepository.scanReceipt(bitmap)
@@ -80,6 +87,9 @@ class ReceiptScanViewModel @Inject constructor(
                     purchaseDate = result.receipt.purchaseDate,
                     rawOcrText = result.receipt.rawOcrText,
                     items = result.items,
+                    lowConfidenceItemIds = result.lowConfidenceItemIds,
+                    needsReview = result.needsReview,
+                    source = result.source,
                 )
             } catch (e: Exception) {
                 Timber.e(e, "Receipt scan failed")
@@ -124,6 +134,20 @@ class ReceiptScanViewModel @Inject constructor(
         _uiState.value = current.copy(items = current.items - item)
     }
 
+    /**
+     * Ersetzt eine Position durch die vom Nutzer korrigierte Version (gleiche id).
+     * Nach manueller Korrektur gilt die Position nicht mehr als unsicher, daher
+     * wird ihre Markierung entfernt.
+     */
+    fun updateItem(updated: ReceiptItemEntity) {
+        val current = _uiState.value as? ReceiptScanUiState.Preview ?: return
+        val newItems = current.items.map { if (it.id == updated.id) updated else it }
+        _uiState.value = current.copy(
+            items = newItems,
+            lowConfidenceItemIds = current.lowConfidenceItemIds - updated.id,
+        )
+    }
+
     fun save() {
         val current = _uiState.value as? ReceiptScanUiState.Preview ?: return
         viewModelScope.launch {
@@ -140,6 +164,7 @@ class ReceiptScanViewModel @Inject constructor(
                     localImageUri = localImageUri,
                     rawOcrText = current.rawOcrText,
                     status = "scanned",
+                    source = current.source.toDbValue(),
                     updatedAt = System.currentTimeMillis(),
                     deleted = 0,
                     dirty = 1,

@@ -6,8 +6,11 @@ import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
+import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
+import com.helga.android.data.remote.dto.AiClassifyRequest
+import com.helga.android.data.remote.dto.AiNutritionRequest
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
@@ -325,7 +328,100 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun clearExport() { _exportJson.value = null }
+
+    private val _bulkAiState = MutableStateFlow(BulkAiState())
+    val bulkAiState: StateFlow<BulkAiState> = _bulkAiState.asStateFlow()
+
+    fun runBulkAi(mode: BulkAiMode) {
+        if (_bulkAiState.value.isRunning) return
+        viewModelScope.launch {
+            val recipes = recipeRepository.allRecipes()
+            _bulkAiState.value = BulkAiState(mode = mode, isRunning = true, total = recipes.size)
+            val api = apiFactory.api()
+            var updated = 0
+            var failed = 0
+            recipes.forEachIndexed { index, recipe ->
+                try {
+                    if (mode == BulkAiMode.CLASSIFY || mode == BulkAiMode.BOTH) {
+                        val tags = recipeRepository.tagsByRecipeId(recipe.id).map { it.name }
+                        val ingredientNames = recipeRepository.ingredientsForRecipe(recipe.id).map { it.food }
+                        val classifyResult = api.classifyRecipe(
+                            AiClassifyRequest(
+                                name = recipe.name,
+                                description = recipe.description,
+                                tags = tags,
+                                ingredients = ingredientNames,
+                            )
+                        )
+                        recipeRepository.upsertLocal(
+                            recipe.copy(
+                                proteinType = classifyResult.proteinType.ifBlank { recipe.proteinType },
+                                effort = classifyResult.effort.ifBlank { recipe.effort },
+                                cuisine = classifyResult.cuisine.ifBlank { recipe.cuisine },
+                                mealSlot = classifyResult.mealSlot.ifBlank { recipe.mealSlot },
+                                seasonFit = classifyResult.seasonFit.ifBlank { recipe.seasonFit },
+                            )
+                        )
+                    }
+                    if (mode == BulkAiMode.NUTRITION || mode == BulkAiMode.BOTH) {
+                        val ingredients = recipeRepository.ingredientsForRecipe(recipe.id).filter { it.deleted == 0 }
+                        val baseServings = Regex("""\d+""").find(recipe.recipeYield)?.value?.toIntOrNull()
+                            ?.takeIf { it > 0 } ?: NUTRITION_BASELINE_PORTIONS
+                        val scale = NUTRITION_BASELINE_PORTIONS.toDouble() / baseServings.toDouble()
+                        val ingredientLines = ingredients.map { ing ->
+                            val scaledQty = ing.quantity * scale
+                            val qtyStr = when {
+                                scaledQty <= 0.0 -> ""
+                                scaledQty % 1.0 < 0.01 -> scaledQty.toInt().toString()
+                                else -> String.format(java.util.Locale.US, "%.1f", scaledQty)
+                            }
+                            listOf(qtyStr, ing.unit, ing.food).filter { it.isNotBlank() }.joinToString(" ")
+                        }
+                        val nutritionResult = api.estimateNutrition(
+                            AiNutritionRequest(
+                                name = recipe.name,
+                                description = recipe.description,
+                                ingredients = ingredientLines,
+                                portions = NUTRITION_BASELINE_PORTIONS,
+                            )
+                        )
+                        recipeRepository.saveNutrition(
+                            recipeId = recipe.id,
+                            kcal = nutritionResult.kcal,
+                            protein = nutritionResult.protein,
+                            fat = nutritionResult.fat,
+                            carbs = nutritionResult.carbs,
+                            nutriScore = nutritionResult.nutriScore,
+                            source = "ai",
+                        )
+                    }
+                    updated++
+                } catch (e: Exception) {
+                    Timber.w(e, "Bulk-KI fehlgeschlagen für Rezept ${recipe.id}")
+                    failed++
+                }
+                _bulkAiState.update { it.copy(processed = index + 1, updated = updated, failed = failed) }
+            }
+            syncScheduler.triggerOneShot()
+            _bulkAiState.update { it.copy(isRunning = false) }
+        }
+    }
+
+    fun dismissBulkAiResult() {
+        _bulkAiState.value = BulkAiState()
+    }
 }
+
+enum class BulkAiMode { NUTRITION, CLASSIFY, BOTH }
+
+data class BulkAiState(
+    val mode: BulkAiMode? = null,
+    val isRunning: Boolean = false,
+    val processed: Int = 0,
+    val total: Int = 0,
+    val updated: Int = 0,
+    val failed: Int = 0,
+)
 
 data class SettingsState(
     val serverUrl: String = "",

@@ -59,6 +59,6 @@ interface ShoppingDao {
     @Query("SELECT * FROM shopping_items WHERE id = :id LIMIT 1")
     suspend fun findItemById(id: String): ShoppingItemEntity?
 
-    @Query("SELECT * FROM shopping_items WHERE listId = :listId AND name = :name COLLATE NOCASE AND unit = :unit COLLATE NOCASE AND isChecked = 0 AND deleted = 0 LIMIT 1")
-    suspend fun findUncheckedItemByNameUnit(listId: String, name: String, unit: String): ShoppingItemEntity?
+    @Query("SELECT * FROM shopping_items WHERE listId = :listId AND name = :name COLLATE NOCASE AND isChecked = 0 AND deleted = 0")
+    suspend fun findUncheckedItemsByName(listId: String, name: String): List<ShoppingItemEntity>
 }

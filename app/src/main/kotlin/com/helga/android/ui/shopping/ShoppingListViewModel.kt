@@ -61,6 +61,9 @@ class ShoppingListViewModel @Inject constructor(
     private val _scannedProduct = MutableStateFlow<OffProductEntity?>(null)
     val scannedProduct: StateFlow<OffProductEntity?> = _scannedProduct.asStateFlow()
 
+    private val _catalogProducts = MutableStateFlow<List<OffProductEntity>>(emptyList())
+    val catalogProducts: StateFlow<List<OffProductEntity>> = _catalogProducts.asStateFlow()
+
 
     val lists: StateFlow<List<ShoppingListEntity>> = repository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -111,6 +114,9 @@ class ShoppingListViewModel @Inject constructor(
 
     val checkMode: StateFlow<String> = preferences.checkMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "keep")
+
+    val userAllergies: StateFlow<List<String>> = preferences.allergies
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     // Banner: Wochenplan bereit zum Export?
     private val monday = LocalDate.now().with(DayOfWeek.MONDAY)
@@ -225,16 +231,13 @@ class ShoppingListViewModel @Inject constructor(
                     val recipeName = recipeDao.findById(entry.recipeId)?.name ?: ""
                     val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
                     ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
-                        val storeId = activeStore.value?.id
-                        val aisle = if (storeId != null)
-                            storeRepository.findAisleForProduct(ingredient.food, storeId) ?: ""
-                        else ""
-                        repository.addItem(
+                        repository.addOrMergeItem(
                             listId = listId,
                             name = ingredient.food,
                             quantity = ingredient.quantity,
                             unit = ingredient.unit,
-                            aisle = aisle,
+                            source = "weekplan",
+                            recipeName = recipeName,
                         )
                     }
                 }

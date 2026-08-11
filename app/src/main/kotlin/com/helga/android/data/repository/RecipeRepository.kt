@@ -6,6 +6,8 @@ import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
+import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
+import com.helga.android.data.model.RecipeNutrition
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -93,6 +95,52 @@ class RecipeRepository @Inject constructor(
             instructions = instructions.map { it.copy(updatedAt = now, dirty = 1) },
             tags = tags.map { it.copy(updatedAt = now, dirty = 1) },
             categories = emptyList<CategoryEntity>(),
+        )
+    }
+
+    /**
+     * Liest die am Rezept hinterlegten Nährwerte (manuell oder per KI ermittelt,
+     * siehe [RecipeEntity.nutritionSource]). Werte gelten immer für
+     * [NUTRITION_BASELINE_PORTIONS] Portionen, unabhängig von der im UI
+     * angezeigten Portionenanzahl.
+     */
+    suspend fun getRecipeNutrition(recipeId: String): RecipeNutrition {
+        val recipe = recipeDao.findById(recipeId)
+        val totalKcal = recipe?.nutritionKcal ?: 0.0
+        return RecipeNutrition(
+            totalKcal = totalKcal,
+            kcalPerPortion = totalKcal / NUTRITION_BASELINE_PORTIONS,
+            protein = recipe?.nutritionProtein ?: 0.0,
+            fat = recipe?.nutritionFat ?: 0.0,
+            carbs = recipe?.nutritionCarbs ?: 0.0,
+            nutriScore = recipe?.nutritionNutriScore ?: "",
+            source = recipe?.nutritionSource ?: "",
+        )
+    }
+
+    /** Speichert Nährwerte für [NUTRITION_BASELINE_PORTIONS] Portionen, manuell oder per KI ermittelt. */
+    suspend fun saveNutrition(
+        recipeId: String,
+        kcal: Double,
+        protein: Double,
+        fat: Double,
+        carbs: Double,
+        nutriScore: String,
+        source: String,
+    ) {
+        val recipe = recipeDao.findById(recipeId) ?: return
+        val score = nutriScore.trim().lowercase().takeIf { it.length == 1 && it[0] in 'a'..'e' } ?: ""
+        recipeDao.upsertRecipe(
+            recipe.copy(
+                nutritionKcal = kcal,
+                nutritionProtein = protein,
+                nutritionFat = fat,
+                nutritionCarbs = carbs,
+                nutritionNutriScore = score,
+                nutritionSource = source,
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
         )
     }
 

@@ -1,7 +1,60 @@
 import httpx
 import json
+import re
 from .db import get_db, now_ms
 from .models import OffProductRecord
+
+# Umrechnungsfaktoren auf Gramm (Flüssigkeiten mit Dichte 1 angenommen).
+_UNIT_FACTORS = {
+    "g": 1.0, "gr": 1.0, "gram": 1.0,
+    "kg": 1000.0,
+    "ml": 1.0, "l": 1000.0, "cl": 10.0,
+}
+
+# Multipack, z. B. "6x125g" oder "2 x 200 ml".
+_MULTIPACK_RE = re.compile(r"(\d+)\s*x\s*([\d.,]+)\s*(kg|g|gr|gram|l|ml|cl)")
+# Einzelpackung, z. B. "500 g", "1.5kg", "330ml".
+_SINGLE_RE = re.compile(r"([\d.,]+)\s*(kg|g|gr|gram|l|ml|cl)\b")
+
+
+def parse_package_grams(off_data: dict) -> float:
+    """Leitet die Packungsgröße in Gramm aus den OFF-Rohdaten ab.
+
+    Zuerst das strukturierte product_quantity-Feld, sonst der Freitext quantity
+    ("500 g", "6x125g", "1,5 kg" …). Gibt 0.0 zurück, wenn nichts parsebar ist –
+    es wird NICHT geraten (explizit "unbekannt").
+    """
+    pq = off_data.get("product_quantity")
+    if pq is not None:
+        try:
+            return float(str(pq).replace(",", "."))
+        except (TypeError, ValueError):
+            pass
+
+    text = str(off_data.get("quantity", "")).lower()
+    if not text:
+        return 0.0
+
+    multi = _MULTIPACK_RE.search(text)
+    if multi:
+        try:
+            count = int(multi.group(1))
+            amount = float(multi.group(2).replace(",", "."))
+            factor = _UNIT_FACTORS.get(multi.group(3), 0.0)
+            return count * amount * factor
+        except (TypeError, ValueError):
+            return 0.0
+
+    single = _SINGLE_RE.search(text)
+    if single:
+        try:
+            amount = float(single.group(1).replace(",", "."))
+            factor = _UNIT_FACTORS.get(single.group(2), 0.0)
+            return amount * factor
+        except (TypeError, ValueError):
+            return 0.0
+
+    return 0.0
 
 
 async def lookup_barcode(barcode: str) -> OffProductRecord:
@@ -41,6 +94,8 @@ async def lookup_barcode(barcode: str) -> OffProductRecord:
         vegan=1 if "vegan" in off_data.get("labels", "").lower() else 0,
         vegetarian=1 if "vegetarian" in off_data.get("labels", "").lower() else 0,
         image_path=off_data.get("image_url", ""),
+        package_grams=parse_package_grams(off_data),
+        package_grams_manual=0,
         updated_at=now_ms(),
         deleted=0,
     )
@@ -51,15 +106,16 @@ async def lookup_barcode(barcode: str) -> OffProductRecord:
             INSERT OR REPLACE INTO off_products (
                 id, barcode, name, brand, categories, kcal_per_unit, proteins, fats, carbs,
                 nutri_score, nova, eco_score, allergenes, additives, is_organic, vegan, vegetarian,
-                image_path, updated_at, deleted
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                image_path, package_grams, package_grams_manual, updated_at, deleted
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 product.id, product.barcode, product.name, product.brand, product.categories,
                 product.kcal_per_unit, product.proteins, product.fats, product.carbs,
                 product.nutri_score, product.nova, product.eco_score, product.allergenes,
                 product.additives, product.is_organic, product.vegan, product.vegetarian,
-                product.image_path, product.updated_at, product.deleted
+                product.image_path, product.package_grams, product.package_grams_manual,
+                product.updated_at, product.deleted
             )
         )
         await db.commit()
@@ -105,6 +161,8 @@ async def search_products(query: str, limit: int = 5) -> dict:
                 vegan=1 if "vegan" in off_data.get("labels", "").lower() else 0,
                 vegetarian=1 if "vegetarian" in off_data.get("labels", "").lower() else 0,
                 image_path=off_data.get("image_url", ""),
+                package_grams=parse_package_grams(off_data),
+                package_grams_manual=0,
                 updated_at=now_ms(),
                 deleted=0,
             )
@@ -117,15 +175,16 @@ async def search_products(query: str, limit: int = 5) -> dict:
                     INSERT OR REPLACE INTO off_products (
                         id, barcode, name, brand, categories, kcal_per_unit, proteins, fats, carbs,
                         nutri_score, nova, eco_score, allergenes, additives, is_organic, vegan, vegetarian,
-                        image_path, updated_at, deleted
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        image_path, package_grams, package_grams_manual, updated_at, deleted
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         product.id, product.barcode, product.name, product.brand, product.categories,
                         product.kcal_per_unit, product.proteins, product.fats, product.carbs,
                         product.nutri_score, product.nova, product.eco_score, product.allergenes,
                         product.additives, product.is_organic, product.vegan, product.vegetarian,
-                        product.image_path, product.updated_at, product.deleted
+                        product.image_path, product.package_grams, product.package_grams_manual,
+                        product.updated_at, product.deleted
                     )
                 )
                 await db.commit()
@@ -192,6 +251,8 @@ def _row_to_product(row) -> OffProductRecord:
         vegetarian=row["vegetarian"],
         image_path=row["image_path"],
         is_favorite=row["is_favorite"] if "is_favorite" in row.keys() else 0,
+        package_grams=row["package_grams"] if "package_grams" in row.keys() else 0.0,
+        package_grams_manual=row["package_grams_manual"] if "package_grams_manual" in row.keys() else 0,
         updated_at=row["updated_at"],
         deleted=row["deleted"],
     )

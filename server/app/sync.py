@@ -10,6 +10,8 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "slug", "name", "description", "recipe_yield", "prep_time",
         "cook_time", "total_time", "image_path", "source_url", "rating",
         "protein_type", "effort", "cuisine", "meal_type", "meal_slot", "season_fit",
+        "nutrition_kcal", "nutrition_protein", "nutrition_fat", "nutrition_carbs",
+        "nutrition_nutri_score", "nutrition_source",
         "created_at", "updated_at", "deleted",
     ],
     "recipe_ingredients": [
@@ -24,11 +26,6 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     ],
     "recipe_categories": [
         "id", "recipe_id", "name", "updated_at", "deleted",
-    ],
-    "foods": ["id", "name", "updated_at", "deleted"],
-    "units": ["id", "name", "updated_at", "deleted"],
-    "product_units": [
-        "id", "product_name", "unit_name", "sort_order", "updated_at", "deleted",
     ],
     "stores": ["id", "name", "is_active", "updated_at", "deleted"],
     "store_aisles": [
@@ -49,7 +46,9 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     "shopping_list_staples": [
         "id", "list_id", "name", "quantity", "sort_order", "updated_at", "deleted",
     ],
-    "weekplan_days": ["id", "plan_date", "note", "updated_at", "deleted"],
+    "weekplan_days": [
+        "id", "plan_date", "note", "is_quick_day", "is_guest_day", "updated_at", "deleted",
+    ],
     "weekplan_recipes": [
         "id", "weekplan_day_id", "recipe_id", "position", "updated_at", "deleted",
     ],
@@ -57,13 +56,15 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "weekplan_day_id", "item_text", "position", "updated_at", "deleted",
     ],
     "recipe_history": [
-        "id", "recipe_id", "planned_date", "updated_at", "deleted",
+        "id", "recipe_id", "planned_date", "cooked", "updated_at", "deleted",
+    ],
+    "recipe_feedback": [
+        "id", "recipe_id", "planned_date", "liked", "updated_at", "deleted",
     ],
     "quick_emojis": [
         "id", "emoji", "food", "quantity", "unit", "sort_order",
         "updated_at", "deleted",
     ],
-    "app_settings": ["id", "value", "updated_at", "deleted"],
     "weekplan_settings": ["id", "plan_days", "shopping_day", "updated_at", "deleted"],
     "weekplan_constraints": [
         "id", "max_meat_per_week", "min_vegetarian_per_week", "max_repeat_days",
@@ -73,27 +74,21 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "barcode", "name", "brand", "categories", "kcal_per_unit",
         "proteins", "fats", "carbs", "nutri_score", "nova", "eco_score",
         "allergenes", "additives", "is_organic", "vegan", "vegetarian",
-        "image_path", "is_favorite", "updated_at", "deleted",
-    ],
-    "ingredient_product_mappings": [
-        "id", "ingredient_name", "off_product_id", "off_barcode", "display_name",
+        "image_path", "is_favorite", "package_grams", "package_grams_manual",
         "updated_at", "deleted",
     ],
-    "product_prices": [
-        "id", "off_product_id", "store_name", "currency", "price", "unit",
-        "last_checked_at", "updated_at", "deleted",
-    ],
-    "product_purchases": [
-        "id", "shopping_item_id", "off_product_id", "quantity_purchased", "price_paid",
-        "store_name", "purchase_date", "updated_at", "deleted",
-    ],
+    # local_image_uri ist gerätelokal (absoluter Dateipfad) und wird bewusst NICHT
+    # synchronisiert – sonst zirkuliert ein gerätespezifischer Pfad zwischen Clients.
     "receipts": [
         "id", "store_id", "store_name", "shopping_list_id", "purchase_date", "total_amount",
-        "currency", "image_path", "local_image_uri", "raw_ocr_text", "status", "updated_at", "deleted",
+        "currency", "image_path", "raw_ocr_text", "status", "updated_at", "deleted",
     ],
     "receipt_items": [
         "id", "receipt_id", "position", "raw_text", "name", "quantity", "unit_price", "total_price",
         "matched_shopping_item_id", "match_status", "updated_at", "deleted",
+    ],
+    "monthly_budgets": [
+        "id", "amount", "warn_threshold", "updated_at", "deleted",
     ],
 }
 
@@ -104,9 +99,6 @@ PAYLOAD_FIELD = {
     "recipe_instructions": "recipe_instructions",
     "recipe_tags": "recipe_tags",
     "recipe_categories": "recipe_categories",
-    "foods": "foods",
-    "units": "units",
-    "product_units": "product_units",
     "stores": "stores",
     "store_aisles": "store_aisles",
     "aisle_products": "aisle_products",
@@ -117,16 +109,14 @@ PAYLOAD_FIELD = {
     "weekplan_recipes": "weekplan_recipes",
     "weekplan_extras": "weekplan_extras",
     "recipe_history": "recipe_history",
+    "recipe_feedback": "recipe_feedback",
     "quick_emojis": "quick_emojis",
-    "app_settings": "app_settings",
     "weekplan_settings": "weekplan_settings",
     "weekplan_constraints": "weekplan_constraints",
     "off_products": "off_products",
-    "ingredient_product_mappings": "ingredient_product_mappings",
-    "product_prices": "product_prices",
-    "product_purchases": "product_purchases",
     "receipts": "receipts",
     "receipt_items": "receipt_items",
+    "monthly_budgets": "monthly_budgets",
 }
 
 

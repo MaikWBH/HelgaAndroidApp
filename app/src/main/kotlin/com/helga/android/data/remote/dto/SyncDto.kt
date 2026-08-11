@@ -28,6 +28,12 @@ data class RecipeDto(
     val cuisine: String = "",
     @Json(name = "meal_slot") val mealSlot: String = "other",
     @Json(name = "season_fit") val seasonFit: String = "",
+    @Json(name = "nutrition_kcal") val nutritionKcal: Double = 0.0,
+    @Json(name = "nutrition_protein") val nutritionProtein: Double = 0.0,
+    @Json(name = "nutrition_fat") val nutritionFat: Double = 0.0,
+    @Json(name = "nutrition_carbs") val nutritionCarbs: Double = 0.0,
+    @Json(name = "nutrition_nutri_score") val nutritionNutriScore: String = "",
+    @Json(name = "nutrition_source") val nutritionSource: String = "",
     @Json(name = "created_at") val createdAt: Long = 0,
 )
 
@@ -216,6 +222,7 @@ data class RecipeHistoryDto(
     val id: String,
     @Json(name = "recipe_id") val recipeId: String,
     @Json(name = "planned_date") val plannedDate: String = "",
+    val cooked: Int = 0,
     @Json(name = "updated_at") val updatedAt: Long = 0,
     val deleted: Int = 0,
 )
@@ -240,7 +247,6 @@ data class ReceiptDto(
     @Json(name = "total_amount") val totalAmount: Double = 0.0,
     val currency: String = "EUR",
     @Json(name = "image_path") val imagePath: String = "",
-    @Json(name = "local_image_uri") val localImageUri: String = "",
     @Json(name = "raw_ocr_text") val rawOcrText: String = "",
     val status: String = "scanned",
     @Json(name = "updated_at") val updatedAt: Long,
@@ -265,15 +271,12 @@ data class ReceiptItemDto(
 
 
 @JsonClass(generateAdapter = true)
-data class OpenPricesLookupRequest(
-    @Json(name = "off_product_id") val offProductId: String,
-    val stores: List<String> = emptyList(),
-)
-
-@JsonClass(generateAdapter = true)
-data class OpenPricesLookupResponse(
-    @Json(name = "product_name") val productName: String = "",
-    val prices: List<ProductPriceDto> = emptyList(),
+data class MonthlyBudgetDto(
+    val id: String = "global",
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    val amount: Double = 0.0,
+    @Json(name = "warn_threshold") val warnThreshold: Double = 0.8,
 )
 
 @JsonClass(generateAdapter = true)
@@ -307,12 +310,8 @@ data class OffLookupBarcodeResponse(
     val vegetarian: Int = 0,
     @Json(name = "image_path") val imagePath: String = "",
     @Json(name = "is_favorite") val isFavorite: Int = 0,
-)
-
-@JsonClass(generateAdapter = true)
-data class OffSearchRequest(
-    val query: String,
-    val limit: Int = 5,
+    @Json(name = "package_grams") val packageGrams: Double = 0.0,
+    @Json(name = "package_grams_manual") val packageGramsManual: Int = 0,
 )
 
 // ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
@@ -352,11 +351,31 @@ data class ReceiptReconcileResponse(
     val missing: List<String> = emptyList(),
 )
 
+// ── Receipt Parsing (KI-Vision) ──────────────────────────────────────────────
+
 @JsonClass(generateAdapter = true)
-data class OffSearchResponse(
-    val products: List<OffProductDto> = emptyList(),
+data class ReceiptParseRequest(
+    @Json(name = "image_base64") val imageBase64: String,
+    @Json(name = "mime_type") val mimeType: String = "image/jpeg",
 )
 
+@JsonClass(generateAdapter = true)
+data class ReceiptParseItemDto(
+    val name: String = "",
+    val quantity: Double = 1.0,
+    @Json(name = "unit_price") val unitPrice: Double = 0.0,
+    @Json(name = "total_price") val totalPrice: Double = 0.0,
+    val confidence: Double = 1.0,
+)
+
+@JsonClass(generateAdapter = true)
+data class ReceiptParseResponse(
+    @Json(name = "store_name") val storeName: String = "",
+    @Json(name = "purchase_date") val purchaseDate: Long = 0L,
+    @Json(name = "total_amount") val totalAmount: Double = 0.0,
+    val confidence: Double = 1.0,
+    val items: List<ReceiptParseItemDto> = emptyList(),
+)
 
 @JsonClass(generateAdapter = true)
 data class SyncPullResponse(
@@ -382,6 +401,7 @@ data class SyncPullResponse(
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
+    @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -408,6 +428,7 @@ data class SyncPushRequest(
     @Json(name = "recipe_feedback") val recipeFeedback: List<RecipeFeedbackDto> = emptyList(),
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
+    @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -429,6 +450,7 @@ data class AiGenerateRequest(
     val prompt: String,
     @Json(name = "custom_instructions") val customInstructions: String = "",
     @Json(name = "available_tags") val availableTags: List<String> = emptyList(),
+    @Json(name = "exclude_allergens") val excludeAllergens: List<String> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -439,6 +461,7 @@ data class AiRemixRequest(
     @Json(name = "recipe_instructions") val recipeInstructions: List<String> = emptyList(),
     @Json(name = "remix_prompt") val remixPrompt: String,
     @Json(name = "available_tags") val availableTags: List<String> = emptyList(),
+    @Json(name = "exclude_allergens") val excludeAllergens: List<String> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -459,6 +482,23 @@ data class AiClassifyResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class AiNutritionRequest(
+    val name: String,
+    val description: String = "",
+    val ingredients: List<String> = emptyList(),
+    val portions: Int = 4,
+)
+
+@JsonClass(generateAdapter = true)
+data class AiNutritionResponse(
+    val kcal: Double = 0.0,
+    val protein: Double = 0.0,
+    val fat: Double = 0.0,
+    val carbs: Double = 0.0,
+    @Json(name = "nutri_score") val nutriScore: String = "",
+)
+
+@JsonClass(generateAdapter = true)
 data class ImportedIngredientDto(
     val food: String = "",
     val quantity: Double = 0.0,
@@ -470,30 +510,10 @@ data class ImportedIngredientDto(
 data class ImportedInstructionDto(val text: String = "")
 
 @JsonClass(generateAdapter = true)
-data class WeekplanGenerateRequest(
-    @Json(name = "start_date") val startDate: String,
-    @Json(name = "plan_days") val planDays: Int = 7,
-    @Json(name = "max_meat_per_week") val maxMeatPerWeek: Int = 3,
-    @Json(name = "max_fish_per_week") val maxFishPerWeek: Int = 2,
-    @Json(name = "min_vegetarian_per_week") val minVegetarianPerWeek: Int = 2,
-    @Json(name = "max_repeat_days") val maxRepeatDays: Int = 14,
-    @Json(name = "anchor_ids") val anchorIds: List<String> = emptyList(),
-    @Json(name = "max_kcal_per_portion") val maxKcalPerPortion: Int = 700,
-    @Json(name = "min_nutri_score") val minNutriScore: String = "c",
-    @Json(name = "prefer_organic") val preferOrganic: Boolean = false,
-    @Json(name = "exclude_allergens") val excludeAllergens: List<String> = emptyList(),
-)
-
-@JsonClass(generateAdapter = true)
 data class WeekplanAssignmentDto(
     val date: String = "",
     @Json(name = "recipe_id") val recipeId: String = "",
     @Json(name = "recipe_name") val recipeName: String = "",
-)
-
-@JsonClass(generateAdapter = true)
-data class WeekplanGenerateResponse(
-    val assignments: List<WeekplanAssignmentDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

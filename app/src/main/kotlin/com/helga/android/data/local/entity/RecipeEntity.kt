@@ -30,6 +30,7 @@ data class RecipeEntity(
     val proteinType: String = "",
     val effort: String = "",
     val cuisine: String = "",
+    // LEGACY: durch mealSlot ersetzt (siehe MIGRATION_20_21), nur für Alt-Sync-Kompatibilität.
     val mealType: String = "",
     @ColumnInfo(defaultValue = "other")
     val mealSlot: String = "other",  // "breakfast", "lunch", "dinner", "snack", "other"
@@ -43,4 +44,18 @@ data class RecipeEntity(
     val isFavorite: Int = 0,
     @ColumnInfo(defaultValue = "")
     val personalNotes: String = "",
+    // Nährwerte, immer für eine feste Basis von 4 Portionen (NUTRITION_BASELINE_PORTIONS).
+    // nutritionSource: "manual", "ai" oder "" (noch nicht ermittelt).
+    @ColumnInfo(defaultValue = "0.0")
+    val nutritionKcal: Double = 0.0,
+    @ColumnInfo(defaultValue = "0.0")
+    val nutritionProtein: Double = 0.0,
+    @ColumnInfo(defaultValue = "0.0")
+    val nutritionFat: Double = 0.0,
+    @ColumnInfo(defaultValue = "0.0")
+    val nutritionCarbs: Double = 0.0,
+    @ColumnInfo(defaultValue = "")
+    val nutritionNutriScore: String = "",
+    @ColumnInfo(defaultValue = "")
+    val nutritionSource: String = "",
 )

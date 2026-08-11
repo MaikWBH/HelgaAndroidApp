@@ -14,12 +14,13 @@ import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
+import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.model.RecipeNutrition
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
+import com.helga.android.data.remote.dto.AiNutritionRequest
 import com.helga.android.data.repository.RecipeRepository
-import com.helga.android.data.repository.RecipeNutritionWithMappings
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncScheduler
@@ -37,10 +38,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.WeekFields
+import java.util.Locale
 import javax.inject.Inject
 
 data class RecipeDetailUiState(
@@ -50,6 +52,8 @@ data class RecipeDetailUiState(
     val tags: List<TagEntity> = emptyList(),
     val isClassifying: Boolean = false,
     val classifyError: String? = null,
+    val isCalculatingNutrition: Boolean = false,
+    val nutritionError: String? = null,
 )
 
 @HiltViewModel
@@ -79,14 +83,21 @@ class RecipeDetailViewModel @Inject constructor(
         if (base > 0 && s > 0) s.toFloat() / base.toFloat() else 1f
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1f)
 
+    private val _nutritionCalcState = MutableStateFlow(false to (null as String?))
+
     val uiState: StateFlow<RecipeDetailUiState> = combine(
-        repository.observeById(recipeId),
-        repository.observeIngredients(recipeId),
-        repository.observeInstructions(recipeId),
-        repository.observeTags(recipeId),
-        _classifyState,
-    ) { recipe, ingredients, instructions, tags, (isClassifying, classifyError) ->
-        RecipeDetailUiState(recipe, ingredients, instructions, tags, isClassifying, classifyError)
+        combine(
+            repository.observeById(recipeId),
+            repository.observeIngredients(recipeId),
+            repository.observeInstructions(recipeId),
+            repository.observeTags(recipeId),
+            _classifyState,
+        ) { recipe, ingredients, instructions, tags, (isClassifying, classifyError) ->
+            RecipeDetailUiState(recipe, ingredients, instructions, tags, isClassifying, classifyError)
+        },
+        _nutritionCalcState,
+    ) { state, (isCalculatingNutrition, nutritionError) ->
+        state.copy(isCalculatingNutrition = isCalculatingNutrition, nutritionError = nutritionError)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RecipeDetailUiState())
 
     val serverUrl: StateFlow<String> = preferences.connection
@@ -98,9 +109,6 @@ class RecipeDetailViewModel @Inject constructor(
 
     private val _nutrition = MutableStateFlow<RecipeNutrition?>(null)
     val nutrition: StateFlow<RecipeNutrition?> = _nutrition.asStateFlow()
-
-    private val _nutritionWithMappings = MutableStateFlow<RecipeNutritionWithMappings?>(null)
-    val nutritionWithMappings: StateFlow<RecipeNutritionWithMappings?> = _nutritionWithMappings.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -213,11 +221,44 @@ class RecipeDetailViewModel @Inject constructor(
     private val _weekplanDays = MutableStateFlow<List<WeekplanDayWithRecipes>>(emptyList())
     val weekplanDays: StateFlow<List<WeekplanDayWithRecipes>> = _weekplanDays.asStateFlow()
 
+    private val _weekOffset = MutableStateFlow(0)
+    val weekOffset: StateFlow<Int> = _weekOffset.asStateFlow()
+
+    private fun mondayForOffset(offset: Int): LocalDate =
+        LocalDate.now().with(DayOfWeek.MONDAY).plusWeeks(offset.toLong())
+
+    val weekLabel: StateFlow<String> = _weekOffset.map { offset ->
+        val monday = mondayForOffset(offset)
+        val sunday = monday.plusDays(6)
+        val kw = monday.get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear())
+        val fmt = DateTimeFormatter.ofPattern("dd.MM.")
+        "KW $kw · ${monday.format(fmt)}–${sunday.format(fmt)}"
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    fun nextWeek() {
+        _weekOffset.value++
+        loadWeekplanDays()
+    }
+
+    fun prevWeek() {
+        _weekOffset.value--
+        loadWeekplanDays()
+    }
+
+    fun goToCurrentWeek() {
+        _weekOffset.value = 0
+        loadWeekplanDays()
+    }
+
     fun loadWeekplanDays() {
         viewModelScope.launch {
-            val monday = LocalDate.now().with(DayOfWeek.MONDAY)
+            val monday = mondayForOffset(_weekOffset.value)
             val sunday = monday.plusDays(6)
             val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+            (0..6).forEach { offset ->
+                weekplanRepository.getOrCreateDay(monday.plusDays(offset.toLong()).format(fmt))
+            }
+            syncScheduler.triggerOneShot()
             val days = weekplanRepository.observeDaysBetween(
                 monday.format(fmt), sunday.format(fmt)
             ).first()
@@ -284,14 +325,58 @@ class RecipeDetailViewModel @Inject constructor(
         context.startActivity(Intent.createChooser(intent, null))
     }
 
-    fun calculateNutritionWithProducts() {
+    fun calculateNutritionWithAi() {
+        val state = uiState.value
+        val recipe = state.recipe ?: return
+        _nutritionCalcState.update { true to null }
         viewModelScope.launch {
             try {
-                val result = repository.getRecipeNutritionWithTopProducts(recipeId)
-                _nutritionWithMappings.value = result
+                val api = apiFactory.api()
+                val baseServings = _baseServings.value.takeIf { it > 0 } ?: NUTRITION_BASELINE_PORTIONS
+                val scale = NUTRITION_BASELINE_PORTIONS.toDouble() / baseServings.toDouble()
+                val ingredientLines = state.ingredients.filter { it.deleted == 0 }.map { ing ->
+                    val scaledQty = ing.quantity * scale
+                    val qtyStr = when {
+                        scaledQty <= 0.0 -> ""
+                        scaledQty % 1.0 < 0.01 -> scaledQty.toInt().toString()
+                        else -> String.format(Locale.US, "%.1f", scaledQty)
+                    }
+                    listOf(qtyStr, ing.unit, ing.food).filter { it.isNotBlank() }.joinToString(" ")
+                }
+                val req = AiNutritionRequest(
+                    name = recipe.name,
+                    description = recipe.description,
+                    ingredients = ingredientLines,
+                    portions = NUTRITION_BASELINE_PORTIONS,
+                )
+                val result = api.estimateNutrition(req)
+                repository.saveNutrition(
+                    recipeId = recipeId,
+                    kcal = result.kcal,
+                    protein = result.protein,
+                    fat = result.fat,
+                    carbs = result.carbs,
+                    nutriScore = result.nutriScore,
+                    source = "ai",
+                )
+                _nutrition.value = repository.getRecipeNutrition(recipeId)
+                syncScheduler.triggerOneShot()
+                _nutritionCalcState.update { false to null }
             } catch (e: Exception) {
-                Timber.e(e, "Failed to calculate nutrition with products")
+                _nutritionCalcState.update { false to (e.message ?: "Nährwertberechnung fehlgeschlagen") }
             }
+        }
+    }
+
+    fun saveManualNutrition(kcal: Double, protein: Double, fat: Double, carbs: Double, nutriScore: String) {
+        viewModelScope.launch {
+            repository.saveNutrition(
+                recipeId = recipeId,
+                kcal = kcal, protein = protein, fat = fat, carbs = carbs,
+                nutriScore = nutriScore, source = "manual",
+            )
+            _nutrition.value = repository.getRecipeNutrition(recipeId)
+            syncScheduler.triggerOneShot()
         }
     }
 }

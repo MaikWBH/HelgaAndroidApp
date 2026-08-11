@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.helga.android.data.local.dao.MonthlyBudgetDao
+import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
@@ -22,6 +24,8 @@ import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
+import com.helga.android.data.local.entity.MonthlyBudgetEntity
+import com.helga.android.data.local.entity.OffProductEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
@@ -43,7 +47,7 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 
 @Database(
-    version = 24,
+    version = 30,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -69,6 +73,8 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
         RecipeFeedbackEntity::class,
         ReceiptEntity::class,
         ReceiptItemEntity::class,
+        MonthlyBudgetEntity::class,
+        OffProductEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -85,6 +91,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recipeHistoryDao(): RecipeHistoryDao
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
     abstract fun receiptDao(): ReceiptDao
+    abstract fun monthlyBudgetDao(): MonthlyBudgetDao
+    abstract fun offProductDao(): OffProductDao
 
     companion object {
         const val NAME = "helga.db"
@@ -654,10 +662,106 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_24_25 = object : Migration(24, 25) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS monthly_budgets (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        amount REAL NOT NULL DEFAULT 0.0,
+                        warnThreshold REAL NOT NULL DEFAULT 0.8,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_monthly_budgets_updatedAt ON monthly_budgets(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_monthly_budgets_deleted ON monthly_budgets(deleted)")
+                // Lokaler Default mit dirty = 0 → wird erst beim ersten Bearbeiten gepusht.
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO monthly_budgets (id, amount, warnThreshold, updatedAt, deleted, dirty)
+                    VALUES ('global', 0.0, 0.8, 0, 0, 0)
+                    """.trimIndent()
+                )
+            }
+        }
+
+        private val MIGRATION_25_26 = object : Migration(25, 26) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Woher der Bon gelesen wurde (KI-Vision vs. On-Device-OCR) – für die
+                // Anzeige im Bon-Detail. Rein lokal, daher kein DTO-/Sync-Feld.
+                db.execSQL("ALTER TABLE receipts ADD COLUMN source TEXT NOT NULL DEFAULT 'on_device'")
+            }
+        }
+
+        private val MIGRATION_26_27 = object : Migration(26, 27) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Packungsgröße (aus OFF-Rohdaten geparst) + Flag für manuelle Korrektur.
+                db.execSQL("ALTER TABLE off_products ADD COLUMN packageGrams REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE off_products ADD COLUMN packageGramsManual INTEGER NOT NULL DEFAULT 0")
+
+                // Persönliche DB: Bon-Artikelname → OFF-Produkt (synchronisiert).
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS receipt_article_links (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        normalizedName TEXT NOT NULL DEFAULT '',
+                        displayName TEXT NOT NULL DEFAULT '',
+                        offProductId TEXT NOT NULL DEFAULT '',
+                        offBarcode TEXT NOT NULL DEFAULT '',
+                        confirmed INTEGER NOT NULL DEFAULT 0,
+                        confirmedAt INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_receipt_article_links_normalizedName ON receipt_article_links(normalizedName)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_article_links_updatedAt ON receipt_article_links(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_article_links_deleted ON receipt_article_links(deleted)")
+            }
+        }
+
+        private val MIGRATION_27_28 = object : Migration(27, 28) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Pro-Artikel-Nährwertzuordnung (Phase 1/2) wurde vollständig entfernt:
+                // OFF-Produktsuche fand zwar Treffer, lieferte aber keine brauchbaren
+                // Nährwerte. Ersetzt durch Nährwerte direkt am Rezept (manuell/KI).
+                db.execSQL("DROP TABLE IF EXISTS receipt_article_links")
+
+                // Rezept-Nährwerte, immer für eine feste Basis von 4 Portionen berechnet
+                // (unabhängig von der Portionen-Anpassung im UI). source = "manual"/"ai"/"".
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionKcal REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionProtein REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionFat REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionCarbs REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionNutriScore TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE recipes ADD COLUMN nutritionSource TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val MIGRATION_28_29 = object : Migration(28, 29) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Unterscheidet "eingeplant" von "im Cooking-Mode tatsächlich gekocht"
+                // (Fertig-Button), damit Stats und Wiederholungssperre die Realität abbilden.
+                db.execSQL("ALTER TABLE recipe_history ADD COLUMN cooked INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_29_30 = object : Migration(29, 30) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Verwaiste Tabellen ohne Entity/DAO (per Raw-SQL in MIGRATION_21_22 /
+                // MIGRATION_22_23 angelegt, nie gelesen oder geschrieben) – unbedenklich
+                // zu entfernen, da kein Code darauf zugreift.
+                db.execSQL("DROP TABLE IF EXISTS ingredient_product_mappings")
+                db.execSQL("DROP TABLE IF EXISTS product_purchases")
+                db.execSQL("DROP TABLE IF EXISTS product_prices")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30)
                 .build()
     }
 }

@@ -14,15 +14,16 @@ def now_ms() -> int:
 
 
 # Alle sync-fähigen Tabellen in Reihenfolge (Fremdschlüssel-Abhängigkeiten beachten)
+# foods/units/product_units/app_settings: keine Kotlin-Entity/DAO im Client – nur
+# Server-Altlast, daher nicht (mehr) Teil des Sync-Umfangs (spart Payload+Zeit).
+# ingredient_product_mappings/product_purchases/product_prices: ebenfalls ohne
+# Client-Entity/DAO, werden client-seitig per Migration gedroppt (siehe AppDatabase.kt).
 SYNC_TABLES = [
     "recipes",
     "recipe_ingredients",
     "recipe_instructions",
     "recipe_tags",
     "recipe_categories",
-    "foods",
-    "units",
-    "product_units",
     "stores",
     "store_aisles",
     "aisle_products",
@@ -33,16 +34,14 @@ SYNC_TABLES = [
     "weekplan_recipes",
     "weekplan_extras",
     "recipe_history",
+    "recipe_feedback",
     "quick_emojis",
-    "app_settings",
     "weekplan_settings",
     "weekplan_constraints",
     "off_products",
-    "ingredient_product_mappings",
-    "product_prices",
-    "product_purchases",
     "receipts",
     "receipt_items",
+    "monthly_budgets",
 ]
 
 SCHEMA = """
@@ -67,6 +66,12 @@ CREATE TABLE IF NOT EXISTS recipes (
     meal_type   TEXT DEFAULT '',
     meal_slot   TEXT NOT NULL DEFAULT 'other',
     season_fit  TEXT DEFAULT '',
+    nutrition_kcal        REAL NOT NULL DEFAULT 0.0,
+    nutrition_protein     REAL NOT NULL DEFAULT 0.0,
+    nutrition_fat         REAL NOT NULL DEFAULT 0.0,
+    nutrition_carbs       REAL NOT NULL DEFAULT 0.0,
+    nutrition_nutri_score TEXT NOT NULL DEFAULT '',
+    nutrition_source      TEXT NOT NULL DEFAULT '',
     created_at  INTEGER NOT NULL DEFAULT 0,
     updated_at  INTEGER NOT NULL DEFAULT 0,
     deleted     INTEGER NOT NULL DEFAULT 0
@@ -199,11 +204,13 @@ CREATE TABLE IF NOT EXISTS shopping_list_staples (
 );
 
 CREATE TABLE IF NOT EXISTS weekplan_days (
-    id          TEXT PRIMARY KEY,
-    plan_date   TEXT NOT NULL DEFAULT '',
-    note        TEXT DEFAULT '',
-    updated_at  INTEGER NOT NULL DEFAULT 0,
-    deleted     INTEGER NOT NULL DEFAULT 0
+    id            TEXT PRIMARY KEY,
+    plan_date     TEXT NOT NULL DEFAULT '',
+    note          TEXT DEFAULT '',
+    is_quick_day  INTEGER NOT NULL DEFAULT 0,
+    is_guest_day  INTEGER NOT NULL DEFAULT 0,
+    updated_at    INTEGER NOT NULL DEFAULT 0,
+    deleted       INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS weekplan_recipes (
@@ -228,6 +235,18 @@ CREATE TABLE IF NOT EXISTS recipe_history (
     id           TEXT PRIMARY KEY,
     recipe_id    TEXT NOT NULL,
     planned_date TEXT NOT NULL DEFAULT '',
+    cooked       INTEGER NOT NULL DEFAULT 0,
+    updated_at   INTEGER NOT NULL DEFAULT 0,
+    deleted      INTEGER NOT NULL DEFAULT 0
+);
+
+-- "Gefällt mir"-Feedback je Rezept+geplantem Tag, fließt in die Favoriten-
+-- Gewichtung der Wochenplan-Generierung ein.
+CREATE TABLE IF NOT EXISTS recipe_feedback (
+    id           TEXT PRIMARY KEY,
+    recipe_id    TEXT NOT NULL,
+    planned_date TEXT NOT NULL DEFAULT '',
+    liked        INTEGER NOT NULL DEFAULT 0,
     updated_at   INTEGER NOT NULL DEFAULT 0,
     deleted      INTEGER NOT NULL DEFAULT 0
 );
@@ -288,6 +307,8 @@ CREATE TABLE IF NOT EXISTS off_products (
     vegetarian          INTEGER NOT NULL DEFAULT 0,
     image_path          TEXT NOT NULL DEFAULT '',
     is_favorite         INTEGER NOT NULL DEFAULT 0,
+    package_grams       REAL NOT NULL DEFAULT 0.0,
+    package_grams_manual INTEGER NOT NULL DEFAULT 0,
     updated_at          INTEGER NOT NULL DEFAULT 0,
     deleted             INTEGER NOT NULL DEFAULT 0
 );
@@ -357,6 +378,16 @@ CREATE TABLE IF NOT EXISTS receipt_items (
     deleted                 INTEGER NOT NULL DEFAULT 0
 );
 
+-- Gemeinsames Monatsbudget der Familie (Singleton id = 'global'). Wird wie
+-- weekplan_constraints zentral gehalten, damit beide Handys denselben Wert sehen.
+CREATE TABLE IF NOT EXISTS monthly_budgets (
+    id              TEXT PRIMARY KEY,
+    amount          REAL NOT NULL DEFAULT 0.0,
+    warn_threshold  REAL NOT NULL DEFAULT 0.8,
+    updated_at      INTEGER NOT NULL DEFAULT 0,
+    deleted         INTEGER NOT NULL DEFAULT 0
+);
+
 -- Globaler Monotonzähler für den Sync-Cursor (entkoppelt Auslieferung von
 -- der Bearbeitungs-Zeit/Client-Uhr). Wird bei jedem Push hochgezählt; jeder
 -- akzeptierte Schreibvorgang erhält die aktuelle Commit-Sequenz als server_seq.
@@ -382,6 +413,8 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_weekplan_recipes_day ON weekplan_recipes(weekplan_day_id)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_extras_day ON weekplan_extras(weekplan_day_id)",
     "CREATE INDEX IF NOT EXISTS idx_recipe_history_recipe ON recipe_history(recipe_id)",
+    "CREATE INDEX IF NOT EXISTS idx_recipe_feedback_recipe ON recipe_feedback(recipe_id)",
+    "CREATE INDEX IF NOT EXISTS idx_recipe_feedback_updated ON recipe_feedback(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_settings_updated ON weekplan_settings(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_constraints_updated ON weekplan_constraints(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_off_products_barcode ON off_products(barcode)",
@@ -401,6 +434,7 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_receipts_updated ON receipts(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_receipt ON receipt_items(receipt_id)",
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_updated ON receipt_items(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_monthly_budgets_updated ON monthly_budgets(updated_at)",
 ]
 
 
@@ -420,9 +454,24 @@ ADDED_COLUMNS = {
     ],
     "recipes": [
         ("meal_slot", "TEXT NOT NULL DEFAULT 'other'"),
+        ("nutrition_kcal", "REAL NOT NULL DEFAULT 0.0"),
+        ("nutrition_protein", "REAL NOT NULL DEFAULT 0.0"),
+        ("nutrition_fat", "REAL NOT NULL DEFAULT 0.0"),
+        ("nutrition_carbs", "REAL NOT NULL DEFAULT 0.0"),
+        ("nutrition_nutri_score", "TEXT NOT NULL DEFAULT ''"),
+        ("nutrition_source", "TEXT NOT NULL DEFAULT ''"),
     ],
     "off_products": [
         ("is_favorite", "INTEGER NOT NULL DEFAULT 0"),
+        ("package_grams", "REAL NOT NULL DEFAULT 0.0"),
+        ("package_grams_manual", "INTEGER NOT NULL DEFAULT 0"),
+    ],
+    "recipe_history": [
+        ("cooked", "INTEGER NOT NULL DEFAULT 0"),
+    ],
+    "weekplan_days": [
+        ("is_quick_day", "INTEGER NOT NULL DEFAULT 0"),
+        ("is_guest_day", "INTEGER NOT NULL DEFAULT 0"),
     ],
 }
 

@@ -7,10 +7,12 @@ import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
+import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SseClient
 import com.helga.android.data.remote.dto.AiRemixRequest
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
+import com.helga.android.data.util.IngredientLineParser
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -50,6 +53,7 @@ class AiRemixViewModel @Inject constructor(
     private val moshi: Moshi,
     private val repository: RecipeRepository,
     private val syncScheduler: SyncScheduler,
+    private val preferences: AppPreferences,
 ) : ViewModel() {
 
     private val recipeId: String = checkNotNull(savedStateHandle["recipeId"])
@@ -91,6 +95,7 @@ class AiRemixViewModel @Inject constructor(
                     recipeIngredients = src.ingredientStrings,
                     recipeInstructions = src.instructionStrings,
                     remixPrompt = remixPrompt,
+                    excludeAllergens = preferences.allergies.first(),
                 )
                 val bodyJson = remixAdapter.toJson(req)
                 val html = sseClient.collect("api/ai/remix", bodyJson)
@@ -126,12 +131,16 @@ class AiRemixViewModel @Inject constructor(
                 localImageUri = "",
                 createdAt = now,
             )
-            val ingredients = recipe.ingredients.mapIndexed { idx, food ->
+            val ingredients = recipe.ingredients.mapIndexed { idx, line ->
+                val parsed = IngredientLineParser.parse(line)
                 IngredientEntity(
                     id = UUID.randomUUID().toString(),
                     recipeId = id,
                     position = idx,
-                    food = food,
+                    quantity = parsed.quantity,
+                    unit = parsed.unit,
+                    food = parsed.food.ifBlank { line },
+                    note = parsed.note,
                 )
             }
             val instructions = recipe.instructions.mapIndexed { idx, text ->

@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NavigateBefore
@@ -23,8 +25,10 @@ import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -49,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,7 +68,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
 import com.helga.android.data.local.entity.IngredientEntity
+import com.helga.android.data.local.entity.InstructionEntity
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 data class DetectedTimer(val label: String, val totalSeconds: Int)
 
@@ -143,6 +150,7 @@ fun RecipeCookScreen(
     var activeTimer by remember { mutableStateOf<DetectedTimer?>(null) }
     var timerSeconds by remember { mutableIntStateOf(0) }
     var timerRunning by remember { mutableStateOf(false) }
+    var focusMode by remember { mutableStateOf(false) }
 
     LaunchedEffect(timerRunning) {
         while (timerRunning && timerSeconds > 0) {
@@ -180,6 +188,18 @@ fun RecipeCookScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.recipe_detail_back))
                     }
                 },
+                actions = {
+                    if (instructions.isNotEmpty()) {
+                        IconButton(onClick = { focusMode = !focusMode }) {
+                            Icon(
+                                imageVector = if (focusMode) Icons.Filled.FormatListBulleted else Icons.Filled.ViewCarousel,
+                                contentDescription = stringResource(
+                                    if (focusMode) R.string.cook_focus_mode_off else R.string.cook_focus_mode_on
+                                ),
+                            )
+                        }
+                    }
+                },
             )
         },
     ) { padding ->
@@ -202,6 +222,25 @@ fun RecipeCookScreen(
         }
 
         val total = instructions.size
+
+        if (focusMode) {
+            CookFocusView(
+                instructions = instructions,
+                completedSteps = completedSteps,
+                onToggleStep = viewModel::toggleStep,
+                onStartTimer = { timer ->
+                    activeTimer = timer
+                    timerSeconds = timer.totalSeconds
+                    timerRunning = false
+                },
+                onDone = {
+                    viewModel.confirmCooked()
+                    onBack()
+                },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
 
         LazyColumn(
             modifier = Modifier
@@ -378,11 +417,124 @@ fun RecipeCookScreen(
             item(key = "done_button") {
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = onBack,
+                    onClick = {
+                        viewModel.confirmCooked()
+                        onBack()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.cook_done))
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Fokusansicht: ein Zubereitungsschritt pro Seite in Großschrift, per Wisch oder
+ * Pfeiltasten navigierbar. Nutzt denselben [completedSteps]-State wie die
+ * Listenansicht, damit beide Modi synchron bleiben.
+ */
+@Composable
+private fun CookFocusView(
+    instructions: List<InstructionEntity>,
+    completedSteps: Set<Int>,
+    onToggleStep: (Int) -> Unit,
+    onStartTimer: (DetectedTimer) -> Unit,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val total = instructions.size
+    val pagerState = rememberPagerState(pageCount = { total })
+    val scope = rememberCoroutineScope()
+
+    Column(modifier = modifier.fillMaxSize()) {
+        LinearProgressIndicator(
+            progress = { (pagerState.currentPage + 1).toFloat() / total },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = stringResource(R.string.cook_step_of, pagerState.currentPage + 1, total),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) { page ->
+            val instruction = instructions[page]
+            val done = page in completedSteps
+            val timers = remember(instruction.text) { extractTimers(instruction.text) }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { onToggleStep(page) }
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = instruction.text,
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        textDecoration = if (done) TextDecoration.LineThrough else TextDecoration.None,
+                    ),
+                    textAlign = TextAlign.Center,
+                    color = if (done) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                           else MaterialTheme.colorScheme.onSurface,
+                )
+                if (timers.isNotEmpty()) {
+                    Spacer(Modifier.height(24.dp))
+                    @OptIn(ExperimentalLayoutApi::class)
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        timers.forEach { timer ->
+                            SuggestionChip(
+                                onClick = { onStartTimer(timer) },
+                                label = { Text(timer.label) },
+                                icon = {
+                                    Icon(
+                                        Icons.Filled.Timer,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SuggestionChipDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
+                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
+                enabled = pagerState.currentPage > 0,
+            ) {
+                Icon(Icons.AutoMirrored.Filled.NavigateBefore, contentDescription = stringResource(R.string.cook_prev))
+            }
+            if (pagerState.currentPage == total - 1) {
+                Button(onClick = onDone) { Text(stringResource(R.string.cook_done)) }
+            } else {
+                FilledTonalButton(
+                    onClick = {
+                        onToggleStep(pagerState.currentPage)
+                        scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                    },
+                ) { Text(stringResource(R.string.cook_next)) }
+            }
+            IconButton(
+                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
+                enabled = pagerState.currentPage < total - 1,
+            ) {
+                Icon(Icons.AutoMirrored.Filled.NavigateNext, contentDescription = stringResource(R.string.cook_next))
             }
         }
     }

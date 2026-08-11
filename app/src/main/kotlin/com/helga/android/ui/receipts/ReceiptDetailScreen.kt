@@ -1,6 +1,7 @@
 package com.helga.android.ui.receipts
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,13 +43,18 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.helga.android.data.local.ScanSource
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
+import com.helga.android.data.local.toScanSource
+import com.helga.android.data.util.ImageUrls
+import com.helga.android.data.util.ReceiptItemNormalizer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiptDetailScreen(
     onBack: () -> Unit,
+    onProductClick: (String) -> Unit = {},
     viewModel: ReceiptDetailViewModel = hiltViewModel(),
 ) {
     val receipt = viewModel.receipt.collectAsState().value
@@ -120,7 +126,10 @@ fun ReceiptDetailScreen(
                 }
                 item { HorizontalDivider() }
                 items(items, key = { it.id }) { item ->
-                    ReceiptItemRow(item = item)
+                    ReceiptItemRow(
+                        item = item,
+                        onProductClick = onProductClick,
+                    )
                 }
             }
         }
@@ -132,7 +141,7 @@ private fun ReceiptPhoto(receipt: ReceiptEntity, serverUrl: String) {
     val imageModel: Any? = when {
         receipt.localImageUri.isNotBlank() -> receipt.localImageUri
         receipt.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
-            "${serverUrl.trimEnd('/')}/api/images/${receipt.imagePath}"
+            ImageUrls.serverImageUrl(serverUrl, receipt.imagePath)
         else -> null
     }
 
@@ -176,6 +185,15 @@ private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
             formatReceiptDate(receipt.purchaseDate),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            when (receipt.source.toScanSource()) {
+                ScanSource.AI -> "Gelesen per KI-Vision"
+                ScanSource.ON_DEVICE -> "Gelesen per On-Device-OCR"
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
         )
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
@@ -254,8 +272,10 @@ private fun ReconcileResult(outcome: com.helga.android.data.repository.Reconcile
 }
 
 @Composable
-private fun ReceiptItemRow(item: ReceiptItemEntity) {
-    // Farbcodierung nach Abgleich-Status (persistiert in matchStatus)
+private fun ReceiptItemRow(
+    item: ReceiptItemEntity,
+    onProductClick: (String) -> Unit = {},
+) {
     val accent = when (item.matchStatus) {
         "matched" -> MaterialTheme.colorScheme.primary
         "unexpected" -> MaterialTheme.colorScheme.tertiary
@@ -264,16 +284,26 @@ private fun ReceiptItemRow(item: ReceiptItemEntity) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable {
+                val key = ReceiptItemNormalizer.normalize(item.name.ifBlank { item.rawText })
+                if (key.isNotBlank()) onProductClick(key)
+            }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            item.name.ifBlank { item.rawText },
-            style = MaterialTheme.typography.bodyMedium,
-            color = accent,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                item.name.ifBlank { item.rawText },
+                style = MaterialTheme.typography.bodyMedium,
+                color = accent,
+            )
+            Text(
+                "${formatQuantity(item.quantity)} × ${String.format("€%.2f", item.unitPrice)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
             String.format("€%.2f", item.totalPrice),
             style = MaterialTheme.typography.bodyMedium,

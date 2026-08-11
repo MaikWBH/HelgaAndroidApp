@@ -26,6 +26,8 @@ import com.helga.android.ui.ai.AiGenerateScreen
 import com.helga.android.ui.ai.AiRemixScreen
 import com.helga.android.ui.onboarding.OnboardingScreen
 import com.helga.android.ui.receipts.CostOverviewScreen
+import com.helga.android.ui.receipts.ProductPriceDetailScreen
+import com.helga.android.ui.receipts.ProductPriceListScreen
 import com.helga.android.ui.receipts.ReceiptDetailScreen
 import com.helga.android.ui.receipts.ReceiptListScreen
 import com.helga.android.ui.receipts.ReceiptScanScreen
@@ -40,6 +42,7 @@ import com.helga.android.ui.stores.StoreListScreen
 import com.helga.android.ui.weekplan.WeekplanRecipePickerScreen
 import com.helga.android.ui.weekplan.WeekplanScreen
 import kotlinx.coroutines.flow.first
+import java.net.URLEncoder
 
 internal const val ROUTE_ONBOARDING = "onboarding"
 internal const val ROUTE_RECIPES = "recipes"
@@ -48,6 +51,8 @@ internal const val ROUTE_STORES = "stores"
 internal const val ROUTE_WEEKPLAN = "weekplan"
 internal const val ROUTE_RECEIPTS = "receipts"
 internal const val ROUTE_RECEIPTS_COST_OVERVIEW = "receipts/cost-overview"
+internal const val ROUTE_RECEIPTS_PRODUCTS = "receipts/products"
+internal const val ROUTE_PRODUCT_PRICE_DETAIL = "receipts/products/{productKey}"
 internal const val ROUTE_RECEIPT_SCAN = "receipts/scan?listId={listId}"
 internal const val ROUTE_RECEIPT_DETAIL = "receipts/detail/{receiptId}"
 internal const val ROUTE_RECIPE_DETAIL = "recipe/{recipeId}"
@@ -68,6 +73,8 @@ internal fun weekplanPickRecipeRoute(dayId: String) = "weekplan/pick-recipe/$day
 internal fun receiptScanRoute(listId: String? = null) =
     if (listId.isNullOrBlank()) "receipts/scan?listId=" else "receipts/scan?listId=$listId"
 internal fun receiptDetailRoute(receiptId: String) = "receipts/detail/$receiptId"
+internal fun productPriceDetailRoute(key: String) =
+    "receipts/products/${URLEncoder.encode(key, "UTF-8").replace("+", "%20")}"
 
 private val ROOT_ROUTES = setOf(ROUTE_SHOPPING, ROUTE_RECIPES, ROUTE_WEEKPLAN)
 
@@ -172,6 +179,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                     WeekplanRecipePickerScreen(
                         onBack = { navController.popBackStack() },
                         onRecipePicked = { navController.popBackStack() },
+                        onRecipeClick = { id -> navController.navigate(recipeDetailRoute(id)) },
                     )
                 }
                 composable(ROUTE_RECIPE_URL_IMPORT) {
@@ -210,16 +218,32 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                         onReceiptClick = { id -> navController.navigate(receiptDetailRoute(id)) },
                         onScanClick = { navController.navigate(receiptScanRoute(null)) },
                         onCostOverviewClick = { navController.navigate(ROUTE_RECEIPTS_COST_OVERVIEW) },
+                        onProductsClick = { navController.navigate(ROUTE_RECEIPTS_PRODUCTS) },
                     )
                 }
                 composable(
                     route = ROUTE_RECEIPT_DETAIL,
                     arguments = listOf(navArgument("receiptId") { type = NavType.StringType }),
                 ) {
-                    ReceiptDetailScreen(onBack = { navController.popBackStack() })
+                    ReceiptDetailScreen(
+                        onBack = { navController.popBackStack() },
+                        onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
+                    )
                 }
                 composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
                     CostOverviewScreen()
+                }
+                composable(ROUTE_RECEIPTS_PRODUCTS) {
+                    ProductPriceListScreen(
+                        onBack = { navController.popBackStack() },
+                        onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
+                    )
+                }
+                composable(
+                    route = ROUTE_PRODUCT_PRICE_DETAIL,
+                    arguments = listOf(navArgument("productKey") { type = NavType.StringType }),
+                ) {
+                    ProductPriceDetailScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
                     route = ROUTE_RECEIPT_SCAN,

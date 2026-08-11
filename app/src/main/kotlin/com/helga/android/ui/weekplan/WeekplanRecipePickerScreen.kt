@@ -60,6 +60,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.util.ImageUrls
 import com.helga.android.ui.recipes.SortOrder
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +68,7 @@ import com.helga.android.ui.recipes.SortOrder
 fun WeekplanRecipePickerScreen(
     onBack: () -> Unit,
     onRecipePicked: () -> Unit,
+    onRecipeClick: (String) -> Unit,
     viewModel: WeekplanRecipePickerViewModel = hiltViewModel(),
 ) {
     val recipes by viewModel.recipes.collectAsStateWithLifecycle()
@@ -145,13 +147,14 @@ fun WeekplanRecipePickerScreen(
                             when {
                                 recipe.localImageUri.isNotBlank() -> recipe.localImageUri
                                 recipe.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
-                                    "${serverUrl.trimEnd('/')}/api/images/${recipe.imagePath}"
+                                    ImageUrls.serverImageUrl(serverUrl, recipe.imagePath)
                                 else -> null
                             }
                         }
                         PickerRecipeCard(
                             recipe = recipe,
                             imageUrl = imageUrl,
+                            onClick = { onRecipeClick(recipe.id) },
                             onPick = {
                                 viewModel.addRecipe(recipe.id)
                                 onRecipePicked()
@@ -237,10 +240,12 @@ private fun sortLabel(order: SortOrder) = stringResource(
 private fun PickerRecipeCard(
     recipe: RecipeEntity,
     imageUrl: String?,
+    onClick: () -> Unit,
     onPick: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
         colors = CardDefaults.cardColors(),
     ) {
         Row(

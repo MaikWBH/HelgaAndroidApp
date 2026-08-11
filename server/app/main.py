@@ -10,9 +10,12 @@ from dotenv import load_dotenv
 
 from .db import init_db, get_db, now_ms
 from .models import (
-    AiClassifyRequest, AiGenerateRequest, AiRemixRequest, AiUrlImportRequest,
-    OffLookupBarcodeRequest, OffSearchRequest, ReceiptReconcileRequest,
-    SyncPullResponse, SyncPushRequest, WeekplanGenerateRequest,
+    AiClassifyRequest, AiGenerateRequest, AiNutritionRequest, AiRemixRequest,
+    AiUrlImportRequest,
+    OffLookupBarcodeRequest, OffSearchRequest,
+    ReceiptParseRequest,
+    ReceiptParseResponse, ReceiptReconcileRequest,
+    SyncPullResponse, SyncPushRequest,
 )
 from .sync import pull_since, push_records
 from . import ai as ai_module
@@ -93,20 +96,29 @@ async def ai_classify(req: AiClassifyRequest):
     return result
 
 
+@app.post("/api/ai/nutrition", dependencies=[Depends(require_auth)])
+async def ai_nutrition(req: AiNutritionRequest):
+    result = await ai_module.estimate_nutrition(req)
+    return result
+
+
 @app.post("/api/ai/import-url", dependencies=[Depends(require_auth)])
 async def ai_import_url(req: AiUrlImportRequest):
     return await ai_module.import_url(req)
-
-
-@app.post("/api/weekplan/generate", dependencies=[Depends(require_auth)])
-async def weekplan_generate(req: WeekplanGenerateRequest):
-    return await ai_module.generate_weekplan(req)
 
 
 @app.post("/api/receipts/reconcile", dependencies=[Depends(require_auth)])
 async def receipts_reconcile(req: ReceiptReconcileRequest):
     """Gleicht die abgehakte Einkaufsliste mit den Bon-Positionen per KI ab."""
     return await ai_module.reconcile_receipt(req.checked_items, req.receipt_items)
+
+
+@app.post("/api/ai/parse-receipt", response_model=ReceiptParseResponse,
+          dependencies=[Depends(require_auth)])
+async def ai_parse_receipt(req: ReceiptParseRequest):
+    """Liest einen fotografierten Kassenbon per Vision-Modell aus."""
+    data = await ai_module.parse_receipt(req.image_base64, req.mime_type)
+    return ReceiptParseResponse(**data)
 
 
 # ── Bilder ────────────────────────────────────────────────────────────────────

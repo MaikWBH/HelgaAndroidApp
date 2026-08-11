@@ -28,6 +28,9 @@ data class ReceiptEntity(
     val localImageUri: String = "",
     val rawOcrText: String = "",
     val status: String = "scanned",
+    // Woher der Bon gelesen wurde ("ai" / "on_device") – wie localImageUri rein
+    // gerätelokal, wird bewusst nicht synchronisiert (siehe SyncEngine.toDto()).
+    val source: String = "on_device",
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

@@ -35,4 +35,5 @@ Thumbs.db
 # Keystore
 *.jks
 *.keystore
+!app/debug.keystore
 keystore.properties

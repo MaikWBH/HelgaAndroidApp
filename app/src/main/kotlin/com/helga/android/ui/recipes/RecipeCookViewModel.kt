@@ -3,10 +3,13 @@ package com.helga.android.ui.recipes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,6 +21,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 import javax.inject.Inject
 
 data class RecipeCookUiState(
@@ -31,6 +37,8 @@ data class RecipeCookUiState(
 class RecipeCookViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     repository: RecipeRepository,
+    private val recipeHistoryDao: RecipeHistoryDao,
+    private val syncScheduler: SyncScheduler,
 ) : ViewModel() {
 
     private val recipeId: String = checkNotNull(savedStateHandle["recipeId"])
@@ -82,5 +90,28 @@ class RecipeCookViewModel @Inject constructor(
 
     fun toggleStep(index: Int) {
         _completedSteps.update { if (index in it) it - index else it + index }
+    }
+
+    fun confirmCooked() {
+        viewModelScope.launch {
+            val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val now = System.currentTimeMillis()
+            val updated = recipeHistoryDao.markCooked(recipeId, today, now)
+            if (updated == 0) {
+                recipeHistoryDao.upsertAll(
+                    listOf(
+                        RecipeHistoryEntity(
+                            id = UUID.randomUUID().toString(),
+                            recipeId = recipeId,
+                            plannedDate = today,
+                            cooked = 1,
+                            updatedAt = now,
+                            dirty = 1,
+                        )
+                    )
+                )
+            }
+            syncScheduler.triggerOneShot()
+        }
     }
 }

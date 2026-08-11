@@ -4,12 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.dao.CostByDate
 import com.helga.android.data.local.dao.CostByStore
+import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.ReceiptDao
+import com.helga.android.data.local.entity.MonthlyBudgetEntity
+import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
@@ -20,10 +26,20 @@ enum class TimePeriod {
 @HiltViewModel
 class CostOverviewViewModel @Inject constructor(
     private val receiptDao: ReceiptDao,
+    private val monthlyBudgetDao: MonthlyBudgetDao,
+    private val syncScheduler: SyncScheduler,
 ) : ViewModel() {
 
     private val _period = MutableStateFlow(TimePeriod.MONTH)
     val period: StateFlow<TimePeriod> = _period
+
+    /** Gemeinsames Monatsbudget (zentral via Sync). null = noch nicht geladen. */
+    val budget: StateFlow<MonthlyBudgetEntity?> = monthlyBudgetDao.observe()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Ausgaben im laufenden Kalendermonat – Basis für die Budget-Warnung. */
+    private val _monthSpending = MutableStateFlow(0.0)
+    val monthSpending: StateFlow<Double> = _monthSpending
 
     private val _costByStore = MutableStateFlow<List<CostByStore>>(emptyList())
     val costByStore: StateFlow<List<CostByStore>> = _costByStore
@@ -42,11 +58,43 @@ class CostOverviewViewModel @Inject constructor(
 
     init {
         loadData()
+        loadMonthSpending()
     }
 
     fun setPeriod(period: TimePeriod) {
         _period.value = period
         loadData()
+    }
+
+    /** Summiert die Ausgaben des laufenden Kalendermonats (lokal, offline-fähig). */
+    private fun loadMonthSpending() {
+        viewModelScope.launch {
+            val zone = ZoneId.systemDefault()
+            val firstOfMonth = LocalDate.now().withDayOfMonth(1)
+            val startEpoch = firstOfMonth.atStartOfDay(zone).toEpochSecond()
+            val endEpoch = firstOfMonth.plusMonths(1).atStartOfDay(zone).toEpochSecond()
+            _monthSpending.value = receiptDao.totalCostForRange(startEpoch, endEpoch).totalAmount
+        }
+    }
+
+    /**
+     * Speichert das gemeinsame Monatsbudget lokal (dirty = 1) und stößt sofort
+     * einen Sync an, damit der Wert zentral auf dem Server landet und das andere
+     * Handy ihn erhält. [amount] = 0 löscht das Budget faktisch (keine Warnung mehr).
+     */
+    fun saveBudget(amount: Double, warnThreshold: Double) {
+        viewModelScope.launch {
+            monthlyBudgetDao.upsert(
+                MonthlyBudgetEntity(
+                    id = "global",
+                    amount = amount.coerceAtLeast(0.0),
+                    warnThreshold = warnThreshold.coerceIn(0.5, 1.0),
+                    updatedAt = System.currentTimeMillis(),
+                    dirty = 1,
+                )
+            )
+            syncScheduler.triggerOneShot()
+        }
     }
 
     private fun loadData() {

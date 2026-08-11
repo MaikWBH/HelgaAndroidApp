@@ -88,6 +88,7 @@ fun SettingsScreen(
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
     val quickEmojis by viewModel.quickEmojis.collectAsStateWithLifecycle()
     val exportJson by viewModel.exportJson.collectAsStateWithLifecycle()
+    val bulkAiState by viewModel.bulkAiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showLogoutDialog by remember { mutableStateOf(false) }
     var deleteList by remember { mutableStateOf<ShoppingListEntity?>(null) }
@@ -359,6 +360,59 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.sync_now))
+            }
+
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = stringResource(R.string.settings_ai_bulk_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+
+            OutlinedButton(
+                onClick = { viewModel.runBulkAi(BulkAiMode.NUTRITION) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !bulkAiState.isRunning,
+            ) {
+                Text(stringResource(R.string.settings_ai_bulk_nutrition))
+            }
+            OutlinedButton(
+                onClick = { viewModel.runBulkAi(BulkAiMode.CLASSIFY) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !bulkAiState.isRunning,
+            ) {
+                Text(stringResource(R.string.settings_ai_bulk_classify))
+            }
+            Button(
+                onClick = { viewModel.runBulkAi(BulkAiMode.BOTH) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !bulkAiState.isRunning,
+            ) {
+                if (bulkAiState.isRunning && bulkAiState.mode == BulkAiMode.BOTH) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.height(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                } else {
+                    Text(stringResource(R.string.settings_ai_bulk_both))
+                }
+            }
+            if (bulkAiState.isRunning) {
+                Text(
+                    text = stringResource(R.string.settings_ai_bulk_progress, bulkAiState.processed, bulkAiState.total),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (bulkAiState.total > 0) {
+                Text(
+                    text = stringResource(R.string.settings_ai_bulk_done, bulkAiState.updated, bulkAiState.failed),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable { viewModel.dismissBulkAiResult() },
+                )
             }
 
             Spacer(Modifier.height(8.dp))
