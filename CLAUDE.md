@@ -6,8 +6,13 @@ Offline-First Android-App für Rezeptverwaltung, KI-Rezepterstellung, Wochenplan
 
 KI-Funktionen laufen ausschließlich auf dem Sync-Server; die App sendet Prompts und empfängt Ergebnisse via Streaming (SSE).
 
-**Feature-Referenz:** `.claude/helga_features.md`  
-**Entwicklungsplan:** `.claude/development_plan.md`
+**Feature-Index (Routing-Einstieg):** `.claude/features/README.md`  
+**Entwicklungsplan (Historie Phase 0–14):** `.claude/development_plan.md`
+
+Die Verbesserung läuft Feature für Feature. Vor Arbeit an einem Feature den Index lesen, den
+zuständigen Bereich bestimmen und dessen `plan.md` öffnen — dort werden Aufgaben abgehakt und
+Entscheidungen protokolliert. Abkürzung: `/feature <bereich>`. Verbindliche Regeln für Code
+stehen in `.claude/guidelines/`.
 
 ---
 
