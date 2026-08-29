@@ -1,6 +1,6 @@
 # Feature: Einkaufsliste
 
-> **Status:** Interview erledigt · **Aufgaben:** 7 offen · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 5 offen (2 erledigt) · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐⭐
 
 Erster Bottom-Nav-Tab und Endpunkt des Kernablaufs Rezept → Wochenplan → Einkauf.
 
@@ -165,10 +165,11 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [ ] **A1** — `!!` in `ShoppingListScreen.kt:486-487` durch `let`-Block ersetzen · S · Impact mittel
 - [ ] **A2** — `key`-Parameter in den vier `items()`-Aufrufen ergänzen · S · Impact mittel
 - [ ] **A3** — Unit-Tests für `ShoppingUnitConverter` und `IngredientLineParser` · M · Impact hoch
-- [ ] **A4** — `LaunchedEffect(Unit)` in `HelgaNavGraph.kt:96-104` auf die Onboarding-Route
+- [x] **A4** — `LaunchedEffect(Unit)` in `HelgaNavGraph.kt:96-104` auf die Onboarding-Route
       eingrenzen, behebt Rotationsbug (Listenwechsel + Rauswurf aus Kochansicht) · S · Impact hoch
-- [ ] **A5** — `suggestItems()` um lokalen Room-Fallback ergänzen (Rezeptzutaten +
-      `ShoppingDao`-Namen), Server nur als Ergänzung · M · Impact hoch
+- [x] **A5** — `suggestItems()` um lokalen Room-Fallback ergänzt (Rezeptzutaten +
+      `ShoppingDao`-Namen) und Server-Aufruf auf 1,5 s begrenzt (vorher bis zu 15 s über den
+      globalen OkHttp-Timeout) · M · Impact hoch
 - [ ] **A6** — Genauigkeit der gelernten Gang-Zuordnung untersuchen (`assignAisle`,
       `AisleProductEntity`-Lernlogik) — größter genannter Reibungspunkt, Ursache noch offen · M ·
       Impact hoch
@@ -183,3 +184,5 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 | 2026-08-22 | Erledigte Items bleiben manuell löschbar, kein Autoclean | Interview: volle Kontrolle gewünscht |
 | 2026-08-22 | Barcode-Scan vorerst kein Ausbaufokus | Interview: wird nicht genutzt |
 | 2026-08-22 | Offline-Pflicht für die Einkaufsliste bestätigt; Sync-Effizienz (Geschwindigkeit, Datenvolumen) als Priorität festgehalten | Interview: nicht verhandelbare Anforderung |
+| 2026-08-22 | A4 umgesetzt: `LaunchedEffect(Unit)` in `HelgaNavGraph.kt` prüft jetzt zuerst `currentRoute == ROUTE_ONBOARDING`, bevor navigiert wird | Kleinster Eingriff, der die Zwangsnavigation auf den echten Erststart begrenzt, ohne Backstack-Restaurierung anzufassen |
+| 2026-08-22 | A5 umgesetzt: neue `searchItemNames`/`searchIngredientNames`-Queries in `ShoppingDao`/`RecipeDao`, `suggestItems()` kombiniert lokale Treffer mit einem auf 1,5 s begrenzten Server-Aufruf (`withTimeoutOrNull`) | Globaler OkHttp-Timeout (15 s, `NetworkModule.kt`) bewusst nicht angetastet, da er Sync/KI/Bild-Upload mitbeträfe; lokale lösung deckt den Offline-Fall vollständig ab |

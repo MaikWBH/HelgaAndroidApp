@@ -33,7 +33,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 
 | # | Bereich | Plan | Interview | Aufgaben | Priorität |
 |---|---------|------|-----------|----------|-----------|
-| 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 7 offen | ⭐⭐⭐ |
+| 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 5 offen (2 erledigt) | ⭐⭐⭐ |
 | 2 | Rezepte | [rezepte](rezepte/plan.md) | offen | – | ⭐⭐⭐ |
 | 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | offen | – | ⭐⭐⭐ |
 | 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | offen | – | ⭐⭐ |

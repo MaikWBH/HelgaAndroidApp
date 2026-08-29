@@ -114,6 +114,13 @@ interface RecipeDao {
     @Query("SELECT DISTINCT food FROM recipe_ingredients WHERE deleted = 0 AND food != '' ORDER BY food COLLATE NOCASE")
     fun observeDistinctIngredientNames(): Flow<List<String>>
 
+    @Query(
+        "SELECT DISTINCT food FROM recipe_ingredients WHERE deleted = 0 " +
+            "AND food LIKE '%' || :query || '%' COLLATE NOCASE " +
+            "ORDER BY food COLLATE NOCASE LIMIT 20"
+    )
+    suspend fun searchIngredientNames(query: String): List<String>
+
     @Query("SELECT * FROM recipe_instructions WHERE recipeId = :recipeId")
     suspend fun instructionsByRecipeId(recipeId: String): List<InstructionEntity>
 

@@ -94,6 +94,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
     val showBottomNav = currentRoute in ROOT_ROUTES
 
     LaunchedEffect(Unit) {
+        if (currentRoute != ROUTE_ONBOARDING) return@LaunchedEffect
         val conn = preferences.connection.first()
         if (conn.isConfigured) {
             val dest = if (initialImportUrl != null) ROUTE_RECIPE_URL_IMPORT else ROUTE_SHOPPING
