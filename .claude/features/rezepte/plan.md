@@ -50,6 +50,11 @@ Damit ist der gesamte Umfang der archivierten Phasen 15, 16 und 19 aus
 Offen bis zum Interview. Auffällig: `RecipeListScreen.kt` hat keine eigene SearchBar-Composable
 — die Suche hängt in `FilterBar`. Ob das im Alltag gut auffindbar ist, klärt Frage 1.
 
+**Rotationsbug betrifft auch die Kochansicht.** Aus dem Einkaufslisten-Interview: Eine
+Bildschirmdrehung während des Kochens (`RecipeCookScreen`) wirft unvermittelt zurück in die
+Einkaufsliste. Ursache und Fix liegen in
+[einkaufsliste/plan.md](../einkaufsliste/plan.md) A4 bzw. [plattform/plan.md](../plattform/plan.md).
+
 ### Code-Qualität
 - `!!`-Zugriffe: `RecipeCookScreen.kt:165,166,170` auf `activeTimer`,
   `RecipeListScreen.kt:220,240` auf `todayRecipe` — fünf der zehn Projektfälle liegen hier.

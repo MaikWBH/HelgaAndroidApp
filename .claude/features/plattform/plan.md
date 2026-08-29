@@ -37,6 +37,20 @@ Build und CI. Kein Fachbereich, sondern die Hülle.
 ### Funktion & UX
 - Vier von elf Bereichen liegen nicht im Bottom-Nav. Ob die Einstiegspunkte auffindbar sind,
   klärt Frage 2.
+- **Rotationsbug in `HelgaNavGraph.kt:96-104`** (aus dem Einkaufslisten-Interview): Ein
+  unconditional feuernder `LaunchedEffect(Unit)` navigiert bei jeder Activity-Neuerstellung
+  (z. B. Bildschirmdrehung, da `MainActivity` kein `android:configChanges` deklariert) zurück zu
+  `ROUTE_SHOPPING` — unabhängig vom aktuellen Screen. Wirft aus der Kochansicht und wechselt die
+  aktive Einkaufsliste. Volle Ursachenanalyse und der eigentliche Fix liegen in
+  [einkaufsliste/plan.md](../einkaufsliste/plan.md) A4, um die Aufgabe nicht doppelt zu führen —
+  hier nur der Verweis, da die Datei strukturell in diesen Bereich gehört.
+- **Wear OS ist kein eigenständiges Wear-App-Modul.** `MainActivity.kt` unterscheidet zur
+  Laufzeit per `isRunningOnWearOs()` (`packageManager.hasSystemFeature(FEATURE_WATCH)`) und
+  zeigt dieselbe APK entweder als Handy-Nav-Graph oder als `ShoppingListWearScreen`. Ohne
+  separates `:wear`-Gradle-Modul installiert sich die App nicht automatisch auf eine gepaarte
+  Uhr — der Nutzer muss manuell sideloaden. Aus dem Einkaufslisten-Interview (Frage 7): genau
+  das war der Grund, warum der Wear-Screen nie genutzt wurde. Ausbau der Abhak-Funktion selbst
+  steht in [einkaufsliste/plan.md](../einkaufsliste/plan.md) A7, die Modul-Umstellung hier in A3.
 
 ### Code-Qualität
 - `items()` ohne `key`: `ShoppingListWearScreen.kt:69`.
@@ -73,6 +87,10 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — `key`-Parameter in `ShoppingListWearScreen.kt:69` ergänzen · S · Impact mittel
 - [ ] **A2** — Durchsicht aller 82 `contentDescription = null`: dekorativ belassen, Bedienelemente beschriften · M · Impact hoch
+- [ ] **A3** — Eigenständiges `:wear`-Gradle-Modul statt Laufzeit-Unterscheidung in
+      `MainActivity.kt`, damit die Watch-App automatisch mit der Handy-App auf die gepaarte Uhr
+      installiert wird · L · Impact mittel — Voraussetzung für
+      [einkaufsliste/plan.md](../einkaufsliste/plan.md) A7
 
 _Weitere Aufgaben nach dem Interview._
 

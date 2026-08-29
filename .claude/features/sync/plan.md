@@ -57,6 +57,10 @@ wirksamer als jede Einzelkorrektur.
 
 ## Offene Fragen
 
+**Aus dem Einkaufslisten-Interview:** Sync-Geschwindigkeit und Datenvolumen sind dem Nutzer
+explizit wichtig — die Einkaufsliste muss offline funktionieren, der Sync danach schnell und
+datensparsam sein. Als Priorität für dieses Interview vermerkt.
+
 1. Fällt dir im Alltag auf, wenn der Sync scheitert — oder merkst du es erst an fehlenden Daten?
 2. Nutzt du mehr als ein Gerät? Davon hängt ab, wie schwer die beiden Sync-Lücken wiegen.
 3. Wie oft ist der Server erreichbar — dauerhaft im Heimnetz oder nur zeitweise?

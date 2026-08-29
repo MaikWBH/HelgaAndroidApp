@@ -42,6 +42,10 @@ bisherigen Dokumentation auftauchte.
 ### Funktion & UX
 Offen bis zum Interview.
 
+**Aus dem Einkaufslisten-Interview:** Die Kostenschätzung in der Einkaufsliste wird nicht
+genutzt, weil das Fotografieren langer Bons zu mühsam ist — das Hindernis liegt im
+Scan-Ablauf hier, nicht in der Kostenschätzung selbst. Guter Startpunkt für Frage 1 unten.
+
 ### Code-Qualität
 - `items()` ohne `key`: `ProductPriceDetailScreen.kt:117` (history.points).
 - `ReceiptListViewModel` stellt nur `receipts` bereit — keine Suche, kein Filter, keine
