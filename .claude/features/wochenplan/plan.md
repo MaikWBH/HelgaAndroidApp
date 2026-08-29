@@ -73,6 +73,11 @@ sind vollständig angebunden.
 
 ## Offene Fragen
 
+**Aus dem Rezepte-Interview:** Der Wunsch, die Rezeptsuche nach Tag und Zutat („Reis, Nudeln,
+vegetarisch") mit der automatischen Wochenplan-Erstellung zu verbinden — also den Plan gezielt
+aus einer Zutaten- oder Tag-Auswahl heraus generieren zu lassen, statt nur über die bestehenden
+Constraints. Als Ausgangspunkt für Frage 2 und 3 vermerkt, hier zu entscheiden.
+
 1. Nutzt du die Vorlagen? Falls ja, ist die fehlende Synchronisierung ein Problem oder egal?
 2. Wie oft trifft die KI-Planung, ohne dass du nachbessern musst — und was änderst du typisch?
 3. Ankerrezepte und tageweises Neuwürfeln: bekannt und genutzt, oder zu versteckt?

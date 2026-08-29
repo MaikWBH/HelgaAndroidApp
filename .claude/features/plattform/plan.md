@@ -1,6 +1,6 @@
 # Feature: Plattform-Integration
 
-> **Status:** Interview offen · **Aufgaben:** 0/0 · **Stand:** 2026-08-22 · **Priorität:** ⭐
+> **Status:** Interview offen · **Aufgaben:** 4 offen · **Stand:** 2026-08-22 · **Priorität:** ⭐
 
 Alles, was die App mit dem Gerät und der Auslieferung verbindet: Widget, Wear OS, Share-Target,
 Build und CI. Kein Fachbereich, sondern die Hülle.
@@ -37,13 +37,6 @@ Build und CI. Kein Fachbereich, sondern die Hülle.
 ### Funktion & UX
 - Vier von elf Bereichen liegen nicht im Bottom-Nav. Ob die Einstiegspunkte auffindbar sind,
   klärt Frage 2.
-- **Rotationsbug in `HelgaNavGraph.kt:96-104`** (aus dem Einkaufslisten-Interview): Ein
-  unconditional feuernder `LaunchedEffect(Unit)` navigiert bei jeder Activity-Neuerstellung
-  (z. B. Bildschirmdrehung, da `MainActivity` kein `android:configChanges` deklariert) zurück zu
-  `ROUTE_SHOPPING` — unabhängig vom aktuellen Screen. Wirft aus der Kochansicht und wechselt die
-  aktive Einkaufsliste. Volle Ursachenanalyse und der eigentliche Fix liegen in
-  [einkaufsliste/plan.md](../einkaufsliste/plan.md) A4, um die Aufgabe nicht doppelt zu führen —
-  hier nur der Verweis, da die Datei strukturell in diesen Bereich gehört.
 - **Wear OS ist kein eigenständiges Wear-App-Modul.** `MainActivity.kt` unterscheidet zur
   Laufzeit per `isRunningOnWearOs()` (`packageManager.hasSystemFeature(FEATURE_WATCH)`) und
   zeigt dieselbe APK entweder als Handy-Nav-Graph oder als `ShoppingListWearScreen`. Ohne
@@ -51,6 +44,31 @@ Build und CI. Kein Fachbereich, sondern die Hülle.
   Uhr — der Nutzer muss manuell sideloaden. Aus dem Einkaufslisten-Interview (Frage 7): genau
   das war der Grund, warum der Wear-Screen nie genutzt wurde. Ausbau der Abhak-Funktion selbst
   steht in [einkaufsliste/plan.md](../einkaufsliste/plan.md) A7, die Modul-Umstellung hier in A3.
+
+### Bugs
+
+**`POST_NOTIFICATIONS` fehlt — alle Benachrichtigungen sind auf modernen Geräten wirkungslos.**
+`app/src/main/AndroidManifest.xml:5-8` deklariert nur `INTERNET`, `ACCESS_NETWORK_STATE`,
+`WAKE_LOCK` und `CAMERA`. Die Berechtigung fehlt vollständig, und es gibt nirgends eine
+Laufzeitabfrage dafür — der einzige Permission-Launcher im Projekt betrifft die Kamera
+(`ReceiptScanScreen.kt:112`). Bei `targetSdk = 35` verwirft Android 13+ (API 33+) damit jede
+`nm.notify()`-Zustellung still.
+
+Betroffen sind die beiden bereits fertig gebauten Erinnerungen in
+`app/src/main/kotlin/com/helga/android/data/sync/NotificationScheduler.kt` (`NOTIFY_ID_SHOPPING`,
+`NOTIFY_ID_COOK`) samt ihren Schaltern in den Einstellungen — sie sehen aus wie funktionierende
+Features, tun aber nichts. Gefunden im Rezepte-Interview, weil derselbe Mangel den dort
+gewünschten Timer mit Benachrichtigung blockiert ([rezepte](../rezepte/plan.md) A8).
+
+Die übrige Infrastruktur ist brauchbar: Kanal `helga_reminders`, `ensureChannel()` und
+`notify()` lassen sich wiederverwenden; ein Timer braucht allerdings `IMPORTANCE_HIGH` statt des
+aktuellen `IMPORTANCE_DEFAULT`.
+
+**Rotationsbug in `HelgaNavGraph.kt` — behoben.** Ein unconditional feuernder
+`LaunchedEffect(Unit)` navigierte bei jeder Activity-Neuerstellung (Bildschirmdrehung, da
+`MainActivity` kein `android:configChanges` deklariert) zurück zu `ROUTE_SHOPPING`, unabhängig
+vom aktuellen Screen. Fix in [einkaufsliste/plan.md](../einkaufsliste/plan.md) A4, Commit
+`f223441`. Gerätetest steht noch aus.
 
 ### Code-Qualität
 - `items()` ohne `key`: `ShoppingListWearScreen.kt:69`.
@@ -91,6 +109,10 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       `MainActivity.kt`, damit die Watch-App automatisch mit der Handy-App auf die gepaarte Uhr
       installiert wird · L · Impact mittel — Voraussetzung für
       [einkaufsliste/plan.md](../einkaufsliste/plan.md) A7
+- [ ] **A4** — `POST_NOTIFICATIONS` im Manifest deklarieren und zur Laufzeit anfragen (Muster:
+      Kamera-Abfrage in `ReceiptScanScreen.kt:112`). Ohne das sind die bestehenden Einkaufstag-
+      und Koch-Erinnerungen auf Android 13+ wirkungslos · S · **Impact hoch** — Voraussetzung
+      für [rezepte](../rezepte/plan.md) A8 (Timer mit Benachrichtigung)
 
 _Weitere Aufgaben nach dem Interview._
 

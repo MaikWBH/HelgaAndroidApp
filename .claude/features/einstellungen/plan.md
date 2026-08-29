@@ -39,6 +39,11 @@ Funktionen die Sammelstelle für Einstellungen aller anderen Bereiche.
 ### Funktion & UX
 - `SettingsScreen.kt` sammelt die Einstellungen aller elf Bereiche in einer flachen Ansicht.
   Ob die Gliederung bei diesem Umfang noch trägt, klärt Frage 1.
+- **Zwei Schalter schalten ins Leere.** `setNotifyShoppingDay` und `setNotifyCookReminder`
+  steuern Benachrichtigungen, die auf Android 13+ gar nicht zugestellt werden — im Manifest
+  fehlt `POST_NOTIFICATIONS`, und es gibt keine Laufzeitabfrage. Gefunden im Rezepte-Interview;
+  Analyse und Aufgabe in [plattform](../plattform/plan.md) A4. Bis dahin versprechen die
+  Einstellungen eine Funktion, die es nicht gibt.
 
 ### Code-Qualität
 - `!!`-Zugriff: `SettingsScreen.kt:352` auf `syncError`.

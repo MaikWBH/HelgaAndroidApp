@@ -34,7 +34,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | # | Bereich | Plan | Interview | Aufgaben | Priorität |
 |---|---------|------|-----------|----------|-----------|
 | 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 5 offen (2 erledigt) | ⭐⭐⭐ |
-| 2 | Rezepte | [rezepte](rezepte/plan.md) | offen | – | ⭐⭐⭐ |
+| 2 | Rezepte | [rezepte](rezepte/plan.md) | erledigt | 10 offen | ⭐⭐⭐ |
 | 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | offen | – | ⭐⭐⭐ |
 | 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | offen | – | ⭐⭐ |
 | 5 | KI | [ki](ki/plan.md) | offen | – | ⭐⭐ |
@@ -43,7 +43,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | 8 | Statistik | [statistik](statistik/plan.md) | offen | – | ⭐ |
 | 9 | Sync | [sync](sync/plan.md) | offen | – | ⭐⭐ |
 | 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | offen | – | ⭐ |
-| 11 | Plattform-Integration | [plattform](plattform/plan.md) | offen | – | ⭐ |
+| 11 | Plattform-Integration | [plattform](plattform/plan.md) | offen | 4 offen | ⭐ |
 
 **Interview-Reihenfolge:** 1 → 2 → 3 (Kernablauf und die drei Bottom-Nav-Tabs), dann 4 → 5 → 6,
 danach 7–11. Ein Bereich pro Runde: Fragen stellen, Antworten einarbeiten, Ziele und Backlog
@@ -82,6 +82,7 @@ Gilt für alle Pläne, hier einmal zentral festgehalten statt elfmal wiederholt:
 | `items()` ohne `key` | 9 Stellen in Compose-Listen | [compose-performance](../guidelines/compose-performance.md) |
 | `contentDescription = null` | 82 Stellen — je Fall zu prüfen, ob dekorativ oder Bedienelement | [ux-accessibility](../guidelines/ux-accessibility.md) |
 | Nicht gesyncte Entities | 3 von 25: `WeekplanTemplateEntity` und `WeekplanTemplateEntryEntity` fehlen überall; `OffProductEntity` hat DAO und Serverseite fertig, aber keinen Aufruf in `SyncEngine` | [sync-patterns](../guidelines/sync-patterns.md) |
+| Benachrichtigungen wirkungslos | `POST_NOTIFICATIONS` fehlt im Manifest und wird nie zur Laufzeit angefragt — bei `targetSdk 35` verwirft Android 13+ jede Zustellung. Betrifft die fertigen Einkaufstag- und Koch-Erinnerungen; Aufgabe in [plattform](plattform/plan.md) A4 | – |
 
 ## Bewusst offene Punkte
 

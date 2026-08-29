@@ -40,6 +40,12 @@ Offen bis zum Interview.
 ### Code-Qualität
 Keine `!!`-Zugriffe, keine `items()`-Verstöße in diesem Bereich.
 
+### Funktion & UX
+`RecipeJsonLdParser` wird in `AiGenerateViewModel.kt:91` und `AiRemixViewModel.kt:102` genutzt,
+im URL-Import-Pfad dagegen nicht — dort läuft alles serverseitig ohne Fallback. Ein fertiger
+Client-Parser liegt damit ungenutzt herum; mögliche Wiederverwendung siehe
+[rezepte](../rezepte/plan.md) A10.
+
 ### Tests
 Keine. `RecipeJsonLdParser` ist reine Parselogik und unmittelbar testbar. Für `SseClient` wäre
 ein Test gegen einen Fake-Stream sinnvoll — Abbruch mitten im Stream ist der Fehlerfall, der im
