@@ -1,6 +1,6 @@
 # Feature: Bons & Kosten
 
-> **Status:** Interview offen · **Aufgaben:** 0/0 · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
 
 Kassenbon-Scan, Preisverlauf und Ausgabenüberblick. Der größte Bereich, der in keiner
 bisherigen Dokumentation auftauchte.
@@ -40,11 +40,14 @@ bisherigen Dokumentation auftauchte.
 ## Bekannte Lücken
 
 ### Funktion & UX
-Offen bis zum Interview.
-
-**Aus dem Einkaufslisten-Interview:** Die Kostenschätzung in der Einkaufsliste wird nicht
-genutzt, weil das Fotografieren langer Bons zu mühsam ist — das Hindernis liegt im
-Scan-Ablauf hier, nicht in der Kostenschätzung selbst. Guter Startpunkt für Frage 1 unten.
+**Root Cause bestätigt:** Der gesamte Bereich hat genau zwei Einstiege, beide innerhalb der
+Einkaufsliste — `ShoppingListScreen.kt:301-308` (Menüpunkt „Kassenzettel" im Dreipunkt-Overflow,
+dritter Eintrag) und `ShoppingListScreen.kt:390-392` (bedingtes Erinnerungs-Banner nach
+Einkaufsabschluss). Kein Bottom-Nav-Tab, kein Zugriff außerhalb der Einkaufsliste
+(`HelgaNavGraph.kt:83-87`, `bottomNavItems` enthält nur Einkaufsliste/Rezepte/Wochenplan). Das
+erklärt den Befund aus dem Einkaufslisten-Interview (Kostenschätzung ungenutzt, weil Scannen zu
+mühsam wirkt) direkter als angenommen: Nicht die Erkennungsqualität ist das Problem, sondern die
+Auffindbarkeit selbst.
 
 ### Code-Qualität
 - `items()` ohne `key`: `ProductPriceDetailScreen.kt:117` (history.points).
@@ -59,25 +62,41 @@ String-Verarbeitung — ohne Tests ist jede Änderung daran riskant.
 ### Sync
 `receipts`, `receiptItems` und `monthlyBudgets` sind vollständig angebunden. Keine Lücke.
 
-## Offene Fragen
+## Fragen
 
-1. Wie zuverlässig erkennt der Scan die Positionen inzwischen — wie oft musst du korrigieren?
-2. Scannst du jeden Bon oder nur ausgewählte? Danach richtet sich, wie viel Aufwand die
-   Listenansicht verdient.
-3. Der Abgleich mit der Einkaufsliste ist abschaltbar. Nutzt du ihn, und was tust du mit dem
-   Ergebnis?
-4. Preisverlauf: Willst du bei einer Preissteigerung aktiv gewarnt werden, oder reicht die
-   Ansicht auf Abruf?
-5. Das Budget ist monatlich. Brauchst du feinere Zeiträume oder ein Budget je Markt?
-6. Fehlt eine Auswertung, die du regelmäßig manuell zusammenrechnest?
-7. Sollen Bons nach einer Zeit automatisch entfernt werden, oder ist der Verlauf dauerhaft
-   wertvoll?
-8. Der Scan braucht den Server. Soll es einen brauchbaren Offline-Weg geben, oder ist das
-   akzeptabel?
+1. **Wie zuverlässig erkennt der Scan die Positionen — wie oft musst du korrigieren?**
+   Antwort: Scannt kaum noch. Grund ist nicht die Erkennungsqualität, sondern dass der
+   Einstiegspunkt zu versteckt ist — sollte von außerhalb der Einkaufsliste per Klick
+   erreichbar sein.
+2. **Scannst du jeden Bon oder nur ausgewählte?**
+   Antwort: Fast nie (gleicher Grund wie oben).
+3. **Nutzt du den Abgleich mit der Einkaufsliste, und was tust du mit dem Ergebnis?**
+   Antwort: Würde Mehrwert bringen, bringt aber nichts, solange kaum gescannt wird — hängt
+   direkt an Frage 1/2.
+4. **Preisverlauf: aktive Warnung bei Preissteigerung oder Ansicht auf Abruf?**
+   Antwort: Ansicht auf Abruf reicht.
+5. **Budget: feinere Zeiträume oder je Markt nötig?**
+   Antwort: Monatlich reicht, keine Änderung.
+6. **Fehlt eine Auswertung, die manuell zusammengerechnet wird?**
+   Antwort: Nein.
+7. **Sollen Bons automatisch nach einer Zeit entfernt werden?**
+   Antwort: Ja, aber einstellbar — Startwert 3 Monate.
+8. **Braucht der Scan einen Offline-Weg?**
+   Antwort: Server-Pflicht ist akzeptabel, kein Offline-Weg nötig.
+9. **Nachfrage — wo soll der Ein-Klick-Zugang liegen?**
+   Antwort: Eigener Bottom-Nav-Tab (viertes Icon neben Einkaufsliste/Rezepte/Wochenplan), führt
+   auf `ReceiptListScreen` — die bietet bereits Scan/Kostenüberblick/Preisverlauf als
+   Unterpunkte, keine neue Screen-Struktur nötig.
 
 ## Ziele
 
-_Nach dem Interview zu füllen._
+- Bon-Scan und Preisverlauf aus dem Alltag erreichbar machen, statt im Einkaufslisten-Menü
+  vergraben zu bleiben — das ist die eigentliche Ursache für die Nichtnutzung, nicht die
+  Scan-Qualität.
+- Bestehende Funktionalität (Abgleich, Preisverlauf, Budget) unverändert lassen — sie wurde im
+  Interview inhaltlich nicht beanstandet, nur der Zugang dazu.
+- Bon-Verlauf soll nicht unbegrenzt wachsen, aber die Aufbewahrungsdauer soll der Nutzer selbst
+  bestimmen können.
 
 ## Backlog
 
@@ -85,6 +104,12 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Unit-Tests für `ReceiptItemNormalizer` · M · Impact hoch
 - [ ] **A2** — `key`-Parameter in `ProductPriceDetailScreen.kt:117` ergänzen · S · Impact mittel
+- [ ] **A3** — Vierten Bottom-Nav-Tab „Bons" ergänzen, der auf `ROUTE_RECEIPTS` zeigt; Menüpunkt
+  „Kassenzettel" und das Erinnerungs-Banner in der Einkaufsliste können bleiben (zusätzlicher
+  Weg schadet nicht) · M · Impact hoch — behebt die Kernursache aus dem Interview
+- [ ] **A4** — Einstellbare automatische Löschung alter Bons (Einstellungen: Zeitraum, Default 3
+  Monate; WorkManager- oder Sync-getriggerte Bereinigung von `ReceiptEntity`/`ReceiptItemEntity`
+  älter als Grenze) · M · Impact mittel
 
 _Weitere Aufgaben nach dem Interview._
 
@@ -92,3 +117,7 @@ _Weitere Aufgaben nach dem Interview._
 
 | Datum | Entscheidung | Begründung |
 |-------|--------------|------------|
+| 2026-08-30 | Vierter Bottom-Nav-Tab statt App-Shortcut oder TopBar-Icon | Nutzer bevorzugt den klassischen, immer sichtbaren Weg gegenüber weniger entdeckbaren Alternativen |
+| 2026-08-30 | Bestehende Einstiege (Menüpunkt, Erinnerungs-Banner) bleiben zusätzlich bestehen | Kein Grund zum Entfernen, der neue Tab ergänzt statt ersetzt |
+| 2026-08-30 | Automatische Bon-Löschung wird einstellbar, nicht fest | Nutzer will Kontrolle über die Aufbewahrungsdauer, Startwert 3 Monate |
+| 2026-08-30 | Preiswarnung, Budget-Granularität, Offline-Scan bleiben unverändert | Im Interview kein Bedarf geäußert |
