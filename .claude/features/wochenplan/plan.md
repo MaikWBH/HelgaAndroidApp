@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview teilweise (4/8 Fragen, Rest folgt) · **Aufgaben:** 11 offen · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 14 offen · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -41,11 +41,13 @@ Projekts:
   nach Feedback, Favorit- und Bio-Bonus; zufällige Wahl aus den Top 40 % der Kandidaten
   (`WeekplanViewModel.kt:402` ff.). Passt zum Commit „Toten KI-Wochenplan-Endpunkt entfernen"
   (`807a50e`), der die serverseitige LLM-Anbindung bereits vor dieser Session entfernt hat.
-- **Vorlagen:** aktuelle Woche als Vorlage sichern, anwenden, löschen (`saveCurrentWeekAsTemplate`,
-  `applyTemplate`, `deleteTemplate`, `TemplateSheet`) sowie `repeatLastWeek`.
+- **Vorlagen (toter Code, siehe „Bugs"):** `saveCurrentWeekAsTemplate`, `applyTemplate`,
+  `deleteTemplate`, `TemplateSheet` existieren vollständig, sind aber an keiner Stelle im UI
+  erreichbar. Erreichbar ist nur `repeatLastWeek` über das Überlaufmenü.
 - **Export:** einzelner Tag oder ganze Woche in eine wählbare Einkaufsliste
   (`exportToShoppingList`, `exportWeekToShoppingList`, `ShoppingListPickerDialog`) — Zutaten
-  werden dabei einheitenbewusst zusammengeführt.
+  werden dabei einheitenbewusst zusammengeführt. Berücksichtigt nur Rezept-Zutaten; freie
+  Extra-Einträge (`WeekplanExtraEntity`) werden dabei **nicht** mit exportiert (siehe „Bugs").
 - **Allergene:** `userAllergies` blendet Warnungen im Plan ein.
 
 Der Umfang der archivierten Phase 18 ist damit vollständig umgesetzt.
@@ -98,11 +100,26 @@ Extra-Dialog ist 2026 verbreiteter Standard bei Meal-Planning-Generatoren („lo
 and regenerate the rest", Zuweisung per Ein-Tipp aus der Tageskarte). Deckt sich mit dem
 unverdrahteten Ankerrezepte-Mechanismus — die Datenbasis existiert bereits.
 
+**Wochenplan-Vorlagen sind komplett unerreichbar — nicht nur ein einzelner Menüpunkt fehlt.**
+Verifiziert: `viewModel.saveCurrentWeekAsTemplate`, `applyTemplate`, `deleteTemplate` und
+`templates` haben **je null Aufrufe** irgendwo im UI-Code. `TemplateSheet`
+(`WeekplanScreen.kt:1216`) wird nie aufgerufen. Das Überlaufmenü hat genau einen Eintrag
+(„Letzte Woche wiederholen"). Zehn Vorlagen-Strings (`strings.xml:255-285`), zwei Room-Entities,
+ein eigenes Repository (`WeekplanTemplateRepository.kt`) und ein DAO existieren — für ein
+Feature, das kein Nutzer je zu Gesicht bekommt. Erklärt die Antwort zu Frage 1 vollständig
+(unten). Entscheidung: ersatzlos entfernen statt fertigzubauen, siehe Backlog A1 (ersetzt).
+
+**Extra-Einträge fehlen beim Export in die Einkaufsliste.** `WeekplanRepository.kt:94-113`
+(`exportToShoppingList`) liest ausschließlich `weekplanDao.recipesForDay(dayId)` — freie
+Extra-Einträge (`WeekplanExtraEntity`, z. B. „Brot besorgen") werden nie mitgenommen, weder bei
+Einzeltag- noch bei Wochen-Export. Siehe Backlog A12.
+
 ### Funktion & UX
 Größter offener Punkt aus dem Interview: die KI-Planung schlägt oft ungeeignete Rezepte vor
 (Süßspeisen als Abendessen, siehe „Bugs"); Constraints-Dialog soll größer und direkter ins
-Wochenplan-UI eingreifen statt als separates Sheet (Backlog A8). Rest offen bis zum Rest des
-Interviews (Fragen 5-8 stehen noch aus).
+Wochenplan-UI eingreifen statt als separates Sheet (Backlog A8). Export soll vor dem Übernehmen
+eine abwählbare Produktvorschau zeigen (Backlog A13). Mehrere Rezepte pro Mahlzeit mit dezenter
+farblicher Unterscheidung gewünscht (Backlog A14).
 
 ### Code-Qualität
 - `!!`-Zugriffe: `WeekplanScreen.kt:156` (`exportPicker`), `WeekplanViewModel.kt:531`
@@ -118,14 +135,12 @@ Keine. Die Constraint-Auswertung der KI-Planung und die Aggregation in `weekBala
 `weekNutrition` sind reine Logik und ohne Emulator testbar.
 
 ### Sync
-**Belegte Lücke.** `WeekplanTemplateEntity` und `WeekplanTemplateEntryEntity` kommen in
-`app/src/main/kotlin/com/helga/android/data/remote/dto/SyncDto.kt`,
-`app/src/main/kotlin/com/helga/android/data/sync/SyncEngine.kt` und
-`app/src/main/kotlin/com/helga/android/data/local/dao/SyncDao.kt` **nirgends** vor. Wochenplan-
-Vorlagen existieren damit nur auf dem Gerät, auf dem sie angelegt wurden: kein Abgleich mit dem
-Server, kein zweites Gerät, Verlust bei Neuinstallation. Alle übrigen fünf Entities des Bereichs
-(`weekplanDays`, `weekplanRecipes`, `weekplanExtras`, `weekplanSettings`, `weekplanConstraints`)
-sind vollständig angebunden.
+`WeekplanTemplateEntity` und `WeekplanTemplateEntryEntity` kommen in `SyncDto.kt`, `SyncEngine.kt`
+und `SyncDao.kt` nirgends vor — ursprünglich als Lücke geführt, mittlerweile gegenstandslos: das
+Vorlagen-Feature selbst ist unerreichbarer Code (siehe „Bugs") und wird auf Nutzerwunsch entfernt
+statt angebunden (Backlog A1). Alle übrigen fünf Entities des Bereichs (`weekplanDays`,
+`weekplanRecipes`, `weekplanExtras`, `weekplanSettings`, `weekplanConstraints`) sind vollständig
+angebunden.
 
 ## Offene Fragen
 
@@ -136,11 +151,14 @@ Constraints. Als Ausgangspunkt für Frage 2 und 3 vermerkt, hier zu entscheiden.
 
 1. Nutzt du die Vorlagen? Falls ja, ist die fehlende Synchronisierung ein Problem oder egal?
 
-   **Nicht eindeutig beantwortet.** Die Frage war unscharf gestellt — „Vorlagen" wurde gefragt,
-   gemeint waren die synclosen `WeekplanTemplateEntity`/`WeekplanTemplateEntryEntity` (A1). Die
-   Antwort bezog sich stattdessen auf die **Constraints** (Einstell-Optionen der Planung: max.
-   Fleisch, min. Vegetarisch etc.) — ein anderes Feature, siehe unten. Bleibt offen für eine
-   spätere Runde; A1 bleibt unabhängig davon ein echter Defekt.
+   **Zunächst missverstanden, dann aufgelöst.** Die Frage war unscharf gestellt — „Vorlagen"
+   wurde gefragt, gemeint waren die synclosen `WeekplanTemplateEntity`/`WeekplanTemplateEntryEntity`.
+   Die erste Antwort bezog sich stattdessen auf die **Constraints** (Einstell-Optionen der
+   Planung: max. Fleisch, min. Vegetarisch etc.) — ein anderes Feature, siehe unten. In der
+   zweiten Runde direkt nachgefragt und geklärt: Beim Nachgehen zeigte sich, dass die Vorlagen
+   im UI **komplett unerreichbar** sind (siehe „Bekannte Lücken → Bugs") — die Antwort „weiß
+   nicht was gemeint ist" erklärt sich damit von selbst. **Entscheidung: ersatzlos entfernen**,
+   siehe Backlog A1 (ersetzt die ursprüngliche Sync-Aufgabe).
 
    **Antwort zu den Constraints (statt Vorlagen):** Werden **selten genutzt** — mögliche
    Vereinfachung oder Verschiebung in die Einstellungen. Die automatische Planerstellung selbst
@@ -170,14 +188,31 @@ Constraints. Als Ausgangspunkt für Frage 2 und 3 vermerkt, hier zu entscheiden.
    Markern — mehr als ein drittes festes Flag. Braucht eine Datenmodell-Entscheidung (drittes
    Boolean-Feld vs. Tag-artiges System) vor der Umsetzung, siehe Backlog A11.
 
-5. *(noch nicht gestellt)* Der Nährwert-Trend steht direkt im Plan. Nützlich beim Planen oder
-   eher Beiwerk?
-6. *(noch nicht gestellt)* Sollen mehrere Mahlzeiten pro Tag planbar sein (Mittag/Abend), oder
-   bleibt es bei einer?
-7. *(noch nicht gestellt)* Fehlt eine Ansicht über mehrere Wochen hinweg, oder reicht die
-   Wochennavigation?
-8. *(noch nicht gestellt)* Beim Export: soll die Zielliste gefragt werden wie bisher, oder immer
-   die Standardliste?
+5. Der Nährwert-Trend steht direkt im Plan. Nützlich beim Planen oder eher Beiwerk?
+
+   **Antwort:** Beiwerk, stört aber nicht. Bleibt unverändert, keine Aufgabe.
+
+6. Sollen mehrere Mahlzeiten pro Tag planbar sein (Mittag/Abend), oder bleibt es bei einer?
+
+   **Antwort:** Mehrere Rezepte pro Mahlzeit sollen möglich sein (z. B. mehrere Gerichte an
+   einem Abend), mit einer Art Tag zur Unterscheidung der Mahlzeit — dezente farbliche
+   Hervorhebung je Mahlzeitentyp gewünscht (z. B. Frühstück grün). Fund beim Nachgehen: Mehrere
+   Rezepte pro Tag sind technisch schon möglich (`WeekplanRecipeEntity.position`), nur ohne
+   Mahlzeiten-Unterscheidung. Siehe Backlog A14.
+
+7. Fehlt eine Ansicht über mehrere Wochen hinweg, oder reicht die Wochennavigation?
+
+   **Antwort:** Nicht gestellt — Fragenkontingent durch die ergiebigen Antworten zu 1, 6 und 8
+   ausgeschöpft. Für eine Anschlussrunde vormerken.
+
+8. Beim Export: soll die Zielliste gefragt werden wie bisher, oder immer die Standardliste?
+
+   **Antwort:** Direkt die Standardliste vorschlagen statt neutral zu starten — aber vor dem
+   Übernehmen alle Produkte einmal in einer Vorschau zeigen und einzeln abwählbar machen (z. B.
+   Salz, das meist schon vorhanden ist). Nachträglich präzisiert: die Listen-Rückfrage soll
+   trotzdem bestehen bleiben, nur mit der Standardliste vorbelegt statt neutral. Zusätzlich
+   bestätigt: Extra-Einträge sollen ebenfalls in der Vorschau/Liste auftauchen (siehe „Bugs",
+   Backlog A12). Siehe Backlog A13.
 
 ## Ziele
 
@@ -186,14 +221,22 @@ Constraints. Als Ausgangspunkt für Frage 2 und 3 vermerkt, hier zu entscheiden.
 - Neuwürfeln respektiert dieselben Regeln wie die Erstplanung.
 - Ankerrezepte sind im UI erreichbar — Sperren und Tages-Reroll direkt in der Tageskarte.
 - Ein dritter/frei definierbarer Tagesmarker ist verfügbar.
+- Vorlagen-Feature ist vollständig entfernt statt halb fertig im Code zu liegen.
+- Export nimmt Extra-Einträge mit; Standardliste ist vorbelegt, Produkte einzeln abwählbar vor
+  der Übernahme.
+- Mehrere Rezepte pro Mahlzeit möglich, dezent farblich nach Mahlzeitentyp unterschieden.
 
-_Ziele zu Fragen 5-8 nach dem Rest des Interviews._
+_Ziel zu Frage 7 (Mehrwochen-Ansicht) nach der Anschlussrunde._
 
 ## Backlog
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — `WeekplanTemplateEntity` und `WeekplanTemplateEntryEntity` an den Sync anbinden: `SyncDto`, `SyncEngine`, `SyncDao` und Serverseite in `server/app/sync.py` · L · Impact hoch
+- [ ] **A1** — Vorlagen-Feature ersatzlos ausbauen (Nutzerentscheidung, nicht sync-fähig machen):
+      `WeekplanTemplateEntity`, `WeekplanTemplateEntryEntity`, `WeekplanTemplateDao`,
+      `WeekplanTemplateRepository.kt`, `TemplateSheet` in `WeekplanScreen.kt`, zehn Strings
+      (`strings.xml:255-285`), Room-Migration zum sauberen Entfernen der Tabellen · M · Impact
+      niedrig
 - [ ] **A2** — `anchorDays[day.id]!!` in `WeekplanViewModel.kt:531` gegen fehlenden Schlüssel absichern · S · Impact hoch
 - [ ] **A3** — `!!` in `WeekplanScreen.kt:156` auflösen · S · Impact mittel
 - [ ] **A4** — `key`-Parameter in `WeekplanScreen.kt:563` und `WeekplanRecipePickerScreen.kt:194` ergänzen · S · Impact mittel
@@ -215,11 +258,25 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [ ] **A11** — Tagesmarker erweitern: „Auswärts/kein Kochen" plus nutzerdefinierte Marker;
       Datenmodell-Frage (drittes Boolean-Feld vs. Tag-artiges System) braucht eigene Rückfrage
       vor der Umsetzung · L · Impact mittel
+- [ ] **A12** — Extra-Einträge (`WeekplanExtraEntity`) in `exportToShoppingList()`
+      (`WeekplanRepository.kt:94-113`) mit exportieren, aktuell nur Rezept-Zutaten · M · Impact
+      hoch
+- [ ] **A13** — Export-Vorschau vor dem Übernehmen: alle Produkte (inkl. Extras aus A12) zeigen,
+      einzeln abwählbar; Listen-Rückfrage bleibt bestehen, aber mit der Standardliste vorbelegt
+      statt neutral zu starten · M · Impact hoch
+- [ ] **A14** — Mahlzeiten-Tag je `WeekplanRecipeEntity`-Eintrag (mehrere Rezepte pro Mahlzeit
+      möglich, `position` existiert bereits als Sortierbasis), dezente Material-3-Tonfarbe je
+      Mahlzeitentyp plus Textlabel (nie Farbe allein, siehe
+      [ux-accessibility](../../guidelines/ux-accessibility.md) Regel 7); Room-Migration nötig ·
+      L · Impact mittel
 
-_Weitere Aufgaben zu den Fragen 5-8 nach dem Rest des Interviews._
+_Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 
 ## Entscheidungen
 
 | Datum | Entscheidung | Begründung |
 |-------|--------------|------------|
 | 2026-08-22 | „KI-Wochenplan"-Framing wird entfernt, Feature bleibt lokal (keine KI-Integration) | Entspricht bereits dem Nutzerwunsch „keine Tokens für den Wochenplan" — nur die Beschriftung war irreführend |
+| 2026-08-22 | Vorlagen-Feature wird ersatzlos entfernt statt fertiggebaut/synchronisiert | Feature ist im UI komplett unerreichbar; „Letzte Woche wiederholen" deckt den Bedarf bereits ab |
+| 2026-08-22 | Nährwert-Trend bleibt unverändert | Interview: Beiwerk, stört aber nicht |
+| 2026-08-22 | Export-Listenauswahl bleibt bestehen, aber mit Standardliste vorbelegt statt neutral | Interview: erst „nur Standardliste", nach Rückfrage präzisiert auf „Rückfrage behalten, nur vorbelegt" |
