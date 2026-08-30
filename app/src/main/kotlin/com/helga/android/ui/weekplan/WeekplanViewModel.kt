@@ -98,11 +98,18 @@ class WeekplanViewModel @Inject constructor(
     val days: StateFlow<List<WeekplanDayEntity>> = _weekOffset.flatMapLatest { offset ->
         val monday = mondayForOffset(offset)
         val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+        // Fenster bis zum Maximum der Zeitraum-Einstellung (7/10/14 Tage) statt fest auf
+        // Mo-So begrenzt – sonst blieben Tage 8-14 bei einer 10/14-Tage-Einstellung
+        // unsichtbar, und eine einmalige Verlängerung (addDayToWeek) hätte nichts anzuzeigen.
         repository.observeDaysBetween(
             startDate = monday.format(fmt),
-            endDate = monday.plusDays(6).format(fmt),
+            endDate = monday.plusDays(13).format(fmt),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Ob für die aktuell angezeigte Woche noch ein weiterer Tag angehängt werden kann (Deckel 14). */
+    val canExtendWeek: StateFlow<Boolean> = days.map { it.size < 14 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val weekplanRecipes: StateFlow<List<WeekplanRecipeEntity>> = _selectedDayId
         .flatMapLatest { id ->
@@ -292,6 +299,35 @@ class WeekplanViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Markiert einen Tag als "kein Kochen nötig" oder hebt das wieder auf. Beim Aktivieren
+     * werden bereits zugewiesene Rezepte/Extras entfernt (siehe [WeekplanRepository.setSkipped])
+     * – der Aufrufer muss vorher warnen, falls der Tag noch belegt war.
+     */
+    fun toggleSkipped(day: WeekplanDayEntity) {
+        viewModelScope.launch {
+            repository.setSkipped(day.id, day.isSkipped == 0)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    /**
+     * Verlängert die aktuell angezeigte Woche einmalig um einen Tag (bis zu 14 Tage ab
+     * Montag), ohne die globale Zeitraum-Einstellung zu ändern.
+     */
+    fun addDayToWeek() {
+        viewModelScope.launch {
+            val monday = mondayForOffset(_weekOffset.value)
+            val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+            val maxDate = monday.plusDays(13)
+            val lastDate = days.value.maxOfOrNull { LocalDate.parse(it.planDate, fmt) }
+                ?: monday.minusDays(1)
+            if (lastDate >= maxDate) return@launch
+            repository.getOrCreateDay(lastDate.plusDays(1).format(fmt))
+            syncScheduler.triggerOneShot()
+        }
+    }
+
     fun setFeedback(recipeId: String, planDate: String, liked: Int) {
         viewModelScope.launch {
             val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, planDate)
@@ -405,7 +441,7 @@ class WeekplanViewModel @Inject constructor(
             try {
                 val c = constraints.value
                 val dayCount = preferences.weekplanDays.first()
-                val currentDays = days.value.take(dayCount)
+                val currentDays = days.value.take(dayCount).filter { it.isSkipped == 0 }
                 if (currentDays.isEmpty()) {
                     _generateStatus.value = WeekplanGenerateStatus.Error("Keine Tage vorhanden")
                     return@launch
@@ -710,6 +746,7 @@ class WeekplanViewModel @Inject constructor(
     fun regenerateDay(dayId: String) {
         viewModelScope.launch {
             val day = days.value.find { it.id == dayId } ?: return@launch
+            if (day.isSkipped == 1) return@launch
             val c = constraints.value
 
             // Sammle alle aktuellen Rezept-IDs der Woche (außer dem zu ersetzenden Tag)

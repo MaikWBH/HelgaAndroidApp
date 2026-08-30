@@ -171,6 +171,7 @@ data class WeekplanDayDto(
     val note: String = "",
     @Json(name = "is_quick_day") val isQuickDay: Int = 0,
     @Json(name = "is_guest_day") val isGuestDay: Int = 0,
+    @Json(name = "is_skipped") val isSkipped: Int = 0,
 )
 
 @JsonClass(generateAdapter = true)

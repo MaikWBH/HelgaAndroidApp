@@ -84,11 +84,26 @@ class WeekplanRepository @Inject constructor(
         weekplanDao.softDeleteExtra(extra.id, System.currentTimeMillis())
     }
 
-    suspend fun deleteDay(dayId: String) {
+    /** Entfernt alle Rezepte und Extras eines Tages, lässt den Tag selbst aber bestehen. */
+    suspend fun clearDay(dayId: String) {
         val ts = System.currentTimeMillis()
         weekplanDao.recipesForDay(dayId).forEach { weekplanDao.softDeleteWeekplanRecipe(it.id, ts) }
         weekplanDao.extrasForDay(dayId).forEach { weekplanDao.softDeleteExtra(it.id, ts) }
-        weekplanDao.softDeleteDay(dayId, ts)
+    }
+
+    suspend fun deleteDay(dayId: String) {
+        clearDay(dayId)
+        weekplanDao.softDeleteDay(dayId, System.currentTimeMillis())
+    }
+
+    /**
+     * Markiert einen Tag als übersprungen (kein Kochen nötig) oder hebt das wieder auf.
+     * Beim Aktivieren werden vorhandene Rezepte/Extras entfernt — der Aufrufer muss vorher
+     * warnen, falls der Tag bereits belegt war.
+     */
+    suspend fun setSkipped(dayId: String, skipped: Boolean) {
+        if (skipped) clearDay(dayId)
+        weekplanDao.setSkipped(dayId, if (skipped) 1 else 0, System.currentTimeMillis())
     }
 
     suspend fun exportToShoppingList(dayIds: List<String>, shoppingListId: String, desiredServings: Int = 0) {

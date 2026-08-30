@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 14 offen · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 14 offen (1 erledigt) · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -114,6 +114,14 @@ Feature, das kein Nutzer je zu Gesicht bekommt. Erklärt die Antwort zu Frage 1 
 Extra-Einträge (`WeekplanExtraEntity`, z. B. „Brot besorgen") werden nie mitgenommen, weder bei
 Einzeltag- noch bei Wochen-Export. Siehe Backlog A12.
 
+**Die 7/10/14-Tage-Einstellung wirkt nie auf die Anzeige.** `days`-StateFlow
+(`WeekplanViewModel.kt:98-105`) ist hart auf `monday..monday+6` (immer exakt 7 Tage) codiert.
+`preferences.weekplanDays` wird nur beim Anlegen der Tage (`ensureWeek()`, Zeile 234) und beim
+Zuschneiden der KI-Kandidaten (`generateWeekplan()`, Zeile 407) gelesen, nie bei der Anzeige.
+Wer 10 oder 14 Tage einstellt, sieht trotzdem nur 7 — Tage 8-14 werden in der DB angelegt, aber
+nie sichtbar oder über die Wochennavigation erreichbar. Eigenständiger Bestandsbug, gefunden
+beim Entwurf von A15, dessen Fix (dynamisches Zeitfenster) diesen Bug mitbehebt.
+
 ### Funktion & UX
 Größter offener Punkt aus dem Interview: die KI-Planung schlägt oft ungeeignete Rezepte vor
 (Süßspeisen als Abendessen, siehe „Bugs"); Constraints-Dialog soll größer und direkter ins
@@ -225,6 +233,8 @@ Constraints. Als Ausgangspunkt für Frage 2 und 3 vermerkt, hier zu entscheiden.
 - Export nimmt Extra-Einträge mit; Standardliste ist vorbelegt, Produkte einzeln abwählbar vor
   der Übernahme.
 - Mehrere Rezepte pro Mahlzeit möglich, dezent farblich nach Mahlzeitentyp unterschieden.
+- Eine einzelne Woche lässt sich schnell und einmalig kürzen (Tage als „kein Kochen" markieren)
+  oder verlängern, ohne die globale 7/10/14-Tage-Einstellung zu ändern.
 
 _Ziel zu Frage 7 (Mehrwochen-Ansicht) nach der Anschlussrunde._
 
@@ -255,9 +265,10 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       Docs (`development_plan.md`) tilgen · S · Impact niedrig
 - [ ] **A10** — Ankerrezepte anbinden: `generateWithAnchors` im UI erreichbar machen, orientiert
       am Lock+Reroll-Muster (Sperr-Icon und Reroll-Icon direkt in `DayCard`) · L · Impact hoch
-- [ ] **A11** — Tagesmarker erweitern: „Auswärts/kein Kochen" plus nutzerdefinierte Marker;
-      Datenmodell-Frage (drittes Boolean-Feld vs. Tag-artiges System) braucht eigene Rückfrage
-      vor der Umsetzung · L · Impact mittel
+- [ ] **A11** — Nur noch der weitergehende Teil: nutzerdefinierte, frei anlegbare Tagesmarker
+      (über „Auswärts/kein Kochen" hinaus). Der Basisfall ist durch A15 abgedeckt. Braucht
+      eigene Rückfrage zum Datenmodell (Tag-artiges System) vor der Umsetzung · L · Impact
+      niedrig
 - [ ] **A12** — Extra-Einträge (`WeekplanExtraEntity`) in `exportToShoppingList()`
       (`WeekplanRepository.kt:94-113`) mit exportieren, aktuell nur Rezept-Zutaten · M · Impact
       hoch
@@ -269,6 +280,19 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       Mahlzeitentyp plus Textlabel (nie Farbe allein, siehe
       [ux-accessibility](../../guidelines/ux-accessibility.md) Regel 7); Room-Migration nötig ·
       L · Impact mittel
+- [x] **A15** — Woche einmalig anpassen (Nutzerwunsch, nicht aus dem Interview): neues Feld
+      `isSkipped` auf `WeekplanDayEntity` (Basisfall von A11 „kein Kochen", gleiches UI-Muster
+      wie `isQuickDay`/`isGuestDay`) markiert einen Tag als nicht zu planen — bleibt sichtbar,
+      fällt aus KI-Planung/Neuwürfeln und `weekBalance`/`weekNutrition` raus; hat der Tag schon
+      ein Rezept, erst Warnung, dann beim Bestätigen entfernen. Dazu „+ Tag"-Aktion zum
+      einmaligen Verlängern einer bestimmten Woche (bis 14 Tage), ohne die globale Einstellung
+      zu ändern; behebt dabei den oben genannten Anzeige-Bug (dynamisches statt festes
+      7-Tage-Fenster) · L · Impact hoch — **umgesetzt:** Room-Migration 30→31, `WeekplanDao`
+      (`setSkipped`), `WeekplanRepository` (`clearDay`/`setSkipped`, `deleteDay` darauf
+      umgestellt), `WeekplanViewModel` (`days`-Fenster auf 14 Tage, `toggleSkipped`,
+      `addDayToWeek`, `canExtendWeek`, Ausschluss in `generateWeekplan`/`regenerateDay`),
+      `WeekplanScreen` (Badge, Toggle, Bestätigungsdialog, „+ Tag"-Button), Sync
+      (`SyncDto`/`SyncEngine`/`server/app/db.py`/`server/app/sync.py`). Kompiliert erfolgreich.
 
 _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 
@@ -280,3 +304,5 @@ _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 | 2026-08-22 | Vorlagen-Feature wird ersatzlos entfernt statt fertiggebaut/synchronisiert | Feature ist im UI komplett unerreichbar; „Letzte Woche wiederholen" deckt den Bedarf bereits ab |
 | 2026-08-22 | Nährwert-Trend bleibt unverändert | Interview: Beiwerk, stört aber nicht |
 | 2026-08-22 | Export-Listenauswahl bleibt bestehen, aber mit Standardliste vorbelegt statt neutral | Interview: erst „nur Standardliste", nach Rückfrage präzisiert auf „Rückfrage behalten, nur vorbelegt" |
+| 2026-08-22 | Woche einmalig anpassen nutzt denselben Mechanismus wie der A11-Basisfall (ein `isSkipped`-Feld statt zwei getrennter Features) | Nutzerentscheidung: „Dasselbe – ein Mechanismus" |
+| 2026-08-22 | Entfernte Tage bleiben in der Wochenansicht sichtbar (nur markiert), keine Navigationslücken; bei bereits geplantem Rezept erst Warnung, dann Löschen | Nutzerentscheidung: „Warnen vor Verlust" |

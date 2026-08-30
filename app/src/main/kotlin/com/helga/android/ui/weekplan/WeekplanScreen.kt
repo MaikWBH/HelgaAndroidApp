@@ -51,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -128,9 +129,11 @@ fun WeekplanScreen(
     val weekBalance by viewModel.weekBalance.collectAsStateWithLifecycle()
     val weekNutrition by viewModel.weekNutrition.collectAsStateWithLifecycle()
     val userAllergies by viewModel.userAllergies.collectAsStateWithLifecycle()
+    val canExtendWeek by viewModel.canExtendWeek.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
     var constraintsEditorVisible by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
+    var skipConfirmDay by remember { mutableStateOf<WeekplanDayEntity?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val recipeById: (String) -> RecipeEntity? = { id -> allRecipes[id] }
@@ -159,6 +162,28 @@ fun WeekplanScreen(
                 exportPicker = null
             },
             onDismiss = { exportPicker = null },
+        )
+    }
+
+    val confirmSkipDay = skipConfirmDay
+    if (confirmSkipDay != null) {
+        AlertDialog(
+            onDismissRequest = { skipConfirmDay = null },
+            title = { Text(stringResource(R.string.weekplan_skip_confirm_title)) },
+            text = { Text(stringResource(R.string.weekplan_skip_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.toggleSkipped(confirmSkipDay)
+                    skipConfirmDay = null
+                }) {
+                    Text(stringResource(R.string.weekplan_skip_confirm_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { skipConfirmDay = null }) {
+                    Text(stringResource(R.string.weekplan_skip_confirm_cancel))
+                }
+            },
         )
     }
 
@@ -351,10 +376,29 @@ fun WeekplanScreen(
                         onNavigateToRecipe = onNavigateToRecipe,
                         onToggleQuick = { viewModel.toggleQuickDay(day) },
                         onToggleGuest = { viewModel.toggleGuestDay(day) },
+                        onToggleSkip = {
+                            if (day.isSkipped == 0 && (summary?.recipeCount ?: 0) > 0) {
+                                skipConfirmDay = day
+                            } else {
+                                viewModel.toggleSkipped(day)
+                            }
+                        },
                         onRegenerateDay = { viewModel.regenerateDay(day.id) },
                         feedbackMap = feedbackMap,
                         onFeedback = { recipeId, liked -> viewModel.setFeedback(recipeId, day.planDate, liked) },
                     )
+                }
+                if (canExtendWeek) {
+                    item(key = "add_day") {
+                        OutlinedButton(
+                            onClick = viewModel::addDayToWeek,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null)
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.weekplan_add_day))
+                        }
+                    }
                 }
             }
 
@@ -404,6 +448,7 @@ private fun DayCard(
     onNavigateToRecipe: (String) -> Unit,
     onToggleQuick: () -> Unit,
     onToggleGuest: () -> Unit,
+    onToggleSkip: () -> Unit,
     onRegenerateDay: () -> Unit,
     feedbackMap: Map<String, Int>,
     onFeedback: (recipeId: String, liked: Int) -> Unit,
@@ -443,6 +488,13 @@ private fun DayCard(
                         if (day.isGuestDay == 1) {
                             Text("👥", style = MaterialTheme.typography.bodySmall)
                         }
+                        if (day.isSkipped == 1) {
+                            Text(
+                                text = "🚫 " + stringResource(R.string.weekplan_skip_badge),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     if (dateLabel.isNotBlank()) {
                         Text(
@@ -464,6 +516,13 @@ private fun DayCard(
                         Text(
                             text = "👥",
                             color = if (day.isGuestDay == 1) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        )
+                    }
+                    IconButton(onClick = onToggleSkip) {
+                        Text(
+                            text = "🚫",
+                            color = if (day.isSkipped == 1) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         )
                     }

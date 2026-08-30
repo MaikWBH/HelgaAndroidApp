@@ -404,7 +404,7 @@ private fun QuickEmojiEntity.toDto(): QuickEmojiDto = QuickEmojiDto(
 
 private fun WeekplanDayDto.toEntity(): WeekplanDayEntity = WeekplanDayEntity(
     id = id, planDate = planDate, note = note, isQuickDay = isQuickDay, isGuestDay = isGuestDay,
-    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+    isSkipped = isSkipped, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun WeekplanRecipeDto.toEntity(): WeekplanRecipeEntity = WeekplanRecipeEntity(
@@ -419,7 +419,7 @@ private fun WeekplanExtraDto.toEntity(): WeekplanExtraEntity = WeekplanExtraEnti
 
 private fun WeekplanDayEntity.toDto(): WeekplanDayDto = WeekplanDayDto(
     id = id, updatedAt = updatedAt, deleted = deleted, planDate = planDate, note = note,
-    isQuickDay = isQuickDay, isGuestDay = isGuestDay,
+    isQuickDay = isQuickDay, isGuestDay = isGuestDay, isSkipped = isSkipped,
 )
 
 private fun WeekplanRecipeEntity.toDto(): WeekplanRecipeDto = WeekplanRecipeDto(

@@ -286,6 +286,13 @@
     <string name="weekplan_prev_week">Vorherige Woche</string>
     <string name="weekplan_next_week">Nächste Woche</string>
     <string name="weekplan_today">Heute</string>
+    <string name="weekplan_toggle_skip">Kein Kochen an diesem Tag</string>
+    <string name="weekplan_skip_badge">Kein Kochen</string>
+    <string name="weekplan_skip_confirm_title">Tag entfernen?</string>
+    <string name="weekplan_skip_confirm_text">Für diesen Tag ist bereits etwas geplant. Beim Markieren als \"kein Kochen\" wird die Zuweisung entfernt.</string>
+    <string name="weekplan_skip_confirm_action">Entfernen</string>
+    <string name="weekplan_skip_confirm_cancel">Abbrechen</string>
+    <string name="weekplan_add_day">Tag hinzufügen</string>
 
     <!-- Bottom Navigation -->
     <string name="nav_shopping">Einkaufen</string>

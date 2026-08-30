@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS weekplan_days (
     note          TEXT DEFAULT '',
     is_quick_day  INTEGER NOT NULL DEFAULT 0,
     is_guest_day  INTEGER NOT NULL DEFAULT 0,
+    is_skipped    INTEGER NOT NULL DEFAULT 0,
     updated_at    INTEGER NOT NULL DEFAULT 0,
     deleted       INTEGER NOT NULL DEFAULT 0
 );
@@ -472,6 +473,7 @@ ADDED_COLUMNS = {
     "weekplan_days": [
         ("is_quick_day", "INTEGER NOT NULL DEFAULT 0"),
         ("is_guest_day", "INTEGER NOT NULL DEFAULT 0"),
+        ("is_skipped", "INTEGER NOT NULL DEFAULT 0"),
     ],
 }
 
