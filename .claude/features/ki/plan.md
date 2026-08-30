@@ -1,6 +1,6 @@
 # Feature: KI
 
-> **Status:** Interview offen · **Aufgaben:** 0/0 · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
 
 Rezeptgenerierung, Remix und Klassifikation. Läuft ausschließlich serverseitig; die App sendet
 Prompts und empfängt Ergebnisse per SSE-Streaming.
@@ -35,7 +35,16 @@ Angrenzend, aber in eigenen Bereichen geführt: `/api/ai/parse-receipt` (Bons & 
 ## Bekannte Lücken
 
 ### Funktion & UX
-Offen bis zum Interview.
+**Root Cause zu „Einheiten teilweise falsch/leer" (aus dem Interview):** Generierte
+Zutatenzeilen (`recipeIngredient` als Freitext, z. B. `"200g Mehl"`) laufen durch
+`IngredientLineParser.parse()` (`app/src/main/kotlin/com/helga/android/data/util/
+IngredientLineParser.kt`). Der Parser erkennt Einheiten nur über eine feste Klartext-Tabelle
+(`UNIT_CANONICAL`, ~20 Einträge) und Mengen nur als Dezimalzahl oder einfachen Bruch mit
+Ziffern (`QUANTITY_RE`). Schreibt das Modell eine Einheit, die nicht in der Tabelle steht, oder
+eine Menge als Unicode-Bruch (½, ¼) oder Bereich in Worten, bleibt die Einheit leer bzw. die
+komplette Zeile landet unverarbeitet im `food`-Feld. Eine reine Kopfzeile wie „Für den Teig:"
+wird ebenfalls als Zutat mit Menge 0 durchgereicht. Kein Fallback, keine Normalisierung —
+passend zum geschilderten Bild (Zeile ohne erkennbare Einheit oder scheinbar leer).
 
 ### Code-Qualität
 Keine `!!`-Zugriffe, keine `items()`-Verstöße in diesem Bereich.
@@ -54,25 +63,44 @@ Alltag auftritt.
 ### Sync
 Keine eigenen Entities. Erzeugte Rezepte laufen über den Rezept-Sync.
 
-## Offene Fragen
+## Fragen
 
-1. Wie oft ist ein generiertes Rezept ohne Nacharbeit brauchbar?
-2. Die strukturierten Vorgaben (Küche, Diät, Aufwand, Zeit, Besonderheit) — nutzt du alle, oder
-   tippst du meist frei?
-3. Was passiert heute, wenn der Stream mitten in der Generierung abbricht? Falls unklar: das ist
-   selbst eine Aufgabe.
-4. Remix: genutzt oder vergessenes Feature?
-5. Soll die App das Modell je Aufgabe wählen können (günstig für Klassifikation, stark für
-   Generierung), oder bleibt eine globale Einstellung?
-6. Das Feedback zu KI-Ergebnissen — soll es die künftigen Prompts beeinflussen, oder ist es nur
-   Protokoll?
-7. Fehlt ein Verlauf der letzten Prompts zum Wiederverwenden?
-8. Ohne Server geht keine KI-Funktion. Soll die App das deutlicher anzeigen, bevor man einen
-   Prompt tippt?
+1. **Wie oft ist ein generiertes Rezept ohne Nacharbeit brauchbar?**
+   Antwort: Meistens direkt brauchbar. Problem liegt bei den Zutaten: Einheiten passen teils
+   nicht oder fehlen ganz — Zeile zeigt nur Zahl ohne erkennbaren Rest. Siehe Root Cause oben
+   (`IngredientLineParser`).
+2. **Nutzt du die strukturierten Vorgaben (Küche, Diät, Aufwand, Zeit, Besonderheit), oder
+   tippst du meist frei?**
+   Antwort: Meistens Freitext, Küche gelegentlich genutzt.
+3. **Was passiert bei Stream-Abbruch?**
+   Antwort: Noch nie erlebt — kein persönlicher Erfahrungswert, bleibt als technische Aufgabe
+   (A2) bestehen, da der Code-Pfad ungetestet ist.
+4. **Remix: genutzt oder vergessenes Feature?**
+   Antwort: Regelmäßig genutzt — aktives Kernfeature, beim Verbessern der Generierung
+   mitdenken.
+5. **Modellwahl je Aufgabe oder global?**
+   Antwort: Global reicht, keine Änderung.
+6. **Beeinflusst das Feedback künftige Prompts, oder ist es nur Protokoll?**
+   Antwort: War nicht bekannt, dass es die Funktion gibt — geringe Priorität, keine Aufgabe
+   daraus.
+7. **Fehlt ein Prompt-Verlauf?**
+   Antwort: Nicht nötig.
+8. **Soll die App deutlicher anzeigen, wenn ohne Server keine KI-Funktion möglich ist?**
+   Antwort: Ja, ausdrücklich — soll grundsätzlich immer sichtbar anzeigen, wenn eine Funktion
+   den Server braucht und dieser gerade nicht erreichbar ist. Aktuell existiert dafür keine
+   Mechanik im Code (`grep` nach `isServerReachable`/`ServerStatus` u. ä. ohne Treffer) — der
+   Fehler zeigt sich bisher erst nach einem gescheiterten Versuch (`AiGenerateStatus.Error`).
 
 ## Ziele
 
-_Nach dem Interview zu füllen._
+- Server-Erreichbarkeit für KI-Funktionen proaktiv anzeigen, bevor Zeit in einen Prompt
+  investiert wird — nicht erst nach einem gescheiterten Versuch.
+- Zutatenzeilen aus der KI-Generierung zuverlässiger in Menge/Einheit/Lebensmittel zerlegen;
+  unbekannte Einheiten und Sonderfälle dürfen nicht zu leeren/unbrauchbaren Zeilen führen.
+- Remix als aktiv genutztes Kernfeature bei künftigen Verbesserungen mitdenken, nicht als
+  Nebenfunktion behandeln.
+- Modellwahl, Prompt-Verlauf und Feedback-gesteuerte Prompt-Anpassung bleiben unverändert — im
+  Interview kein Bedarf geäußert.
 
 ## Backlog
 
@@ -80,6 +108,14 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Unit-Tests für `RecipeJsonLdParser` · M · Impact hoch
 - [ ] **A2** — Verhalten bei Stream-Abbruch prüfen und absichern · M · Impact hoch
+- [ ] **A3** — Server-Erreichbarkeit vor KI-Nutzung deutlich anzeigen (Generieren, Remix,
+  Klassifikation): Reachability-Check + persistenter Hinweis, statt den Fehler erst nach einem
+  gescheiterten Versuch zu zeigen. Kein bestehender Mechanismus im Code — neue Infrastruktur
+  nötig, potenziell auch für [sync](../sync/plan.md) relevant · L · Impact hoch
+- [ ] **A4** — `IngredientLineParser` robuster für KI-generierte Zutatenzeilen machen
+  (unbekannte Einheiten nicht verwerfen, Unicode-Brüche wie ½/¼ erkennen, reine Kopfzeilen wie
+  „Für den Teig:" nicht als Zutat durchreichen) · M · Impact hoch — Testabdeckung dafür bereits
+  in [einkaufsliste](../einkaufsliste/plan.md) A3 vorgemerkt
 
 _Weitere Aufgaben nach dem Interview._
 
@@ -87,3 +123,6 @@ _Weitere Aufgaben nach dem Interview._
 
 | Datum | Entscheidung | Begründung |
 |-------|--------------|------------|
+| 2026-08-30 | Server-Erreichbarkeit wird proaktiv angezeigt, nicht erst nach Fehlschlag | Ausdrücklicher Nutzerwunsch, aktuell keine Reachability-Mechanik im Code vorhanden |
+| 2026-08-30 | Modellwahl bleibt global | Kein Bedarf für Aufgaben-spezifische Modelle geäußert |
+| 2026-08-30 | Prompt-Verlauf und Feedback-Wirkung auf künftige Prompts werden nicht umgesetzt | Kein Bedarf, Feedback-Funktion war dem Nutzer nicht mal bekannt |
