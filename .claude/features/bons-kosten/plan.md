@@ -106,7 +106,10 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [ ] **A2** — `key`-Parameter in `ProductPriceDetailScreen.kt:117` ergänzen · S · Impact mittel
 - [ ] **A3** — Vierten Bottom-Nav-Tab „Bons" ergänzen, der auf `ROUTE_RECEIPTS` zeigt; Menüpunkt
   „Kassenzettel" und das Erinnerungs-Banner in der Einkaufsliste können bleiben (zusätzlicher
-  Weg schadet nicht) · M · Impact hoch — behebt die Kernursache aus dem Interview
+  Weg schadet nicht) · M · Impact hoch — behebt die Kernursache aus dem Interview. Laut
+  [statistik](../statistik/plan.md) A2 soll derselbe Tab auch den (aktuell unverdrahteten)
+  Statistik-Screen erreichbar machen — bei Umsetzung zusammen planen, nicht zwei separate
+  Tabs bauen
 - [ ] **A4** — Einstellbare automatische Löschung alter Bons (Einstellungen: Zeitraum, Default 3
   Monate; WorkManager- oder Sync-getriggerte Bereinigung von `ReceiptEntity`/`ReceiptItemEntity`
   älter als Grenze) · M · Impact mittel

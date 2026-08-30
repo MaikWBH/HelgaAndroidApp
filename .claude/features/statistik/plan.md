@@ -1,6 +1,6 @@
 # Feature: Statistik
 
-> **Status:** Interview offen · **Aufgaben:** 0/0 · **Stand:** 2026-08-22 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 3 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐
 
 Auswertung der Kochhistorie. Der kleinste Bereich der App.
 
@@ -29,7 +29,11 @@ Die Daten stammen vollständig aus `RecipeHistoryEntity`, das beim Bestätigen i
 ### Funktion & UX
 - Kein Zeitraumfilter — die Zahlen sind immer der Gesamtbestand. Anders als der
   Ausgabenüberblick, der `setPeriod` anbietet.
-- Der Screen ist über keinen Bottom-Nav-Tab erreichbar; Einstiegspunkt im Interview zu klären.
+- **Root Cause zu „Screen nicht erreichbar" (bestätigt vor dem Interview):** `StatsScreen` hat
+  keine Route in `HelgaNavGraph.kt` und wird sonst nirgends im Code referenziert
+  (`grep -r StatsScreen app/` → ein einziger Treffer, die Definition selbst). Der Screen lässt
+  sich im aktuellen Build nicht öffnen — kein Bottom-Nav-Fehlen, sondern vollständig
+  unverdrahteter Code.
 
 ### Code-Qualität
 Keine `!!`-Zugriffe, keine `items()`-Verstöße in diesem Bereich.
@@ -40,26 +44,43 @@ Keine. Die Aggregation ist reine Logik über eine Liste und damit gut testbar.
 ### Sync
 Keine eigenen Entities; `recipeHistory` wird im Rezepte-Bereich gesynct.
 
-## Offene Fragen
+## Fragen
 
-1. Öffnest du den Screen überhaupt? Falls nein: entfernen oder sichtbarer machen?
-2. Fehlt ein Zeitraumfilter wie beim Ausgabenüberblick?
-3. Welche Frage soll die Statistik beantworten — „was koche ich zu oft", „was habe ich lange
-   nicht gekocht", „wie ausgewogen war der Monat"?
-4. Sollen Kosten aus den Bons und Nährwerte hier zusammenlaufen, statt in drei Ansichten zu
-   liegen?
-5. Wäre eine Auswertung „lange nicht gekocht" als Vorschlagsquelle für die Wochenplanung
-   nützlicher als die reine Anzeige?
+1. **Screen erreichbar machen oder ist Statistik verzichtbar?**
+   Antwort: Erreichbar machen — Richtung: über den neuen Bons-Tab, der ohnehin für den
+   Bon-Scan geplant ist (siehe [bons-kosten](../bons-kosten/plan.md) A3). Ein Tab könnte damit
+   beides bedienen: Bons scannen und Statistik einsehen, statt einen fünften Bottom-Nav-Eintrag
+   zu schaffen.
+2. **Fehlt ein Zeitraumfilter wie beim Ausgabenüberblick?**
+   Antwort: Ja, wäre sinnvoll.
+3. **Welche Frage soll die Statistik primär beantworten?**
+   Antwort: Wie ausgewogen war der Zeitraum — die vorhandenen Felder (`meatCount`, `fishCount`,
+   `vegCount`, `otherCount`) passen dazu, brauchen nur die Zeitraum-Eingrenzung aus Frage 2.
+4. **Sollen Kosten und Nährwerte hier mit einfließen?**
+   Antwort: Getrennt lassen — eigene Themen, eigene Ansichten bleiben sinnvoll.
+5. **„Lange nicht gekocht" als Wochenplan-Vorschlag statt reiner Anzeige?**
+   Antwort: Reine Anzeige reicht, keine aktive Vorschlagsfunktion.
 
 ## Ziele
 
-_Nach dem Interview zu füllen._
+- Statistik-Screen erreichbar machen — voraussichtlich über den neuen Bons-Tab statt einem
+  eigenen Bottom-Nav-Eintrag, siehe [bons-kosten](../bons-kosten/plan.md) A3.
+- Zeitraumfilter ergänzen, damit die Ausgewogenheits-Auswertung (Protein-/Kategorienverteilung)
+  sich auf einen sinnvollen Zeitraum statt den Gesamtbestand bezieht.
+- Kosten und Nährwerte bleiben in ihren eigenen Ansichten — keine Zusammenführung.
+- Keine aktive Vorschlagsfunktion für den Wochenplan — Statistik bleibt reine Anzeige.
 
 ## Backlog
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Unit-Tests für die Aggregationslogik · S · Impact mittel
+- [ ] **A2** — Statistik-Screen erreichbar machen: keine Route in `HelgaNavGraph.kt`, `StatsScreen`
+  komplett unverdrahtet. Richtung: in den neuen Bons-Tab integrieren statt eigenem
+  Bottom-Nav-Eintrag — bei Umsetzung mit [bons-kosten](../bons-kosten/plan.md) A3 zusammen
+  planen · M · Impact hoch
+- [ ] **A3** — Zeitraumfilter ergänzen, analog zum Ausgabenüberblick
+  (`CostOverviewViewModel.setPeriod`-Muster wiederverwenden) · M · Impact hoch
 
 _Weitere Aufgaben nach dem Interview._
 
@@ -67,3 +88,7 @@ _Weitere Aufgaben nach dem Interview._
 
 | Datum | Entscheidung | Begründung |
 |-------|--------------|------------|
+| 2026-08-30 | Statistik wird über den neuen Bons-Tab erreichbar gemacht, nicht über einen eigenen Bottom-Nav-Eintrag | Nutzerwunsch, ein Tab bedient Bon-Scan und Statistik gemeinsam statt einen fünften Tab zu schaffen |
+| 2026-08-30 | Zeitraumfilter wird ergänzt | Ohne Zeitbezug sind reine Gesamtzahlen wenig aussagekräftig |
+| 2026-08-30 | Kosten/Nährwerte bleiben getrennt von der Statistik | Unterschiedliche Themen, getrennte Ansichten gewünscht |
+| 2026-08-30 | Keine Vorschlagsfunktion „lange nicht gekocht" im Wochenplan | Reine Anzeige reicht aus |
