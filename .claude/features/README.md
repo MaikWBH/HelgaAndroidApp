@@ -39,7 +39,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | erledigt | 4 offen | ⭐⭐ |
 | 5 | KI | [ki](ki/plan.md) | erledigt | 4 offen | ⭐⭐ |
 | 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 4 offen | ⭐⭐ |
-| 7 | Märkte & Gänge | [maerkte](maerkte/plan.md) | offen | – | ⭐ |
+| 7 | Märkte & Gänge | [maerkte](maerkte/plan.md) | erledigt | 3 offen | ⭐ |
 | 8 | Statistik | [statistik](statistik/plan.md) | offen | – | ⭐ |
 | 9 | Sync | [sync](sync/plan.md) | offen | – | ⭐⭐ |
 | 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | offen | – | ⭐ |
