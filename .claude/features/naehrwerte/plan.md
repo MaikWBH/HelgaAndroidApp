@@ -1,6 +1,6 @@
 # Feature: Nährwerte & Allergene
 
-> **Status:** Interview offen · **Aufgaben:** 0/0 · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
 
 OpenFoodFacts-Anbindung, Nährwerte je Rezept, Nutri-Score und Allergenwarnungen. Querschnitts-
 funktion ohne eigenen Screen — sichtbar in Rezepten, Einkaufsliste und Wochenplan.
@@ -34,7 +34,24 @@ funktion ohne eigenen Screen — sichtbar in Rezepten, Einkaufsliste und Wochenp
 ## Bekannte Lücken
 
 ### Funktion & UX
-Offen bis zum Interview.
+**Root Cause zu „Nährwerte je Portion" (aus dem Interview):** `RecipeNutrition.kt` berechnet
+`kcalPerPortion` bereits als `totalKcal / NUTRITION_BASELINE_PORTIONS` (feste Basis: 4
+Portionen), aber `protein`/`fat`/`carbs` bleiben absolute Werte **für diese 4 Portionen** —
+inkonsistent zur kcal-Angabe daneben. `NutritionSection` in `RecipeDetailScreen.kt:534-538`
+bekommt zudem keinen `scaleFactor`-Parameter (anders als `IngredientRow`, das mit dem
+Portionswähler mitskaliert) — die Nährwertanzeige bleibt bei jeder Portionenzahl gleich.
+
+**Nutri-Score kommt aus zwei unabhängigen Quellen**, beide laut Interview zum Entfernen
+vorgesehen:
+1. Produktkatalog (`OffProductEntity.nutriScore`, echter OFF-Wert) — Badge in
+   `ShoppingListScreen.kt:1470-1471` (Karte) und `:1561-1587` (Detail-Sheet).
+2. KI-geschätzter Rezept-Nutri-Score (`RecipeNutrition.nutriScore`, „a"–„e") — Anzeige in
+   `RecipeDetailScreen.kt:564-588`, Eingabefeld in `NutritionEditDialog`, sowie aggregiert in
+   `DayNutrition.avgNutriScore`/`WeekplanNutrition.weekAvgNutriScore` für die Trend-Karte in
+   `WeekplanScreen.kt`. Zusätzlich nutzt `WeekplanConstraintsEntity.minNutriScore` (Default
+   `"c"`) den Wert als Filterschwelle bei der Wochenplan-Generierung
+   (`WeekplanRepository.kt`/`WeekplanViewModel.kt`) — Entfernung reicht damit in
+   [wochenplan](../wochenplan/plan.md) hinein.
 
 ### Code-Qualität
 Keine `!!`-Zugriffe, keine `items()`-Verstöße in diesem Bereich.
@@ -53,31 +70,57 @@ Sync-Muster verlangt. **Nichts ruft sie auf:**
 Stelle. Der Produktkatalog bleibt damit gerätelokal, obwohl die Verdrahtung nur noch fehlt —
 kein Konzeptproblem, sondern ein offener Anschluss.
 
-## Offene Fragen
+## Fragen
 
-1. Wie oft nutzt du den Barcode-Scan im Laden — lohnt sich Ausbau, oder ist es eine Randfunktion?
-2. Der Produktkatalog synct nicht (siehe oben). Soll er das, oder ist er bewusst gerätelokal?
-3. Nährwerte kommen aus drei Quellen: KI, manuelle Eingabe, Bon-Verknüpfung. Welcher Weg ist in
-   der Praxis der verlässlichste?
-4. Sind Allergene bei dir echter Bedarf oder Vorsichtsmaßnahme? Davon hängt ab, wie streng die
-   Warnung sein muss.
-5. Soll die Allergenwarnung blockierend sein (Rezept lässt sich nicht in den Plan ziehen) oder
-   weiterhin nur ein Hinweis?
-6. Nutri-Score erscheint in Einkaufsliste und Wochenplan. Fehlt er im Rezeptdetail?
-7. Sollen Nährwerte je Portion oder je Rezept angezeigt werden — und passt sich das an die
-   Portionsskalierung an?
-8. Wäre ein Tages- oder Wochenziel für Kalorien sinnvoll, oder ist das über das Ziel hinaus?
+1. **Wie oft nutzt du den Barcode-Scan im Laden?**
+   Antwort: So gut wie nie — Randfunktion bestätigt, kein Ausbau.
+2. **Soll der Produktkatalog geräteübergreifend syncen?**
+   Antwort (nach Rückfrage zur Konkretisierung): Ja — einmal gescannt/gesucht soll auf allen
+   Geräten verfügbar sein.
+3. **Welcher Nährwert-Weg (KI, manuell, Bon-Verknüpfung) ist am verlässlichsten?**
+   Antwort: KI läuft meistens mit; eine einmalige KI-Berechnung pro Rezept reicht für einen
+   überschlägigen Wert — keine laufende Neuberechnung nötig.
+4. **Sind Allergene echter Bedarf oder Vorsichtsmaßnahme?**
+   Antwort: Vorsorglich, kein akuter Bedarf.
+5. **Soll die Allergenwarnung blockierend werden?**
+   Antwort: Nein, bleibt reiner Hinweis.
+6. **Fehlt der Nutri-Score im Rezeptdetail?**
+   Antwort: Gegenteil — Nutri-Score soll komplett aus der App verschwinden. Echte Nährwerte
+   (kcal/Protein/Fett/KH) sind aussagekräftiger.
+7. **Nährwerte je Portion, skalierend?**
+   Antwort: Ja, je Portion mit Skalierung gewünscht — deckt sich mit dem Root Cause oben
+   (aktuell inkonsistent: kcal ist pro Portion, Makros sind es nicht, nichts skaliert live).
+8. **Tages-/Wochenziel für Kalorien sinnvoll?**
+   Antwort: Wäre nett, kein Muss — niedrige Priorität, kein Backlog-Item jetzt.
 
 ## Ziele
 
-_Nach dem Interview zu füllen._
+- Nutri-Score vollständig aus der App entfernen — beide Quellen (Produktkatalog und
+  KI-geschätzter Rezeptwert inkl. Wochenplan-Trend und Generierungs-Filter).
+- Echte Nährwerte (kcal, Protein, Fett, Kohlenhydrate) im Rezept konsistent pro Portion zeigen
+  und mit dem Portionswähler mitskalieren lassen.
+- Produktkatalog geräteübergreifend synchronisieren, wie der Rest der App.
+- Barcode-Scan unverändert lassen — kein Ausbau, da kaum genutzt.
+- Allergenwarnung bleibt reiner Hinweis, nicht blockierend.
+- Kalorienziel als spätere Idee vormerken, aktuell keine Priorität.
 
 ## Backlog
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Unit-Tests für `AllergyChecker` (Treffer, Teilwort, Groß-/Kleinschreibung, leeres Profil) · S · Impact hoch
-- [ ] **A2** — `OffProductEntity` an `SyncEngine` anbinden; DAO und Serverseite sind fertig · M · Impact mittel
+- [ ] **A2** — `OffProductEntity` an `SyncEngine` anbinden; DAO und Serverseite sind fertig · M · Impact mittel — bestätigter Bedarf aus dem Interview
+- [ ] **A3** — Nutri-Score vollständig entfernen: Badges in der Einkaufsliste
+  (`ShoppingListScreen.kt:1470-1471`/`:1561-1587`), Anzeige + Eingabefeld in
+  `RecipeDetailScreen.kt` (`NutritionSection`/`NutritionEditDialog`), Wochenplan-Trendkarte
+  (`DayNutrition.avgNutriScore`/`WeekplanNutrition.weekAvgNutriScore`) sowie den
+  Generierungs-Filter `WeekplanConstraintsEntity.minNutriScore` in
+  [wochenplan](../wochenplan/plan.md). Room-Spalten bleiben bestehen (nicht destruktiv), werden
+  nur nicht mehr befüllt/angezeigt · L · Impact hoch
+- [ ] **A4** — Nährwerte korrekt pro Portion berechnen und mit dem Portionswähler skalieren:
+  `protein`/`fat`/`carbs` in `RecipeNutrition` sind aktuell fix für die 4er-Baseline
+  (`NUTRITION_BASELINE_PORTIONS`), `NutritionSection` bekommt keinen `scaleFactor` · M · Impact
+  hoch
 
 _Weitere Aufgaben nach dem Interview._
 
@@ -85,3 +128,8 @@ _Weitere Aufgaben nach dem Interview._
 
 | Datum | Entscheidung | Begründung |
 |-------|--------------|------------|
+| 2026-08-30 | Nutri-Score wird vollständig entfernt (Produktkatalog + Rezept/Wochenplan) | Echte Nährwerte sind aussagekräftiger, Nutzer hat keinen Bedarf am Score |
+| 2026-08-30 | Produktkatalog wird geräteübergreifend gesynct | Passt zum Offline-First-Sync-Prinzip der App, Server/DAO sind bereits fertig |
+| 2026-08-30 | Allergenwarnung bleibt nicht-blockierender Hinweis | Vorsorgliche Nutzung ohne akuten Bedarf, Blockieren wäre zu streng |
+| 2026-08-30 | Barcode-Scan bleibt unverändert | Kaum genutzt, kein Ausbau gerechtfertigt |
+| 2026-08-30 | Kalorienziel wird nicht umgesetzt | Nice-to-have ohne aktiven Bedarf |

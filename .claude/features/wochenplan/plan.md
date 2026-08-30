@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 14 offen (1 erledigt) · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 15 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -261,6 +261,9 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [ ] **A8** — Constraints-Dialog vergrößern/direkter ins Wochenplan-UI integrieren; Richtung:
       recherchiertes Muster (Sperren + Tages-Reroll direkt in der Tageskarte statt Extra-Dialog),
       siehe A10 · L · Impact mittel
+- [ ] **A16** — `WeekplanConstraintsEntity.minNutriScore` entfernen: Nutri-Score verschwindet laut
+      [naehrwerte](../naehrwerte/plan.md) A3 komplett aus der App, der Generierungs-Filter in
+      `WeekplanRepository.kt`/`WeekplanViewModel.kt` wird damit hinfällig · S · Impact mittel
 - [ ] **A9** — Totes String-Resource `weekplan_ai_generate` entfernen; „KI"-Framing aus internen
       Docs (`development_plan.md`) tilgen · S · Impact niedrig
 - [ ] **A10** — Ankerrezepte anbinden: `generateWithAnchors` im UI erreichbar machen, orientiert
