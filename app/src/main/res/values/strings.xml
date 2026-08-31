@@ -140,6 +140,10 @@
     <string name="settings_logout_confirm_title">Abmelden?</string>
     <string name="settings_logout_confirm_text">Server-URL und API-Schlüssel werden entfernt. Lokale Rezepte bleiben erhalten.</string>
     <string name="settings_logout_confirm_ok">Abmelden</string>
+    <string name="settings_reset_local_data">Alle lokalen Daten zurücksetzen</string>
+    <string name="settings_reset_confirm_title">Wirklich alles zurücksetzen?</string>
+    <string name="settings_reset_confirm_text">Löscht alle lokalen Rezepte, Wochenpläne, Einkaufslisten und Bons auf diesem Gerät und holt anschließend alles vom Server neu. Server-URL und API-Schlüssel bleiben erhalten. Nur sinnvoll, wenn der Server als Backup erreichbar ist.</string>
+    <string name="settings_reset_confirm_ok">Zurücksetzen</string>
 
     <!-- Allgemein -->
     <string name="action_retry">Erneut versuchen</string>

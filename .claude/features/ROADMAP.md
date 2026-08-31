@@ -118,7 +118,7 @@ Bewertung, Wochenplan-Erweiterungen, u. a.).
 | ✅ **ki A3** | Server-Erreichbarkeit vor jeder KI-Nutzung anzeigen |
 | ✅ **maerkte A1** | Drag-and-Drop für die Gangreihenfolge |
 | ✅ **maerkte A3** | Neue Märkte per Standard-Gangsatz oder Kopie vorbefüllen |
-| **einstellungen A4** | Reset aller lokalen Daten ohne Neuinstallation |
+| ✅ **einstellungen A4** | Reset aller lokalen Daten ohne Neuinstallation |
 | **plattform A2** | 82× `contentDescription` durchsehen · Impact niedrig |
 
 ---

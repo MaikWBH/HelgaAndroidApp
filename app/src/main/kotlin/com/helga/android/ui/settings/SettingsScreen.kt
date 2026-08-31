@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -99,6 +100,7 @@ fun SettingsScreen(
     val bulkAiState by viewModel.bulkAiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
     var deleteList by remember { mutableStateOf<ShoppingListEntity?>(null) }
     var editEmoji by remember { mutableStateOf<QuickEmojiEntity?>(null) }
     var showAddEmoji by remember { mutableStateOf(false) }
@@ -144,6 +146,27 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
+                    Text(stringResource(R.string.recipe_delete_confirm_cancel))
+                }
+            },
+        )
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text(stringResource(R.string.settings_reset_confirm_title)) },
+            text = { Text(stringResource(R.string.settings_reset_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResetDialog = false
+                    viewModel.resetLocalData()
+                }) {
+                    Text(stringResource(R.string.settings_reset_confirm_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
                     Text(stringResource(R.string.recipe_delete_confirm_cancel))
                 }
             },
@@ -643,6 +666,14 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.settings_logout))
+                }
+
+                OutlinedButton(
+                    onClick = { showResetDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(stringResource(R.string.settings_reset_local_data))
                 }
             }
 

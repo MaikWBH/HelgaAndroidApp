@@ -1,6 +1,6 @@
 # Feature: Einstellungen & Onboarding
 
-> **Status:** Interview erledigt · **Aufgaben:** 1 offen (3 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 0 offen (4 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐
 
 Erste Einrichtung und zentrale Konfiguration. `SettingsViewModel` ist mit 25 öffentlichen
 Funktionen die Sammelstelle für Einstellungen aller anderen Bereiche.
@@ -113,8 +113,16 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   Schnellbuttons stehen jetzt oben, direkt sichtbar; Darstellung, Benachrichtigungen, Server,
   Sync, KI-Massenlauf und Konto stecken hinter einem aufklappbaren „Erweitert"-Bereich
   (`showAdvanced`-State, `ExpandMore`/`ExpandLess`-Icon), standardmäßig eingeklappt
-- [ ] **A4** — Reset-Funktion für alle lokalen Daten ohne Neuinstallation · M · Impact niedrig
-  — Nice-to-have, kein Muss
+- [x] **A4** — Reset-Funktion für alle lokalen Daten ohne Neuinstallation · M · Impact niedrig
+  — Nice-to-have, kein Muss — **umgesetzt:** neuer roter Button „Alle lokalen Daten
+  zurücksetzen" im „Konto"-Abschnitt neben „Abmelden", mit Bestätigungsdialog (gleiches
+  Muster wie `showLogoutDialog`). `SettingsViewModel.resetLocalData()` leert alle Room-Tabellen
+  über `AppDatabase.clearAllTables()`, setzt den Sync-Cursor (`lastSyncTs`) auf 0 zurück und
+  stößt sofort einen Voll-Sync an — ohne den Cursor-Reset bliebe die App nach dem Löschen leer,
+  weil `GET /api/sync?since=<alter Stand>` nichts mehr zurückgeben würde. Server-URL und
+  API-Schlüssel bleiben bewusst erhalten (anders als bei „Abmelden"), damit der Voll-Sync direkt
+  funktioniert — die Funktion ist als "sauberer Neustart mit demselben Server" gedacht, nicht
+  als Verbindungstrennung.
 
 _Weitere Aufgaben nach dem Interview._
 

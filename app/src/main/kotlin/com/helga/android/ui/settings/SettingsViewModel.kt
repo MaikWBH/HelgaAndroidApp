@@ -2,6 +2,7 @@ package com.helga.android.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.helga.android.data.local.AppDatabase
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
@@ -17,6 +18,7 @@ import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +28,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import retrofit2.HttpException
@@ -43,6 +46,7 @@ class SettingsViewModel @Inject constructor(
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanSettingsDao: WeekplanSettingsDao,
     private val syncStatusHolder: SyncStatusHolder,
+    private val database: AppDatabase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -275,6 +279,23 @@ class SettingsViewModel @Inject constructor(
             syncScheduler.cancelAll()
             preferences.clearConnection()
             onLoggedOut()
+        }
+    }
+
+    /**
+     * Leert alle Room-Tabellen (einstellungen A4) — für den Fall, dass die App "klemmt" und ein
+     * sauberer Neustart ohne Deinstallation reichen soll. Server-URL/API-Key bleiben erhalten,
+     * damit direkt danach wieder alles vom Server-Backup zurückgeholt werden kann: Sync-Cursor
+     * auf 0 zurücksetzen (sonst würde `GET /api/sync?since=<alter Stand>` nichts mehr liefern,
+     * die App bliebe leer) und sofort einen Voll-Sync anstoßen.
+     */
+    fun resetLocalData() {
+        viewModelScope.launch {
+            syncScheduler.cancelAll()
+            withContext(Dispatchers.IO) { database.clearAllTables() }
+            preferences.saveLastSyncTs(0L)
+            syncScheduler.schedulePeriodic()
+            syncScheduler.triggerOneShot()
         }
     }
 
