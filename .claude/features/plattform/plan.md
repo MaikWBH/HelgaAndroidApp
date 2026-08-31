@@ -1,6 +1,6 @@
 # Feature: Plattform-Integration
 
-> **Status:** Interview offen · **Aufgaben:** 4 offen · **Stand:** 2026-08-22 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐
 
 Alles, was die App mit dem Gerät und der Auslieferung verbindet: Widget, Wear OS, Share-Target,
 Build und CI. Kein Fachbereich, sondern die Hülle.
@@ -37,6 +37,12 @@ Build und CI. Kein Fachbereich, sondern die Hülle.
 ### Funktion & UX
 - Vier von elf Bereichen liegen nicht im Bottom-Nav. Ob die Einstiegspunkte auffindbar sind,
   klärt Frage 2.
+- **Bestätigt im Interview:** Bons, Statistik und Märkte sind zu langsam/versteckt erreichbar.
+  Für Bons und Statistik existieren bereits Lösungen (neuer Bons-Tab, siehe
+  [bons-kosten](../bons-kosten/plan.md) A3 und [statistik](../statistik/plan.md) A2). Märkte
+  ist noch nicht adressiert: `HelgaNavGraph.kt:210` — `onStoresClick` kommt ausschließlich aus
+  `SettingsScreen`, also Einkaufsliste/Rezepte/Wochenplan → Einstellungen → Märkte, zwei Hops
+  tief. Aufgabe ergänzt in [maerkte](../maerkte/plan.md) A4.
 - **Wear OS ist kein eigenständiges Wear-App-Modul.** `MainActivity.kt` unterscheidet zur
   Laufzeit per `isRunningOnWearOs()` (`packageManager.hasSystemFeature(FEATURE_WATCH)`) und
   zeigt dieselbe APK entweder als Handy-Nav-Graph oder als `ShoppingListWearScreen`. Ohne
@@ -85,19 +91,34 @@ prüft aber nichts, was ein Nutzer sieht.
 ### Sync
 Nicht zutreffend.
 
-## Offene Fragen
+## Fragen
 
-1. Nutzt du Widget und Wear-Screen tatsächlich? Beide sind Aufwand ohne erkennbare Rückmeldung.
-2. Findest du Bons, Statistik und Märkte schnell genug, oder sollen sie in die Hauptnavigation?
-3. Wie installierst du neue Versionen — APK aus der CI, oder anders?
-4. Wären UI-Tests für die drei Kernabläufe die Mühe wert, oder reicht dir manuelles Prüfen?
-5. Soll die App auf ein Release-Signing umgestellt werden, oder bleibt der Debug-Keystore?
-6. Fehlt eine Plattform-Anbindung, die du erwartest — Quick Settings, Assistant, Freigabe von
-   Rezepten an andere Apps?
+1. **Nutzt du Widget und Wear-Screen tatsächlich?**
+   Antwort Widget: Kaum/nie. Antwort Wear: Nie genutzt — weiß nicht mal, wie das Sideloading
+   funktioniert. Bestätigt: Die Sideload-Hürde aus der Ist-Analyse ist real und hat die Nutzung
+   auf null gedrückt, nicht nur reduziert.
+2. **Findest du Bons, Statistik und Märkte schnell genug?**
+   Antwort: Schon zu langsam/versteckt. Siehe Root Cause oben — für Bons/Statistik schon gelöst,
+   für Märkte neu ergänzt.
+3. **Wie installierst du neue Versionen?**
+   Antwort: APK aus der CI (GitHub Actions Artefakt).
+4. **UI-Tests für die drei Kernabläufe die Mühe wert?**
+   Antwort: Manuelles Prüfen reicht.
+5. **Release-Signing statt Debug-Keystore?**
+   Antwort: Debug-Keystore bleibt — passt zum Installationsweg per CI-Artefakt.
+6. **Fehlt eine erwartete Plattform-Anbindung?**
+   Antwort: Nein, nichts vermisst.
 
 ## Ziele
 
-_Nach dem Interview zu füllen._
+- Bons, Statistik und Märkte aus der Hauptnavigation heraus erreichbar machen — für Bons und
+  Statistik bereits als Aufgabe in den jeweiligen Bereichen verankert, für Märkte hier neu
+  ergänzt.
+- Wear-Modul-Umstellung (A3) bleibt im Backlog, aber mit gedämpfter Priorität: Die Uhr wird
+  aktuell nachweislich nicht genutzt, der Umbau würde vorerst niemandem etwas bringen — erst
+  relevant, wenn tatsächlich eine Uhr im Einsatz ist.
+- Kein Ausbau bei UI-Tests, Release-Signing oder zusätzlichen Plattform-Anbindungen — kein
+  Bedarf geäußert, aktueller Installationsweg (CI-APK) bleibt bestehen.
 
 ## Backlog
 
@@ -107,16 +128,21 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [ ] **A2** — Durchsicht aller 82 `contentDescription = null`: dekorativ belassen, Bedienelemente beschriften · M · Impact hoch
 - [ ] **A3** — Eigenständiges `:wear`-Gradle-Modul statt Laufzeit-Unterscheidung in
       `MainActivity.kt`, damit die Watch-App automatisch mit der Handy-App auf die gepaarte Uhr
-      installiert wird · L · Impact mittel — Voraussetzung für
+      installiert wird · L · Impact mittel → **niedrig** (bestätigt ungenutzt, erst relevant
+      bei aktivem Uhren-Einsatz) — Voraussetzung für
       [einkaufsliste/plan.md](../einkaufsliste/plan.md) A7
 - [ ] **A4** — `POST_NOTIFICATIONS` im Manifest deklarieren und zur Laufzeit anfragen (Muster:
       Kamera-Abfrage in `ReceiptScanScreen.kt:112`). Ohne das sind die bestehenden Einkaufstag-
       und Koch-Erinnerungen auf Android 13+ wirkungslos · S · **Impact hoch** — Voraussetzung
       für [rezepte](../rezepte/plan.md) A8 (Timer mit Benachrichtigung)
 
-_Weitere Aufgaben nach dem Interview._
+_Weitere Aufgaben nach dem Interview. Widget-Nutzung bewusst nicht als Aufgabe aufgenommen —
+bestätigt kaum genutzt, aber kein Änderungswunsch geäußert, nur eine Beobachtung._
 
 ## Entscheidungen
 
 | Datum | Entscheidung | Begründung |
 |-------|--------------|------------|
+| 2026-08-30 | A3 (:wear-Modul) bleibt im Backlog, aber mit gesenkter Priorität | Wear-Screen wird nachweislich nicht genutzt, Umbau hätte aktuell keinen Nutzen |
+| 2026-08-30 | Märkte-Erreichbarkeit wird in maerkte/plan.md als A4 ergänzt | Zwei Hops tief (Settings → Stores), im Interview als "zu versteckt" bestätigt |
+| 2026-08-30 | Debug-Keystore bleibt, keine UI-Tests, keine weiteren Plattform-Anbindungen | Passt zum aktuellen CI-APK-Installationsweg, kein Bedarf geäußert |
