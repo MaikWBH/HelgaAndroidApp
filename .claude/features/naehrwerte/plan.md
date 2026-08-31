@@ -1,6 +1,6 @@
 # Feature: Nährwerte & Allergene
 
-> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 1 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
 
 OpenFoodFacts-Anbindung, Nährwerte je Rezept, Nutri-Score und Allergenwarnungen. Querschnitts-
 funktion ohne eigenen Screen — sichtbar in Rezepten, Einkaufsliste und Wochenplan.
@@ -109,7 +109,17 @@ kein Konzeptproblem, sondern ein offener Anschluss.
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Unit-Tests für `AllergyChecker` (Treffer, Teilwort, Groß-/Kleinschreibung, leeres Profil) · S · Impact hoch
-- [ ] **A2** — `OffProductEntity` an `SyncEngine` anbinden; DAO und Serverseite sind fertig · M · Impact mittel — bestätigter Bedarf aus dem Interview
+- [x] **A2** — `OffProductEntity` an `SyncEngine` anbinden; DAO und Serverseite sind fertig · M · Impact mittel — bestätigter Bedarf aus dem Interview — **umgesetzt:** beim
+  Nachgehen bestätigt, dass DAO (`dirtyProducts`/`upsertAll`/`clearDirty`) und Server
+  (`OffProductRecord`, `SYNC_TABLES`/`TABLE_COLUMNS`/`PAYLOAD_FIELD` in `db.py`/`sync.py`,
+  `_ensure_server_seq` non-destruktiv) bereits vollständig fertig waren — die Lücke steckte
+  ausschließlich im Android-Client. Neue `OffProductDto` in `SyncDto.kt` (mirrort
+  `OffLookupBarcodeResponse`s Feldnamen, aber als eigenständiger Sync-DTO statt den
+  Barcode-Lookup-Response wiederzuverwenden), in `SyncPullResponse`/`SyncPushRequest`
+  verdrahtet. `SyncDao.offProductTimestamps()` ergänzt. `SyncEngine` bekommt `OffProductDao` als
+  neue Abhängigkeit, volle LWW-Behandlung (Winner-Filter, Transaktion, Push, Dirty-Clear) analog
+  zu `MonthlyBudgetEntity`, Mapper-Funktionen `toEntity()`/`toDto()`. Keine Server- oder
+  Datenbankänderung nötig.
 - [x] **A3** — Nutri-Score vollständig entfernen: Badges in der Einkaufsliste
   (`ShoppingListScreen.kt:1470-1471`/`:1561-1587`), Anzeige + Eingabefeld in
   `RecipeDetailScreen.kt` (`NutritionSection`/`NutritionEditDialog`), Wochenplan-Trendkarte

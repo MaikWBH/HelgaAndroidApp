@@ -281,6 +281,33 @@ data class MonthlyBudgetDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class OffProductDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    val barcode: String = "",
+    val name: String = "",
+    val brand: String = "",
+    val categories: String = "[]",
+    @Json(name = "kcal_per_unit") val kcalPerUnit: Double = 0.0,
+    val proteins: Double = 0.0,
+    val fats: Double = 0.0,
+    val carbs: Double = 0.0,
+    @Json(name = "nutri_score") val nutriScore: String = "",
+    val nova: Int = 0,
+    @Json(name = "eco_score") val ecoScore: String = "",
+    val allergenes: String = "[]",
+    val additives: String = "[]",
+    @Json(name = "is_organic") val isOrganic: Int = 0,
+    val vegan: Int = 0,
+    val vegetarian: Int = 0,
+    @Json(name = "image_path") val imagePath: String = "",
+    @Json(name = "is_favorite") val isFavorite: Int = 0,
+    @Json(name = "package_grams") val packageGrams: Double = 0.0,
+    @Json(name = "package_grams_manual") val packageGramsManual: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
 data class SuggestionsResponse(val suggestions: List<String> = emptyList())
 
 @JsonClass(generateAdapter = true)
@@ -403,6 +430,7 @@ data class SyncPullResponse(
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
     @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
+    @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -430,6 +458,7 @@ data class SyncPushRequest(
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
     @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
+    @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

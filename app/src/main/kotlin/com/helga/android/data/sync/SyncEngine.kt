@@ -2,6 +2,7 @@ package com.helga.android.data.sync
 
 import com.helga.android.data.local.AppDatabase
 import com.helga.android.data.local.dao.MonthlyBudgetDao
+import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
@@ -18,6 +19,7 @@ import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
+import com.helga.android.data.local.entity.OffProductEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
@@ -42,6 +44,7 @@ import com.helga.android.data.remote.dto.CategoryDto
 import com.helga.android.data.remote.dto.IngredientDto
 import com.helga.android.data.remote.dto.InstructionDto
 import com.helga.android.data.remote.dto.MonthlyBudgetDto
+import com.helga.android.data.remote.dto.OffProductDto
 import com.helga.android.data.remote.dto.QuickEmojiDto
 import com.helga.android.data.remote.dto.ReceiptDto
 import com.helga.android.data.remote.dto.ReceiptItemDto
@@ -80,6 +83,7 @@ class SyncEngine @Inject constructor(
     private val recipeFeedbackDao: RecipeFeedbackDao,
     private val receiptDao: ReceiptDao,
     private val monthlyBudgetDao: MonthlyBudgetDao,
+    private val offProductDao: OffProductDao,
     private val apiFactory: SyncApiFactory,
     private val preferences: AppPreferences,
 ) {
@@ -135,6 +139,7 @@ class SyncEngine @Inject constructor(
         val receiptWinners = filterServerWins(response.receipts, syncDao.receiptTimestamps()) { it.id to it.updatedAt }
         val receiptItemWinners = filterServerWins(response.receiptItems, syncDao.receiptItemTimestamps()) { it.id to it.updatedAt }
         val budgetWinners = filterServerWins(response.monthlyBudgets, syncDao.monthlyBudgetTimestamps()) { it.id to it.updatedAt }
+        val offProductWinners = filterServerWins(response.offProducts, syncDao.offProductTimestamps()) { it.id to it.updatedAt }
 
         if (recipeWinners.isEmpty() && ingredientWinners.isEmpty() &&
             instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty() &&
@@ -144,7 +149,7 @@ class SyncEngine @Inject constructor(
             wpDayWinners.isEmpty() && wpRecipeWinners.isEmpty() && wpExtraWinners.isEmpty() &&
             wpSettingsWinners.isEmpty() && wpConstraintsWinners.isEmpty() && historyWinners.isEmpty() &&
             feedbackWinners.isEmpty() && receiptWinners.isEmpty() && receiptItemWinners.isEmpty() &&
-            budgetWinners.isEmpty()
+            budgetWinners.isEmpty() && offProductWinners.isEmpty()
         ) return
 
         database.withTransaction {
@@ -170,6 +175,7 @@ class SyncEngine @Inject constructor(
             if (receiptWinners.isNotEmpty()) receiptDao.upsertReceipts(receiptWinners.map { it.toEntity() })
             if (receiptItemWinners.isNotEmpty()) receiptDao.upsertItems(receiptItemWinners.map { it.toEntity() })
             if (budgetWinners.isNotEmpty()) monthlyBudgetDao.upsert(budgetWinners.first().toEntity())
+            if (offProductWinners.isNotEmpty()) offProductDao.upsertAll(offProductWinners.map { it.toEntity() })
         }
     }
 
@@ -197,6 +203,7 @@ class SyncEngine @Inject constructor(
         receipts = receiptDao.dirtyReceipts().map { it.toDto() },
         receiptItems = receiptDao.dirtyItems().map { it.toDto() },
         monthlyBudgets = monthlyBudgetDao.dirty().map { it.toDto() },
+        offProducts = offProductDao.dirtyProducts().map { it.toDto() },
     )
 
     private suspend fun clearDirtyFlagsExcept(
@@ -225,6 +232,7 @@ class SyncEngine @Inject constructor(
         val receiptIds = pushed.receipts.map { it.id } - serverWins.receipts.map { it.id }.toSet()
         val receiptItemIds = pushed.receiptItems.map { it.id } - serverWins.receiptItems.map { it.id }.toSet()
         val budgetIds = pushed.monthlyBudgets.map { it.id } - serverWins.monthlyBudgets.map { it.id }.toSet()
+        val offProductIds = pushed.offProducts.map { it.id } - serverWins.offProducts.map { it.id }.toSet()
 
         database.withTransaction {
             if (recipeIds.isNotEmpty()) recipeDao.clearRecipeDirty(recipeIds)
@@ -249,6 +257,7 @@ class SyncEngine @Inject constructor(
             if (receiptIds.isNotEmpty()) receiptDao.clearReceiptDirty(receiptIds)
             if (receiptItemIds.isNotEmpty()) receiptDao.clearItemDirty(receiptItemIds)
             if (budgetIds.isNotEmpty()) monthlyBudgetDao.clearDirty(budgetIds.toList())
+            if (offProductIds.isNotEmpty()) offProductDao.clearDirty(offProductIds.toList())
         }
     }
 
@@ -528,4 +537,22 @@ private fun MonthlyBudgetDto.toEntity(): MonthlyBudgetEntity = MonthlyBudgetEnti
 private fun MonthlyBudgetEntity.toDto(): MonthlyBudgetDto = MonthlyBudgetDto(
     id = id, updatedAt = updatedAt, deleted = deleted,
     amount = amount, warnThreshold = warnThreshold,
+)
+
+private fun OffProductDto.toEntity(): OffProductEntity = OffProductEntity(
+    id = id, barcode = barcode, name = name, brand = brand, categories = categories,
+    kcalPerUnit = kcalPerUnit, proteins = proteins, fats = fats, carbs = carbs,
+    nutriScore = nutriScore, nova = nova, ecoScore = ecoScore, allergenes = allergenes,
+    additives = additives, isOrganic = isOrganic, vegan = vegan, vegetarian = vegetarian,
+    imagePath = imagePath, isFavorite = isFavorite, packageGrams = packageGrams,
+    packageGramsManual = packageGramsManual, updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun OffProductEntity.toDto(): OffProductDto = OffProductDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, barcode = barcode, name = name,
+    brand = brand, categories = categories, kcalPerUnit = kcalPerUnit, proteins = proteins,
+    fats = fats, carbs = carbs, nutriScore = nutriScore, nova = nova, ecoScore = ecoScore,
+    allergenes = allergenes, additives = additives, isOrganic = isOrganic, vegan = vegan,
+    vegetarian = vegetarian, imagePath = imagePath, isFavorite = isFavorite,
+    packageGrams = packageGrams, packageGramsManual = packageGramsManual,
 )

@@ -42,7 +42,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 5 offen (9 erledigt) | ⭐⭐⭐ |
 | 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
 | 5 | KI | [ki](ki/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
-| 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
+| 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐⭐ |
 | 7 | Märkte & Gänge | [maerkte](maerkte/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐ |
 | 8 | Statistik | [statistik](statistik/plan.md) | erledigt | 2 offen (1 erledigt) | ⭐ |
 | 9 | Sync | [sync](sync/plan.md) | erledigt | 3 offen (1 erledigt) | ⭐⭐ |
@@ -84,7 +84,7 @@ Gilt für alle Pläne, hier einmal zentral festgehalten statt elfmal wiederholt:
 | `!!`-Operator | 10 Stellen, verboten laut Guideline | [kotlin-quality](../guidelines/kotlin-quality.md) |
 | `items()` ohne `key` | 9 Stellen in Compose-Listen | [compose-performance](../guidelines/compose-performance.md) |
 | `contentDescription = null` | 82 Stellen — je Fall zu prüfen, ob dekorativ oder Bedienelement | [ux-accessibility](../guidelines/ux-accessibility.md) |
-| Nicht gesyncte Entities | 1 von 23: `OffProductEntity` hat DAO und Serverseite fertig, aber keinen Aufruf in `SyncEngine` (`WeekplanTemplateEntity`/`WeekplanTemplateEntryEntity` waren die anderen beiden — per wochenplan A1 komplett entfernt statt angebunden) | [sync-patterns](../guidelines/sync-patterns.md) |
+| Nicht gesyncte Entities | 0 von 23 — behoben: `OffProductEntity` jetzt an `SyncEngine` angebunden (naehrwerte A2), `WeekplanTemplateEntity`/`WeekplanTemplateEntryEntity` per wochenplan A1 komplett entfernt statt angebunden | [sync-patterns](../guidelines/sync-patterns.md) |
 | Benachrichtigungen wirkungslos | `POST_NOTIFICATIONS` fehlt im Manifest und wird nie zur Laufzeit angefragt — bei `targetSdk 35` verwirft Android 13+ jede Zustellung. Betrifft die fertigen Einkaufstag- und Koch-Erinnerungen; Aufgabe in [plattform](plattform/plan.md) A4 | – |
 
 ## Bewusst offene Punkte
