@@ -3,10 +3,12 @@ package com.helga.android.ui.recipes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
+import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
@@ -36,8 +38,9 @@ data class RecipeCookUiState(
 @HiltViewModel
 class RecipeCookViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    repository: RecipeRepository,
+    private val repository: RecipeRepository,
     private val recipeHistoryDao: RecipeHistoryDao,
+    private val recipeFeedbackDao: RecipeFeedbackDao,
     private val syncScheduler: SyncScheduler,
 ) : ViewModel() {
 
@@ -92,7 +95,13 @@ class RecipeCookViewModel @Inject constructor(
         _completedSteps.update { if (index in it) it - index else it + index }
     }
 
-    fun confirmCooked() {
+    /**
+     * [liked]: 1 = 👍, -1 = 👎, 0 = übersprungen (kein Feedback). "Nur beim Kochen bewerten"
+     * (rezepte A6) — dies ist neben dem Wochenplan-Tageskärtchen der zweite, aber nicht
+     * redundante Weg, denselben [RecipeFeedbackEntity]-Datensatz zu schreiben; die früher
+     * separate Sterne-Eingabe im Rezeptdetail ist entfallen.
+     */
+    fun confirmCooked(liked: Int = 0) {
         viewModelScope.launch {
             val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
             val now = System.currentTimeMillis()
@@ -110,6 +119,20 @@ class RecipeCookViewModel @Inject constructor(
                         )
                     )
                 )
+            }
+            if (liked != 0) {
+                val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, today)
+                val entity = existing?.copy(liked = liked, updatedAt = now, dirty = 1)
+                    ?: RecipeFeedbackEntity(
+                        id = UUID.randomUUID().toString(),
+                        recipeId = recipeId,
+                        plannedDate = today,
+                        liked = liked,
+                        updatedAt = now,
+                        dirty = 1,
+                    )
+                recipeFeedbackDao.upsert(entity)
+                repository.recalculateRating(recipeId)
             }
             syncScheduler.triggerOneShot()
         }

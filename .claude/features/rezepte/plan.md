@@ -1,6 +1,6 @@
 # Feature: Rezepte
 
-> **Status:** Interview erledigt · **Aufgaben:** 5 offen (5 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 4 offen (6 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Zweiter Bottom-Nav-Tab. Datenbasis für Wochenplan und Einkaufsliste.
 
@@ -191,9 +191,22 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       bewusst als In-Memory-Filter (die Rezeptliste ist ohnehin schon vollständig geladen,
       dafür lohnt sich keine eigene Query). `RecipeListViewModel.recipes` kombiniert beide
       Ergebnisse per OR — ein Treffer in Name, Beschreibung, Tag ODER Zutat reicht.
-- [ ] **A6** — Bewertung zusammenlegen: `RecipeFeedbackEntity` wird alleinige Eingabequelle,
+- [x] **A6** — Bewertung zusammenlegen: `RecipeFeedbackEntity` wird alleinige Eingabequelle,
       `RecipeEntity.rating` daraus abgeleitet und im Detail nur noch angezeigt; Room-Migration
-      und Sync-Anpassung nötig · L · Impact hoch
+      und Sync-Anpassung nötig · L · Impact hoch — **umgesetzt:** entgegen der ursprünglichen
+      Einschätzung **ohne** Room-Migration/Sync-Anpassung — beide Entities (`RecipeEntity.rating`,
+      `RecipeFeedbackEntity.liked`) existierten bereits, nur die Verdrahtung fehlte. Neues
+      `RecipeRepository.recalculateRating(recipeId)`: Durchschnitt aller `liked`-Werte (-1..1)
+      auf 1–5 Sterne gemappt (`3 + avg*2`, gerundet); bleibt ein Rezept ganz ohne Feedback,
+      **bleibt ein alter manueller Wert unangetastet** statt auf „unbewertet" zurückgesetzt zu
+      werden (kein rückwirkender Datenverlust). Aufgerufen nach jedem Feedback-Eintrag — sowohl
+      vom bestehenden Wochenplan-Tageskärtchen (`WeekplanViewModel.setFeedback`) als auch von
+      einem neuen zweiten Eingang: einem "Wie war's?"-Dialog (👍/👎/Überspringen) beim Abschluss
+      der Kochansicht (`RecipeCookScreen.kt`, `RecipeCookViewModel.confirmCooked(liked)`) — beide
+      schreiben denselben `RecipeFeedbackEntity`-Datensatz, keine zwei getrennten Mechanismen
+      mehr. Die freie Sterne-Eingabe im Rezeptdetail (`RatingSection`) ist entfernt,
+      `RecipeDetailViewModel.setRating()` gelöscht; die Sektion ist jetzt reine Anzeige und
+      blendet sich aus, solange kein Feedback vorliegt.
 - [ ] **A7** — Kochansicht: geteilter Landscape-Modus mit Zutaten und aktuellem Schritt
       nebeneinander · M · Impact hoch
 - [ ] **A8** — Timer: mehrere parallel, laufen im Hintergrund weiter, melden sich per

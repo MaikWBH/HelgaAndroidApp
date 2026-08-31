@@ -45,6 +45,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -151,6 +152,20 @@ fun RecipeCookScreen(
     var timerSeconds by remember { mutableIntStateOf(0) }
     var timerRunning by remember { mutableStateOf(false) }
     var focusMode by remember { mutableStateOf(false) }
+    var showRatingPrompt by remember { mutableStateOf(false) }
+
+    fun finish(liked: Int) {
+        viewModel.confirmCooked(liked)
+        onBack()
+    }
+
+    if (showRatingPrompt) {
+        CookRatingDialog(
+            onLike = { finish(1) },
+            onDislike = { finish(-1) },
+            onSkip = { finish(0) },
+        )
+    }
 
     LaunchedEffect(timerRunning) {
         while (timerRunning && timerSeconds > 0) {
@@ -234,10 +249,7 @@ fun RecipeCookScreen(
                     timerSeconds = timer.totalSeconds
                     timerRunning = false
                 },
-                onDone = {
-                    viewModel.confirmCooked()
-                    onBack()
-                },
+                onDone = { showRatingPrompt = true },
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -418,10 +430,7 @@ fun RecipeCookScreen(
             item(key = "done_button") {
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = {
-                        viewModel.confirmCooked()
-                        onBack()
-                    },
+                    onClick = { showRatingPrompt = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.cook_done))
@@ -539,6 +548,40 @@ private fun CookFocusView(
             }
         }
     }
+}
+
+/**
+ * "Wie war's?" — der einzige Bewertungs-Einstieg neben dem Wochenplan-Tageskärtchen
+ * (rezepte A6). Schreibt direkt in [com.helga.android.data.local.entity.RecipeFeedbackEntity],
+ * aus dem die Sterne-Anzeige im Rezeptdetail abgeleitet wird.
+ */
+@Composable
+private fun CookRatingDialog(
+    onLike: () -> Unit,
+    onDislike: () -> Unit,
+    onSkip: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onSkip,
+        title = { Text(stringResource(R.string.cook_rating_title)) },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+            ) {
+                IconButton(onClick = onLike, modifier = Modifier.size(56.dp)) {
+                    Text(text = "👍", fontSize = 32.sp)
+                }
+                IconButton(onClick = onDislike, modifier = Modifier.size(56.dp)) {
+                    Text(text = "👎", fontSize = 32.sp)
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onSkip) { Text(stringResource(R.string.cook_rating_skip)) }
+        },
+    )
 }
 
 @Composable

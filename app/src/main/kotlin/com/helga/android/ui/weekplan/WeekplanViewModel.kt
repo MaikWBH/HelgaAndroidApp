@@ -13,6 +13,7 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.dao.ShoppingDao
@@ -76,6 +77,7 @@ sealed interface WeekplanGenerateStatus {
 class WeekplanViewModel @Inject constructor(
     private val repository: WeekplanRepository,
     private val recipeDao: RecipeDao,
+    private val recipeRepository: RecipeRepository,
     private val recipeHistoryDao: RecipeHistoryDao,
     private val recipeFeedbackDao: RecipeFeedbackDao,
     private val shoppingDao: ShoppingDao,
@@ -355,6 +357,7 @@ class WeekplanViewModel @Inject constructor(
                 dirty = 1,
             )
             recipeFeedbackDao.upsert(entity)
+            recipeRepository.recalculateRating(recipeId)
             syncScheduler.triggerOneShot()
         }
     }

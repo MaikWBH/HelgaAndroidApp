@@ -143,13 +143,6 @@ class RecipeDetailViewModel @Inject constructor(
         }
     }
 
-    fun setRating(rating: Int) {
-        viewModelScope.launch {
-            repository.updateRating(recipeId, rating)
-            syncScheduler.triggerOneShot()
-        }
-    }
-
     fun toggleFavorite() {
         val recipe = uiState.value.recipe ?: return
         viewModelScope.launch {

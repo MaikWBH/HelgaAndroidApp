@@ -38,6 +38,7 @@
     <!-- Rezept-Detail -->
     <string name="recipe_actions">Aktionen</string>
     <string name="recipe_detail_back">Zurück</string>
+    <string name="recipe_rating_derived_hint">Ergibt sich aus deiner Bewertung beim Kochen</string>
     <string name="recipe_detail_ingredients">Zutaten</string>
     <string name="recipe_detail_instructions">Zubereitung</string>
     <string name="recipe_detail_yield">Portionen</string>
@@ -110,6 +111,8 @@
     <string name="cook_next">Nächster Schritt</string>
     <string name="cook_prev">Vorheriger Schritt</string>
     <string name="cook_done">Fertig!</string>
+    <string name="cook_rating_title">Wie war\'s?</string>
+    <string name="cook_rating_skip">Überspringen</string>
     <string name="cook_no_steps">Keine Zubereitungsschritte vorhanden.</string>
     <string name="cook_timer_start">Starten</string>
     <string name="cook_timer_pause">Pause</string>

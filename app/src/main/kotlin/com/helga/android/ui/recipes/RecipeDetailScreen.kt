@@ -353,11 +353,8 @@ fun RecipeDetailScreen(
                         serverUrl = serverUrl,
                     )
                 }
-                item {
-                    RatingSection(
-                        rating = recipe.rating,
-                        onRatingChange = viewModel::setRating,
-                    )
+                if (recipe.rating > 0) {
+                    item { RatingSection(rating = recipe.rating) }
                 }
                 if (uiState.tags.isNotEmpty()) {
                     item { TagsSection(tags = uiState.tags) }
@@ -457,28 +454,36 @@ private fun HeroImage(
     }
 }
 
+/**
+ * Rein lesend — die Bewertung wird ausschließlich aus dem Kochfeedback abgeleitet
+ * (rezepte A6, siehe [RecipeRepository.recalculateRating]), nicht mehr hier frei gesetzt.
+ */
 @Composable
-private fun RatingSection(rating: Int, onRatingChange: (Int) -> Unit) {
-    Row(
+private fun RatingSection(rating: Int) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        for (i in 1..5) {
-            IconButton(
-                onClick = { onRatingChange(if (i == rating) 0 else i) },
-                modifier = Modifier.size(40.dp),
-            ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            for (i in 1..5) {
                 Icon(
                     imageVector = if (i <= rating) Icons.Filled.Star else Icons.Outlined.Star,
                     contentDescription = null,
                     tint = if (i <= rating) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(28.dp),
                 )
             }
         }
+        Text(
+            text = stringResource(R.string.recipe_rating_derived_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

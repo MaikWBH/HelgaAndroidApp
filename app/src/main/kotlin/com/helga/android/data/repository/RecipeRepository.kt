@@ -1,6 +1,7 @@
 package com.helga.android.data.repository
 
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
@@ -9,12 +10,14 @@ import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.model.RecipeNutrition
 import kotlinx.coroutines.flow.Flow
+import kotlin.math.roundToInt
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class RecipeRepository @Inject constructor(
     private val recipeDao: RecipeDao,
+    private val recipeFeedbackDao: RecipeFeedbackDao,
     private val shoppingRepository: ShoppingRepository,
 ) {
     fun observeAll(): Flow<List<RecipeEntity>> = recipeDao.observeAll()
@@ -41,8 +44,20 @@ class RecipeRepository @Inject constructor(
         )
     }
 
-    suspend fun updateRating(id: String, rating: Int) {
-        recipeDao.updateRating(id, rating, System.currentTimeMillis())
+    /**
+     * Leitet die Sternebewertung aus dem Kochfeedback ab (rezepte A6) statt sie manuell zu
+     * setzen — "Sterne am Rezept" und "Daumen je Kochtermin" waren zwei getrennte
+     * Bewertungswege ohne erkennbare Rollenteilung. Nach jedem [RecipeFeedbackEntity]-Eintrag
+     * aufrufen (egal ob aus der Kochansicht oder vom Wochenplan-Tageskärtchen). Gibt es noch
+     * kein Feedback, bleibt ein eventuell vorhandener alter manueller Wert unangetastet — kein
+     * rückwirkendes Zurücksetzen bereits bewerteter Rezepte auf "unbewertet".
+     */
+    suspend fun recalculateRating(recipeId: String) {
+        val feedback = recipeFeedbackDao.feedbackForRecipe(recipeId).filter { it.liked != 0 }
+        if (feedback.isEmpty()) return
+        val avg = feedback.map { it.liked }.average()
+        val rating = (3 + avg * 2).roundToInt().coerceIn(1, 5)
+        recipeDao.updateRating(recipeId, rating, System.currentTimeMillis())
     }
 
     suspend fun updatePersonalNotes(id: String, notes: String) {

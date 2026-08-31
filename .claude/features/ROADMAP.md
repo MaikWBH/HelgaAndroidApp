@@ -109,7 +109,7 @@ Bewertung, Wochenplan-Erweiterungen, u. a.).
 | **plattform A3 → einkaufsliste A7** | Eigenes `:wear`-Modul, danach Abhaken auf der Uhr — der Ablauf, den du dir vom Einkaufen versprichst |
 | **rezepte A8** | Timer: mehrere parallel, Hintergrundlauf, Benachrichtigung (braucht plattform A4 ✓ aus den Quick Wins) |
 | **rezepte A7** | Kochansicht: geteilter Landscape-Modus |
-| **rezepte A6** | Bewertung zusammenlegen (nur beim Kochen bewerten) |
+| ✅ **rezepte A6** | Bewertung zusammenlegen (nur beim Kochen bewerten) |
 | ✅ **rezepte A9** | Portionsskalierung je Rezept merken |
 | **wochenplan A10** | Ankerrezepte anbinden (`generateWithAnchors` ist toter Code) |
 | **wochenplan A8** | Constraints direkt ins UI statt Dialog |
