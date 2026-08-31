@@ -79,7 +79,7 @@ ausbauen, Sync-Lücken schließen, Tests für sicherheitsrelevante Logik).
 
 ---
 
-## 🧹 Welle 3 — Aufräumen & Fundament · 10 Punkte, M/L
+## 🧹 Welle 3 — Aufräumen & Fundament — vollständig umgesetzt (2026-08-31)
 
 | Punkt | Inhalt |
 |-------|--------|
@@ -91,7 +91,14 @@ ausbauen, Sync-Lücken schließen, Tests für sicherheitsrelevante Logik).
 | ✅ **rezepte A5** | Suche auf Tags und Zutaten erweitern |
 | ✅ **statistik A3** | Zeitraumfilter analog zum Ausgabenüberblick |
 | ✅ **bons-kosten A4** | Einstellbare automatische Bon-Löschung, Default 3 Monate |
-| **sync A4** | Bilder proaktiv herunterladen (Offline-Verfügbarkeit auf dem zweiten Gerät) |
+| ✅ **sync A4** | Bilder proaktiv herunterladen (Offline-Verfügbarkeit auf dem zweiten Gerät) |
+
+Details: [naehrwerte](naehrwerte/plan.md) A1–A3, [wochenplan](wochenplan/plan.md) A1/A16,
+[sync](sync/plan.md) A1/A4, [rezepte](rezepte/plan.md) A5, [statistik](statistik/plan.md) A3,
+[bons-kosten](bons-kosten/plan.md) A4 — jeweils mit „umgesetzt"-Vermerk.
+
+**Weiter geht's mit Welle 4** (Größere Features — Wear-Modul, Timer, Kochansicht,
+Bewertung, Wochenplan-Erweiterungen, u. a.).
 
 ---
 

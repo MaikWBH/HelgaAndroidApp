@@ -57,6 +57,10 @@ interface ReceiptDao {
     @Query("SELECT * FROM receipts WHERE localImageUri != '' AND deleted = 0")
     suspend fun receiptsWithLocalImage(): List<ReceiptEntity>
 
+    /** Für den proaktiven Bild-Download (sync A4) — Bild liegt auf dem Server, aber noch nicht lokal gecacht. */
+    @Query("SELECT * FROM receipts WHERE localImageUri = '' AND imagePath != '' AND deleted = 0")
+    suspend fun receiptsNeedingImageDownload(): List<ReceiptEntity>
+
     @Query("UPDATE receipts SET imagePath = :imagePath, localImageUri = '', updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
     suspend fun setImagePathAndClearLocal(id: String, imagePath: String, updatedAt: Long)
 

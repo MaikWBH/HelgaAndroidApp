@@ -145,6 +145,10 @@ interface RecipeDao {
     @Query("SELECT * FROM recipes WHERE localImageUri != '' AND deleted = 0")
     suspend fun recipesWithLocalImage(): List<RecipeEntity>
 
+    /** Für den proaktiven Bild-Download (sync A4) — Bild liegt auf dem Server, aber noch nicht lokal gecacht. */
+    @Query("SELECT * FROM recipes WHERE localImageUri = '' AND imagePath != '' AND deleted = 0")
+    suspend fun recipesNeedingImageDownload(): List<RecipeEntity>
+
     @Query("SELECT * FROM recipes WHERE deleted = 0 AND id NOT IN (:excludeIds) ORDER BY RANDOM() LIMIT :limit")
     suspend fun getRandomExcluding(excludeIds: List<String>, limit: Int): List<RecipeEntity>
 

@@ -1,6 +1,6 @@
 # Feature: Sync
 
-> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 1 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
 
 Bidirektionaler Abgleich mit dem Homeserver, Last-Write-Wins. Kein eigener Screen, aber
 Grundlage aller anderen Bereiche — und der einzige Bereich mit vorhandenen Tests.
@@ -134,9 +134,19 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   `ForegroundSyncObserver` (Muster von `NetworkObserver`), registriert sich auf
   `ProcessLifecycleOwner`, `onStart()` triggert `syncScheduler.triggerOneShot()`; in `HelgaApp`
   neben `networkObserver.start()` gestartet
-- [ ] **A4** — Bilder proaktiv im Hintergrund herunterladen (Download-Pendant zu
+- [x] **A4** — Bilder proaktiv im Hintergrund herunterladen (Download-Pendant zu
   `ImageUploadWorker`), damit sie auch offline auf einem neuen/zweiten Gerät verfügbar sind ·
-  M · Impact mittel
+  M · Impact mittel — **umgesetzt:** neuer `ImageDownloadWorker`, in `SyncScheduler.triggerOneShot()`
+  ans Ende der bestehenden Kette gehängt (Sync → Upload → Download), damit erst die durch den
+  Sync neu bekannten `imagePath`-Werte anderer Geräte vorliegen, bevor geladen wird. Neue
+  DAO-Queries `recipesNeedingImageDownload()`/`receiptsNeedingImageDownload()`
+  (`localImageUri = '' AND imagePath != ''`). Lädt bewusst nicht in eine eigene Datei/Feld,
+  sondern per `applicationContext.imageLoader.execute()` proaktiv in Coils bestehenden
+  Disk-Cache (derselbe, den `AsyncImage` beim Anzeigen ohnehin nutzt) — spart eine
+  Room-Migration und einen neuen Uri-Zustand, der mit `localImageUri` (das für
+  `ImageUploadWorker` „muss noch hochgeladen werden" bedeutet) kollidiert hätte. Nutzt denselben
+  authentifizierten `ImageLoader` wie die App (Coil-Singleton über `HelgaApp.newImageLoader()`,
+  X-Api-Key-Header bereits verdrahtet).
 
 _Weitere Aufgaben nach dem Interview._
 

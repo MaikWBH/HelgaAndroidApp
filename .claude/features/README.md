@@ -45,7 +45,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 0 offen (4 erledigt) | ⭐⭐ |
 | 7 | Märkte & Gänge | [maerkte](maerkte/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐ |
 | 8 | Statistik | [statistik](statistik/plan.md) | erledigt | 1 offen (2 erledigt) | ⭐ |
-| 9 | Sync | [sync](sync/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
+| 9 | Sync | [sync](sync/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐⭐ |
 | 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐ |
 | 11 | Plattform-Integration | [plattform](plattform/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐ |
 
