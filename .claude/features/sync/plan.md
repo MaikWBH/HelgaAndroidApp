@@ -1,6 +1,6 @@
 # Feature: Sync
 
-> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
 
 Bidirektionaler Abgleich mit dem Homeserver, Last-Write-Wins. Kein eigener Screen, aber
 Grundlage aller anderen Bereiche — und der einzige Bereich mit vorhandenen Tests.
@@ -56,13 +56,19 @@ Die einzigen Tests des Projekts liegen hier: `SyncLwwTest.kt` prüft die LWW-Log
 Teilfehler beim Push, Abbruch mitten im Sync.
 
 ### Sync
-Zwei Entities sind nicht angebunden — beide in ihren Fachbereichen als Aufgabe geführt:
+**Stand bei Interview (2026-08-30):** Zwei Entities waren nicht angebunden — beide in ihren
+Fachbereichen als Aufgabe geführt:
 - `WeekplanTemplateEntity`, `WeekplanTemplateEntryEntity` → [wochenplan](../wochenplan/plan.md), A1
 - `OffProductEntity` → [naehrwerte](../naehrwerte/plan.md), A2 (DAO und Server sind fertig, nur der Aufruf fehlt)
 
-Damit sind 22 von 25 Entities angebunden. Ein wiederkehrendes Muster: eine neue Entity wird
+Damit waren 22 von 25 Entities angebunden. Ein wiederkehrendes Muster: eine neue Entity wird
 angelegt und der Sync-Anschluss vergessen. Eine Prüfung, die das automatisch bemerkt, wäre
-wirksamer als jede Einzelkorrektur.
+wirksamer als jede Einzelkorrektur — siehe Backlog A1.
+
+**Update 2026-08-31:** Beide Lücken geschlossen — Vorlagen-Feature per wochenplan A1 komplett
+entfernt statt angebunden, `OffProductEntity` per naehrwerte A2 angebunden. Damit sind aktuell
+alle 23 verbliebenen Entities angebunden (0 offene Lücken), und `SyncCompletenessTest.kt`
+(Backlog A1 hier) bewacht das automatisch für künftige neue Entities.
 
 ## Fragen
 
@@ -110,7 +116,16 @@ datensparsam sein. Als Priorität für dieses Interview vermerkt.
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Test, der alle Entities aus `AppDatabase` gegen `SyncDto`/`SyncEngine` abgleicht und bei fehlendem Anschluss fehlschlägt · M · Impact hoch — bestätigter Bedarf aus dem Interview
+- [x] **A1** — Test, der alle Entities aus `AppDatabase` gegen `SyncDto`/`SyncEngine` abgleicht und bei fehlendem Anschluss fehlschlägt · M · Impact hoch — bestätigter Bedarf aus dem Interview —
+  **umgesetzt:** `SyncCompletenessTest.kt` (reines JVM-Test analog zu `SyncLwwTest`, keine
+  Android-Runtime nötig). Liest `AppDatabase.kt`/`SyncEngine.kt` als Quelltext, extrahiert alle
+  `<Name>Entity::class`-Einträge aus dem `entities = [...]`-Block per Regex und prüft für jede,
+  ob `SyncEngine.kt` sowohl `fun <Name>Entity.toDto(): <Name>Dto` als auch
+  `fun <Name>Dto.toEntity(): <Name>Entity` enthält — das durchgängige Namensmuster aller 23
+  bestehenden Mapper. Ein mitgeführtes, aktuell leeres `intentionallyLocalOnly`-Set erlaubt
+  künftige bewusste Ausnahmen mit Begründung. Verifiziert: Test schlägt fehl, wenn eine Entity
+  ohne Mapper-Paar eingespeist wird (Positiv- und Negativfall geprüft, letzterer über einen
+  temporären Test-Patch statt Produktivcode).
 - [ ] **A2** — Tests für Konfliktfälle: gleicher Zeitstempel, Teilfehler beim Push, Abbruch mitten im Sync · M · Impact hoch
 - [x] **A3** — App-Foreground-Sync-Trigger implementieren (z. B. `ProcessLifecycleOwner` in der
   Application-Klasse, `syncScheduler.triggerOneShot()` beim Vordergrundwechsel): kein

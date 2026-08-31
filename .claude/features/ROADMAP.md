@@ -86,7 +86,7 @@ ausbauen, Sync-Lücken schließen, Tests für sicherheitsrelevante Logik).
 | ✅ **naehrwerte A3 + wochenplan A16** | Nutri-Score vollständig entfernen (inkl. `minNutriScore`-Filter) — **vor** wochenplan A6 spart Arbeit |
 | ✅ **wochenplan A1** | Vorlagen-Feature ersatzlos ausbauen (unerreichbarer Code) |
 | ✅ **naehrwerte A2** | `OffProductEntity` an den Sync anbinden — DAO und Server sind fertig |
-| **sync A1** | Test, der eine nicht angebundene Entity künftig automatisch meldet |
+| ✅ **sync A1** | Test, der eine nicht angebundene Entity künftig automatisch meldet |
 | **naehrwerte A1** | `AllergyChecker`-Tests · S · sicherheitsrelevanteste Logik der App |
 | **rezepte A5** | Suche auf Tags und Zutaten erweitern |
 | **statistik A3** | Zeitraumfilter analog zum Ausgabenüberblick |

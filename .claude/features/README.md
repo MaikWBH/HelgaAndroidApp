@@ -45,7 +45,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐⭐ |
 | 7 | Märkte & Gänge | [maerkte](maerkte/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐ |
 | 8 | Statistik | [statistik](statistik/plan.md) | erledigt | 2 offen (1 erledigt) | ⭐ |
-| 9 | Sync | [sync](sync/plan.md) | erledigt | 3 offen (1 erledigt) | ⭐⭐ |
+| 9 | Sync | [sync](sync/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
 | 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐ |
 | 11 | Plattform-Integration | [plattform](plattform/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐ |
 
@@ -80,7 +80,7 @@ Gilt für alle Pläne, hier einmal zentral festgehalten statt elfmal wiederholt:
 
 | Befund | Zahl | Guideline |
 |--------|------|-----------|
-| Testabdeckung | 3 Testklassen / 14 Tests bei 127 Kotlin-Dateien; ein `androidTest`-Quellverzeichnis existiert nicht | – |
+| Testabdeckung | 4 Testklassen / 19 Tests bei 123 Kotlin-Dateien; ein `androidTest`-Quellverzeichnis existiert nicht | – |
 | `!!`-Operator | 10 Stellen, verboten laut Guideline | [kotlin-quality](../guidelines/kotlin-quality.md) |
 | `items()` ohne `key` | 9 Stellen in Compose-Listen | [compose-performance](../guidelines/compose-performance.md) |
 | `contentDescription = null` | 82 Stellen — je Fall zu prüfen, ob dekorativ oder Bedienelement | [ux-accessibility](../guidelines/ux-accessibility.md) |
