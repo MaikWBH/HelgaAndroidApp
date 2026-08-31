@@ -42,7 +42,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | 7 | Märkte & Gänge | [maerkte](maerkte/plan.md) | erledigt | 3 offen | ⭐ |
 | 8 | Statistik | [statistik](statistik/plan.md) | erledigt | 3 offen | ⭐ |
 | 9 | Sync | [sync](sync/plan.md) | erledigt | 4 offen | ⭐⭐ |
-| 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | offen | – | ⭐ |
+| 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | erledigt | 4 offen | ⭐ |
 | 11 | Plattform-Integration | [plattform](plattform/plan.md) | offen | 4 offen | ⭐ |
 
 **Interview-Reihenfolge:** 1 → 2 → 3 (Kernablauf und die drei Bottom-Nav-Tabs), dann 4 → 5 → 6,

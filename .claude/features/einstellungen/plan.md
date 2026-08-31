@@ -1,6 +1,6 @@
 # Feature: Einstellungen & Onboarding
 
-> **Status:** Interview offen · **Aufgaben:** 0/0 · **Stand:** 2026-08-22 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐
 
 Erste Einrichtung und zentrale Konfiguration. `SettingsViewModel` ist mit 25 öffentlichen
 Funktionen die Sammelstelle für Einstellungen aller anderen Bereiche.
@@ -39,6 +39,12 @@ Funktionen die Sammelstelle für Einstellungen aller anderen Bereiche.
 ### Funktion & UX
 - `SettingsScreen.kt` sammelt die Einstellungen aller elf Bereiche in einer flachen Ansicht.
   Ob die Gliederung bei diesem Umfang noch trägt, klärt Frage 1.
+- **Root Cause zu „Einstellungen nur über Rezepte erreichbar" (aus dem Interview):**
+  `HelgaNavGraph.kt:156-166` — nur `RecipeListScreen` bekommt den Parameter `onSettingsClick`;
+  `ShoppingListScreen` und `WeekplanScreen` haben keinen Einstiegspunkt zu den Einstellungen.
+  Der `Scaffold` in `HelgaNavGraph.kt:107-131` hat nur eine `bottomBar`, keine gemeinsame
+  `topBar` — jeder Root-Screen baut seine eigene TopAppBar unabhängig, es gibt also keine
+  zentrale Stelle, die automatisch für alle drei gilt.
 - **Zwei Schalter schalten ins Leere.** `setNotifyShoppingDay` und `setNotifyCookReminder`
   steuern Benachrichtigungen, die auf Android 13+ gar nicht zugestellt werden — im Manifest
   fehlt `POST_NOTIFICATIONS`, und es gibt keine Laufzeitabfrage. Gefunden im Rezepte-Interview;
@@ -58,26 +64,52 @@ andere ungetestet.
 Keine eigene Entity ohne Anschluss. `weekplanSettings` und `quickEmojis` sind angebunden;
 reine Gerätepräferenzen in `AppPreferences.kt` sind bewusst lokal.
 
-## Offene Fragen
+## Fragen
 
-1. Findest du eine bestimmte Einstellung regelmäßig nicht wieder?
-2. Welche Einstellungen änderst du tatsächlich mehr als einmal — der Rest könnte einklappen.
-3. Der Datenexport: wofür nutzt du ihn, und ist das Format brauchbar?
-4. Onboarding: Hat die Ersteinrichtung beim letzten Mal funktioniert, oder gab es Hürden?
-5. Sollen Einstellungen zwischen Geräten synchronisiert werden, oder bewusst pro Gerät bleiben?
-6. Der API-Schlüssel liegt in den Einstellungen. Ist die aktuelle Speicherung für dich in
-   Ordnung, oder soll das abgesichert werden?
-7. Fehlt ein Weg, alle Daten zurückzusetzen, ohne die App neu zu installieren?
+1. **Findest du eine bestimmte Einstellung regelmäßig nicht wieder?**
+   Antwort: Ja, kommt vor. Die Einstellungen wirken allgemein überladen/unstrukturiert.
+   Zusätzlich: verwirrend, dass Einstellungen nur über die Rezepte-Karte aufrufbar sind — sollte
+   zentraler und intuitiver sein. Siehe Root Cause oben.
+2. **Welche Einstellungen änderst du tatsächlich mehr als einmal?**
+   Antwort: Einkaufsliste (Standardliste, Emoji-Buttons); ansonsten kaum etwas öfter als einmal
+   — die meisten Einstellungen werden einmal gesetzt und nie wieder angefasst.
+3. **Datenexport: wofür genutzt, Format brauchbar?**
+   Antwort: Nicht genutzt — Server-Sync reicht als Absicherung, der Docker-Container wird
+   zusätzlich separat gebackupt.
+4. **Onboarding: Hürden bei der letzten Ersteinrichtung?**
+   Antwort: Problemlos.
+5. **Sollen Einstellungen zwischen Geräten syncen?**
+   Antwort: Nein, bewusst pro Gerät.
+6. **Ist die aktuelle API-Schlüssel-Speicherung in Ordnung?**
+   Antwort: Ja, in Ordnung.
+7. **Fehlt ein Reset-Weg ohne Neuinstallation?**
+   Antwort: Wäre nett, kein Muss.
 
 ## Ziele
 
-_Nach dem Interview zu füllen._
+- Einstellungen von allen drei Hauptscreens (Einkaufsliste, Rezepte, Wochenplan) aus erreichbar
+  machen, nicht nur über Rezepte.
+- Struktur überarbeiten: häufig genutzte Einstellungen (Einkaufsliste) vorn, selten geänderte
+  Einstellungen in eine „Erweitert"-Sektion einklappen — passend zur Beobachtung, dass die
+  meisten Einstellungen nur einmal gesetzt werden.
+- Onboarding, Einstellungs-Sync-Verhalten, API-Key-Speicherung und Datenexport unverändert
+  lassen — kein Bedarf geäußert.
+- Reset-Funktion als Nice-to-have vormerken, keine aktuelle Priorität.
 
 ## Backlog
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — `!!` in `SettingsScreen.kt:352` auflösen · S · Impact mittel
+- [ ] **A2** — Einstellungen von allen Hauptscreens erreichbar machen: `ShoppingListScreen`
+  und `WeekplanScreen` bekommen einen Einstellungs-Zugang (z. B. Overflow-Menü, analog zum
+  bereits vorhandenen Muster in `ShoppingListScreen.kt`), nicht nur `RecipeListScreen` ·
+  M · Impact hoch
+- [ ] **A3** — Einstellungen umstrukturieren: häufig genutzte Einstellungen (Einkaufsliste)
+  vorn, Rest in „Erweitert" einklappen, um die flache 11-Bereiche-Liste zu entzerren ·
+  M · Impact hoch
+- [ ] **A4** — Reset-Funktion für alle lokalen Daten ohne Neuinstallation · M · Impact niedrig
+  — Nice-to-have, kein Muss
 
 _Weitere Aufgaben nach dem Interview._
 
@@ -85,3 +117,7 @@ _Weitere Aufgaben nach dem Interview._
 
 | Datum | Entscheidung | Begründung |
 |-------|--------------|------------|
+| 2026-08-30 | Einstellungen werden von allen drei Hauptscreens aus erreichbar gemacht | Aktuell nur über Rezepte erreichbar, explizit als verwirrend benannt |
+| 2026-08-30 | Einstellungen werden nach Nutzungshäufigkeit umstrukturiert | Die meisten Einstellungen werden nur einmal gesetzt, Einkaufsliste-Einstellungen öfter |
+| 2026-08-30 | Einstellungs-Sync, API-Key-Speicherung, Datenexport und Onboarding bleiben unverändert | Kein Bedarf geäußert, Server-Backup deckt Absicherung bereits ab |
+| 2026-08-30 | Reset-Funktion wird als Nice-to-have vorgemerkt, nicht priorisiert | Kein aktiver Bedarf |
