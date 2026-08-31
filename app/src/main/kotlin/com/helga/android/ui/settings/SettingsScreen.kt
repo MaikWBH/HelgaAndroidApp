@@ -349,7 +349,7 @@ fun SettingsScreen(
                 ) {
                     Text(list.name, modifier = Modifier.weight(1f))
                     IconButton(onClick = { deleteList = list }) {
-                        Icon(Icons.Filled.Delete, contentDescription = null)
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
                     }
                 }
             }
@@ -374,10 +374,10 @@ fun SettingsScreen(
                     Text("${item.emoji} ${item.food}")
                     Row {
                         IconButton(onClick = { editEmoji = item }) {
-                            Icon(Icons.Filled.Edit, contentDescription = null)
+                            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.settings_quick_button_edit))
                         }
                         IconButton(onClick = { viewModel.deleteQuickEmoji(item) }) {
-                            Icon(Icons.Filled.Delete, contentDescription = null)
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
                         }
                     }
                 }

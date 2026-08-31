@@ -223,7 +223,7 @@ fun RecipeDetailScreen(
                         }
                         Box {
                             IconButton(onClick = { showOverflow = true }) {
-                                Icon(Icons.Filled.MoreVert, contentDescription = null)
+                                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more))
                             }
                             DropdownMenu(
                                 expanded = showOverflow,
@@ -779,7 +779,7 @@ private fun ServingsStepper(servings: Int, onDecrease: () -> Unit, onIncrease: (
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 IconButton(onClick = onDecrease, enabled = servings > 1) {
-                    Icon(Icons.Filled.Remove, contentDescription = null)
+                    Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.servings_decrease))
                 }
                 Text(
                     text = "$servings",
@@ -788,7 +788,7 @@ private fun ServingsStepper(servings: Int, onDecrease: () -> Unit, onIncrease: (
                     textAlign = TextAlign.Center,
                 )
                 IconButton(onClick = onIncrease, enabled = servings < 99) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.servings_increase))
                 }
             }
         }

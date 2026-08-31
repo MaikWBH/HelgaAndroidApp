@@ -47,7 +47,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | 8 | Statistik | [statistik](statistik/plan.md) | erledigt | 1 offen (2 erledigt) | ⭐ |
 | 9 | Sync | [sync](sync/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐⭐ |
 | 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | erledigt | 0 offen (4 erledigt) | ⭐ |
-| 11 | Plattform-Integration | [plattform](plattform/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐ |
+| 11 | Plattform-Integration | [plattform](plattform/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐ |
 
 **Alle Interviews abgeschlossen** (2026-08-30). Die Reihenfolge der Umsetzung steht jetzt in
 [ROADMAP.md](ROADMAP.md); die Bereichspläne bleiben die Heimat der Details und der Statuspflege.
@@ -83,7 +83,7 @@ Gilt für alle Pläne, hier einmal zentral festgehalten statt elfmal wiederholt:
 | Testabdeckung | 5 Testklassen / 33 Tests bei 125 Kotlin-Dateien (`src/main`); ein `androidTest`-Quellverzeichnis existiert nicht | – |
 | `!!`-Operator | 10 Stellen, verboten laut Guideline | [kotlin-quality](../guidelines/kotlin-quality.md) |
 | `items()` ohne `key` | 9 Stellen in Compose-Listen | [compose-performance](../guidelines/compose-performance.md) |
-| `contentDescription = null` | 82 Stellen — je Fall zu prüfen, ob dekorativ oder Bedienelement | [ux-accessibility](../guidelines/ux-accessibility.md) |
+| `contentDescription = null` | Durchsicht abgeschlossen (plattform A2): 27 von 82 Stellen waren unbeschriftete Bedienelemente, jetzt beschriftet; verbleibende 55 bewusst dekorativ/redundant | [ux-accessibility](../guidelines/ux-accessibility.md) |
 | Nicht gesyncte Entities | 0 von 23 — behoben: `OffProductEntity` jetzt an `SyncEngine` angebunden (naehrwerte A2), `WeekplanTemplateEntity`/`WeekplanTemplateEntryEntity` per wochenplan A1 komplett entfernt statt angebunden | [sync-patterns](../guidelines/sync-patterns.md) |
 | Benachrichtigungen wirkungslos | `POST_NOTIFICATIONS` fehlt im Manifest und wird nie zur Laufzeit angefragt — bei `targetSdk 35` verwirft Android 13+ jede Zustellung. Betrifft die fertigen Einkaufstag- und Koch-Erinnerungen; Aufgabe in [plattform](plattform/plan.md) A4 | – |
 

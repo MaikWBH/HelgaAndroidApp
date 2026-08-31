@@ -700,7 +700,7 @@ private fun DayCard(
                         },
                         enabled = extraInput.isNotBlank(),
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = null)
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.weekplan_extra_add))
                     }
                 }
 
@@ -923,7 +923,7 @@ private fun ExtraChip(text: String, onRemove: () -> Unit) {
         IconButton(onClick = onRemove) {
             Icon(
                 imageVector = Icons.Filled.Close,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.weekplan_extra_remove),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -953,11 +953,11 @@ private fun ShoppingListPickerDialog(
                     Text(stringResource(R.string.weekplan_servings), style = MaterialTheme.typography.bodyMedium)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { if (servings > 1) servings-- }) {
-                            Icon(Icons.Filled.Remove, contentDescription = null)
+                            Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.servings_decrease))
                         }
                         Text("$servings", style = MaterialTheme.typography.titleMedium)
                         IconButton(onClick = { if (servings < 12) servings++ }) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
+                            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.servings_increase))
                         }
                     }
                 }

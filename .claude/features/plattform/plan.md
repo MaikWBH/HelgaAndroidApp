@@ -1,6 +1,6 @@
 # Feature: Plattform-Integration
 
-> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 1 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐
 
 Alles, was die App mit dem Gerät und der Auslieferung verbindet: Widget, Wear OS, Share-Target,
 Build und CI. Kein Fachbereich, sondern die Hülle.
@@ -126,9 +126,28 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [x] **A1** — `key`-Parameter in `ShoppingListWearScreen.kt` ergänzen · S · Impact mittel —
       **umgesetzt:** `key = { it.id }`
-- [ ] **A2** — Durchsicht aller 82 `contentDescription = null`: dekorativ belassen, Bedienelemente
+- [x] **A2** — Durchsicht aller 82 `contentDescription = null`: dekorativ belassen, Bedienelemente
       beschriften · M · Impact **niedrig** (2026-08-30 herabgestuft: Guideline-getrieben, kein
-      Screenreader-Bedarf in dieser App)
+      Screenreader-Bedarf in dieser App) — **umgesetzt:** alle 82 Fundstellen in 18 Dateien
+      einzeln geprüft. 27 waren echte, unbeschriftete Bedienelemente (IconButton ohne
+      begleitenden Text) — beschriftet: Zurück-Buttons (`action_back`, neu wiederverwendet für
+      `StatsScreen`/`AiGenerateScreen`/`AiRemixScreen`), Overflow-Menüs (`action_more`, neu),
+      Suche-leeren (`action_clear_search`, neu, in `RecipeListScreen` und
+      `WeekplanRecipePickerScreen`), Portionen +/− (`servings_decrease`/`servings_increase`,
+      neu, an drei Stellen: `RecipeCookScreen`, `RecipeDetailScreen`,
+      `WeekplanScreen`/`ShoppingListPickerDialog`), diverse Löschen-Buttons (bestehendes
+      `recipe_delete` wiederverwendet: Einkaufsliste/Schnellbutton in `SettingsScreen`,
+      Fest-Artikel in `ShoppingListScreen`, Gang in `StoreListScreen`), sowie je Bildschirm
+      spezifische Buttons (Tag/Zutat/Schritt hinzufügen/entfernen in `RecipeFormScreen`,
+      Extra hinzufügen/entfernen in `WeekplanScreen`, Fest-Artikel/Schnell-Hinzufügen in
+      `ShoppingListScreen`, aktiven Markt setzen/Gang hinzufügen in `StoreListScreen`,
+      Schnellbutton bearbeiten in `SettingsScreen`). Die übrigen 55 blieben `null` — durchweg
+      redundant mit sichtbarem Text direkt am selben Element (Chips/DropdownMenuItems mit
+      `label`/`text`, Buttons mit Icon+Text, Bilder/Fallback-Icons neben Namens-Text, rein
+      visuelle Sternebewertungen, Zwischenablage-Swipe-Hintergrund) oder redundant mit einem
+      Textfeld-Label/Placeholder (Such-/URL-Icons). Keine einzige echte Regression gefunden — die
+      Guideline-Vermutung "still overengineered accessibility debt" bestätigte sich nicht, es
+      waren tatsächlich fehlende Labels an konkreten Bedienelementen.
 - [ ] **A3** — Eigenständiges `:wear`-Gradle-Modul statt Laufzeit-Unterscheidung in
       `MainActivity.kt`, damit die Watch-App automatisch mit der Handy-App auf die gepaarte Uhr
       installiert wird · L · Impact **hoch** — Voraussetzung für

@@ -197,7 +197,7 @@ fun RecipeListScreen(
                 trailingIcon = {
                     if (searchQuery.isNotBlank()) {
                         IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                            Icon(Icons.Filled.Close, contentDescription = null)
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_clear_search))
                         }
                     }
                 },

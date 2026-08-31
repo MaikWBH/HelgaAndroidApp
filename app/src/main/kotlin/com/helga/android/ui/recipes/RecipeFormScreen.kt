@@ -384,7 +384,7 @@ private fun TagsEditor(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             )
             FilledTonalIconButton(onClick = { onAddTag(input); input = "" }) {
-                Icon(Icons.Filled.Add, contentDescription = null)
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.recipe_form_add_tag))
             }
         }
     }
@@ -428,7 +428,7 @@ private fun IngredientsEditor(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 )
                 IconButton(onClick = { onRemove(idx) }) {
-                    Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_form_remove_ingredient), tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -466,7 +466,7 @@ private fun InstructionsEditor(
                     minLines = 2,
                 )
                 IconButton(onClick = { onRemove(idx) }, modifier = Modifier.padding(top = 4.dp)) {
-                    Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_form_remove_step), tint = MaterialTheme.colorScheme.error)
                 }
             }
         }

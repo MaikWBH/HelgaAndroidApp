@@ -81,7 +81,10 @@
     <string name="recipe_form_food">Zutat</string>
     <string name="recipe_form_step">Schritt</string>
     <string name="recipe_form_add_ingredient">Zutat hinzufügen</string>
+    <string name="recipe_form_remove_ingredient">Zutat entfernen</string>
     <string name="recipe_form_add_step">Schritt hinzufügen</string>
+    <string name="recipe_form_remove_step">Schritt entfernen</string>
+    <string name="recipe_form_add_tag">Tag hinzufügen</string>
     <string name="recipe_form_pick_image">Bild auswählen</string>
     <string name="recipe_form_save">Speichern</string>
 
@@ -149,6 +152,10 @@
     <string name="action_retry">Erneut versuchen</string>
     <string name="action_back">Zurück</string>
     <string name="action_settings">Einstellungen</string>
+    <string name="action_more">Mehr</string>
+    <string name="action_clear_search">Suche leeren</string>
+    <string name="servings_decrease">Portionen verringern</string>
+    <string name="servings_increase">Portionen erhöhen</string>
     <string name="action_dismiss">Schließen</string>
 
     <!-- FAB Speed-Dial -->
@@ -214,6 +221,8 @@
     <string name="shopping_staples_add_all">Alle hinzufügen</string>
     <string name="shopping_staples_empty">Keine Vorratsstapel konfiguriert</string>
     <string name="shopping_staple_hint">Artikel eingeben…</string>
+    <string name="shopping_staple_add">Artikel hinzufügen</string>
+    <string name="shopping_add_item">Hinzufügen</string>
     <string name="shopping_edit_item_title">Einkaufsartikel bearbeiten</string>
     <string name="shopping_no_store">Kein Markt</string>
     <string name="shopping_weekplan_export_banner">Wochenplan bereit – Zutaten zur Einkaufsliste hinzufügen</string>
@@ -228,6 +237,8 @@
     <string name="stores_edit_aisles">Gänge bearbeiten</string>
     <string name="stores_aisles_for">Gänge für %1$s</string>
     <string name="stores_aisle_hint">Gangname eingeben…</string>
+    <string name="stores_add_aisle">Gang hinzufügen</string>
+    <string name="stores_set_active">Als aktiven Markt festlegen</string>
     <string name="stores_aisles_drag_hint">Zum Sortieren gedrückt halten und ziehen</string>
     <string name="stores_aisle_drag_handle">Zum Verschieben ziehen</string>
     <string name="stores_prefill_label">Gänge übernehmen</string>
@@ -262,6 +273,8 @@
     <!-- Wochenplan -->
     <string name="weekplan_title">Wochenplan</string>
     <string name="weekplan_add_recipe">Rezept hinzufügen</string>
+    <string name="weekplan_extra_add">Extra hinzufügen</string>
+    <string name="weekplan_extra_remove">Eintrag entfernen</string>
     <string name="weekplan_remove_recipe">Entfernen</string>
     <string name="weekplan_note_label">Notiz</string>
     <string name="weekplan_extra_hint">Extrazeile hinzufügen…</string>

@@ -330,7 +330,7 @@ fun RecipeCookScreen(
                                 onClick = { viewModel.setServings(servings - 1) },
                                 enabled = servings > 1,
                             ) {
-                                Icon(Icons.Filled.Remove, contentDescription = null)
+                                Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.servings_decrease))
                             }
                             Text(
                                 text = "$servings ${stringResource(R.string.recipe_detail_yield)}",
@@ -339,7 +339,7 @@ fun RecipeCookScreen(
                                 modifier = Modifier.widthIn(min = 100.dp),
                             )
                             IconButton(onClick = { viewModel.setServings(servings + 1) }) {
-                                Icon(Icons.Filled.Add, contentDescription = null)
+                                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.servings_increase))
                             }
                         }
                     }

@@ -276,7 +276,7 @@ fun ShoppingListScreen(
                     }
                     Box {
                         IconButton(onClick = { showOverflow = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = null)
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more))
                         }
                         DropdownMenu(
                             expanded = showOverflow,
@@ -1098,7 +1098,7 @@ private fun StaplesSheet(
                         newName = ""
                     }
                 }) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.shopping_staple_add))
                 }
             }
             if (staples.isEmpty()) {
@@ -1123,7 +1123,7 @@ private fun StaplesSheet(
                                 IconButton(onClick = { onDeleteStaple(staple) }) {
                                     Icon(
                                         Icons.Filled.Delete,
-                                        contentDescription = null,
+                                        contentDescription = stringResource(R.string.recipe_delete),
                                         tint = MaterialTheme.colorScheme.error,
                                     )
                                 }
@@ -1246,7 +1246,7 @@ private fun QuickAddBar(
                         suggestions = emptyList()
                         onAdd(name)
                     }) {
-                        Icon(Icons.Filled.Add, contentDescription = null)
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.shopping_add_item))
                     }
                 }
             },

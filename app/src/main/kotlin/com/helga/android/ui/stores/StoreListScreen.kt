@@ -177,7 +177,7 @@ private fun StoreRow(
                         Icons.Filled.RadioButtonChecked
                     else
                         Icons.Filled.RadioButtonUnchecked,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.stores_set_active),
                     tint = if (store.isActive == 1)
                         MaterialTheme.colorScheme.primary
                     else
@@ -255,7 +255,7 @@ private fun AisleEditorSheet(
                         }
                     }
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.stores_add_aisle))
                 }
             }
             HorizontalDivider()
@@ -379,7 +379,7 @@ private fun AisleRow(
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Filled.Delete,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.recipe_delete),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
