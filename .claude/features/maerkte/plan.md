@@ -1,6 +1,6 @@
 # Feature: Märkte & Gänge
 
-> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 1 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐
 
 Bestimmt die Reihenfolge, in der die Einkaufsliste sortiert wird. Kleiner Bereich mit direkter
 Wirkung auf den Einkauf.
@@ -79,8 +79,17 @@ Keine.
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Drag-and-Drop für die Gangreihenfolge · M · Impact mittel — bestätigter Bedarf
-  aus dem Interview (mehrere Märkte, viele Gänge)
+- [x] **A1** — Drag-and-Drop für die Gangreihenfolge · M · Impact mittel — bestätigter Bedarf
+  aus dem Interview (mehrere Märkte, viele Gänge) — **umgesetzt:** die bisherigen Hoch/Runter-
+  Pfeile in `AisleEditorSheet`/`AisleRow` (`StoreListScreen.kt`) durch echtes Long-Press-Drag
+  ersetzt (`detectDragGesturesAfterLongPress`, gleiches Prinzip wie das bereits vorhandene
+  Wisch-Gesture in `ShoppingListScreen.kt` — keine externe Reorder-Library nötig). Neue
+  `ReorderableAisleList` hält während des Ziehens eine lokale Kopie der Reihenfolge (verhindert
+  Zurückspringen durch parallel einlaufende Flow-Updates), tauscht Positionen sobald über die
+  halbe Höhe des Nachbarn gezogen wurde, committet die finale Reihenfolge erst bei Drag-Ende über
+  `StoreRepository.reorderAisles()` (ersetzt `moveAisleUp`/`moveAisleDown`, die beide nur je einen
+  Platztausch konnten). `sortOrder` wird dabei per `storeDao.upsertAisles()` als Batch neu
+  geschrieben — bereits vorhandene DAO-Funktion, keine neue Query nötig.
 - [x] **A2** — Gang-Zuordnung robuster machen: `findAisleForProduct`/`findAisleProductEntry`
   (`StoreDao.kt:31`/`:34`) matchen exakt, keine Normalisierung von Plural/Singular oder
   Klammerzusätzen (`Zwiebel` ↔ `Zwiebeln`, `Tomaten (klein)`) · M · Impact hoch — löst zugleich

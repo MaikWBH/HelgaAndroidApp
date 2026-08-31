@@ -76,11 +76,11 @@ class StoreListViewModel @Inject constructor(
         }
     }
 
-    fun moveAisleUp(aisle: StoreAisleEntity) {
-        viewModelScope.launch { repository.moveAisleUp(aisle); syncScheduler.triggerOneShot() }
-    }
-
-    fun moveAisleDown(aisle: StoreAisleEntity) {
-        viewModelScope.launch { repository.moveAisleDown(aisle); syncScheduler.triggerOneShot() }
+    fun reorderAisles(orderedIds: List<String>) {
+        val storeId = _selectedStoreId.value ?: return
+        viewModelScope.launch {
+            repository.reorderAisles(storeId, orderedIds)
+            syncScheduler.triggerOneShot()
+        }
     }
 }

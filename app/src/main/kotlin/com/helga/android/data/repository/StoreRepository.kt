@@ -69,24 +69,14 @@ class StoreRepository @Inject constructor(
         storeDao.upsertAisle(aisle.copy(deleted = 1, updatedAt = now(), dirty = 1))
     }
 
-    suspend fun moveAisleUp(aisle: StoreAisleEntity) {
-        val aisles = storeDao.aislesForStore(aisle.storeId)
-        val idx = aisles.indexOfFirst { it.id == aisle.id }
-        if (idx <= 0) return
-        val prev = aisles[idx - 1]
+    /** Übernimmt die per Drag-and-Drop gezogene Reihenfolge (maerkte A1). */
+    suspend fun reorderAisles(storeId: String, orderedIds: List<String>) {
+        val byId = storeDao.aislesForStore(storeId).associateBy { it.id }
         val ts = now()
-        storeDao.upsertAisle(aisle.copy(sortOrder = prev.sortOrder, updatedAt = ts, dirty = 1))
-        storeDao.upsertAisle(prev.copy(sortOrder = aisle.sortOrder, updatedAt = ts, dirty = 1))
-    }
-
-    suspend fun moveAisleDown(aisle: StoreAisleEntity) {
-        val aisles = storeDao.aislesForStore(aisle.storeId)
-        val idx = aisles.indexOfFirst { it.id == aisle.id }
-        if (idx < 0 || idx >= aisles.lastIndex) return
-        val next = aisles[idx + 1]
-        val ts = now()
-        storeDao.upsertAisle(aisle.copy(sortOrder = next.sortOrder, updatedAt = ts, dirty = 1))
-        storeDao.upsertAisle(next.copy(sortOrder = aisle.sortOrder, updatedAt = ts, dirty = 1))
+        val updated = orderedIds.mapIndexedNotNull { index, id ->
+            byId[id]?.takeIf { it.sortOrder != index }?.copy(sortOrder = index, updatedAt = ts, dirty = 1)
+        }
+        if (updated.isNotEmpty()) storeDao.upsertAisles(updated)
     }
 
     suspend fun saveAisleProduct(productName: String, aisleName: String, storeId: String) {

@@ -224,6 +224,8 @@
     <string name="stores_edit_aisles">Gänge bearbeiten</string>
     <string name="stores_aisles_for">Gänge für %1$s</string>
     <string name="stores_aisle_hint">Gangname eingeben…</string>
+    <string name="stores_aisles_drag_hint">Zum Sortieren gedrückt halten und ziehen</string>
+    <string name="stores_aisle_drag_handle">Zum Verschieben ziehen</string>
 
     <!-- Einstellungen – Einkaufen -->
     <string name="settings_shopping_section">Einkaufen</string>
