@@ -87,7 +87,7 @@ ausbauen, Sync-Lücken schließen, Tests für sicherheitsrelevante Logik).
 | ✅ **wochenplan A1** | Vorlagen-Feature ersatzlos ausbauen (unerreichbarer Code) |
 | ✅ **naehrwerte A2** | `OffProductEntity` an den Sync anbinden — DAO und Server sind fertig |
 | ✅ **sync A1** | Test, der eine nicht angebundene Entity künftig automatisch meldet |
-| **naehrwerte A1** | `AllergyChecker`-Tests · S · sicherheitsrelevanteste Logik der App |
+| ✅ **naehrwerte A1** | `AllergyChecker`-Tests · S · sicherheitsrelevanteste Logik der App |
 | **rezepte A5** | Suche auf Tags und Zutaten erweitern |
 | **statistik A3** | Zeitraumfilter analog zum Ausgabenüberblick |
 | **bons-kosten A4** | Einstellbare automatische Bon-Löschung, Default 3 Monate |

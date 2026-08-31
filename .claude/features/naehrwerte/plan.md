@@ -1,6 +1,6 @@
 # Feature: Nährwerte & Allergene
 
-> **Status:** Interview erledigt · **Aufgaben:** 1 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 0 offen (4 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
 
 OpenFoodFacts-Anbindung, Nährwerte je Rezept, Nutri-Score und Allergenwarnungen. Querschnitts-
 funktion ohne eigenen Screen — sichtbar in Rezepten, Einkaufsliste und Wochenplan.
@@ -108,7 +108,12 @@ kein Konzeptproblem, sondern ein offener Anschluss.
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Unit-Tests für `AllergyChecker` (Treffer, Teilwort, Groß-/Kleinschreibung, leeres Profil) · S · Impact hoch
+- [x] **A1** — Unit-Tests für `AllergyChecker` (Treffer, Teilwort, Groß-/Kleinschreibung, leeres Profil) · S · Impact hoch —
+  **umgesetzt:** `AllergyCheckerTest.kt`, 14 Tests — exakter Treffer, Groß-/Kleinschreibung,
+  Teilwort in beide Richtungen (Produktallergen enthält Nutzerbegriff und umgekehrt), leeres
+  Nutzerprofil, Produkt ohne Allergene, mehrere Allergien mit unterschiedlichen Treffern, kein
+  Treffer bei unabhängigen Begriffen, leeres `[]`-Array, Whitespace um Einträge, sowie
+  `hasAnyAllergen()` als Bool-Wrapper. Reines JVM-Test wie `SyncLwwTest`.
 - [x] **A2** — `OffProductEntity` an `SyncEngine` anbinden; DAO und Serverseite sind fertig · M · Impact mittel — bestätigter Bedarf aus dem Interview — **umgesetzt:** beim
   Nachgehen bestätigt, dass DAO (`dirtyProducts`/`upsertAll`/`clearDirty`) und Server
   (`OffProductRecord`, `SYNC_TABLES`/`TABLE_COLUMNS`/`PAYLOAD_FIELD` in `db.py`/`sync.py`,
