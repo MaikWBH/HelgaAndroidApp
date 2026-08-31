@@ -257,9 +257,6 @@
     <string name="weekplan_regenerate_day">Tag neu generieren</string>
     <string name="weekplan_more">Mehr</string>
     <string name="weekplan_repeat_last_week">Letzte Woche übernehmen</string>
-    <string name="weekplan_no_templates">Keine Vorlagen gespeichert</string>
-    <string name="weekplan_save_template">Aktuelle Woche als Vorlage speichern</string>
-    <string name="weekplan_template_name">Vorlagenname</string>
     <string name="weekplan_ai_generating">KI erstellt Wochenplan…</string>
     <string name="weekplan_constraints_title">Planungs-Constraints</string>
     <string name="weekplan_max_meat">Max. Fleisch-Tage</string>
@@ -280,13 +277,6 @@
     <string name="weekplan_anchor_subtitle">Wähle bis zu 3 Rezepte als Fixpunkte</string>
     <string name="weekplan_anchor_skip">Ohne Anker generieren</string>
     <string name="weekplan_anchor_generate">Plan erstellen</string>
-    <string name="weekplan_templates">Vorlagen</string>
-    <string name="weekplan_template_save_section">Aktuelle Woche als Vorlage speichern</string>
-    <string name="weekplan_template_name_hint">Vorlagenname…</string>
-    <string name="weekplan_template_save">Speichern</string>
-    <string name="weekplan_template_load_section">Vorlage laden</string>
-    <string name="weekplan_template_apply">Laden</string>
-    <string name="weekplan_template_delete">Löschen</string>
     <string name="weekplan_prev_week">Vorherige Woche</string>
     <string name="weekplan_next_week">Nächste Woche</string>
     <string name="weekplan_today">Heute</string>

@@ -10,8 +10,6 @@ import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
 import com.helga.android.data.local.dao.RecipeDao
@@ -23,7 +21,6 @@ import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import com.helga.android.data.repository.WeekplanRepository
-import com.helga.android.data.repository.WeekplanTemplateRepository
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -78,7 +75,6 @@ sealed interface WeekplanGenerateStatus {
 @HiltViewModel
 class WeekplanViewModel @Inject constructor(
     private val repository: WeekplanRepository,
-    private val templateRepository: WeekplanTemplateRepository,
     private val recipeDao: RecipeDao,
     private val recipeHistoryDao: RecipeHistoryDao,
     private val recipeFeedbackDao: RecipeFeedbackDao,
@@ -221,9 +217,6 @@ class WeekplanViewModel @Inject constructor(
 
     private val _generateStatus = MutableStateFlow<WeekplanGenerateStatus>(WeekplanGenerateStatus.Idle)
     val generateStatus: StateFlow<WeekplanGenerateStatus> = _generateStatus
-
-    val templates: StateFlow<List<WeekplanTemplateEntity>> = templateRepository.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val feedbackForSelectedDay: StateFlow<Map<String, Int>> = _selectedDayId
         .flatMapLatest { dayId ->
@@ -846,53 +839,6 @@ class WeekplanViewModel @Inject constructor(
             recordHistory(chosen.id, day.planDate)
             syncScheduler.triggerOneShot()
         }
-    }
-
-    fun saveCurrentWeekAsTemplate(name: String) {
-        if (name.isBlank()) return
-        viewModelScope.launch {
-            val monday = mondayForOffset(_weekOffset.value)
-            val fmt = DateTimeFormatter.ISO_LOCAL_DATE
-            val templateId = UUID.randomUUID().toString()
-            val entries = mutableListOf<WeekplanTemplateEntryEntity>()
-            days.value.forEach { day ->
-                val dayDate = LocalDate.parse(day.planDate, fmt)
-                val dayOffset = ChronoUnit.DAYS.between(monday, dayDate).toInt()
-                weekplanDao.recipesForDay(day.id).forEachIndexed { pos, recipe ->
-                    entries.add(
-                        WeekplanTemplateEntryEntity(
-                            id = UUID.randomUUID().toString(),
-                            templateId = templateId,
-                            dayOffset = dayOffset,
-                            recipeId = recipe.recipeId,
-                            position = pos,
-                        )
-                    )
-                }
-            }
-            templateRepository.save(id = templateId, name = name, entries = entries)
-        }
-    }
-
-    fun applyTemplate(templateId: String) {
-        viewModelScope.launch {
-            val monday = mondayForOffset(_weekOffset.value)
-            val fmt = DateTimeFormatter.ISO_LOCAL_DATE
-            val entries = templateRepository.entriesForTemplate(templateId)
-            entries.map { it.dayOffset }.toSet().forEach { offset ->
-                val day = repository.getOrCreateDay(monday.plusDays(offset.toLong()).format(fmt))
-                weekplanDao.recipesForDay(day.id).forEach { repository.removeRecipe(it) }
-            }
-            entries.forEach { entry ->
-                val day = repository.getOrCreateDay(monday.plusDays(entry.dayOffset.toLong()).format(fmt))
-                repository.addRecipe(day.id, entry.recipeId)
-            }
-            syncScheduler.triggerOneShot()
-        }
-    }
-
-    fun deleteTemplate(templateId: String) {
-        viewModelScope.launch { templateRepository.delete(templateId) }
     }
 
     fun repeatLastWeek() {

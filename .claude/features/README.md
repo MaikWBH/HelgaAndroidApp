@@ -3,7 +3,7 @@
 Routing-Einstieg für die Feature-für-Feature-Verbesserung. Diese Datei ist die **einzige
 Stelle mit Gesamtstatus**; der inhaltliche Stand liegt jeweils im `plan.md` des Bereichs.
 
-**Stand:** 2026-08-31 · **Basis:** DB v31, 127 Kotlin-Dateien, 25 Room-Entities — alle elf
+**Stand:** 2026-08-31 · **Basis:** DB v32, 123 Kotlin-Dateien, 23 Room-Entities — alle elf
 Bereiche interviewt
 
 ➡️ **Womit anfangen?** [ROADMAP.md](ROADMAP.md) sortiert alle 58 offenen Punkte nach
@@ -39,7 +39,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 |---|---------|------|-----------|----------|-----------|
 | 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 2 offen (4 erledigt) | ⭐⭐⭐ |
 | 2 | Rezepte | [rezepte](rezepte/plan.md) | erledigt | 7 offen (3 erledigt) | ⭐⭐⭐ |
-| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 6 offen (8 erledigt) | ⭐⭐⭐ |
+| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 5 offen (9 erledigt) | ⭐⭐⭐ |
 | 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
 | 5 | KI | [ki](ki/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
 | 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
@@ -62,7 +62,7 @@ Basis aller UI-Pfade: `app/src/main/kotlin/com/helga/android/`
 |---------|----|---------------|------------|--------|
 | Einkaufsliste | `ui/shopping/` | ShoppingList, ShoppingItem, ShoppingListStaple, QuickEmoji | ShoppingRepository | `/api/suggestions/*` |
 | Rezepte | `ui/recipes/` | Recipe, Ingredient, Instruction, Tag, Category, RecipeHistory, RecipeFeedback | RecipeRepository | `/api/ai/import-url` |
-| Wochenplan | `ui/weekplan/` | WeekplanDay, WeekplanRecipe, WeekplanExtra, WeekplanSettings, WeekplanConstraints, WeekplanTemplate, WeekplanTemplateEntry | WeekplanRepository, WeekplanTemplateRepository | – |
+| Wochenplan | `ui/weekplan/` | WeekplanDay, WeekplanRecipe, WeekplanExtra, WeekplanSettings, WeekplanConstraints | WeekplanRepository | – |
 | Bons & Kosten | `ui/receipts/` | Receipt, ReceiptItem, MonthlyBudget | ReceiptRepository | `/api/ai/parse-receipt`, `/api/receipts/reconcile` |
 | KI | `ui/ai/` | – | – | `/api/ai/generate`, `/api/ai/remix`, `/api/ai/classify` |
 | Nährwerte | `ui/components/AllergenWarningBanner.kt`, `ui/components/BarcodeScanner.kt` | OffProduct | – | `/api/ai/nutrition`, `/api/off/*` |
@@ -84,7 +84,7 @@ Gilt für alle Pläne, hier einmal zentral festgehalten statt elfmal wiederholt:
 | `!!`-Operator | 10 Stellen, verboten laut Guideline | [kotlin-quality](../guidelines/kotlin-quality.md) |
 | `items()` ohne `key` | 9 Stellen in Compose-Listen | [compose-performance](../guidelines/compose-performance.md) |
 | `contentDescription = null` | 82 Stellen — je Fall zu prüfen, ob dekorativ oder Bedienelement | [ux-accessibility](../guidelines/ux-accessibility.md) |
-| Nicht gesyncte Entities | 3 von 25: `WeekplanTemplateEntity` und `WeekplanTemplateEntryEntity` fehlen überall; `OffProductEntity` hat DAO und Serverseite fertig, aber keinen Aufruf in `SyncEngine` | [sync-patterns](../guidelines/sync-patterns.md) |
+| Nicht gesyncte Entities | 1 von 23: `OffProductEntity` hat DAO und Serverseite fertig, aber keinen Aufruf in `SyncEngine` (`WeekplanTemplateEntity`/`WeekplanTemplateEntryEntity` waren die anderen beiden — per wochenplan A1 komplett entfernt statt angebunden) | [sync-patterns](../guidelines/sync-patterns.md) |
 | Benachrichtigungen wirkungslos | `POST_NOTIFICATIONS` fehlt im Manifest und wird nie zur Laufzeit angefragt — bei `targetSdk 35` verwirft Android 13+ jede Zustellung. Betrifft die fertigen Einkaufstag- und Koch-Erinnerungen; Aufgabe in [plattform](plattform/plan.md) A4 | – |
 
 ## Bewusst offene Punkte

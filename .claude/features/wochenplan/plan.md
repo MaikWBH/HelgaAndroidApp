@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 6 offen (8 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 5 offen (9 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -242,11 +242,22 @@ _Ziel zu Frage 7 (Mehrwochen-Ansicht) nach der Anschlussrunde._
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Vorlagen-Feature ersatzlos ausbauen (Nutzerentscheidung, nicht sync-fähig machen):
+- [x] **A1** — Vorlagen-Feature ersatzlos ausbauen (Nutzerentscheidung, nicht sync-fähig machen):
       `WeekplanTemplateEntity`, `WeekplanTemplateEntryEntity`, `WeekplanTemplateDao`,
       `WeekplanTemplateRepository.kt`, `TemplateSheet` in `WeekplanScreen.kt`, zehn Strings
       (`strings.xml:255-285`), Room-Migration zum sauberen Entfernen der Tabellen · M · Impact
-      niedrig
+      niedrig — **umgesetzt:** alle vier Dateien gelöscht (Entities, DAO, Repository),
+      `saveCurrentWeekAsTemplate`/`applyTemplate`/`deleteTemplate`/`templates`-StateFlow aus
+      `WeekplanViewModel.kt` entfernt, `TemplateSheet`-Composable (nie aufgerufen, bestätigt vor
+      dem Löschen) aus `WeekplanScreen.kt` entfernt, alle zehn Vorlagen-Strings aus
+      `strings.xml` entfernt (verifiziert, nicht aus dem alten Zeilenbereich übernommen — lagen
+      inzwischen verstreut statt am Stück), DI-Provider in
+      `DatabaseModule.kt` entfernt. Anders als bei den Nutri-Score-Spalten (siehe naehrwerte A3)
+      hier eine echte Room-Migration (30→31 existierte schon, jetzt 31→32) mit `DROP TABLE IF
+      EXISTS` für `weekplan_templates`/`weekplan_template_entries` — folgt dem bereits
+      etablierten Muster aus `MIGRATION_29_30` (verwaiste Tabellen ohne Entity/DAO), weil hier
+      im Gegensatz zum Nutri-Score-Fall zwei komplette Tabellen und keine Sync-Anbindung
+      betroffen waren, die entfernt werden konnte, ohne andere Spalten/Tabellen anzufassen.
 - [x] **A2** — `anchorDays[day.id]!!` gegen fehlenden Schlüssel absichern · S · Impact hoch —
       **umgesetzt:** Einzel-Lookup in eine lokale `val` gehoben statt doppeltem
       `in`-Check + `!!`-Zugriff (`WeekplanViewModel.kt`, Zeile war inzwischen auf 567

@@ -19,7 +19,6 @@ import com.helga.android.data.local.dao.SyncDao
 import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
-import com.helga.android.data.local.dao.WeekplanTemplateDao
 import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -43,11 +42,9 @@ import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 
 @Database(
-    version = 31,
+    version = 32,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -67,8 +64,6 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
         WeekplanExtraEntity::class,
         WeekplanSettingsEntity::class,
         WeekplanConstraintsEntity::class,
-        WeekplanTemplateEntity::class,
-        WeekplanTemplateEntryEntity::class,
         RecipeHistoryEntity::class,
         RecipeFeedbackEntity::class,
         ReceiptEntity::class,
@@ -87,7 +82,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun weekplanDao(): WeekplanDao
     abstract fun weekplanSettingsDao(): WeekplanSettingsDao
     abstract fun weekplanConstraintsDao(): WeekplanConstraintsDao
-    abstract fun weekplanTemplateDao(): WeekplanTemplateDao
     abstract fun recipeHistoryDao(): RecipeHistoryDao
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
     abstract fun receiptDao(): ReceiptDao
@@ -764,10 +758,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_31_32 = object : Migration(31, 32) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Vorlagen-Feature ersatzlos entfernt (wochenplan A1) – im UI nie erreichbar
+                // gewesen (TemplateSheet wurde nirgends aufgerufen), auch nicht sync-angebunden.
+                db.execSQL("DROP TABLE IF EXISTS weekplan_template_entries")
+                db.execSQL("DROP TABLE IF EXISTS weekplan_templates")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32)
                 .build()
     }
 }
