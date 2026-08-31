@@ -1,6 +1,6 @@
 # Feature: Einkaufsliste
 
-> **Status:** Interview erledigt · **Aufgaben:** 5 offen (2 erledigt) · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 4 offen (2 erledigt, A6 in [maerkte](../maerkte/plan.md) A2 aufgegangen) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
 
 Erster Bottom-Nav-Tab und Endpunkt des Kernablaufs Rezept → Wochenplan → Einkauf.
 
@@ -77,7 +77,8 @@ Daten, die Room ohnehin lokal hält — widerspricht dem in `CLAUDE.md` festgeha
 ### Funktion & UX
 Größter im Interview genannter Reibungspunkt: falsche Gang-Zuordnung (Frage 1) — Items landen
 im falschen Gang oder bleiben unzugeordnet, die gelernte Zuordnung trifft nicht zuverlässig
-genug. Ursache noch nicht analysiert, siehe Backlog A6.
+genug. **Ursache inzwischen geklärt** (Märkte-Interview, 2026-08-30): exakter String-Match ohne
+Normalisierung — Umsetzung in [maerkte](../maerkte/plan.md) A2.
 
 ### Code-Qualität
 - `ShoppingListScreen.kt:486-487` — zwei `!!`-Zugriffe auf `costEstimate`, verboten laut
@@ -170,9 +171,12 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [x] **A5** — `suggestItems()` um lokalen Room-Fallback ergänzt (Rezeptzutaten +
       `ShoppingDao`-Namen) und Server-Aufruf auf 1,5 s begrenzt (vorher bis zu 15 s über den
       globalen OkHttp-Timeout) · M · Impact hoch
-- [ ] **A6** — Genauigkeit der gelernten Gang-Zuordnung untersuchen (`assignAisle`,
-      `AisleProductEntity`-Lernlogik) — größter genannter Reibungspunkt, Ursache noch offen · M ·
-      Impact hoch
+- **A6** — ~~Genauigkeit der gelernten Gang-Zuordnung untersuchen~~ **Ursache gefunden, Punkt
+      aufgelöst (2026-08-30):** Das Märkte-Interview hat es root-caused —
+      `findAisleForProduct`/`findAisleProductEntry` (`StoreDao.kt:31`/`:34`) matchen den
+      Produktnamen exakt, ohne Normalisierung von Plural/Singular oder Klammerzusätzen
+      (`Zwiebel` ↔ `Zwiebeln`). Umsetzung jetzt in [maerkte](../maerkte/plan.md) A2, hier kein
+      eigener Punkt mehr.
 - [ ] **A7** — Abhaken auf dem Wear-Screen ausbauen (`ShoppingListWearScreen.kt`) · M · Impact
       mittel — setzt das Wear-Modul aus [plattform](../plattform/plan.md) voraus
 

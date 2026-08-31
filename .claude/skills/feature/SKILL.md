@@ -10,9 +10,9 @@ Dieser Skill ist die Abkürzung dorthin.
 
 ## Ohne Argument
 
-`.claude/features/README.md` lesen und die Bereichstabelle wiedergeben: Bereich, Interview-Status,
-offene Aufgaben, Priorität. Dazu den nächsten Bereich der Interview-Reihenfolge nennen, dessen
-Interview noch offen ist. Keine Datei ändern.
+`.claude/features/ROADMAP.md` lesen und den nächsten offenen Block wiedergeben — Quick Wins
+zuerst, danach die Wellen. Ergänzend `.claude/features/README.md` für den Gesamtstatus
+(Bereich, offene Aufgaben, Priorität). Keine Datei ändern.
 
 ## Mit Argument (`/feature einkaufsliste`)
 

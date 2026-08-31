@@ -176,7 +176,9 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Fünf `!!`-Zugriffe in `RecipeCookScreen.kt` und `RecipeListScreen.kt` auflösen · S · Impact mittel
 - [ ] **A2** — `key`-Parameter in `RecipeListScreen.kt:504,569` ergänzen · S · Impact mittel
-- [ ] **A3** — Unit-Tests für `RecipeJsonLdParser` und die Timer-Erkennung · M · Impact hoch
+- [ ] **A3** — Unit-Tests für die **Timer-Erkennung** · S · Impact mittel — der
+      `RecipeJsonLdParser`-Teil war deckungsgleich mit [ki](../ki/plan.md) A1 und wird dort
+      geführt (Parser liegt in `ui/ai/`)
 - [ ] **A4** — `recipeHistory`/`recipeFeedback` im Sync auf das `SyncDao`-Muster vereinheitlichen oder Abweichung dokumentieren · M · Impact niedrig
 - [ ] **A5** — Suche auf **Tags und Zutaten** erweitern und dabei vom In-Memory-Filter
       (`RecipeListViewModel.kt:69-74`) auf eine Room-Query umstellen; Muster liegen mit

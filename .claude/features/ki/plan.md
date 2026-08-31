@@ -106,7 +106,8 @@ Keine eigenen Entities. Erzeugte Rezepte laufen über den Rezept-Sync.
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Unit-Tests für `RecipeJsonLdParser` · M · Impact hoch
+- [ ] **A1** — Unit-Tests für `RecipeJsonLdParser` · M · Impact mittel — deckt auch den
+  Parser-Teil ab, der zuvor doppelt in [rezepte](../rezepte/plan.md) A3 stand
 - [ ] **A2** — Verhalten bei Stream-Abbruch prüfen und absichern · M · Impact hoch
 - [ ] **A3** — Server-Erreichbarkeit vor KI-Nutzung deutlich anzeigen (Generieren, Remix,
   Klassifikation): Reachability-Check + persistenter Hinweis, statt den Fehler erst nach einem

@@ -83,7 +83,10 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   aus dem Interview (mehrere Märkte, viele Gänge)
 - [ ] **A2** — Gang-Zuordnung robuster machen: `findAisleForProduct`/`findAisleProductEntry`
   (`StoreDao.kt:31`/`:34`) matchen exakt, keine Normalisierung von Plural/Singular oder
-  Klammerzusätzen (`Zwiebel` ↔ `Zwiebeln`, `Tomaten (klein)`) · M · Impact hoch
+  Klammerzusätzen (`Zwiebel` ↔ `Zwiebeln`, `Tomaten (klein)`) · M · Impact hoch — löst zugleich
+  [einkaufsliste](../einkaufsliste/plan.md) A6 („falsche Gang-Zuordnung", größter Reibungspunkt
+  aus dem Einkaufslisten-Interview); dort aufgelöst, hier umgesetzt. Normalisierung möglichst
+  gemeinsam mit [ki](../ki/plan.md) A4 denken — beide brauchen dieselbe Namensbereinigung
 - [ ] **A3** — Neue Märkte vorbefüllen: Standard-Gangsatz als Vorlage anbieten, alternativ
   Gänge von einem bestehenden Markt kopieren · M · Impact mittel
 - [ ] **A4** — Märkte direkter erreichbar machen: aktuell nur über Einstellungen → Märkte

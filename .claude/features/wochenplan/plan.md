@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 15 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 13 offen (1 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -251,13 +251,18 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [ ] **A3** — `!!` in `WeekplanScreen.kt:156` auflösen · S · Impact mittel
 - [ ] **A4** — `key`-Parameter in `WeekplanScreen.kt:563` und `WeekplanRecipePickerScreen.kt:194` ergänzen · S · Impact mittel
 - [ ] **A5** — Unit-Tests für Constraint-Auswertung und `weekBalance` · M · Impact hoch
-- [ ] **A6** — mealSlot-Filter in `generateWeekplan()` von „nicht breakfast/snack" auf
-      „ausschließlich lunch/dinner" verschärfen ODER `meal_slot` im Klassifikations-Prompt
-      (`server/app/ai.py:46`) um `"dessert"` erweitern und im Filter ausschließen; Default
-      `"other"` bei nie klassifizierten Rezepten ebenfalls ausschließen · M · Impact hoch
-- [ ] **A7** — `regenerateDay()` auf dieselben fünf Filter wie `generateWeekplan()` bringen
-      (mealSlot, Allergene, Kcal, Nutri-Score, Saison) — gemeinsame Filterfunktion extrahieren
-      statt duplizieren · M · Impact hoch
+- [ ] **A6** — **Filterlogik in einem Griff** (2026-08-30 mit dem früheren A7 zusammengelegt,
+      weil beide dieselbe Stelle anfassen und A7 ohnehin die gemeinsame Funktion verlangte):
+      1. mealSlot-Filter in `generateWeekplan()` von „nicht breakfast/snack" auf „ausschließlich
+         lunch/dinner" verschärfen ODER `meal_slot` im Klassifikations-Prompt
+         (`server/app/ai.py:46`) um `"dessert"` erweitern und ausschließen; Default `"other"`
+         bei nie klassifizierten Rezepten ebenfalls ausschließen — behebt den
+         Süßspeisen-als-Abendessen-Bug.
+      2. Die Filter in eine gemeinsame Funktion ziehen und `regenerateDay()` darauf umstellen,
+         das aktuell vier der Filter überspringt (Allergene, Kcal, Saison, mealSlot).
+      Nach A16 umsetzen, dann entfällt der Nutri-Score-Filter von selbst · M · Impact hoch
+- **A7** — → **in A6 aufgegangen** (2026-08-30). Verweise auf A7 bleiben gültig, die Arbeit
+      steckt dort.
 - [ ] **A8** — Constraints-Dialog vergrößern/direkter ins Wochenplan-UI integrieren; Richtung:
       recherchiertes Muster (Sperren + Tages-Reroll direkt in der Tageskarte statt Extra-Dialog),
       siehe A10 · L · Impact mittel
@@ -272,12 +277,15 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       (über „Auswärts/kein Kochen" hinaus). Der Basisfall ist durch A15 abgedeckt. Braucht
       eigene Rückfrage zum Datenmodell (Tag-artiges System) vor der Umsetzung · L · Impact
       niedrig
-- [ ] **A12** — Extra-Einträge (`WeekplanExtraEntity`) in `exportToShoppingList()`
-      (`WeekplanRepository.kt:94-113`) mit exportieren, aktuell nur Rezept-Zutaten · M · Impact
-      hoch
-- [ ] **A13** — Export-Vorschau vor dem Übernehmen: alle Produkte (inkl. Extras aus A12) zeigen,
-      einzeln abwählbar; Listen-Rückfrage bleibt bestehen, aber mit der Standardliste vorbelegt
-      statt neutral zu starten · M · Impact hoch
+- [ ] **A12** — **Export in die Einkaufsliste überarbeiten** (2026-08-30 mit dem früheren A13
+      zusammengelegt — ein Ablauf, eine Umsetzung):
+      1. Extra-Einträge (`WeekplanExtraEntity`) in `exportToShoppingList()`
+         (`WeekplanRepository.kt:94-113`) mit exportieren, aktuell nur Rezept-Zutaten.
+      2. Vorschau vor dem Übernehmen: alle Produkte (inkl. der Extras aus Schritt 1) zeigen,
+         einzeln abwählbar; Listen-Rückfrage bleibt bestehen, aber mit der Standardliste
+         vorbelegt statt neutral zu starten · M · Impact hoch
+- **A13** — → **in A12 aufgegangen** (2026-08-30). Verweise auf A13 bleiben gültig, die Arbeit
+      steckt dort.
 - [ ] **A14** — Mahlzeiten-Tag je `WeekplanRecipeEntity`-Eintrag (mehrere Rezepte pro Mahlzeit
       möglich, `position` existiert bereits als Sortierbasis), dezente Material-3-Tonfarbe je
       Mahlzeitentyp plus Textlabel (nie Farbe allein, siehe

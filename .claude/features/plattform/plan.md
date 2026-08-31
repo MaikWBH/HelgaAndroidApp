@@ -114,9 +114,9 @@ Nicht zutreffend.
 - Bons, Statistik und Märkte aus der Hauptnavigation heraus erreichbar machen — für Bons und
   Statistik bereits als Aufgabe in den jeweiligen Bereichen verankert, für Märkte hier neu
   ergänzt.
-- Wear-Modul-Umstellung (A3) bleibt im Backlog, aber mit gedämpfter Priorität: Die Uhr wird
-  aktuell nachweislich nicht genutzt, der Umbau würde vorerst niemandem etwas bringen — erst
-  relevant, wenn tatsächlich eine Uhr im Einsatz ist.
+- Wear-Modul-Umstellung (A3) regulär einplanen: Die Uhr wird aktuell nicht genutzt, **weil**
+  die Sideload-Hürde besteht — der Nutzer erwartet vom Umbau genau die Nutzung, die heute
+  fehlt (Einkaufsliste auf der Uhr abhaken). Ursache und Wirkung nicht verwechseln.
 - Kein Ausbau bei UI-Tests, Release-Signing oder zusätzlichen Plattform-Anbindungen — kein
   Bedarf geäußert, aktueller Installationsweg (CI-APK) bleibt bestehen.
 
@@ -125,12 +125,15 @@ Nicht zutreffend.
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — `key`-Parameter in `ShoppingListWearScreen.kt:69` ergänzen · S · Impact mittel
-- [ ] **A2** — Durchsicht aller 82 `contentDescription = null`: dekorativ belassen, Bedienelemente beschriften · M · Impact hoch
+- [ ] **A2** — Durchsicht aller 82 `contentDescription = null`: dekorativ belassen, Bedienelemente
+      beschriften · M · Impact **niedrig** (2026-08-30 herabgestuft: Guideline-getrieben, kein
+      Screenreader-Bedarf in dieser App)
 - [ ] **A3** — Eigenständiges `:wear`-Gradle-Modul statt Laufzeit-Unterscheidung in
       `MainActivity.kt`, damit die Watch-App automatisch mit der Handy-App auf die gepaarte Uhr
-      installiert wird · L · Impact mittel → **niedrig** (bestätigt ungenutzt, erst relevant
-      bei aktivem Uhren-Einsatz) — Voraussetzung für
-      [einkaufsliste/plan.md](../einkaufsliste/plan.md) A7
+      installiert wird · L · Impact **hoch** — Voraussetzung für
+      [einkaufsliste/plan.md](../einkaufsliste/plan.md) A7. Der Nutzer erwartet künftig
+      genau diesen Ablauf (Liste auf der Uhr beim Einkaufen abhaken); die Sideload-Hürde ist
+      der einzige Grund für die aktuelle Nichtnutzung
 - [ ] **A4** — `POST_NOTIFICATIONS` im Manifest deklarieren und zur Laufzeit anfragen (Muster:
       Kamera-Abfrage in `ReceiptScanScreen.kt:112`). Ohne das sind die bestehenden Einkaufstag-
       und Koch-Erinnerungen auf Android 13+ wirkungslos · S · **Impact hoch** — Voraussetzung
@@ -143,6 +146,7 @@ bestätigt kaum genutzt, aber kein Änderungswunsch geäußert, nur eine Beobach
 
 | Datum | Entscheidung | Begründung |
 |-------|--------------|------------|
-| 2026-08-30 | A3 (:wear-Modul) bleibt im Backlog, aber mit gesenkter Priorität | Wear-Screen wird nachweislich nicht genutzt, Umbau hätte aktuell keinen Nutzen |
+| 2026-08-30 | ~~A3 (:wear-Modul) mit gesenkter Priorität~~ **revidiert am selben Tag:** A3 wird regulär eingeplant, Impact hoch | Nachfrage ergab: Die Nichtnutzung ist Folge der Sideload-Hürde, nicht mangelnden Interesses — der Nutzer erwartet vom Umbau aktive Nutzung |
+| 2026-08-30 | A2 (contentDescription) von Impact hoch auf niedrig | Kommt aus der Guideline, nicht aus dem Bedarf: private App ohne Screenreader-Nutzung |
 | 2026-08-30 | Märkte-Erreichbarkeit wird in maerkte/plan.md als A4 ergänzt | Zwei Hops tief (Settings → Stores), im Interview als "zu versteckt" bestätigt |
 | 2026-08-30 | Debug-Keystore bleibt, keine UI-Tests, keine weiteren Plattform-Anbindungen | Passt zum aktuellen CI-APK-Installationsweg, kein Bedarf geäußert |

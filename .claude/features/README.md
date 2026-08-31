@@ -6,6 +6,9 @@ Stelle mit Gesamtstatus**; der inhaltliche Stand liegt jeweils im `plan.md` des 
 **Stand:** 2026-08-30 · **Basis:** DB v31, 127 Kotlin-Dateien, 25 Room-Entities — alle elf
 Bereiche interviewt
 
+➡️ **Womit anfangen?** [ROADMAP.md](ROADMAP.md) sortiert alle 58 offenen Punkte nach
+Dringlichkeit und Aufwand — Quick Wins zuerst.
+
 ---
 
 ## Routing-Regel
@@ -34,9 +37,9 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 
 | # | Bereich | Plan | Interview | Aufgaben | Priorität |
 |---|---------|------|-----------|----------|-----------|
-| 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 5 offen (2 erledigt) | ⭐⭐⭐ |
+| 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 4 offen (2 erledigt) | ⭐⭐⭐ |
 | 2 | Rezepte | [rezepte](rezepte/plan.md) | erledigt | 10 offen | ⭐⭐⭐ |
-| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 15 offen (1 erledigt) | ⭐⭐⭐ |
+| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 13 offen (1 erledigt) | ⭐⭐⭐ |
 | 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | erledigt | 4 offen | ⭐⭐ |
 | 5 | KI | [ki](ki/plan.md) | erledigt | 4 offen | ⭐⭐ |
 | 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 4 offen | ⭐⭐ |
@@ -46,9 +49,8 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | erledigt | 4 offen | ⭐ |
 | 11 | Plattform-Integration | [plattform](plattform/plan.md) | erledigt | 4 offen | ⭐ |
 
-**Interview-Reihenfolge:** 1 → 2 → 3 (Kernablauf und die drei Bottom-Nav-Tabs), dann 4 → 5 → 6,
-danach 7–11. Ein Bereich pro Runde: Fragen stellen, Antworten einarbeiten, Ziele und Backlog
-füllen, Status hier nachziehen.
+**Alle Interviews abgeschlossen** (2026-08-30). Die Reihenfolge der Umsetzung steht jetzt in
+[ROADMAP.md](ROADMAP.md); die Bereichspläne bleiben die Heimat der Details und der Statuspflege.
 
 ---
 
