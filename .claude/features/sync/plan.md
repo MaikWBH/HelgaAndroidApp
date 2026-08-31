@@ -1,6 +1,6 @@
 # Feature: Sync
 
-> **Status:** Interview offen · **Aufgaben:** 0/0 · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
 
 Bidirektionaler Abgleich mit dem Homeserver, Last-Write-Wins. Kein eigener Screen, aber
 Grundlage aller anderen Bereiche — und der einzige Bereich mit vorhandenen Tests.
@@ -22,8 +22,17 @@ Grundlage aller anderen Bereiche — und der einzige Bereich mit vorhandenen Tes
   `POST /api/sync` schiebt alle `dirty`-Records; danach werden die Dirty-Flags gezielt gelöscht
   (`clearDirtyFlagsExcept` in `SyncEngine.kt:99,202`) — bewusst nur für die Datensätze, die der
   Server übernommen hat.
-- **Auslöser:** periodisch über `SyncWorker` (WorkManager), bei Netzwechsel über
-  `NetworkObserver`, beim App-Start und manuell aus den Einstellungen (`syncNow`).
+- **Auslöser:** periodisch über `SyncWorker` (WorkManager, 15-Minuten-Intervall,
+  `SyncScheduler.kt:29`), bei Netzwechsel über `NetworkObserver` und manuell aus den
+  Einstellungen (`syncNow`). **Korrektur zur bisherigen Annahme:** Kein App-Start/Foreground-
+  Trigger vorhanden — `CLAUDE.md` führt „App-Foreground" als Trigger auf, aber
+  `syncScheduler.triggerOneShot()` wird im gesamten Code nur aus `NetworkObserver.kt:35` und aus
+  einzelnen ViewModel-Schreibaktionen aufgerufen, nie beim App-Start oder Vordergrundwechsel.
+- **Bilder faktisch teilweise bidirektional:** `ImageUploadWorker` lädt nur hoch, aber
+  `RecipeDetailScreen.kt:420-422` lässt Coil bei fehlendem lokalem Cache vom Server laden
+  (`ImageUrls.serverImageUrl`) — Bilder kommen so auf einem zweiten Gerät an, sobald der
+  Datensatz gesynct ist und das Bild einmal online betrachtet wird. Kein proaktiver
+  Download/Offline-Cache, echtes Offline-First für Bilder auf einem neuen Gerät fehlt.
 - **Status:** `SyncStatusHolder` als Flow, `SyncStatusIcon` in der Top-Bar, Fehlertext in den
   Einstellungen.
 - **Bilder:** `ImageUploadWorker` lädt lokal gespeicherte Bilder nach erfolgreichem Sync hoch.
@@ -55,31 +64,61 @@ Damit sind 22 von 25 Entities angebunden. Ein wiederkehrendes Muster: eine neue 
 angelegt und der Sync-Anschluss vergessen. Eine Prüfung, die das automatisch bemerkt, wäre
 wirksamer als jede Einzelkorrektur.
 
-## Offene Fragen
+## Fragen
 
 **Aus dem Einkaufslisten-Interview:** Sync-Geschwindigkeit und Datenvolumen sind dem Nutzer
 explizit wichtig — die Einkaufsliste muss offline funktionieren, der Sync danach schnell und
 datensparsam sein. Als Priorität für dieses Interview vermerkt.
 
-1. Fällt dir im Alltag auf, wenn der Sync scheitert — oder merkst du es erst an fehlenden Daten?
-2. Nutzt du mehr als ein Gerät? Davon hängt ab, wie schwer die beiden Sync-Lücken wiegen.
-3. Wie oft ist der Server erreichbar — dauerhaft im Heimnetz oder nur zeitweise?
-4. Gab es schon Datenverlust oder überschriebene Änderungen durch Last-Write-Wins?
-5. Soll die App Konflikte sichtbar machen, statt sie still nach Zeitstempel zu entscheiden?
-6. Wäre eine automatische Prüfung sinnvoll, die beim Bauen meldet, wenn eine Entity nicht im
-   Sync auftaucht?
-7. Sollen Bilder auch in die Gegenrichtung synchronisiert werden, oder reicht der Upload?
+1. **Fällt dir im Alltag auf, wenn der Sync scheitert, oder merkst du es erst an fehlenden
+   Daten?**
+   Antwort: Ist mir noch nie negativ aufgefallen — bezogen auf sichtbare Fehleranzeigen.
+2. **Nutzt du mehr als ein Gerät?**
+   Antwort: Ja, mehrere Geräte aktiv.
+3. **Wie oft ist der Server erreichbar?**
+   Antwort: Dauerhaft erreichbar.
+4. **Gab es schon Datenverlust oder überschriebene Änderungen durch Last-Write-Wins?**
+   Antwort: Kein bewusster LWW-Konflikt, aber ein konkreter Vorfall: eine neu angelegte
+   Urlaubs-Einkaufsliste erschien auf dem zweiten Gerät (Ehefrau) erst sehr spät. Root Cause
+   siehe oben — der App-Foreground-Trigger aus `CLAUDE.md` existiert im Code nicht; bei
+   dauerhaft aktivem Netz feuert `NetworkObserver` nicht (kein Connectivity-Wechsel), also blieb
+   nur der 15-Minuten-Worker, der von Android zusätzlich verzögert werden kann.
+5. **Soll die App beim Öffnen/Vordergrund automatisch synchronisieren?**
+   Antwort: Ja, unbedingt — behebt den Vorfall direkt.
+6. **Automatische Prüfung gegen vergessene Sync-Anbindungen sinnvoll?**
+   Antwort: Ja.
+6b. **Sollen Sync-Konflikte sichtbar gemacht werden, statt still per LWW entschieden zu
+    werden?**
+    Antwort: Nein, still per LWW reicht — kein bekannter Vorfall mit verlorenen Änderungen.
+7. **Bilder auch in die Gegenrichtung synchronisieren?**
+   Antwort: Ja, wichtig, dass Bilder auf allen Geräten ankommen. Faktisch bereits teilweise
+   gelöst (Coil-Fallback aufs Server-Bild, siehe Ist-Analyse) — es fehlt der proaktive
+   Offline-Download für ein neues/zweites Gerät.
 
 ## Ziele
 
-_Nach dem Interview zu füllen._
+- App-Foreground-Sync-Trigger ergänzen — schließt die Lücke zwischen der `CLAUDE.md`-Doku und
+  dem tatsächlichen Code und behebt den geschilderten Vorfall direkt.
+- Automatisierte Prüfung gegen vergessene Sync-Anbindungen einführen, damit sich das Muster
+  „neue Entity, Sync-Anschluss vergessen" nicht wiederholt.
+- Bilder proaktiv im Hintergrund herunterladen, damit sie auch offline auf einem neuen Gerät
+  verfügbar sind, statt nur bei Bedarf live vom Server geladen zu werden.
+- Bestehende Sync-Mechanik (LWW, Connectivity-Trigger, periodischer Worker, Datensparsamkeit)
+  unverändert lassen — kein bewusster Datenverlust bekannt, Server ist dauerhaft erreichbar.
 
 ## Backlog
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Test, der alle Entities aus `AppDatabase` gegen `SyncDto`/`SyncEngine` abgleicht und bei fehlendem Anschluss fehlschlägt · M · Impact hoch
+- [ ] **A1** — Test, der alle Entities aus `AppDatabase` gegen `SyncDto`/`SyncEngine` abgleicht und bei fehlendem Anschluss fehlschlägt · M · Impact hoch — bestätigter Bedarf aus dem Interview
 - [ ] **A2** — Tests für Konfliktfälle: gleicher Zeitstempel, Teilfehler beim Push, Abbruch mitten im Sync · M · Impact hoch
+- [ ] **A3** — App-Foreground-Sync-Trigger implementieren (z. B. `ProcessLifecycleOwner` in der
+  Application-Klasse, `syncScheduler.triggerOneShot()` beim Vordergrundwechsel): kein
+  bestehender Code-Pfad ruft das aus, obwohl `CLAUDE.md` es als Trigger dokumentiert · S ·
+  Impact hoch — root-caused Vorfall aus dem Interview
+- [ ] **A4** — Bilder proaktiv im Hintergrund herunterladen (Download-Pendant zu
+  `ImageUploadWorker`), damit sie auch offline auf einem neuen/zweiten Gerät verfügbar sind ·
+  M · Impact mittel
 
 _Weitere Aufgaben nach dem Interview._
 
@@ -87,3 +126,7 @@ _Weitere Aufgaben nach dem Interview._
 
 | Datum | Entscheidung | Begründung |
 |-------|--------------|------------|
+| 2026-08-30 | App-Foreground-Sync-Trigger wird ergänzt | Behebt einen konkret erlebten Vorfall (späte Einkaufsliste), schließt Doku/Code-Lücke |
+| 2026-08-30 | Automatisierte Sync-Vollständigkeitsprüfung wird eingeführt | Verhindert Wiederholung des „vergessene Entity"-Musters |
+| 2026-08-30 | Bilder bekommen einen proaktiven Download-Mechanismus | Nutzer legt Wert auf Bilder auf allen Geräten, auch offline |
+| 2026-08-30 | Konflikt-Sichtbarkeit (Frage 5 aus der urspr. Liste) bleibt wie bisher still per LWW | Kein bewusster Datenverlust bekannt, kein Bedarf an sichtbarer Konfliktauflösung geäußert |
