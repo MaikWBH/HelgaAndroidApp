@@ -324,6 +324,19 @@ class WeekplanViewModel @Inject constructor(
     }
 
     /**
+     * Sperrt einen Tag gegen Überschreiben durch Wochenplan-Generierung und Reroll, oder hebt
+     * die Sperre wieder auf (wochenplan A10 — Ankerrezepte). Ersetzt den bisherigen impliziten
+     * Mechanismus ("jeder Tag mit Rezept bleibt automatisch stehen"): ohne Sperre wird ein Tag
+     * bei „Woche generieren" jetzt auch dann neu belegt, wenn er bereits ein Rezept hat.
+     */
+    fun toggleLocked(day: WeekplanDayEntity) {
+        viewModelScope.launch {
+            weekplanDao.setLocked(day.id, if (day.isLocked == 0) 1 else 0, System.currentTimeMillis())
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    /**
      * Verlängert die aktuell angezeigte Woche einmalig um einen Tag (bis zu 14 Tage ab
      * Montag), ohne die globale Zeitraum-Einstellung zu ändern.
      */
@@ -529,9 +542,10 @@ class WeekplanViewModel @Inject constructor(
                     return@launch
                 }
 
-                // --- Anker-Rezepte: Tage die bereits Rezepte haben, überspringen ---
+                // --- Anker-Rezepte: gesperrte Tage mit vorhandenem Rezept bleiben unangetastet,
+                // alle anderen (auch bereits befüllte) werden neu generiert (wochenplan A10) ---
                 val anchorDays = mutableMapOf<String, List<WeekplanRecipeEntity>>()
-                currentDays.forEach { day ->
+                currentDays.filter { it.isLocked == 1 }.forEach { day ->
                     val existing = weekplanDao.recipesForDay(day.id)
                     if (existing.isNotEmpty()) anchorDays[day.id] = existing
                 }
@@ -604,6 +618,7 @@ class WeekplanViewModel @Inject constructor(
                                 date = day.planDate,
                                 recipeId = anchorRecipe?.recipeId ?: "",
                                 recipeName = recipe?.name?.ifBlank { recipe.slug } ?: "Anker",
+                                isLocked = true,
                             )
                         )
                         continue
@@ -712,6 +727,7 @@ class WeekplanViewModel @Inject constructor(
         val current = (_generateStatus.value as? WeekplanGenerateStatus.Proposal) ?: return
         val assignments = current.assignments.toMutableList()
         val target = assignments[index]
+        if (target.isLocked) return
 
         viewModelScope.launch {
             val c = constraints.value
@@ -779,7 +795,7 @@ class WeekplanViewModel @Inject constructor(
     fun regenerateDay(dayId: String) {
         viewModelScope.launch {
             val day = days.value.find { it.id == dayId } ?: return@launch
-            if (day.isSkipped == 1) return@launch
+            if (day.isSkipped == 1 || day.isLocked == 1) return@launch
             val c = constraints.value
 
             // Sammle alle aktuellen Rezept-IDs der Woche (außer dem zu ersetzenden Tag)
@@ -888,10 +904,6 @@ class WeekplanViewModel @Inject constructor(
                 _generateStatus.value = WeekplanGenerateStatus.Error(e.message ?: "Fehler")
             }
         }
-    }
-
-    fun generateWithAnchors(startDate: String) {
-        generateWeekplan()
     }
 
     private suspend fun recordHistory(recipeId: String, planDate: String) {

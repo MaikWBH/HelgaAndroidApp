@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
@@ -401,6 +403,7 @@ fun WeekplanScreen(
                             }
                         },
                         onRegenerateDay = { viewModel.regenerateDay(day.id) },
+                        onToggleLock = { viewModel.toggleLocked(day) },
                         feedbackMap = feedbackMap,
                         onFeedback = { recipeId, liked -> viewModel.setFeedback(recipeId, day.planDate, liked) },
                     )
@@ -467,6 +470,7 @@ private fun DayCard(
     onToggleGuest: () -> Unit,
     onToggleSkip: () -> Unit,
     onRegenerateDay: () -> Unit,
+    onToggleLock: () -> Unit,
     feedbackMap: Map<String, Int>,
     onFeedback: (recipeId: String, liked: Int) -> Unit,
 ) {
@@ -512,6 +516,14 @@ private fun DayCard(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                        if (day.isLocked == 1) {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = stringResource(R.string.weekplan_lock_badge),
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                     if (dateLabel.isNotBlank()) {
                         Text(
@@ -543,6 +555,14 @@ private fun DayCard(
                                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         )
                     }
+                    IconButton(onClick = onToggleLock) {
+                        Icon(
+                            imageVector = if (day.isLocked == 1) Icons.Filled.Lock else Icons.Filled.LockOpen,
+                            contentDescription = stringResource(R.string.weekplan_lock_day),
+                            tint = if (day.isLocked == 1) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        )
+                    }
                     IconButton(onClick = onExport) {
                         Icon(
                             imageVector = Icons.Filled.ShoppingCart,
@@ -550,11 +570,12 @@ private fun DayCard(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    IconButton(onClick = onRegenerateDay) {
+                    IconButton(onClick = onRegenerateDay, enabled = day.isLocked == 0) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
                             contentDescription = stringResource(R.string.weekplan_regenerate_day),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (day.isLocked == 0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         )
                     }
                 }
@@ -1317,12 +1338,21 @@ private fun ProposalSheet(
                             }
                         }
                     }
-                    IconButton(onClick = { onRegenerateDay(index) }) {
+                    if (assignment.isLocked) {
                         Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = stringResource(R.string.weekplan_regenerate_day),
+                            imageVector = Icons.Filled.Lock,
+                            contentDescription = stringResource(R.string.weekplan_lock_badge),
                             modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    } else {
+                        IconButton(onClick = { onRegenerateDay(index) }) {
+                            Icon(
+                                imageVector = Icons.Filled.Refresh,
+                                contentDescription = stringResource(R.string.weekplan_regenerate_day),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
             }

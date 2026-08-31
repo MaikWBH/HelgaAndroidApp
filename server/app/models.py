@@ -113,6 +113,8 @@ class WeekplanDayRecord(SyncRecord):
     note: str = ""
     is_quick_day: int = 0
     is_guest_day: int = 0
+    is_skipped: int = 0
+    is_locked: int = 0
 
 
 class WeekplanRecipeRecord(SyncRecord):

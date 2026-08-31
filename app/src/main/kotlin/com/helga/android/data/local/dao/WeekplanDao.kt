@@ -103,6 +103,9 @@ interface WeekplanDao {
     @Query("UPDATE weekplan_days SET isSkipped = :skipped, updatedAt = :ts, dirty = 1 WHERE id = :id")
     suspend fun setSkipped(id: String, skipped: Int, ts: Long)
 
+    @Query("UPDATE weekplan_days SET isLocked = :locked, updatedAt = :ts, dirty = 1 WHERE id = :id")
+    suspend fun setLocked(id: String, locked: Int, ts: Long)
+
     // ── Dirty / Sync ──────────────────────────────────────────────────────────
 
     @Query("SELECT * FROM weekplan_days WHERE dirty = 1")

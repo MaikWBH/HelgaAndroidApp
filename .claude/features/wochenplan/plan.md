@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 5 offen (9 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 4 offen (10 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -306,8 +306,30 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       („KI"-Framing aus `development_plan.md` tilgen) bewusst nicht angefasst —
       `development_plan.md` ist laut README ein Historie-Dokument, kein aktueller Stand;
       rückwirkendes Umschreiben verzerrt die Historie eher, als dass es nützt.
-- [ ] **A10** — Ankerrezepte anbinden: `generateWithAnchors` im UI erreichbar machen, orientiert
-      am Lock+Reroll-Muster (Sperr-Icon und Reroll-Icon direkt in `DayCard`) · L · Impact hoch
+- [x] **A10** — Ankerrezepte anbinden: `generateWithAnchors` im UI erreichbar machen, orientiert
+      am Lock+Reroll-Muster (Sperr-Icon und Reroll-Icon direkt in `DayCard`) · L · Impact hoch —
+      **umgesetzt:** Reroll-Icon (`Icons.Filled.Refresh`) gab es in `DayCard` bereits, verdrahtet
+      auf `WeekplanViewModel.regenerateDay()`. `generateWithAnchors(startDate)` war jedoch
+      totes Fassaden-Wrapping — rief nur `generateWeekplan()` auf und ignorierte den Parameter;
+      ersatzlos entfernt statt "erreichbar gemacht", da kein eigenständiger Mechanismus dahinter
+      steckte. Stattdessen den bisher impliziten Anker-Mechanismus ("jeder Tag mit Rezept bleibt
+      bei `generateWeekplan()` automatisch stehen") durch ein explizites Sperr-Flag ersetzt:
+      neue Spalte `WeekplanDayEntity.isLocked` (Room-Migration 33→34 `ALTER TABLE weekplan_days
+      ADD COLUMN isLocked`, DB jetzt v34), volle Sync-Anbindung (`WeekplanDayDto.isLocked`,
+      `SyncEngine`-Mapper, Server `db.py`/`models.py`/`sync.py`). Schloss-Icon (`Icons.Filled.Lock`
+      / `LockOpen`) neben Skip-Icon in `DayCard`, toggelt über neue `WeekplanViewModel.toggleLocked()`.
+      Verhaltensänderung bewusst so gewählt (recherchierter Standard „lock meals you like and
+      regenerate the rest"): `generateWeekplan()` überschreibt jetzt auch bereits befüllte,
+      aber ungesperrte Tage — vorher blieb jeder Tag mit Rezept automatisch unangetastet, was
+      "Woche neu generieren" bei einer teilbefüllten Woche faktisch nutzlos machte. Der Nutzer
+      sieht die volle Zuordnung vor dem Übernehmen im `ProposalSheet` (Review-Schritt existierte
+      schon), kein blindes Überschreiben. Reroll (`regenerateDay`, `regenerateProposalDay`)
+      respektiert die Sperre ebenfalls (kein Effekt auf gesperrte Tage, Icon in `DayCard`
+      und `ProposalSheet` entsprechend deaktiviert/ausgeblendet). Nebenbei entdeckt und
+      behoben: `WeekplanDayRecord` in `server/app/models.py` hatte `is_skipped` nie deklariert,
+      obwohl `TABLE_COLUMNS`/`sync.py` die Spalte längst führten — jeder Push eines
+      `weekplan_days`-Datensatzes wäre an der NOT-NULL-Constraint gescheitert (`rec_dict.get(c)`
+      liefert `None` für ein nicht deklariertes Pydantic-Feld). Ergänzt, zusammen mit `is_locked`.
 - [ ] **A11** — Nur noch der weitergehende Teil: nutzerdefinierte, frei anlegbare Tagesmarker
       (über „Auswärts/kein Kochen" hinaus). Der Basisfall ist durch A15 abgedeckt. Braucht
       eigene Rückfrage zum Datenmodell (Tag-artiges System) vor der Umsetzung · L · Impact

@@ -173,6 +173,7 @@ data class WeekplanDayDto(
     @Json(name = "is_quick_day") val isQuickDay: Int = 0,
     @Json(name = "is_guest_day") val isGuestDay: Int = 0,
     @Json(name = "is_skipped") val isSkipped: Int = 0,
+    @Json(name = "is_locked") val isLocked: Int = 0,
 )
 
 @JsonClass(generateAdapter = true)
@@ -544,6 +545,7 @@ data class WeekplanAssignmentDto(
     val date: String = "",
     @Json(name = "recipe_id") val recipeId: String = "",
     @Json(name = "recipe_name") val recipeName: String = "",
+    val isLocked: Boolean = false,
 )
 
 @JsonClass(generateAdapter = true)

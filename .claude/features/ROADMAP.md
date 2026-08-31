@@ -111,7 +111,7 @@ Bewertung, Wochenplan-Erweiterungen, u. a.).
 | **rezepte A7** | Kochansicht: geteilter Landscape-Modus |
 | ✅ **rezepte A6** | Bewertung zusammenlegen (nur beim Kochen bewerten) |
 | ✅ **rezepte A9** | Portionsskalierung je Rezept merken |
-| **wochenplan A10** | Ankerrezepte anbinden (`generateWithAnchors` ist toter Code) |
+| ✅ **wochenplan A10** | Ankerrezepte anbinden (`generateWithAnchors` ist toter Code) |
 | **wochenplan A8** | Constraints direkt ins UI statt Dialog |
 | **wochenplan A14** | Mahlzeiten-Tag je Eintrag |
 | **wochenplan A11** | Frei anlegbare Tagesmarker — braucht vorher eine Datenmodell-Rückfrage |

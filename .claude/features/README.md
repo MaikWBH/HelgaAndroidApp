@@ -3,7 +3,7 @@
 Routing-Einstieg für die Feature-für-Feature-Verbesserung. Diese Datei ist die **einzige
 Stelle mit Gesamtstatus**; der inhaltliche Stand liegt jeweils im `plan.md` des Bereichs.
 
-**Stand:** 2026-08-31 · **Basis:** DB v33, 124 Kotlin-Dateien, 23 Room-Entities — alle elf
+**Stand:** 2026-08-31 · **Basis:** DB v34, 124 Kotlin-Dateien, 23 Room-Entities — alle elf
 Bereiche interviewt
 
 ➡️ **Womit anfangen?** [ROADMAP.md](ROADMAP.md) sortiert alle 58 offenen Punkte nach
@@ -39,7 +39,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 |---|---------|------|-----------|----------|-----------|
 | 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 2 offen (4 erledigt) | ⭐⭐⭐ |
 | 2 | Rezepte | [rezepte](rezepte/plan.md) | erledigt | 4 offen (6 erledigt) | ⭐⭐⭐ |
-| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 5 offen (9 erledigt) | ⭐⭐⭐ |
+| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 4 offen (10 erledigt) | ⭐⭐⭐ |
 | 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐⭐ |
 | 5 | KI | [ki](ki/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
 | 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 0 offen (4 erledigt) | ⭐⭐ |

@@ -264,6 +264,8 @@
     <string name="weekplan_export_day">Tag auf Einkaufsliste</string>
     <string name="weekplan_export_week">Woche auf Einkaufsliste</string>
     <string name="weekplan_regenerate_day">Tag neu generieren</string>
+    <string name="weekplan_lock_day">Tag sperren</string>
+    <string name="weekplan_lock_badge">Gesperrt</string>
     <string name="weekplan_more">Mehr</string>
     <string name="weekplan_repeat_last_week">Letzte Woche übernehmen</string>
     <string name="weekplan_ai_generating">KI erstellt Wochenplan…</string>
