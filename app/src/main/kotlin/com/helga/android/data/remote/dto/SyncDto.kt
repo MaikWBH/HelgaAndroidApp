@@ -35,6 +35,7 @@ data class RecipeDto(
     @Json(name = "nutrition_nutri_score") val nutritionNutriScore: String = "",
     @Json(name = "nutrition_source") val nutritionSource: String = "",
     @Json(name = "created_at") val createdAt: Long = 0,
+    @Json(name = "last_servings") val lastServings: Int = 0,
 )
 
 @JsonClass(generateAdapter = true)

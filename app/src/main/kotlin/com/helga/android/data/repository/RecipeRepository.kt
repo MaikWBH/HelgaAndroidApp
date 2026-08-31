@@ -49,6 +49,10 @@ class RecipeRepository @Inject constructor(
         recipeDao.updatePersonalNotes(id, notes, System.currentTimeMillis())
     }
 
+    suspend fun updateLastServings(id: String, servings: Int) {
+        recipeDao.updateLastServings(id, servings, System.currentTimeMillis())
+    }
+
     suspend fun toggleFavorite(recipe: RecipeEntity) {
         val newValue = if (recipe.isFavorite == 0) 1 else 0
         recipeDao.updateFavorite(recipe.id, newValue, System.currentTimeMillis())

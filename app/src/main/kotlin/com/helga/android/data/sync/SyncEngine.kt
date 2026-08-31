@@ -289,6 +289,7 @@ private fun RecipeDto.toEntity(): RecipeEntity = RecipeEntity(
     nutritionFat = nutritionFat, nutritionCarbs = nutritionCarbs,
     nutritionNutriScore = nutritionNutriScore, nutritionSource = nutritionSource,
     createdAt = createdAt, updatedAt = updatedAt, deleted = deleted, dirty = 0,
+    lastServings = lastServings,
 )
 
 private fun IngredientDto.toEntity(): IngredientEntity = IngredientEntity(
@@ -356,6 +357,7 @@ private fun RecipeEntity.toDto(): RecipeDto = RecipeDto(
     nutritionFat = nutritionFat, nutritionCarbs = nutritionCarbs,
     nutritionNutriScore = nutritionNutriScore, nutritionSource = nutritionSource,
     createdAt = createdAt,
+    lastServings = lastServings,
 )
 
 private fun IngredientEntity.toDto(): IngredientDto = IngredientDto(

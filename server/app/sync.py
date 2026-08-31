@@ -11,7 +11,7 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "cook_time", "total_time", "image_path", "source_url", "rating",
         "protein_type", "effort", "cuisine", "meal_type", "meal_slot", "season_fit",
         "nutrition_kcal", "nutrition_protein", "nutrition_fat", "nutrition_carbs",
-        "nutrition_nutri_score", "nutrition_source",
+        "nutrition_nutri_score", "nutrition_source", "last_servings",
         "created_at", "updated_at", "deleted",
     ],
     "recipe_ingredients": [

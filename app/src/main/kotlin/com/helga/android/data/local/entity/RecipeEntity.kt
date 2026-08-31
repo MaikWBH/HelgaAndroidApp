@@ -60,4 +60,7 @@ data class RecipeEntity(
     val nutritionNutriScore: String = "",
     @ColumnInfo(defaultValue = "")
     val nutritionSource: String = "",
+    // 0 = noch nie geändert, dann gilt der aus recipeYield geparste Standardwert (rezepte A9).
+    @ColumnInfo(defaultValue = "0")
+    val lastServings: Int = 0,
 )

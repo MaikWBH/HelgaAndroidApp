@@ -32,6 +32,7 @@ class RecipeRecord(SyncRecord):
     nutrition_nutri_score: str = ""
     nutrition_source: str = ""
     created_at: int = 0
+    last_servings: int = 0
 
 
 class IngredientRecord(SyncRecord):

@@ -116,7 +116,8 @@ class RecipeDetailViewModel @Inject constructor(
                 val base = parseServings(recipe.recipeYield)
                 if (base > 0) {
                     _baseServings.value = base
-                    _servings.value = base
+                    // Zuletzt gewählte Portionenzahl merken (rezepte A9), sonst Rezept-Standard.
+                    _servings.value = recipe.lastServings.takeIf { it > 0 } ?: base
                 }
                 _nutrition.value = repository.getRecipeNutrition(recipe.id)
             }
@@ -126,7 +127,14 @@ class RecipeDetailViewModel @Inject constructor(
     private fun parseServings(yieldStr: String): Int =
         Regex("""\d+""").find(yieldStr)?.value?.toIntOrNull() ?: 0
 
-    fun setServings(n: Int) { _servings.value = n.coerceIn(1, 99) }
+    fun setServings(n: Int) {
+        val coerced = n.coerceIn(1, 99)
+        _servings.value = coerced
+        viewModelScope.launch {
+            repository.updateLastServings(recipeId, coerced)
+            syncScheduler.triggerOneShot()
+        }
+    }
 
     fun savePersonalNotes(notes: String) {
         viewModelScope.launch {

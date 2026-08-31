@@ -1,6 +1,6 @@
 # Feature: Rezepte
 
-> **Status:** Interview erledigt · **Aufgaben:** 6 offen (4 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 5 offen (5 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Zweiter Bottom-Nav-Tab. Datenbasis für Wochenplan und Einkaufsliste.
 
@@ -199,8 +199,15 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [ ] **A8** — Timer: mehrere parallel, laufen im Hintergrund weiter, melden sich per
       Benachrichtigung; Kanal `helga_reminders` aus `NotificationScheduler.kt` wiederverwendbar,
       aber mit `IMPORTANCE_HIGH`. **Setzt [plattform](../plattform/plan.md) A4 voraus** · L · Impact hoch
-- [ ] **A9** — Portionsskalierung je Rezept persistieren (neues Feld in `RecipeEntity` +
-      Room-Migration v31 + Sync-Anbindung) · M · Impact mittel
+- [x] **A9** — Portionsskalierung je Rezept persistieren (neues Feld in `RecipeEntity` +
+      Room-Migration v31 + Sync-Anbindung) · M · Impact mittel — **umgesetzt:** neues Feld
+      `RecipeEntity.lastServings` (0 = noch nie geändert, dann gilt weiterhin der aus
+      `recipeYield` geparste Standardwert), Room-Migration 32→33 (nicht v31 — DB war durch
+      zwischenzeitliche Arbeit inzwischen bei v32). `RecipeDetailViewModel.setServings()`
+      schreibt bei jeder Änderung über `RecipeRepository.updateLastServings()` und triggert
+      Sync, `init` liest `lastServings` statt immer auf den Rezept-Standard zurückzufallen.
+      Serverseitig `last_servings`-Spalte non-destruktiv ergänzt (`db.py` CREATE TABLE +
+      `TABLE_COLUMNS`, `models.py`, `sync.py`).
 - [x] **A10** — URL-Import reparieren: `supported_only=False` in `server/app/ai.py:270`,
       `WebsiteNotImplementedError` / `NoSchemaFoundInWildMode` / HTTP-Fehler getrennt behandeln
       und als verständliche deutsche Meldung ausgeben statt rohem `e.message`

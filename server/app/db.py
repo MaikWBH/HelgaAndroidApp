@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS recipes (
     nutrition_carbs       REAL NOT NULL DEFAULT 0.0,
     nutrition_nutri_score TEXT NOT NULL DEFAULT '',
     nutrition_source      TEXT NOT NULL DEFAULT '',
+    last_servings INTEGER NOT NULL DEFAULT 0,
     created_at  INTEGER NOT NULL DEFAULT 0,
     updated_at  INTEGER NOT NULL DEFAULT 0,
     deleted     INTEGER NOT NULL DEFAULT 0
@@ -461,6 +462,7 @@ ADDED_COLUMNS = {
         ("nutrition_carbs", "REAL NOT NULL DEFAULT 0.0"),
         ("nutrition_nutri_score", "TEXT NOT NULL DEFAULT ''"),
         ("nutrition_source", "TEXT NOT NULL DEFAULT ''"),
+        ("last_servings", "INTEGER NOT NULL DEFAULT 0"),
     ],
     "off_products": [
         ("is_favorite", "INTEGER NOT NULL DEFAULT 0"),
