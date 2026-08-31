@@ -387,7 +387,6 @@
     <string name="recipe_nutrition_protein_label">Protein (g)</string>
     <string name="recipe_nutrition_fat_label">Fett (g)</string>
     <string name="recipe_nutrition_carbs_label">Kohlenhydrate (g)</string>
-    <string name="recipe_nutrition_nutriscore_label">Nutri-Score (A–E, optional)</string>
     <string name="recipe_nutrition_save">Speichern</string>
 
     <!-- Settings: globale KI-Sammelaktionen für alle Rezepte -->

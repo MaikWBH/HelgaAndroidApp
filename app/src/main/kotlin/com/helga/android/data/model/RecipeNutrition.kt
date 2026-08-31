@@ -13,7 +13,6 @@ data class RecipeNutrition(
     val proteinPerPortion: Double,  // protein / NUTRITION_BASELINE_PORTIONS — für die Anzeige
     val fatPerPortion: Double,      // fat / NUTRITION_BASELINE_PORTIONS — für die Anzeige
     val carbsPerPortion: Double,    // carbs / NUTRITION_BASELINE_PORTIONS — für die Anzeige
-    val nutriScore: String,         // "a"-"e"
     val source: String,             // "manual", "ai" oder "" (noch nicht ermittelt)
 )
 
@@ -21,13 +20,11 @@ data class DayNutrition(
     val date: String,
     val recipeNames: List<String>,
     val avgKcal: Double,           // Durchschnitt der Rezepte des Tages
-    val avgNutriScore: String,     // Beste Score des Tages
     val totalRecipes: Int,
 )
 
 data class WeekplanNutrition(
     val days: List<DayNutrition>,
     val weekAvgKcal: Double,       // Durchschnitt über alle Tage
-    val weekAvgNutriScore: String, // Beste Score der Woche
     val totalRecipes: Int,
 )

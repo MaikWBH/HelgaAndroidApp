@@ -210,9 +210,8 @@ async def estimate_nutrition(req: AiNutritionRequest) -> dict:
         f"ZUTATEN (bereits für {req.portions} Portionen bemessen):\n{ingredients_block}\n\n"
         "Schätze die GESAMT-Nährwerte für das komplette Rezept (alle Zutaten zusammen):\n"
         "- kcal: Gesamt-Kalorien\n- protein: Gesamt-Eiweiß in Gramm\n"
-        "- fat: Gesamt-Fett in Gramm\n- carbs: Gesamt-Kohlenhydrate in Gramm\n"
-        "- nutri_score: einer von [a, b, c, d, e] (a = am gesündesten)\n\n"
-        'Antworte mit: {"kcal":0,"protein":0,"fat":0,"carbs":0,"nutri_score":"c"}'
+        "- fat: Gesamt-Fett in Gramm\n- carbs: Gesamt-Kohlenhydrate in Gramm\n\n"
+        'Antworte mit: {"kcal":0,"protein":0,"fat":0,"carbs":0}'
     )
 
     text = (await _call_once(system, user)).strip()
@@ -226,16 +225,11 @@ async def estimate_nutrition(req: AiNutritionRequest) -> dict:
     except json.JSONDecodeError:
         return {}
 
-    nutri_score = str(data.get("nutri_score", "")).strip().lower()
-    if nutri_score not in ("a", "b", "c", "d", "e"):
-        nutri_score = ""
-
     return {
         "kcal": _to_float(data.get("kcal"), 0.0),
         "protein": _to_float(data.get("protein"), 0.0),
         "fat": _to_float(data.get("fat"), 0.0),
         "carbs": _to_float(data.get("carbs"), 0.0),
-        "nutri_score": nutri_score,
     }
 
 

@@ -356,7 +356,6 @@ class RecipeDetailViewModel @Inject constructor(
                     protein = result.protein,
                     fat = result.fat,
                     carbs = result.carbs,
-                    nutriScore = result.nutriScore,
                     source = "ai",
                 )
                 _nutrition.value = repository.getRecipeNutrition(recipeId)
@@ -368,12 +367,12 @@ class RecipeDetailViewModel @Inject constructor(
         }
     }
 
-    fun saveManualNutrition(kcal: Double, protein: Double, fat: Double, carbs: Double, nutriScore: String) {
+    fun saveManualNutrition(kcal: Double, protein: Double, fat: Double, carbs: Double) {
         viewModelScope.launch {
             repository.saveNutrition(
                 recipeId = recipeId,
                 kcal = kcal, protein = protein, fat = fat, carbs = carbs,
-                nutriScore = nutriScore, source = "manual",
+                source = "manual",
             )
             _nutrition.value = repository.getRecipeNutrition(recipeId)
             syncScheduler.triggerOneShot()

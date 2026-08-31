@@ -54,6 +54,8 @@ data class RecipeEntity(
     val nutritionFat: Double = 0.0,
     @ColumnInfo(defaultValue = "0.0")
     val nutritionCarbs: Double = 0.0,
+    // LEGACY: Nutri-Score-Feature entfernt (naehrwerte A3), Spalte bleibt aus
+    // Migrationsgründen erhalten (siehe mealType oben für dasselbe Muster).
     @ColumnInfo(defaultValue = "")
     val nutritionNutriScore: String = "",
     @ColumnInfo(defaultValue = "")

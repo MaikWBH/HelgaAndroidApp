@@ -1,6 +1,6 @@
 # Feature: Nährwerte & Allergene
 
-> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
 
 OpenFoodFacts-Anbindung, Nährwerte je Rezept, Nutri-Score und Allergenwarnungen. Querschnitts-
 funktion ohne eigenen Screen — sichtbar in Rezepten, Einkaufsliste und Wochenplan.
@@ -110,13 +110,27 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Unit-Tests für `AllergyChecker` (Treffer, Teilwort, Groß-/Kleinschreibung, leeres Profil) · S · Impact hoch
 - [ ] **A2** — `OffProductEntity` an `SyncEngine` anbinden; DAO und Serverseite sind fertig · M · Impact mittel — bestätigter Bedarf aus dem Interview
-- [ ] **A3** — Nutri-Score vollständig entfernen: Badges in der Einkaufsliste
+- [x] **A3** — Nutri-Score vollständig entfernen: Badges in der Einkaufsliste
   (`ShoppingListScreen.kt:1470-1471`/`:1561-1587`), Anzeige + Eingabefeld in
   `RecipeDetailScreen.kt` (`NutritionSection`/`NutritionEditDialog`), Wochenplan-Trendkarte
   (`DayNutrition.avgNutriScore`/`WeekplanNutrition.weekAvgNutriScore`) sowie den
   Generierungs-Filter `WeekplanConstraintsEntity.minNutriScore` in
   [wochenplan](../wochenplan/plan.md). Room-Spalten bleiben bestehen (nicht destruktiv), werden
-  nur nicht mehr befüllt/angezeigt · L · Impact hoch
+  nur nicht mehr befüllt/angezeigt · L · Impact hoch — **umgesetzt:** überall entfernt, wo
+  Nutri-Score sichtbar war oder Verhalten beeinflusst hat — Badges (`ShoppingListScreen.kt`),
+  `NutritionSection`/`NutritionEditDialog` (`RecipeDetailScreen.kt`), Wochenplan-Trendkarte und
+  `DayNutrition`/`WeekplanNutrition`-Modelle, KI-Nährwertschätzung fragt `nutri_score` nicht mehr
+  ab (`server/app/ai.py:estimate_nutrition`, spart auch Prompt-Tokens), Filter in
+  `WeekplanViewModel.applyRecipeFilters()` entfernt (siehe
+  [wochenplan](../wochenplan/plan.md) A16). Room-Spalten (`RecipeEntity.nutritionNutriScore`,
+  `OffProductEntity.nutriScore`, `WeekplanConstraintsEntity.minNutriScore`) bleiben wie geplant
+  bestehen — als `LEGACY`-Kommentar markiert, exakt das bereits etablierte Muster von
+  `RecipeEntity.mealType`. Eine Nuance gegenüber dem ursprünglichen Plan: die Spalten werden an
+  zwei Stellen technisch weiterhin befüllt statt komplett unbefüllt zu bleiben —
+  `off.py`/`ShoppingListViewModel.addItemFromBarcode` schreibt weiterhin den von Open Food Facts
+  gelieferten Wert in die (nirgends mehr gelesene) Spalte, und `SyncEngine`/`SyncDto` spiegeln
+  den Legacy-Wert weiterhin fürs Sync-Roundtrip — beides bewusst unangetastet gelassen, um keine
+  Sync-/Ingestions-Pfade anzufassen, die für ein rein totes Datenfeld kein Risiko wert sind.
 - [x] **A4** — Nährwerte korrekt pro Portion berechnen und mit dem Portionswähler skalieren:
   `protein`/`fat`/`carbs` in `RecipeNutrition` sind aktuell fix für die 4er-Baseline
   (`NUTRITION_BASELINE_PORTIONS`), `NutritionSection` bekommt keinen `scaleFactor` · M · Impact

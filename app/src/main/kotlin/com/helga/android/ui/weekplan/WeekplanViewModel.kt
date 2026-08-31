@@ -443,7 +443,6 @@ class WeekplanViewModel @Inject constructor(
         minVeg: Int,
         maxRepeat: Int,
         maxKcalPerPortion: Int = 700,
-        minNutriScore: String = "c",
         preferOrganic: Boolean = false,
         excludeAllergens: List<String> = emptyList(),
     ) {
@@ -459,7 +458,6 @@ class WeekplanViewModel @Inject constructor(
                     minVegetarianPerWeek = minVeg,
                     maxRepeatDays = maxRepeat,
                     maxKcalPerPortion = maxKcalPerPortion,
-                    minNutriScore = minNutriScore,
                     preferOrganic = if (preferOrganic) 1 else 0,
                     excludeAllergens = allergenJson,
                     updatedAt = now,
@@ -472,12 +470,12 @@ class WeekplanViewModel @Inject constructor(
 
     /**
      * Gemeinsame Kandidaten-Filter für Generierung und Neuwürfeln: mealSlot (nur lunch/dinner,
-     * behebt den Süßspeisen-als-Abendessen-Bug), Allergene, Kcal-Budget, Nutri-Score, Saison.
-     * Jede Stufe fällt auf die vorherige zurück, wenn sie den Pool leer räumen würde. Der
-     * Saison-Filter war vorher in generateWeekplan() nur eine Sortier-Präferenz (durch
-     * nachfolgende stabile Sortierungen praktisch wirkungslos) — hier als echter Filter mit
-     * Fallback, damit er auch bei regenerateDay()/regenerateProposalDay() (reiner Zufallsgriff,
-     * keine Sortierung) tatsächlich etwas bewirkt.
+     * behebt den Süßspeisen-als-Abendessen-Bug), Allergene, Kcal-Budget, Saison. Jede Stufe
+     * fällt auf die vorherige zurück, wenn sie den Pool leer räumen würde. Der Saison-Filter war
+     * vorher in generateWeekplan() nur eine Sortier-Präferenz (durch nachfolgende stabile
+     * Sortierungen praktisch wirkungslos) — hier als echter Filter mit Fallback, damit er auch
+     * bei regenerateDay()/regenerateProposalDay() (reiner Zufallsgriff, keine Sortierung)
+     * tatsächlich etwas bewirkt.
      */
     private suspend fun applyRecipeFilters(
         candidates: List<RecipeEntity>,
@@ -510,23 +508,17 @@ class WeekplanViewModel @Inject constructor(
         }
         val kcalFilteredSafe = kcalFiltered.ifEmpty { allergenFilteredSafe }
 
-        val nutriScoreFiltered = kcalFilteredSafe.filter { recipe ->
-            val score = recipe.nutritionNutriScore.lowercase()
-            score.isBlank() || score <= constraints.minNutriScore.lowercase()
-        }
-        val nutriScoreFilteredSafe = nutriScoreFiltered.ifEmpty { kcalFilteredSafe }
-
         val currentSeason = when (LocalDate.now().monthValue) {
             in 3..5 -> "frühling"
             in 6..8 -> "sommer"
             in 9..11 -> "herbst"
             else -> "winter"
         }
-        val seasonFiltered = nutriScoreFilteredSafe.filter { recipe ->
+        val seasonFiltered = kcalFilteredSafe.filter { recipe ->
             recipe.seasonFit.isBlank() ||
                 recipe.seasonFit.lowercase().let { it == "ganzjährig" || it == currentSeason }
         }
-        return seasonFiltered.ifEmpty { nutriScoreFilteredSafe }
+        return seasonFiltered.ifEmpty { kcalFilteredSafe }
     }
 
     fun generateWeekplan() {

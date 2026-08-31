@@ -207,8 +207,8 @@ fun WeekplanScreen(
         ConstraintsEditorSheet(
             constraints = constraints,
             allergies = userAllergies,
-            onSave = { maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies ->
-                viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies)
+            onSave = { maxMeat, maxFish, minVeg, maxRepeat, maxKcal, prefOrganic, excludeAllergies ->
+                viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat, maxKcal, prefOrganic, excludeAllergies)
                 constraintsEditorVisible = false
             },
             onDismiss = { constraintsEditorVisible = false },
@@ -364,12 +364,6 @@ fun WeekplanScreen(
                                 "🔥 Ø ${nutrition.weekAvgKcal.toInt()} kcal/Tag",
                                 style = MaterialTheme.typography.labelMedium,
                             )
-                            if (nutrition.weekAvgNutriScore.isNotBlank()) {
-                                Text(
-                                    "Nutri-Score ${nutrition.weekAvgNutriScore.uppercase()}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
                         }
                     }
                 }
@@ -1060,7 +1054,7 @@ fun parseAllergenJson(json: String): List<String> = json
 private fun ConstraintsEditorSheet(
     constraints: WeekplanConstraintsEntity,
     allergies: List<String>,
-    onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, minScore: String, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
+    onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -1069,7 +1063,6 @@ private fun ConstraintsEditorSheet(
     var minVeg by remember(constraints.minVegetarianPerWeek) { mutableFloatStateOf(constraints.minVegetarianPerWeek.toFloat()) }
     var maxRepeat by remember(constraints.maxRepeatDays) { mutableFloatStateOf(constraints.maxRepeatDays.toFloat()) }
     var maxKcal by remember(constraints.maxKcalPerPortion) { mutableFloatStateOf(constraints.maxKcalPerPortion.toFloat()) }
-    var minNutriScore by remember(constraints.minNutriScore) { mutableStateOf(constraints.minNutriScore) }
     var preferOrganic by remember(constraints.preferOrganic) { mutableStateOf(constraints.preferOrganic == 1) }
     var selectedAllergens by remember(constraints.excludeAllergens) {
         mutableStateOf(parseAllergenJson(constraints.excludeAllergens))
@@ -1164,29 +1157,6 @@ private fun ConstraintsEditorSheet(
             )
             Spacer(Modifier.height(8.dp))
 
-            Text(
-                text = "Min Nutri-Score",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf("c", "b", "a").forEach { score ->
-                    Button(
-                        onClick = { minNutriScore = score },
-                        modifier = Modifier.weight(1f),
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = if (minNutriScore == score) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.surfaceVariant,
-                        ),
-                    ) {
-                        Text(score.uppercase())
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1232,7 +1202,7 @@ private fun ConstraintsEditorSheet(
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = { onSave(maxMeat.toInt(), maxFish.toInt(), minVeg.toInt(), maxRepeat.toInt(), maxKcal.toInt(), minNutriScore, preferOrganic, selectedAllergens) },
+                onClick = { onSave(maxMeat.toInt(), maxFish.toInt(), minVeg.toInt(), maxRepeat.toInt(), maxKcal.toInt(), preferOrganic, selectedAllergens) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.weekplan_constraints_save))

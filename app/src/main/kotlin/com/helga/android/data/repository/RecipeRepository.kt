@@ -119,7 +119,6 @@ class RecipeRepository @Inject constructor(
             proteinPerPortion = protein / NUTRITION_BASELINE_PORTIONS,
             fatPerPortion = fat / NUTRITION_BASELINE_PORTIONS,
             carbsPerPortion = carbs / NUTRITION_BASELINE_PORTIONS,
-            nutriScore = recipe?.nutritionNutriScore ?: "",
             source = recipe?.nutritionSource ?: "",
         )
     }
@@ -131,18 +130,15 @@ class RecipeRepository @Inject constructor(
         protein: Double,
         fat: Double,
         carbs: Double,
-        nutriScore: String,
         source: String,
     ) {
         val recipe = recipeDao.findById(recipeId) ?: return
-        val score = nutriScore.trim().lowercase().takeIf { it.length == 1 && it[0] in 'a'..'e' } ?: ""
         recipeDao.upsertRecipe(
             recipe.copy(
                 nutritionKcal = kcal,
                 nutritionProtein = protein,
                 nutritionFat = fat,
                 nutritionCarbs = carbs,
-                nutritionNutriScore = score,
                 nutritionSource = source,
                 updatedAt = System.currentTimeMillis(),
                 dirty = 1,

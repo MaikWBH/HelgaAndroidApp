@@ -1487,10 +1487,6 @@ private fun CatalogProductCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (product.nutriScore.isNotBlank()) {
-                NutriScoreBadge(product.nutriScore)
-                Spacer(Modifier.widthIn(min = 12.dp))
-            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = product.name.ifBlank { product.barcode },
@@ -1536,31 +1532,6 @@ private fun CatalogProductCard(
 }
 
 @Composable
-private fun NutriScoreBadge(score: String) {
-    Surface(
-        modifier = Modifier.size(36.dp),
-        shape = RoundedCornerShape(4.dp),
-        color = when (score.uppercase()) {
-            "A" -> Color(0xFF4CAF50)
-            "B" -> Color(0xFF8BC34A)
-            "C" -> Color(0xFFFFC107)
-            "D" -> Color(0xFFFF9800)
-            "E" -> Color(0xFFF44336)
-            else -> MaterialTheme.colorScheme.surfaceVariant
-        },
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = score.uppercase(),
-                color = Color.White,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            )
-        }
-    }
-}
-
-@Composable
 fun ScannedProductDialog(
     product: OffProductEntity,
     activeStore: StoreEntity?,
@@ -1577,43 +1548,6 @@ fun ScannedProductDialog(
         title = { Text(text = "📦 ${product.name}") },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // NutriScore
-                if (product.nutriScore.isNotBlank()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "NutriScore:",
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Surface(
-                            modifier = Modifier.size(32.dp),
-                            shape = RoundedCornerShape(4.dp),
-                            color = when (product.nutriScore.uppercase()) {
-                                "A" -> Color(0xFF4CAF50)
-                                "B" -> Color(0xFF8BC34A)
-                                "C" -> Color(0xFFFFC107)
-                                "D" -> Color(0xFFFF9800)
-                                "E" -> Color(0xFFF44336)
-                                else -> MaterialTheme.colorScheme.surfaceVariant
-                            },
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = product.nutriScore.uppercase(),
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                )
-                            }
-                        }
-                    }
-                }
-
                 // Nährwerte (pro 100 g) – übersichtlich in einer Karte gruppiert
                 if (product.kcalPerUnit > 0 || product.proteins > 0 ||
                     product.fats > 0 || product.carbs > 0

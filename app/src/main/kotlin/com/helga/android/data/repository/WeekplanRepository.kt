@@ -165,14 +165,12 @@ class WeekplanRepository @Inject constructor(
         val days = weekplanDao.getDaysBetween(startDate, endDate)
         val dayNutritions = mutableListOf<DayNutrition>()
         var totalKcal = 0.0
-        var bestNutriScore = ""
         var totalRecipes = 0
 
         days.forEach { day ->
             val recipes = weekplanDao.recipesForDay(day.id)
             val dayRecipes = mutableListOf<String>()
             var dayTotalKcal = 0.0
-            var dayBestScore = ""
 
             recipes.forEach { entry ->
                 val recipe = recipeDao.findById(entry.recipeId)
@@ -180,11 +178,6 @@ class WeekplanRepository @Inject constructor(
                     dayRecipes.add(recipe.name)
                     val nutrition = recipeRepository.getRecipeNutrition(recipe.id)
                     dayTotalKcal += nutrition.kcalPerPortion
-                    if (nutrition.nutriScore.isNotBlank()) {
-                        if (dayBestScore.isEmpty() || nutrition.nutriScore < dayBestScore) {
-                            dayBestScore = nutrition.nutriScore
-                        }
-                    }
                     totalRecipes++
                 }
             }
@@ -195,7 +188,6 @@ class WeekplanRepository @Inject constructor(
                     date = day.planDate,
                     recipeNames = dayRecipes,
                     avgKcal = avgDayKcal,
-                    avgNutriScore = dayBestScore,
                     totalRecipes = recipes.size,
                 )
             )
@@ -203,19 +195,10 @@ class WeekplanRepository @Inject constructor(
         }
 
         val weekAvgKcal = if (days.isNotEmpty()) totalKcal / days.size else 0.0
-        var weekBestScore = ""
-        dayNutritions.forEach { day ->
-            if (day.avgNutriScore.isNotBlank()) {
-                if (weekBestScore.isEmpty() || day.avgNutriScore < weekBestScore) {
-                    weekBestScore = day.avgNutriScore
-                }
-            }
-        }
 
         return WeekplanNutrition(
             days = dayNutritions,
             weekAvgKcal = weekAvgKcal,
-            weekAvgNutriScore = weekBestScore,
             totalRecipes = totalRecipes,
         )
     }

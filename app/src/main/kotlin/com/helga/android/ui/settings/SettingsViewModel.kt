@@ -391,7 +391,6 @@ class SettingsViewModel @Inject constructor(
                             protein = nutritionResult.protein,
                             fat = nutritionResult.fat,
                             carbs = nutritionResult.carbs,
-                            nutriScore = nutritionResult.nutriScore,
                             source = "ai",
                         )
                     }

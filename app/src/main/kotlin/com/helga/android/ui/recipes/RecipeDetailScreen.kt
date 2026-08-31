@@ -178,9 +178,9 @@ fun RecipeDetailScreen(
         NutritionEditDialog(
             nutrition = nutrition,
             onDismiss = { showNutritionDialog = false },
-            onSave = { kcal, protein, fat, carbs, nutriScore ->
+            onSave = { kcal, protein, fat, carbs ->
                 showNutritionDialog = false
-                viewModel.saveManualNutrition(kcal, protein, fat, carbs, nutriScore)
+                viewModel.saveManualNutrition(kcal, protein, fat, carbs)
             },
         )
     }
@@ -563,32 +563,6 @@ private fun NutritionSection(
                 NutritionItem(value = String.format("%.1f", nutrition.fatPerPortion * scaleFactor), unit = "g Fett")
                 NutritionItem(value = String.format("%.1f", nutrition.carbsPerPortion * scaleFactor), unit = "g KH")
             }
-            if (nutrition.nutriScore.isNotBlank()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Nutri-Score:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = nutrition.nutriScore.uppercase(),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = when (nutrition.nutriScore.lowercase()) {
-                            "a" -> androidx.compose.ui.graphics.Color(0xFF22863A)
-                            "b" -> androidx.compose.ui.graphics.Color(0xFF28A745)
-                            "c" -> androidx.compose.ui.graphics.Color(0xFFFFC107)
-                            "d" -> androidx.compose.ui.graphics.Color(0xFFFF9800)
-                            else -> androidx.compose.ui.graphics.Color(0xFFD32F2F)
-                        },
-                    )
-                }
-            }
             Text(
                 text = stringResource(R.string.recipe_nutrition_baseline_hint) + " · " + stringResource(
                     if (nutrition.source == "ai") R.string.recipe_nutrition_source_ai
@@ -621,13 +595,12 @@ private fun NutritionSection(
 private fun NutritionEditDialog(
     nutrition: com.helga.android.data.model.RecipeNutrition?,
     onDismiss: () -> Unit,
-    onSave: (kcal: Double, protein: Double, fat: Double, carbs: Double, nutriScore: String) -> Unit,
+    onSave: (kcal: Double, protein: Double, fat: Double, carbs: Double) -> Unit,
 ) {
     var kcal by remember { mutableStateOf(nutrition?.totalKcal?.takeIf { it > 0 }?.toString() ?: "") }
     var protein by remember { mutableStateOf(nutrition?.protein?.takeIf { it > 0 }?.toString() ?: "") }
     var fat by remember { mutableStateOf(nutrition?.fat?.takeIf { it > 0 }?.toString() ?: "") }
     var carbs by remember { mutableStateOf(nutrition?.carbs?.takeIf { it > 0 }?.toString() ?: "") }
-    var nutriScore by remember { mutableStateOf(nutrition?.nutriScore ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -661,13 +634,6 @@ private fun NutritionEditDialog(
                     label = { Text(stringResource(R.string.recipe_nutrition_carbs_label)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(Modifier.height(8.dp))
-                androidx.compose.material3.OutlinedTextField(
-                    value = nutriScore,
-                    onValueChange = { nutriScore = it },
-                    label = { Text(stringResource(R.string.recipe_nutrition_nutriscore_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         },
         confirmButton = {
@@ -677,7 +643,6 @@ private fun NutritionEditDialog(
                     protein.toDoubleOrNull() ?: 0.0,
                     fat.toDoubleOrNull() ?: 0.0,
                     carbs.toDoubleOrNull() ?: 0.0,
-                    nutriScore,
                 )
             }) {
                 Text(stringResource(R.string.recipe_nutrition_save))

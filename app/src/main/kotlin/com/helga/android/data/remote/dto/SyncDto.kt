@@ -496,7 +496,6 @@ data class AiNutritionResponse(
     val protein: Double = 0.0,
     val fat: Double = 0.0,
     val carbs: Double = 0.0,
-    @Json(name = "nutri_score") val nutriScore: String = "",
 )
 
 @JsonClass(generateAdapter = true)

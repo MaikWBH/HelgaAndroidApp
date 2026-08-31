@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 7 offen (7 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 6 offen (8 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -283,9 +283,13 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [ ] **A8** — Constraints-Dialog vergrößern/direkter ins Wochenplan-UI integrieren; Richtung:
       recherchiertes Muster (Sperren + Tages-Reroll direkt in der Tageskarte statt Extra-Dialog),
       siehe A10 · L · Impact mittel
-- [ ] **A16** — `WeekplanConstraintsEntity.minNutriScore` entfernen: Nutri-Score verschwindet laut
+- [x] **A16** — `WeekplanConstraintsEntity.minNutriScore` entfernen: Nutri-Score verschwindet laut
       [naehrwerte](../naehrwerte/plan.md) A3 komplett aus der App, der Generierungs-Filter in
-      `WeekplanRepository.kt`/`WeekplanViewModel.kt` wird damit hinfällig · S · Impact mittel
+      `WeekplanRepository.kt`/`WeekplanViewModel.kt` wird damit hinfällig · S · Impact mittel —
+      **umgesetzt:** zusammen mit naehrwerte A3. `applyRecipeFilters()` hat keine
+      Nutri-Score-Stufe mehr (Saison-Filter greift jetzt direkt nach dem Kcal-Filter), Min-
+      Nutri-Score-Auswahl aus dem `ConstraintsEditorSheet` entfernt, `saveConstraints()` ohne
+      `minNutriScore`-Parameter. Die Room-Spalte selbst bleibt bestehen (siehe naehrwerte A3).
 - [x] **A9** — Totes String-Resource `weekplan_ai_generate` entfernen · S · Impact niedrig —
       **umgesetzt:** Zeile aus `strings.xml` entfernt (verifiziert unbenutzt). Den zweiten Teil
       („KI"-Framing aus `development_plan.md` tilgen) bewusst nicht angefasst —
