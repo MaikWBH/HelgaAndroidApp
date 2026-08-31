@@ -117,10 +117,9 @@
     <string name="cook_rating_title">Wie war\'s?</string>
     <string name="cook_rating_skip">Überspringen</string>
     <string name="cook_no_steps">Keine Zubereitungsschritte vorhanden.</string>
-    <string name="cook_timer_start">Starten</string>
-    <string name="cook_timer_pause">Pause</string>
     <string name="cook_timer_reset">Zurücksetzen</string>
     <string name="cook_timer_done">Zeit abgelaufen!</string>
+    <string name="cook_timer_cancel">Timer abbrechen</string>
     <string name="cook_focus_mode_on">Fokusansicht aktivieren</string>
     <string name="cook_focus_mode_off">Listenansicht aktivieren</string>
 
@@ -343,6 +342,8 @@
     <!-- Benachrichtigungen -->
     <string name="settings_notify_section">Benachrichtigungen</string>
     <string name="notify_channel_name">Erinnerungen</string>
+    <string name="notify_timer_channel_name">Kochtimer</string>
+    <string name="notify_timer_title">Timer abgelaufen ⏱</string>
     <string name="notify_shopping_title">Heute ist Einkaufstag 🛒</string>
     <string name="notify_shopping_text">%1$d Artikel auf der Einkaufsliste</string>
     <string name="notify_cook_title">Heute kochen 🍳</string>

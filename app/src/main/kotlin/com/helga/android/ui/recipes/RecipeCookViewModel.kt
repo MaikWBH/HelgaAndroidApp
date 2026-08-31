@@ -3,6 +3,8 @@ package com.helga.android.ui.recipes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.helga.android.data.cooking.ActiveCookingTimer
+import com.helga.android.data.cooking.CookingTimerManager
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.entity.IngredientEntity
@@ -42,9 +44,17 @@ class RecipeCookViewModel @Inject constructor(
     private val recipeHistoryDao: RecipeHistoryDao,
     private val recipeFeedbackDao: RecipeFeedbackDao,
     private val syncScheduler: SyncScheduler,
+    private val timerManager: CookingTimerManager,
 ) : ViewModel() {
 
     private val recipeId: String = checkNotNull(savedStateHandle["recipeId"])
+
+    /** Parallele Kochtimer (rezepte A8) — geteilter Zustand, überlebt Bildschirmwechsel. */
+    val activeTimers: StateFlow<List<ActiveCookingTimer>> = timerManager.activeTimers
+
+    fun startTimer(label: String, totalSeconds: Int): String = timerManager.start(label, totalSeconds)
+    fun resetTimer(id: String, label: String, totalSeconds: Int) = timerManager.reset(id, label, totalSeconds)
+    fun cancelTimer(id: String) = timerManager.cancel(id)
     private val _checkedIds = MutableStateFlow<Set<String>>(emptySet())
     private val _completedSteps = MutableStateFlow<Set<Int>>(emptySet())
     val completedSteps: StateFlow<Set<Int>> = _completedSteps.asStateFlow()

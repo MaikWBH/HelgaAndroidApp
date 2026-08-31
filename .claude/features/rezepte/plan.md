@@ -1,6 +1,6 @@
 # Feature: Rezepte
 
-> **Status:** Interview erledigt · **Aufgaben:** 3 offen (7 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (8 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Zweiter Bottom-Nav-Tab. Datenbasis für Wochenplan und Einkaufsliste.
 
@@ -222,9 +222,29 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       (Standard-Vorgehen dieser Session: nur Compile + Unit-Tests als Verifikation), Rotation
       und Split-Layout sollten vor dem nächsten Release einmal auf einem echten Gerät/Emulator
       geprüft werden.
-- [ ] **A8** — Timer: mehrere parallel, laufen im Hintergrund weiter, melden sich per
+- [x] **A8** — Timer: mehrere parallel, laufen im Hintergrund weiter, melden sich per
       Benachrichtigung; Kanal `helga_reminders` aus `NotificationScheduler.kt` wiederverwendbar,
-      aber mit `IMPORTANCE_HIGH`. **Setzt [plattform](../plattform/plan.md) A4 voraus** · L · Impact hoch
+      aber mit `IMPORTANCE_HIGH`. **Setzt [plattform](../plattform/plan.md) A4 voraus** · L · Impact hoch —
+      **umgesetzt:** Korrektur der ursprünglichen Annahme — `helga_reminders` ließ sich nicht
+      wiederverwenden, weil Android die Priorität eines Kanals nach dem Erstanlegen nicht mehr
+      ändern lässt und `helga_reminders` bereits mit `IMPORTANCE_DEFAULT` existiert; stattdessen
+      neuer eigener Kanal `helga_timers` mit `IMPORTANCE_HIGH`. Neuer `CookingTimerManager`
+      (Singleton, `data/cooking/`) hält eine geteilte `StateFlow<List<ActiveCookingTimer>>` und
+      plant pro Timer einen `WorkManager`-Einmaljob (`CookingTimerWorker`, `@HiltWorker`,
+      eindeutiger Work-Name je Timer-ID) mit `setInitialDelay()` — das eigentliche "Klingeln"
+      hängt damit nicht am App-Prozess oder Compose-Lifecycle wie vorher (ein einzelner lokaler
+      `activeTimer`-State im Bildschirm, verschwand beim Verlassen), sondern lebt in WorkManagers
+      eigener DB und feuert auch nach Backgrounding/Prozessende pünktlich die Benachrichtigung.
+      `RecipeCookScreen.kt` komplett auf Mehrfach-Timer umgebaut: neue `ActiveTimersRow`
+      (Chip-Leiste mit Live-Countdown) sichtbar in Listen-, Fokus- und Split-Ansicht gleichermaßen
+      statt eines einzelnen blockierenden Dialogs; Tippen auf einen Chip öffnet `TimerDialog` für
+      Details. Bewusste Vereinfachung dabei: kein Pause/Fortsetzen mehr (ergab bei
+      Hintergrund-Timern keinen Sinn mehr — die ganze Idee ist ja, dass er weiterläuft), nur noch
+      Zurücksetzen und Abbrechen. Voraussetzung [plattform](../plattform/plan.md) A4
+      (POST_NOTIFICATIONS) war bereits erledigt. **Nicht auf echtem Gerät/Emulator getestet**
+      (keine laufende Android-Umgebung in dieser Session) — insbesondere das tatsächliche
+      Hintergrund-Verhalten (App komplett schließen, Timer läuft trotzdem ab und benachrichtigt)
+      sollte vor dem nächsten Release einmal manuell verifiziert werden.
 - [x] **A9** — Portionsskalierung je Rezept persistieren (neues Feld in `RecipeEntity` +
       Room-Migration v31 + Sync-Anbindung) · M · Impact mittel — **umgesetzt:** neues Feld
       `RecipeEntity.lastServings` (0 = noch nie geändert, dann gilt weiterhin der aus

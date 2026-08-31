@@ -55,7 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
+import com.helga.android.data.cooking.ActiveCookingTimer
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import kotlinx.coroutines.delay
@@ -153,12 +154,12 @@ fun RecipeCookScreen(
     val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
     var ingredientsExpanded by remember { mutableStateOf(false) }
-    var activeTimer by remember { mutableStateOf<DetectedTimer?>(null) }
-    var timerSeconds by remember { mutableIntStateOf(0) }
-    var timerRunning by remember { mutableStateOf(false) }
+    val activeTimers by viewModel.activeTimers.collectAsStateWithLifecycle()
+    var selectedTimerId by remember { mutableStateOf<String?>(null) }
     var focusMode by remember { mutableStateOf(false) }
     var showRatingPrompt by remember { mutableStateOf(false) }
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val onStartTimer: (DetectedTimer) -> Unit = { timer -> viewModel.startTimer(timer.label, timer.totalSeconds) }
 
     fun finish(liked: Int) {
         viewModel.confirmCooked(liked)
@@ -173,24 +174,13 @@ fun RecipeCookScreen(
         )
     }
 
-    LaunchedEffect(timerRunning) {
-        while (timerRunning && timerSeconds > 0) {
-            delay(1_000L)
-            timerSeconds--
-        }
-        if (timerSeconds == 0) timerRunning = false
-    }
-
-    val timer = activeTimer
-    if (timer != null) {
+    val selectedTimer = activeTimers.find { it.id == selectedTimerId }
+    if (selectedTimer != null) {
         TimerDialog(
-            label = timer.label,
-            totalSeconds = timer.totalSeconds,
-            remainingSeconds = timerSeconds,
-            running = timerRunning,
-            onToggle = { timerRunning = !timerRunning },
-            onReset = { timerSeconds = timer.totalSeconds; timerRunning = false },
-            onDismiss = { activeTimer = null; timerRunning = false },
+            timer = selectedTimer,
+            onReset = { viewModel.resetTimer(selectedTimer.id, selectedTimer.label, selectedTimer.totalSeconds) },
+            onCancel = { viewModel.cancelTimer(selectedTimer.id); selectedTimerId = null },
+            onDismiss = { selectedTimerId = null },
         )
     }
 
@@ -257,30 +247,27 @@ fun RecipeCookScreen(
                 instructions = instructions,
                 completedSteps = completedSteps,
                 onToggleStep = viewModel::toggleStep,
-                onStartTimer = { timer ->
-                    activeTimer = timer
-                    timerSeconds = timer.totalSeconds
-                    timerRunning = false
-                },
+                onStartTimer = onStartTimer,
                 onDone = { showRatingPrompt = true },
+                activeTimers = activeTimers,
+                onTimerClick = { selectedTimerId = it.id },
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
         }
 
         if (focusMode) {
-            CookFocusView(
-                instructions = instructions,
-                completedSteps = completedSteps,
-                onToggleStep = viewModel::toggleStep,
-                onStartTimer = { timer ->
-                    activeTimer = timer
-                    timerSeconds = timer.totalSeconds
-                    timerRunning = false
-                },
-                onDone = { showRatingPrompt = true },
-                modifier = Modifier.padding(padding),
-            )
+            Column(modifier = Modifier.padding(padding)) {
+                ActiveTimersRow(timers = activeTimers, onTimerClick = { selectedTimerId = it.id })
+                CookFocusView(
+                    instructions = instructions,
+                    completedSteps = completedSteps,
+                    onToggleStep = viewModel::toggleStep,
+                    onStartTimer = onStartTimer,
+                    onDone = { showRatingPrompt = true },
+                    modifier = Modifier.weight(1f),
+                )
+            }
             return@Scaffold
         }
 
@@ -292,6 +279,11 @@ fun RecipeCookScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp),
         ) {
+            if (activeTimers.isNotEmpty()) {
+                item(key = "active_timers") {
+                    ActiveTimersRow(timers = activeTimers, onTimerClick = { selectedTimerId = it.id })
+                }
+            }
             val personalNotes = uiState.recipe?.personalNotes.orEmpty()
             if (personalNotes.isNotBlank()) {
                 item(key = "personal_notes") {
@@ -433,11 +425,7 @@ fun RecipeCookScreen(
                         ) {
                             timers.forEach { timer ->
                                 SuggestionChip(
-                                    onClick = {
-                                        activeTimer = timer
-                                        timerSeconds = timer.totalSeconds
-                                        timerRunning = false
-                                    },
+                                    onClick = { onStartTimer(timer) },
                                     label = { Text(timer.label) },
                                     icon = {
                                         Icon(
@@ -469,6 +457,55 @@ fun RecipeCookScreen(
     }
 }
 
+@Composable
+private fun rememberRemainingSeconds(endAtMillis: Long): Int {
+    var now by remember(endAtMillis) { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(endAtMillis) {
+        while (now < endAtMillis) {
+            delay(1_000L)
+            now = System.currentTimeMillis()
+        }
+    }
+    return ((endAtMillis - now) / 1000).toInt().coerceAtLeast(0)
+}
+
+/**
+ * Zeigt alle parallel laufenden Kochtimer (rezepte A8) als Chip-Leiste, sichtbar in Listen-,
+ * Fokus- und Split-Ansicht gleichermaßen. Tippen öffnet [TimerDialog] für Details/Zurücksetzen/
+ * Abbrechen. Läuft weiter, auch wenn dieser Bildschirm verlassen wird — die Chips zeigen nur den
+ * geteilten Zustand aus [com.helga.android.data.cooking.CookingTimerManager] an, sie steuern die
+ * eigentliche Laufzeit nicht.
+ */
+@Composable
+private fun ActiveTimersRow(
+    timers: List<ActiveCookingTimer>,
+    onTimerClick: (ActiveCookingTimer) -> Unit,
+) {
+    if (timers.isEmpty()) return
+    @OptIn(ExperimentalLayoutApi::class)
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        timers.forEach { timer ->
+            val remaining = rememberRemainingSeconds(timer.endAtMillis)
+            SuggestionChip(
+                onClick = { onTimerClick(timer) },
+                label = { Text("${timer.label}: ${formatTimer(remaining)}") },
+                icon = {
+                    Icon(
+                        Icons.Filled.Timer,
+                        contentDescription = null,
+                        modifier = Modifier.size(SuggestionChipDefaults.IconSize),
+                    )
+                },
+            )
+        }
+    }
+}
+
 /**
  * Geteilter Landscape-Modus (rezepte A7): Zutaten links, aktueller Schritt rechts — im Querformat
  * automatisch statt der Wahl zwischen Listen- und Fokusansicht, die im Hochformat gilt. Zutaten
@@ -491,70 +528,75 @@ private fun CookSplitView(
     onToggleStep: (Int) -> Unit,
     onStartTimer: (DetectedTimer) -> Unit,
     onDone: () -> Unit,
+    activeTimers: List<ActiveCookingTimer>,
+    onTimerClick: (ActiveCookingTimer) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier
-                .weight(0.4f)
-                .fillMaxHeight()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item(key = "header") {
-                Text(
-                    text = stringResource(R.string.recipe_detail_ingredients),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                HorizontalDivider()
-            }
-            if (baseServings > 0) {
-                item(key = "servings_control") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        IconButton(onClick = { onSetServings(servings - 1) }, enabled = servings > 1) {
-                            Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.servings_decrease))
-                        }
-                        Text(
-                            text = "$servings ${stringResource(R.string.recipe_detail_yield)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.widthIn(min = 100.dp),
-                        )
-                        IconButton(onClick = { onSetServings(servings + 1) }) {
-                            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.servings_increase))
+    Column(modifier = modifier.fillMaxSize()) {
+        ActiveTimersRow(timers = activeTimers, onTimerClick = onTimerClick)
+        Row(modifier = Modifier.weight(1f)) {
+            LazyColumn(
+                modifier = Modifier
+                    .weight(0.4f)
+                    .fillMaxHeight()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                item(key = "header") {
+                    Text(
+                        text = stringResource(R.string.recipe_detail_ingredients),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    HorizontalDivider()
+                }
+                if (baseServings > 0) {
+                    item(key = "servings_control") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            IconButton(onClick = { onSetServings(servings - 1) }, enabled = servings > 1) {
+                                Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.servings_decrease))
+                            }
+                            Text(
+                                text = "$servings ${stringResource(R.string.recipe_detail_yield)}",
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.widthIn(min = 100.dp),
+                            )
+                            IconButton(onClick = { onSetServings(servings + 1) }) {
+                                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.servings_increase))
+                            }
                         }
                     }
                 }
+                items(ingredients, key = { it.id }) { ingredient ->
+                    IngredientCheckRow(
+                        ingredient = ingredient,
+                        checked = ingredient.id in checkedIds,
+                        onToggle = { onToggleIngredient(ingredient.id) },
+                        scaleFactor = scaleFactor,
+                    )
+                }
             }
-            items(ingredients, key = { it.id }) { ingredient ->
-                IngredientCheckRow(
-                    ingredient = ingredient,
-                    checked = ingredient.id in checkedIds,
-                    onToggle = { onToggleIngredient(ingredient.id) },
-                    scaleFactor = scaleFactor,
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant),
+            )
+            CookFocusView(
+                instructions = instructions,
+                completedSteps = completedSteps,
+                onToggleStep = onToggleStep,
+                onStartTimer = onStartTimer,
+                onDone = onDone,
+                modifier = Modifier
+                    .weight(0.6f)
+                    .fillMaxHeight(),
+            )
         }
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(1.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant),
-        )
-        CookFocusView(
-            instructions = instructions,
-            completedSteps = completedSteps,
-            onToggleStep = onToggleStep,
-            onStartTimer = onStartTimer,
-            onDone = onDone,
-            modifier = Modifier
-                .weight(0.6f)
-                .fillMaxHeight(),
-        )
     }
 }
 
@@ -702,23 +744,26 @@ private fun CookRatingDialog(
     )
 }
 
+/**
+ * Detailansicht eines einzelnen laufenden Timers (rezepte A8) — kein Pause/Fortsetzen mehr,
+ * da der Timer über [com.helga.android.data.cooking.CookingTimerManager] auch im Hintergrund
+ * weiterläuft und nicht an diesen Dialog gebunden ist; Schließen lässt ihn einfach weiterlaufen,
+ * "Zurücksetzen" startet ihn mit derselben Dauer neu, "Abbrechen" beendet ihn endgültig.
+ */
 @Composable
 private fun TimerDialog(
-    label: String,
-    totalSeconds: Int,
-    remainingSeconds: Int,
-    running: Boolean,
-    onToggle: () -> Unit,
+    timer: ActiveCookingTimer,
     onReset: () -> Unit,
+    onCancel: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val finished = remainingSeconds == 0
+    val remainingSeconds = rememberRemainingSeconds(timer.endAtMillis)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.Timer, contentDescription = null)
-                Text(label)
+                Text(timer.label)
             }
         },
         text = {
@@ -727,39 +772,23 @@ private fun TimerDialog(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = if (finished) stringResource(R.string.cook_timer_done)
-                           else formatTimer(remainingSeconds),
+                    text = formatTimer(remainingSeconds),
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (finished) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                if (!finished) {
-                    Spacer(Modifier.height(4.dp))
-                    LinearProgressIndicator(
-                        progress = { remainingSeconds.toFloat() / totalSeconds },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                Spacer(Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = { remainingSeconds.toFloat() / timer.totalSeconds },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         },
         confirmButton = {
-            if (!finished) {
-                Button(onClick = onToggle) {
-                    Text(
-                        stringResource(
-                            if (running) R.string.cook_timer_pause else R.string.cook_timer_start
-                        )
-                    )
-                }
-            } else {
-                Button(onClick = onDismiss) { Text(stringResource(R.string.cook_done)) }
-            }
+            Button(onClick = onCancel) { Text(stringResource(R.string.cook_timer_cancel)) }
         },
         dismissButton = {
-            if (!finished) {
-                OutlinedButton(onClick = onReset) { Text(stringResource(R.string.cook_timer_reset)) }
-            }
+            OutlinedButton(onClick = onReset) { Text(stringResource(R.string.cook_timer_reset)) }
         },
     )
 }
