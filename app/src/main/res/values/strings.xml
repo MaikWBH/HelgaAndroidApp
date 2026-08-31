@@ -123,6 +123,7 @@
     <string name="settings_server_section">Server</string>
     <string name="settings_sync_section">Synchronisation</string>
     <string name="settings_account_section">Konto</string>
+    <string name="settings_advanced_section">Erweitert</string>
     <string name="settings_save_and_test">Speichern &amp; Verbindung testen</string>
     <string name="settings_last_sync">Letzter Sync: %1$s</string>
     <string name="settings_last_sync_never">Noch nie</string>

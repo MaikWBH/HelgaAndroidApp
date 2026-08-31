@@ -32,6 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -100,6 +102,7 @@ fun SettingsScreen(
     var deleteList by remember { mutableStateOf<ShoppingListEntity?>(null) }
     var editEmoji by remember { mutableStateOf<QuickEmojiEntity?>(null) }
     var showAddEmoji by remember { mutableStateOf(false) }
+    var showAdvanced by remember { mutableStateOf(false) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -207,244 +210,9 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = stringResource(R.string.settings_appearance_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            Text(
-                text = stringResource(R.string.settings_theme_mode),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            val themeModes = listOf("system", "light", "dark")
-            val themeModeLabels = listOf(
-                stringResource(R.string.settings_theme_system),
-                stringResource(R.string.settings_theme_light),
-                stringResource(R.string.settings_theme_dark),
-            )
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                themeModes.forEachIndexed { index, mode ->
-                    SegmentedButton(
-                        selected = state.themeMode == mode,
-                        onClick = { viewModel.setThemeMode(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(index, themeModes.size),
-                        label = { Text(themeModeLabels[index]) },
-                    )
-                }
-            }
-
-            Text(
-                text = stringResource(R.string.settings_accent_color),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                itemsIndexed(accentPrimaryColors) { index, color ->
-                    val isSelected = state.accentColor == index
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .border(
-                                width = if (isSelected) 3.dp else 0.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
-                                shape = CircleShape,
-                            )
-                            .padding(if (isSelected) 3.dp else 0.dp)
-                            .clip(CircleShape),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
-                                .background(color)
-                                .clickable { viewModel.setAccentColor(index) },
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.settings_notify_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_notify_shopping),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Switch(
-                    checked = state.notifyShoppingDay,
-                    onCheckedChange = {
-                        viewModel.setNotifyShoppingDay(it)
-                        if (it) requestNotificationPermissionIfNeeded()
-                    },
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_notify_cook),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Switch(
-                    checked = state.notifyCookReminder,
-                    onCheckedChange = {
-                        viewModel.setNotifyCookReminder(it)
-                        if (it) requestNotificationPermissionIfNeeded()
-                    },
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.settings_server_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            OutlinedTextField(
-                value = state.serverUrl,
-                onValueChange = viewModel::setServerUrl,
-                label = { Text(stringResource(R.string.onboarding_server_url)) },
-                placeholder = { Text(stringResource(R.string.onboarding_server_url_hint)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            OutlinedTextField(
-                value = state.apiKey,
-                onValueChange = viewModel::setApiKey,
-                label = { Text(stringResource(R.string.onboarding_api_key)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            ValidationFeedback(state.validation)
-
-            Button(
-                onClick = { viewModel.testAndSave() },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = state.validation != SettingsValidation.Testing &&
-                    state.serverUrl.isNotBlank() && state.apiKey.isNotBlank(),
-            ) {
-                if (state.validation == SettingsValidation.Testing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.height(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text(stringResource(R.string.settings_save_and_test))
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.settings_sync_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            Text(
-                text = stringResource(R.string.settings_last_sync, formatTimestamp(lastSyncTs)),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            val error = syncError
-            if (error != null) {
-                Text(
-                    text = stringResource(R.string.sync_error_detail, error),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-
-            OutlinedButton(
-                onClick = { viewModel.syncNow() },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.sync_now))
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.settings_ai_bulk_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            OutlinedButton(
-                onClick = { viewModel.runBulkAi(BulkAiMode.NUTRITION) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !bulkAiState.isRunning,
-            ) {
-                Text(stringResource(R.string.settings_ai_bulk_nutrition))
-            }
-            OutlinedButton(
-                onClick = { viewModel.runBulkAi(BulkAiMode.CLASSIFY) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !bulkAiState.isRunning,
-            ) {
-                Text(stringResource(R.string.settings_ai_bulk_classify))
-            }
-            Button(
-                onClick = { viewModel.runBulkAi(BulkAiMode.BOTH) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !bulkAiState.isRunning,
-            ) {
-                if (bulkAiState.isRunning && bulkAiState.mode == BulkAiMode.BOTH) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.height(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text(stringResource(R.string.settings_ai_bulk_both))
-                }
-            }
-            if (bulkAiState.isRunning) {
-                Text(
-                    text = stringResource(R.string.settings_ai_bulk_progress, bulkAiState.processed, bulkAiState.total),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else if (bulkAiState.total > 0) {
-                Text(
-                    text = stringResource(R.string.settings_ai_bulk_done, bulkAiState.updated, bulkAiState.failed),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.clickable { viewModel.dismissBulkAiResult() },
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
+            // Häufig genutzt (siehe einstellungen-Interview): Einkaufsliste-Einstellungen und
+            // Schnellbuttons zuerst, direkt sichtbar. Alles andere wird nur einmal gesetzt und
+            // nie wieder angefasst — das steckt weiter unten hinter "Erweitert".
             Text(
                 text = stringResource(R.string.settings_shopping_section),
                 style = MaterialTheme.typography.titleMedium,
@@ -596,16 +364,273 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(8.dp))
 
-            Text(
-                text = stringResource(R.string.settings_account_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            OutlinedButton(
-                onClick = { showLogoutDialog = true },
-                modifier = Modifier.fillMaxWidth(),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showAdvanced = !showAdvanced },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.settings_logout))
+                Text(
+                    text = stringResource(R.string.settings_advanced_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Icon(
+                    imageVector = if (showAdvanced) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = null,
+                )
+            }
+
+            if (showAdvanced) {
+                Text(
+                    text = stringResource(R.string.settings_appearance_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Text(
+                    text = stringResource(R.string.settings_theme_mode),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                val themeModes = listOf("system", "light", "dark")
+                val themeModeLabels = listOf(
+                    stringResource(R.string.settings_theme_system),
+                    stringResource(R.string.settings_theme_light),
+                    stringResource(R.string.settings_theme_dark),
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    themeModes.forEachIndexed { index, mode ->
+                        SegmentedButton(
+                            selected = state.themeMode == mode,
+                            onClick = { viewModel.setThemeMode(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(index, themeModes.size),
+                            label = { Text(themeModeLabels[index]) },
+                        )
+                    }
+                }
+
+                Text(
+                    text = stringResource(R.string.settings_accent_color),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    itemsIndexed(accentPrimaryColors) { index, color ->
+                        val isSelected = state.accentColor == index
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    width = if (isSelected) 3.dp else 0.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
+                                    shape = CircleShape,
+                                )
+                                .padding(if (isSelected) 3.dp else 0.dp)
+                                .clip(CircleShape),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .clickable { viewModel.setAccentColor(index) },
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_notify_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_notify_shopping),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Switch(
+                        checked = state.notifyShoppingDay,
+                        onCheckedChange = {
+                            viewModel.setNotifyShoppingDay(it)
+                            if (it) requestNotificationPermissionIfNeeded()
+                        },
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_notify_cook),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Switch(
+                        checked = state.notifyCookReminder,
+                        onCheckedChange = {
+                            viewModel.setNotifyCookReminder(it)
+                            if (it) requestNotificationPermissionIfNeeded()
+                        },
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_server_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                OutlinedTextField(
+                    value = state.serverUrl,
+                    onValueChange = viewModel::setServerUrl,
+                    label = { Text(stringResource(R.string.onboarding_server_url)) },
+                    placeholder = { Text(stringResource(R.string.onboarding_server_url_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                OutlinedTextField(
+                    value = state.apiKey,
+                    onValueChange = viewModel::setApiKey,
+                    label = { Text(stringResource(R.string.onboarding_api_key)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                ValidationFeedback(state.validation)
+
+                Button(
+                    onClick = { viewModel.testAndSave() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.validation != SettingsValidation.Testing &&
+                        state.serverUrl.isNotBlank() && state.apiKey.isNotBlank(),
+                ) {
+                    if (state.validation == SettingsValidation.Testing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.height(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text(stringResource(R.string.settings_save_and_test))
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_sync_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Text(
+                    text = stringResource(R.string.settings_last_sync, formatTimestamp(lastSyncTs)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                val error = syncError
+                if (error != null) {
+                    Text(
+                        text = stringResource(R.string.sync_error_detail, error),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = { viewModel.syncNow() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.sync_now))
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_ai_bulk_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                OutlinedButton(
+                    onClick = { viewModel.runBulkAi(BulkAiMode.NUTRITION) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !bulkAiState.isRunning,
+                ) {
+                    Text(stringResource(R.string.settings_ai_bulk_nutrition))
+                }
+                OutlinedButton(
+                    onClick = { viewModel.runBulkAi(BulkAiMode.CLASSIFY) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !bulkAiState.isRunning,
+                ) {
+                    Text(stringResource(R.string.settings_ai_bulk_classify))
+                }
+                Button(
+                    onClick = { viewModel.runBulkAi(BulkAiMode.BOTH) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !bulkAiState.isRunning,
+                ) {
+                    if (bulkAiState.isRunning && bulkAiState.mode == BulkAiMode.BOTH) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.height(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text(stringResource(R.string.settings_ai_bulk_both))
+                    }
+                }
+                if (bulkAiState.isRunning) {
+                    Text(
+                        text = stringResource(R.string.settings_ai_bulk_progress, bulkAiState.processed, bulkAiState.total),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else if (bulkAiState.total > 0) {
+                    Text(
+                        text = stringResource(R.string.settings_ai_bulk_done, bulkAiState.updated, bulkAiState.failed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clickable { viewModel.dismissBulkAiResult() },
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_account_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                OutlinedButton(
+                    onClick = { showLogoutDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.settings_logout))
+                }
             }
 
             Spacer(Modifier.height(24.dp))

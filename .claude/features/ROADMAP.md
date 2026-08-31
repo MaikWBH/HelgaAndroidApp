@@ -33,7 +33,7 @@ jeweils mit „umgesetzt"-Vermerk bei den betroffenen Punkten.
 
 ---
 
-## 🧭 Welle 1 — Sichtbarkeit · 3 von 4 Punkten erledigt (2026-08-30)
+## 🧭 Welle 1 — Sichtbarkeit — vollständig umgesetzt (2026-08-30)
 
 Alles Navigation, gemeinsam in einem Durchgang durch `HelgaNavGraph.kt` umgesetzt.
 
@@ -41,10 +41,13 @@ Alles Navigation, gemeinsam in einem Durchgang durch `HelgaNavGraph.kt` umgesetz
 |-------|--------|
 | ✅ **bons-kosten A3 + statistik A2** | Vierter Bottom-Nav-Tab „Bons" (`ROUTE_RECEIPTS` als Root-Route), Insights-Button darin führt zum vorher komplett unverdrahteten Statistik-Screen |
 | ✅ **einstellungen A2** | Einstellungen jetzt auch aus Einkaufsliste und Wochenplan erreichbar (Overflow-Menü), nicht mehr nur über Rezepte |
-| **einstellungen A3** | Einstellungen nach Nutzungshäufigkeit gliedern, Rest in „Erweitert" — noch offen, größerer Umbau von `SettingsScreen.kt` |
+| ✅ **einstellungen A3** | Einkaufsliste-Einstellungen + Schnellbuttons oben sichtbar, Rest hinter aufklappbarem „Erweitert" |
 
 Details: [bons-kosten](bons-kosten/plan.md) A3, [statistik](statistik/plan.md) A2,
-[einstellungen](einstellungen/plan.md) A2.
+[einstellungen](einstellungen/plan.md) A2/A3.
+
+**Weiter geht's mit Welle 2** (Kernabläufe — URL-Import, Wochenplan-Filter, Nährwerte,
+Gang-Zuordnung, Zutaten-Parser, Export-Vorschau, Stream-Abbruch).
 
 ---
 

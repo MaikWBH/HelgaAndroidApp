@@ -46,7 +46,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 | 7 | Märkte & Gänge | [maerkte](maerkte/plan.md) | erledigt | 3 offen (1 erledigt) | ⭐ |
 | 8 | Statistik | [statistik](statistik/plan.md) | erledigt | 2 offen (1 erledigt) | ⭐ |
 | 9 | Sync | [sync](sync/plan.md) | erledigt | 3 offen (1 erledigt) | ⭐⭐ |
-| 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐ |
+| 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐ |
 | 11 | Plattform-Integration | [plattform](plattform/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐ |
 
 **Alle Interviews abgeschlossen** (2026-08-30). Die Reihenfolge der Umsetzung steht jetzt in
