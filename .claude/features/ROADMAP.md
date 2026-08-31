@@ -19,14 +19,13 @@ mechanisch auf.
 |---|-------|---------|
 | 1 | ✅ **plattform A4** — `POST_NOTIFICATIONS` deklarieren + Laufzeitabfrage | Macht die zwei fertig gebauten Erinnerungen überhaupt erst zustellbar; schaltet rezepte A8 frei |
 | 2 | ✅ **sync A3** — App-Foreground-Sync-Trigger | Behebt den Urlaubslisten-Vorfall: Änderungen kommen sofort statt nach 15+ min an |
-| 3 | **wochenplan A2** — `anchorDays[…]!!` absichern | Echtes Crash-Risiko |
+| 3 | ✅ **wochenplan A2** — `anchorDays[…]!!` absichern | Echtes Crash-Risiko |
 | 4 | ✅ **maerkte A4** — Märkte aus der Einkaufsliste erreichbar | Von zwei Hops auf einen |
-| 5 | **wochenplan A9** — tote String-Resource entfernen | Aufräumen, trivial |
+| 5 | ✅ **wochenplan A9** — tote String-Resource entfernen | Aufräumen, trivial |
 | 6 | **`!!`-Sweep** — einkaufsliste A1 · rezepte A1 · wochenplan A3 · einstellungen A1 | 4 Guideline-Verstöße in einem Durchgang |
 | 7 | **`key`-Sweep** — einkaufsliste A2 · rezepte A2 · wochenplan A4 · bons-kosten A2 · plattform A1 | 5 Compose-Listen in einem Durchgang |
 
-**Umgesetzt (2026-08-30):** 1, 2, 4 — Commit folgt in dieser Runde. 3, 5, 6, 7 folgen direkt im
-Anschluss (2 weitere Commits, siehe unten).
+**Umgesetzt (2026-08-30):** 1–5. Nur noch 6 und 7 offen (Code-Qualitäts-Sweep, ein Commit).
 
 ---
 

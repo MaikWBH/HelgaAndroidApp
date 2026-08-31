@@ -563,8 +563,9 @@ class WeekplanViewModel @Inject constructor(
 
                 for (day in currentDays) {
                     // Anker-Tag: bestehende Rezepte beibehalten
-                    if (day.id in anchorDays) {
-                        val anchorRecipe = anchorDays[day.id]!!.firstOrNull()
+                    val anchorList = anchorDays[day.id]
+                    if (anchorList != null) {
+                        val anchorRecipe = anchorList.firstOrNull()
                         val recipe = anchorRecipe?.let { allRecipes.value[it.recipeId] }
                         assignments.add(
                             WeekplanAssignmentDto(

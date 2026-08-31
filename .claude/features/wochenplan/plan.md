@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 13 offen (1 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 11 offen (3 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -247,7 +247,10 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       `WeekplanTemplateRepository.kt`, `TemplateSheet` in `WeekplanScreen.kt`, zehn Strings
       (`strings.xml:255-285`), Room-Migration zum sauberen Entfernen der Tabellen · M · Impact
       niedrig
-- [ ] **A2** — `anchorDays[day.id]!!` in `WeekplanViewModel.kt:531` gegen fehlenden Schlüssel absichern · S · Impact hoch
+- [x] **A2** — `anchorDays[day.id]!!` gegen fehlenden Schlüssel absichern · S · Impact hoch —
+      **umgesetzt:** Einzel-Lookup in eine lokale `val` gehoben statt doppeltem
+      `in`-Check + `!!`-Zugriff (`WeekplanViewModel.kt`, Zeile war inzwischen auf 567
+      gewandert)
 - [ ] **A3** — `!!` in `WeekplanScreen.kt:156` auflösen · S · Impact mittel
 - [ ] **A4** — `key`-Parameter in `WeekplanScreen.kt:563` und `WeekplanRecipePickerScreen.kt:194` ergänzen · S · Impact mittel
 - [ ] **A5** — Unit-Tests für Constraint-Auswertung und `weekBalance` · M · Impact hoch
@@ -269,8 +272,11 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [ ] **A16** — `WeekplanConstraintsEntity.minNutriScore` entfernen: Nutri-Score verschwindet laut
       [naehrwerte](../naehrwerte/plan.md) A3 komplett aus der App, der Generierungs-Filter in
       `WeekplanRepository.kt`/`WeekplanViewModel.kt` wird damit hinfällig · S · Impact mittel
-- [ ] **A9** — Totes String-Resource `weekplan_ai_generate` entfernen; „KI"-Framing aus internen
-      Docs (`development_plan.md`) tilgen · S · Impact niedrig
+- [x] **A9** — Totes String-Resource `weekplan_ai_generate` entfernen · S · Impact niedrig —
+      **umgesetzt:** Zeile aus `strings.xml` entfernt (verifiziert unbenutzt). Den zweiten Teil
+      („KI"-Framing aus `development_plan.md` tilgen) bewusst nicht angefasst —
+      `development_plan.md` ist laut README ein Historie-Dokument, kein aktueller Stand;
+      rückwirkendes Umschreiben verzerrt die Historie eher, als dass es nützt.
 - [ ] **A10** — Ankerrezepte anbinden: `generateWithAnchors` im UI erreichbar machen, orientiert
       am Lock+Reroll-Muster (Sperr-Icon und Reroll-Icon direkt in `DayCard`) · L · Impact hoch
 - [ ] **A11** — Nur noch der weitergehende Teil: nutzerdefinierte, frei anlegbare Tagesmarker

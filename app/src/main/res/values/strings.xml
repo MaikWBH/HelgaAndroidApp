@@ -255,7 +255,6 @@
     <string name="weekplan_no_templates">Keine Vorlagen gespeichert</string>
     <string name="weekplan_save_template">Aktuelle Woche als Vorlage speichern</string>
     <string name="weekplan_template_name">Vorlagenname</string>
-    <string name="weekplan_ai_generate">KI-Wochenplan erstellen</string>
     <string name="weekplan_ai_generating">KI erstellt Wochenplan…</string>
     <string name="weekplan_constraints_title">Planungs-Constraints</string>
     <string name="weekplan_max_meat">Max. Fleisch-Tage</string>
