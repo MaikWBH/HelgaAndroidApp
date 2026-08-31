@@ -191,7 +191,7 @@ private fun PickerFilterBar(
                     label = { Text(stringResource(R.string.recipes_filter_all)) },
                 )
             }
-            items(allTags) { tag ->
+            items(allTags, key = { it }) { tag ->
                 FilterChip(
                     selected = tag == selectedTag,
                     onClick = { onTagSelect(if (tag == selectedTag) null else tag) },

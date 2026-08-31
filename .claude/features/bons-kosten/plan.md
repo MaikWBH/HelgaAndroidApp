@@ -1,6 +1,6 @@
 # Feature: Bons & Kosten
 
-> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
 
 Kassenbon-Scan, Preisverlauf und Ausgabenüberblick. Der größte Bereich, der in keiner
 bisherigen Dokumentation auftauchte.
@@ -103,7 +103,9 @@ String-Verarbeitung — ohne Tests ist jede Änderung daran riskant.
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Unit-Tests für `ReceiptItemNormalizer` · M · Impact hoch
-- [ ] **A2** — `key`-Parameter in `ProductPriceDetailScreen.kt:117` ergänzen · S · Impact mittel
+- [x] **A2** — `key`-Parameter in `ProductPriceDetailScreen.kt` ergänzen · S · Impact mittel —
+      **umgesetzt:** `history.points` hat kein `id`-Feld, zusammengesetzter Schlüssel
+      `key = { "${it.purchaseDate}_${it.storeId}" }`
 - [ ] **A3** — Vierten Bottom-Nav-Tab „Bons" ergänzen, der auf `ROUTE_RECEIPTS` zeigt; Menüpunkt
   „Kassenzettel" und das Erinnerungs-Banner in der Einkaufsliste können bleiben (zusätzlicher
   Weg schadet nicht) · M · Impact hoch — behebt die Kernursache aus dem Interview. Laut

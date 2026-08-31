@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 11 offen (3 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 9 offen (5 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -251,8 +251,12 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       **umgesetzt:** Einzel-Lookup in eine lokale `val` gehoben statt doppeltem
       `in`-Check + `!!`-Zugriff (`WeekplanViewModel.kt`, Zeile war inzwischen auf 567
       gewandert)
-- [ ] **A3** — `!!` in `WeekplanScreen.kt:156` auflösen · S · Impact mittel
-- [ ] **A4** — `key`-Parameter in `WeekplanScreen.kt:563` und `WeekplanRecipePickerScreen.kt:194` ergänzen · S · Impact mittel
+- [x] **A3** — `!!` in `WeekplanScreen.kt` auflösen · S · Impact mittel — **umgesetzt:** war
+      `exportPicker!!` (nicht `anchorDays`, das ist A2 in `WeekplanViewModel.kt`), lokale `val`
+      statt `!!`
+- [x] **A4** — `key`-Parameter in `WeekplanScreen.kt` und `WeekplanRecipePickerScreen.kt`
+      ergänzen · S · Impact mittel — **umgesetzt:** `extraSuggestions` bzw. `allTags`, beide
+      `key = { it }`
 - [ ] **A5** — Unit-Tests für Constraint-Auswertung und `weekBalance` · M · Impact hoch
 - [ ] **A6** — **Filterlogik in einem Griff** (2026-08-30 mit dem früheren A7 zusammengelegt,
       weil beide dieselbe Stelle anfassen und A7 ohnehin die gemeinsame Funktion verlangte):

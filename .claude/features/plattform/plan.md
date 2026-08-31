@@ -1,6 +1,6 @@
 # Feature: Plattform-Integration
 
-> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
 
 Alles, was die App mit dem Gerät und der Auslieferung verbindet: Widget, Wear OS, Share-Target,
 Build und CI. Kein Fachbereich, sondern die Hülle.
@@ -124,7 +124,8 @@ Nicht zutreffend.
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — `key`-Parameter in `ShoppingListWearScreen.kt:69` ergänzen · S · Impact mittel
+- [x] **A1** — `key`-Parameter in `ShoppingListWearScreen.kt` ergänzen · S · Impact mittel —
+      **umgesetzt:** `key = { it.id }`
 - [ ] **A2** — Durchsicht aller 82 `contentDescription = null`: dekorativ belassen, Bedienelemente
       beschriften · M · Impact **niedrig** (2026-08-30 herabgestuft: Guideline-getrieben, kein
       Screenreader-Bedarf in dieser App)

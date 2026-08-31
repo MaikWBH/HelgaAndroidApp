@@ -160,14 +160,15 @@ fun RecipeCookScreen(
         if (timerSeconds == 0) timerRunning = false
     }
 
-    if (activeTimer != null) {
+    val timer = activeTimer
+    if (timer != null) {
         TimerDialog(
-            label = activeTimer!!.label,
-            totalSeconds = activeTimer!!.totalSeconds,
+            label = timer.label,
+            totalSeconds = timer.totalSeconds,
             remainingSeconds = timerSeconds,
             running = timerRunning,
             onToggle = { timerRunning = !timerRunning },
-            onReset = { timerSeconds = activeTimer!!.totalSeconds; timerRunning = false },
+            onReset = { timerSeconds = timer.totalSeconds; timerRunning = false },
             onDismiss = { activeTimer = null; timerRunning = false },
         )
     }

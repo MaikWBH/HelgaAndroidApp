@@ -66,7 +66,7 @@ fun ShoppingListWearScreen(
                             modifier = Modifier.padding(top = 6.dp),
                         )
                     }
-                    items(items) { item ->
+                    items(items, key = { it.id }) { item ->
                         WearShoppingItemRow(
                             item = item,
                             onToggle = { viewModel.toggleChecked(item) },

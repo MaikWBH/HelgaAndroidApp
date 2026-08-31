@@ -114,7 +114,7 @@ private fun ProductPriceContent(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
         }
-        items(history.points) { point ->
+        items(history.points, key = { "${it.purchaseDate}_${it.storeId}" }) { point ->
             PricePointRow(point = point, formatCurrency = formatCurrency)
         }
     }

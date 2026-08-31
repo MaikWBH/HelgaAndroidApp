@@ -1,6 +1,6 @@
 # Feature: Einstellungen & Onboarding
 
-> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
 
 Erste Einrichtung und zentrale Konfiguration. `SettingsViewModel` ist mit 25 öffentlichen
 Funktionen die Sammelstelle für Einstellungen aller anderen Bereiche.
@@ -100,7 +100,8 @@ reine Gerätepräferenzen in `AppPreferences.kt` sind bewusst lokal.
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — `!!` in `SettingsScreen.kt:352` auflösen · S · Impact mittel
+- [x] **A1** — `!!` in `SettingsScreen.kt` (`syncError`) auflösen · S · Impact mittel —
+      **umgesetzt:** lokale `val` statt `!!`
 - [ ] **A2** — Einstellungen von allen Hauptscreens erreichbar machen: `ShoppingListScreen`
   und `WeekplanScreen` bekommen einen Einstellungs-Zugang (z. B. Overflow-Menü, analog zum
   bereits vorhandenen Muster in `ShoppingListScreen.kt`), nicht nur `RecipeListScreen` ·

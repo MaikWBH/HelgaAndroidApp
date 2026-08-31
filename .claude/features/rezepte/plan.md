@@ -1,6 +1,6 @@
 # Feature: Rezepte
 
-> **Status:** Interview erledigt · **Aufgaben:** 10 offen · **Stand:** 2026-08-22 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 8 offen (2 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
 
 Zweiter Bottom-Nav-Tab. Datenbasis für Wochenplan und Einkaufsliste.
 
@@ -174,8 +174,10 @@ behandelt statt über `SyncDao` — funktioniert, bricht aber das Muster aus
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Fünf `!!`-Zugriffe in `RecipeCookScreen.kt` und `RecipeListScreen.kt` auflösen · S · Impact mittel
-- [ ] **A2** — `key`-Parameter in `RecipeListScreen.kt:504,569` ergänzen · S · Impact mittel
+- [x] **A1** — Fünf `!!`-Zugriffe in `RecipeCookScreen.kt` und `RecipeListScreen.kt` auflösen ·
+      S · Impact mittel — **umgesetzt:** lokale `val`s statt wiederholtem `!!`
+- [x] **A2** — `key`-Parameter in `RecipeListScreen.kt` ergänzen · S · Impact mittel —
+      **umgesetzt:** `allTags` (key = it) und `unclassifiedRecipes` (key = it.id)
 - [ ] **A3** — Unit-Tests für die **Timer-Erkennung** · S · Impact mittel — der
       `RecipeJsonLdParser`-Teil war deckungsgleich mit [ki](../ki/plan.md) A1 und wird dort
       geführt (Parser liegt in `ui/ai/`)

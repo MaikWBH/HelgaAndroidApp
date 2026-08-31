@@ -492,8 +492,9 @@ fun ShoppingListScreen(
                 }
             }
             // Cost estimate card
-            if (costEstimate != null && costEstimate!!.totalCost > 0) {
-                CostEstimateCard(estimate = costEstimate!!)
+            val estimate = costEstimate
+            if (estimate != null && estimate.totalCost > 0) {
+                CostEstimateCard(estimate = estimate)
             }
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
@@ -981,7 +982,7 @@ private fun AislePickerDialog(
         title = { Text(stringResource(R.string.shopping_assign_aisle)) },
         text = {
             LazyColumn {
-                items(aisles) { aisle ->
+                items(aisles, key = { it.id }) { aisle ->
                     TextButton(
                         onClick = { onPick(aisle.aisleName) },
                         modifier = Modifier.fillMaxWidth(),
@@ -1048,7 +1049,7 @@ private fun StaplesSheet(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(suggestions) { suggestion ->
+                    items(suggestions, key = { it }) { suggestion ->
                         SuggestionChip(
                             onClick = {
                                 onAddStaple(suggestion)
@@ -1185,7 +1186,7 @@ private fun QuickAddBar(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(suggestions) { suggestion ->
+                items(suggestions, key = { it }) { suggestion ->
                     SuggestionChip(
                         onClick = {
                             text = ""

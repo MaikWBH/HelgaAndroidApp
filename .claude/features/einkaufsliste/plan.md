@@ -1,6 +1,6 @@
 # Feature: Einkaufsliste
 
-> **Status:** Interview erledigt · **Aufgaben:** 4 offen (2 erledigt, A6 in [maerkte](../maerkte/plan.md) A2 aufgegangen) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (4 erledigt, A6 in [maerkte](../maerkte/plan.md) A2 aufgegangen) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
 
 Erster Bottom-Nav-Tab und Endpunkt des Kernablaufs Rezept → Wochenplan → Einkauf.
 
@@ -163,8 +163,11 @@ Alle vier Entities sind vollständig angebunden (`shoppingLists`, `shoppingItems
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — `!!` in `ShoppingListScreen.kt:486-487` durch `let`-Block ersetzen · S · Impact mittel
-- [ ] **A2** — `key`-Parameter in den vier `items()`-Aufrufen ergänzen · S · Impact mittel
+- [x] **A1** — `!!` in `ShoppingListScreen.kt` (`costEstimate`) auflösen · S · Impact mittel —
+      **umgesetzt:** lokale `val` statt zweifachem `!!`
+- [x] **A2** — `key`-Parameter in den `items()`-Aufrufen ergänzen · S · Impact mittel —
+      **umgesetzt:** 3 Stellen (nicht 4 — bei der Umsetzung geprüft: 6 der 9 `items()`-Aufrufe
+      hatten schon einen `key`)
 - [ ] **A3** — Unit-Tests für `ShoppingUnitConverter` und `IngredientLineParser` · M · Impact hoch
 - [x] **A4** — `LaunchedEffect(Unit)` in `HelgaNavGraph.kt:96-104` auf die Onboarding-Route
       eingrenzen, behebt Rotationsbug (Listenwechsel + Rauswurf aus Kochansicht) · S · Impact hoch

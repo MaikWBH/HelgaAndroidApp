@@ -37,17 +37,17 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 
 | # | Bereich | Plan | Interview | Aufgaben | Priorität |
 |---|---------|------|-----------|----------|-----------|
-| 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 4 offen (2 erledigt) | ⭐⭐⭐ |
-| 2 | Rezepte | [rezepte](rezepte/plan.md) | erledigt | 10 offen | ⭐⭐⭐ |
-| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 11 offen (3 erledigt) | ⭐⭐⭐ |
-| 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | erledigt | 4 offen | ⭐⭐ |
+| 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 2 offen (4 erledigt) | ⭐⭐⭐ |
+| 2 | Rezepte | [rezepte](rezepte/plan.md) | erledigt | 8 offen (2 erledigt) | ⭐⭐⭐ |
+| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 9 offen (5 erledigt) | ⭐⭐⭐ |
+| 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | erledigt | 3 offen (1 erledigt) | ⭐⭐ |
 | 5 | KI | [ki](ki/plan.md) | erledigt | 4 offen | ⭐⭐ |
 | 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 4 offen | ⭐⭐ |
 | 7 | Märkte & Gänge | [maerkte](maerkte/plan.md) | erledigt | 3 offen (1 erledigt) | ⭐ |
 | 8 | Statistik | [statistik](statistik/plan.md) | erledigt | 3 offen | ⭐ |
 | 9 | Sync | [sync](sync/plan.md) | erledigt | 3 offen (1 erledigt) | ⭐⭐ |
-| 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | erledigt | 4 offen | ⭐ |
-| 11 | Plattform-Integration | [plattform](plattform/plan.md) | erledigt | 3 offen (1 erledigt) | ⭐ |
+| 10 | Einstellungen & Onboarding | [einstellungen](einstellungen/plan.md) | erledigt | 3 offen (1 erledigt) | ⭐ |
+| 11 | Plattform-Integration | [plattform](plattform/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐ |
 
 **Alle Interviews abgeschlossen** (2026-08-30). Die Reihenfolge der Umsetzung steht jetzt in
 [ROADMAP.md](ROADMAP.md); die Bereichspläne bleiben die Heimat der Details und der Statuspflege.

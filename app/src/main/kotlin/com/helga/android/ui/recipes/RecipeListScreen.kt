@@ -215,9 +215,10 @@ fun RecipeListScreen(
                 onToggleFavorites = viewModel::toggleFavoritesFilter,
                 onClearFilter = { viewModel.clearTags(); if (showFavoritesOnly) viewModel.toggleFavoritesFilter() },
             )
-            if (todayRecipe != null) {
+            val recipe = todayRecipe
+            if (recipe != null) {
                 Card(
-                    onClick = { onCookClick(todayRecipe!!.recipeId) },
+                    onClick = { onCookClick(recipe.recipeId) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 4.dp),
@@ -237,7 +238,7 @@ fun RecipeListScreen(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                             Text(
-                                text = todayRecipe!!.recipeName,
+                                text = recipe.recipeName,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
@@ -501,7 +502,7 @@ private fun TagFilterDialog(
                 Text(stringResource(R.string.recipes_filter_no_tags))
             } else {
                 LazyColumn {
-                    items(allTags) { tag ->
+                    items(allTags, key = { it }) { tag ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -566,7 +567,7 @@ private fun BulkClassifyDialog(
                         style = MaterialTheme.typography.labelSmall)
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp)) {
-                        items(unclassifiedRecipes) { recipe ->
+                        items(unclassifiedRecipes, key = { it.id }) { recipe ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,

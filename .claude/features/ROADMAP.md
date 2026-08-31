@@ -10,10 +10,9 @@ Statuspflege läuft weiter über die Bereichspläne und [README.md](README.md).
 
 ---
 
-## ⚡ Quick Wins — 14 Punkte, alle S
+## ⚡ Quick Wins — vollständig umgesetzt (2026-08-30)
 
-Zusammen an einem Nachmittag machbar. Behebt zwei stille Bugs, ein Crash-Risiko und räumt
-mechanisch auf.
+Alle 7 Gruppen (14 Einzelpunkte) sind erledigt, in drei Commits:
 
 | # | Punkt | Wirkung |
 |---|-------|---------|
@@ -22,10 +21,15 @@ mechanisch auf.
 | 3 | ✅ **wochenplan A2** — `anchorDays[…]!!` absichern | Echtes Crash-Risiko |
 | 4 | ✅ **maerkte A4** — Märkte aus der Einkaufsliste erreichbar | Von zwei Hops auf einen |
 | 5 | ✅ **wochenplan A9** — tote String-Resource entfernen | Aufräumen, trivial |
-| 6 | **`!!`-Sweep** — einkaufsliste A1 · rezepte A1 · wochenplan A3 · einstellungen A1 | 4 Guideline-Verstöße in einem Durchgang |
-| 7 | **`key`-Sweep** — einkaufsliste A2 · rezepte A2 · wochenplan A4 · bons-kosten A2 · plattform A1 | 5 Compose-Listen in einem Durchgang |
+| 6 | ✅ **`!!`-Sweep** — einkaufsliste A1 · rezepte A1 · wochenplan A3 · einstellungen A1 | 10 Fundstellen (nicht 4 Gruppen mit 1 Treffer — insgesamt mehr `!!` als ursprünglich gezählt), alle in einem Durchgang |
+| 7 | ✅ **`key`-Sweep** — einkaufsliste A2 · rezepte A2 · wochenplan A4 · bons-kosten A2 · plattform A1 | 8 Fundstellen, alle in einem Durchgang |
 
-**Umgesetzt (2026-08-30):** 1–5. Nur noch 6 und 7 offen (Code-Qualitäts-Sweep, ein Commit).
+Details: [einkaufsliste](einkaufsliste/plan.md), [rezepte](rezepte/plan.md),
+[wochenplan](wochenplan/plan.md), [maerkte](maerkte/plan.md), [bons-kosten](bons-kosten/plan.md),
+[sync](sync/plan.md), [plattform](plattform/plan.md), [einstellungen](einstellungen/plan.md) —
+jeweils mit „umgesetzt"-Vermerk bei den betroffenen Punkten.
+
+**Weiter geht's mit Welle 1** (Sichtbarkeit — Bons-Tab/Statistik, Einstellungen überall).
 
 ---
 

@@ -372,9 +372,10 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            if (syncError != null) {
+            val error = syncError
+            if (error != null) {
                 Text(
-                    text = stringResource(R.string.sync_error_detail, syncError!!),
+                    text = stringResource(R.string.sync_error_detail, error),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )

@@ -152,13 +152,13 @@ fun WeekplanScreen(
         }
     }
 
-    if (exportPicker != null) {
+    val pendingExportDayId = exportPicker
+    if (pendingExportDayId != null) {
         ShoppingListPickerDialog(
             lists = shoppingLists,
             onPick = { listId, servings ->
-                val dayId = exportPicker!!
-                if (dayId == "all") viewModel.exportWeekToShoppingList(listId, servings)
-                else viewModel.exportToShoppingList(dayId, listId, servings)
+                if (pendingExportDayId == "all") viewModel.exportWeekToShoppingList(listId, servings)
+                else viewModel.exportToShoppingList(pendingExportDayId, listId, servings)
                 exportPicker = null
             },
             onDismiss = { exportPicker = null },
@@ -619,7 +619,7 @@ private fun DayCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        items(extraSuggestions) { suggestion ->
+                        items(extraSuggestions, key = { it }) { suggestion ->
                             SuggestionChip(
                                 onClick = {
                                     onAddExtra(suggestion)
