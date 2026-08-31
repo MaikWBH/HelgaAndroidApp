@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -54,6 +55,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
@@ -81,6 +83,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -118,6 +121,8 @@ fun WeekplanScreen(
     val weekplanExtras by viewModel.weekplanExtras.collectAsStateWithLifecycle()
     val allRecipes by viewModel.allRecipes.collectAsStateWithLifecycle()
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
+    val defaultShoppingListId by viewModel.defaultShoppingListId.collectAsStateWithLifecycle()
+    val exportPreview by viewModel.exportPreview.collectAsStateWithLifecycle()
     val selectedDayId by viewModel.selectedDayId.collectAsStateWithLifecycle()
     val daySummaries by viewModel.daySummaries.collectAsStateWithLifecycle()
     val weekRecipes by viewModel.weekRecipes.collectAsStateWithLifecycle()
@@ -158,12 +163,21 @@ fun WeekplanScreen(
     if (pendingExportDayId != null) {
         ShoppingListPickerDialog(
             lists = shoppingLists,
-            onPick = { listId, servings ->
-                if (pendingExportDayId == "all") viewModel.exportWeekToShoppingList(listId, servings)
-                else viewModel.exportToShoppingList(pendingExportDayId, listId, servings)
+            defaultListId = defaultShoppingListId,
+            onConfirm = { listId, servings ->
+                viewModel.startExportPreview(pendingExportDayId, listId, servings)
                 exportPicker = null
             },
             onDismiss = { exportPicker = null },
+        )
+    }
+
+    exportPreview?.let { preview ->
+        ExportPreviewDialog(
+            preview = preview,
+            onToggle = viewModel::toggleExportItem,
+            onConfirm = viewModel::confirmExportPreview,
+            onDismiss = viewModel::cancelExportPreview,
         )
     }
 
@@ -902,10 +916,12 @@ private fun ExtraChip(text: String, onRemove: () -> Unit) {
 @Composable
 private fun ShoppingListPickerDialog(
     lists: List<ShoppingListEntity>,
-    onPick: (String, Int) -> Unit,
+    defaultListId: String,
+    onConfirm: (String, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var servings by remember { mutableIntStateOf(2) }
+    var selectedListId by remember { mutableStateOf(defaultListId.ifBlank { lists.firstOrNull()?.id.orEmpty() }) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -933,17 +949,96 @@ private fun ShoppingListPickerDialog(
                     Text(stringResource(R.string.weekplan_no_lists))
                 } else {
                     lists.forEach { list ->
-                        TextButton(
-                            onClick = { onPick(list.id, servings) },
-                            modifier = Modifier.fillMaxWidth(),
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedListId = list.id }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            RadioButton(selected = list.id == selectedListId, onClick = { selectedListId = list.id })
                             Text(list.name, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(selectedListId, servings) },
+                enabled = selectedListId.isNotBlank(),
+            ) {
+                Text(stringResource(R.string.weekplan_export_preview_continue))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.recipe_delete_confirm_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun ExportPreviewDialog(
+    preview: ExportPreviewState,
+    onToggle: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.weekplan_export_preview_title)) },
+        text = {
+            if (preview.items.isEmpty()) {
+                Text(stringResource(R.string.weekplan_export_preview_empty))
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                    items(preview.items, key = { it.key }) { item ->
+                        val checked = item.key !in preview.deselected
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggle(item.key) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = checked, onCheckedChange = { onToggle(item.key) })
+                            Column {
+                                val label = buildString {
+                                    if (item.quantity > 0) {
+                                        val q = item.quantity
+                                        append(if (q % 1.0 < 0.01) q.toInt().toString() else "%.1f".format(q))
+                                        append(" ")
+                                    }
+                                    if (item.unit.isNotBlank()) { append(item.unit); append(" ") }
+                                    append(item.name)
+                                }
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        textDecoration = if (checked) TextDecoration.None else TextDecoration.LineThrough,
+                                    ),
+                                    color = if (checked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                if (item.recipeName.isNotBlank()) {
+                                    Text(
+                                        text = item.recipeName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = preview.items.size > preview.deselected.size) {
+                Text(stringResource(R.string.weekplan_export_preview_confirm))
+            }
+        },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.recipe_delete_confirm_cancel))

@@ -58,11 +58,11 @@ Die Dinge, die im Alltag heute nicht richtig funktionieren.
 | Punkt | Inhalt |
 |-------|--------|
 | **rezepte A10** | URL-Import reparieren (`supported_only=False` + verständliche Fehlermeldungen) |
-| **wochenplan A6** | Filterlogik: Süßspeisen-als-Abendessen-Bug + `regenerateDay()` auf dieselben Filter |
+| ✅ **wochenplan A6** | Filterlogik: Süßspeisen-als-Abendessen-Bug + `regenerateDay()` auf dieselben Filter |
 | **naehrwerte A4** | Nährwerte korrekt pro Portion und mit dem Portionswähler skalierend |
 | **maerkte A2** | Gang-Zuordnung normalisieren — größter Reibungspunkt der Einkaufsliste |
 | **ki A4** | `IngredientLineParser` robuster (unbekannte Einheiten, ½/¼, Kopfzeilen) |
-| **wochenplan A12** | Export in die Einkaufsliste: Extras mitnehmen + abwählbare Vorschau |
+| ✅ **wochenplan A12** | Export in die Einkaufsliste: Extras mitnehmen + abwählbare Vorschau |
 | **ki A2** | Verhalten bei Stream-Abbruch absichern |
 
 > maerkte A2 und ki A4 brauchen beide eine Namensnormalisierung — zusammen denken.

@@ -12,6 +12,7 @@ import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
+import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
@@ -53,6 +54,16 @@ import javax.inject.Inject
 data class DaySummary(val recipeCount: Int, val extraCount: Int)
 
 data class WeekBalance(val meat: Int = 0, val fish: Int = 0, val veg: Int = 0, val other: Int = 0)
+
+/**
+ * Export-Vorschau: alle Kandidaten (Rezeptzutaten + Extras) für die gewählten Tage, bevor sie in
+ * die Einkaufsliste geschrieben werden. `deselected` hält die per Checkbox abgewählten Items.
+ */
+data class ExportPreviewState(
+    val items: List<WeekplanExportItem>,
+    val listId: String,
+    val deselected: Set<String> = emptySet(),
+)
 
 sealed interface WeekplanGenerateStatus {
     data object Idle : WeekplanGenerateStatus
@@ -195,6 +206,12 @@ class WeekplanViewModel @Inject constructor(
 
     val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingDao.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val defaultShoppingListId: StateFlow<String> = preferences.defaultShoppingListId
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    private val _exportPreview = MutableStateFlow<ExportPreviewState?>(null)
+    val exportPreview: StateFlow<ExportPreviewState?> = _exportPreview.asStateFlow()
 
     val selectedDayId: StateFlow<String?> = _selectedDayId
 
@@ -387,19 +404,37 @@ class WeekplanViewModel @Inject constructor(
         }
     }
 
-    fun exportToShoppingList(dayId: String, shoppingListId: String, servings: Int = 0) {
+    /** Startet die Export-Vorschau für einen Tag oder die ganze Woche — schreibt noch nichts. */
+    fun startExportPreview(dayId: String, shoppingListId: String, servings: Int = 0) {
         viewModelScope.launch {
-            repository.exportToShoppingList(listOf(dayId), shoppingListId, servings)
-            syncScheduler.triggerOneShot()
+            val dayIds = if (dayId == "all") days.value.map { it.id } else listOf(dayId)
+            val items = repository.collectExportItems(dayIds, servings)
+            _exportPreview.value = ExportPreviewState(items = items, listId = shoppingListId)
         }
     }
 
-    fun exportWeekToShoppingList(shoppingListId: String, servings: Int = 0) {
-        viewModelScope.launch {
-            val dayIds = days.value.map { it.id }
-            repository.exportToShoppingList(dayIds, shoppingListId, servings)
-            syncScheduler.triggerOneShot()
+    /** Wechselt die Abwahl eines einzelnen Produkts in der Export-Vorschau. */
+    fun toggleExportItem(key: String) {
+        _exportPreview.update { state ->
+            state?.copy(
+                deselected = if (key in state.deselected) state.deselected - key else state.deselected + key,
+            )
         }
+    }
+
+    /** Schreibt die in der Vorschau noch ausgewählten Produkte in die Einkaufsliste. */
+    fun confirmExportPreview() {
+        val state = _exportPreview.value ?: return
+        viewModelScope.launch {
+            val selected = state.items.filter { it.key !in state.deselected }
+            repository.applyExportItems(selected, state.listId)
+            syncScheduler.triggerOneShot()
+            _exportPreview.value = null
+        }
+    }
+
+    fun cancelExportPreview() {
+        _exportPreview.value = null
     }
 
     fun saveConstraints(
@@ -433,6 +468,65 @@ class WeekplanViewModel @Inject constructor(
             )
             syncScheduler.triggerOneShot()
         }
+    }
+
+    /**
+     * Gemeinsame Kandidaten-Filter für Generierung und Neuwürfeln: mealSlot (nur lunch/dinner,
+     * behebt den Süßspeisen-als-Abendessen-Bug), Allergene, Kcal-Budget, Nutri-Score, Saison.
+     * Jede Stufe fällt auf die vorherige zurück, wenn sie den Pool leer räumen würde. Der
+     * Saison-Filter war vorher in generateWeekplan() nur eine Sortier-Präferenz (durch
+     * nachfolgende stabile Sortierungen praktisch wirkungslos) — hier als echter Filter mit
+     * Fallback, damit er auch bei regenerateDay()/regenerateProposalDay() (reiner Zufallsgriff,
+     * keine Sortierung) tatsächlich etwas bewirkt.
+     */
+    private suspend fun applyRecipeFilters(
+        candidates: List<RecipeEntity>,
+        constraints: WeekplanConstraintsEntity,
+        warnings: MutableList<String>? = null,
+    ): List<RecipeEntity> {
+        val mealFiltered = candidates.filter { it.mealSlot in listOf("lunch", "dinner") }
+        if (mealFiltered.isEmpty()) {
+            warnings?.add("⚠️ Zu wenige klassifizierte Hauptgericht-Rezepte. Alle Rezepte werden verwendet.")
+        }
+        val mealFilteredSafe = mealFiltered.ifEmpty { candidates }
+
+        val excludeAllergens = parseAllergenJson(constraints.excludeAllergens)
+        val allergenFiltered = if (excludeAllergens.isEmpty()) {
+            mealFilteredSafe
+        } else {
+            val ingredientsByRecipe = recipeDao.allActiveIngredients().groupBy { it.recipeId }
+            mealFilteredSafe.filter { recipe ->
+                val foods = ingredientsByRecipe[recipe.id]?.map { it.food } ?: emptyList()
+                foods.none { food -> excludeAllergens.any { allergen -> food.contains(allergen, ignoreCase = true) } }
+            }
+        }
+        if (allergenFiltered.isEmpty() && excludeAllergens.isNotEmpty()) {
+            warnings?.add("⚠️ Keine Rezepte ohne ausgeschlossene Allergene gefunden. Allergen-Filter wird ignoriert.")
+        }
+        val allergenFilteredSafe = allergenFiltered.ifEmpty { mealFilteredSafe }
+
+        val kcalFiltered = allergenFilteredSafe.filter { recipe ->
+            recipe.nutritionKcal <= 0.0 || recipe.nutritionKcal <= constraints.maxKcalPerPortion
+        }
+        val kcalFilteredSafe = kcalFiltered.ifEmpty { allergenFilteredSafe }
+
+        val nutriScoreFiltered = kcalFilteredSafe.filter { recipe ->
+            val score = recipe.nutritionNutriScore.lowercase()
+            score.isBlank() || score <= constraints.minNutriScore.lowercase()
+        }
+        val nutriScoreFilteredSafe = nutriScoreFiltered.ifEmpty { kcalFilteredSafe }
+
+        val currentSeason = when (LocalDate.now().monthValue) {
+            in 3..5 -> "frühling"
+            in 6..8 -> "sommer"
+            in 9..11 -> "herbst"
+            else -> "winter"
+        }
+        val seasonFiltered = nutriScoreFilteredSafe.filter { recipe ->
+            recipe.seasonFit.isBlank() ||
+                recipe.seasonFit.lowercase().let { it == "ganzjährig" || it == currentSeason }
+        }
+        return seasonFiltered.ifEmpty { nutriScoreFilteredSafe }
     }
 
     fun generateWeekplan() {
@@ -476,58 +570,8 @@ class WeekplanViewModel @Inject constructor(
                     return@launch
                 }
 
-                // mealSlot-Filter: Keine Frühstück/Snack ins Dinner-Rezept platzieren
                 val warnings = mutableListOf<String>()
-                val mealFiltered = candidates.filter { recipe ->
-                    recipe.mealSlot !in listOf("breakfast", "snack")
-                }
-                if (mealFiltered.isEmpty()) {
-                    warnings.add("⚠️ Zu wenige klassifizierte Hauptgericht-Rezepte. Alle Rezepte werden verwendet.")
-                }
-                val mealFilteredSafe = mealFiltered.ifEmpty { candidates }
-
-                // Allergen-Filter: Rezepte ausschließen deren Zutaten ein ausgeschlossenes Allergen enthalten
-                val excludeAllergens = parseAllergenJson(c.excludeAllergens)
-                val allergenFiltered = if (excludeAllergens.isEmpty()) {
-                    mealFilteredSafe
-                } else {
-                    val ingredientsByRecipe = recipeDao.allActiveIngredients().groupBy { it.recipeId }
-                    mealFilteredSafe.filter { recipe ->
-                        val foods = ingredientsByRecipe[recipe.id]?.map { it.food } ?: emptyList()
-                        foods.none { food -> excludeAllergens.any { allergen -> food.contains(allergen, ignoreCase = true) } }
-                    }
-                }
-                if (allergenFiltered.isEmpty() && excludeAllergens.isNotEmpty()) {
-                    warnings.add("⚠️ Keine Rezepte ohne ausgeschlossene Allergene gefunden. Allergen-Filter wird ignoriert.")
-                }
-                val allergenFilteredSafe = allergenFiltered.ifEmpty { mealFilteredSafe }
-
-                // Kcal-Budget-Filter: Rezepte mit bekanntem Kcal-Wert über dem Limit ausschließen
-                val kcalFiltered = allergenFilteredSafe.filter { recipe ->
-                    recipe.nutritionKcal <= 0.0 || recipe.nutritionKcal <= c.maxKcalPerPortion
-                }
-                val kcalFilteredSafe = kcalFiltered.ifEmpty { allergenFilteredSafe }
-
-                // Nutri-Score-Filter: Rezepte mit bekanntem, zu schlechtem Score ausschließen (a = beste, e = schlechteste)
-                val nutriScoreFiltered = kcalFilteredSafe.filter { recipe ->
-                    val score = recipe.nutritionNutriScore.lowercase()
-                    score.isBlank() || score <= c.minNutriScore.lowercase()
-                }
-                val nutriScoreFilteredSafe = nutriScoreFiltered.ifEmpty { kcalFilteredSafe }
-
-                // Saison-Filter: saisonale Rezepte bevorzugen
-                val currentSeason = when (LocalDate.now().monthValue) {
-                    in 3..5 -> "frühling"
-                    in 6..8 -> "sommer"
-                    in 9..11 -> "herbst"
-                    else -> "winter"
-                }
-                val seasonalCandidates = nutriScoreFilteredSafe.partition { recipe ->
-                    recipe.seasonFit.isBlank() ||
-                    recipe.seasonFit.lowercase().let { it == "ganzjährig" || it == currentSeason }
-                }
-                // Saisonale zuerst, dann Rest als Fallback
-                val seasonAware = seasonalCandidates.first + seasonalCandidates.second
+                val seasonAware = applyRecipeFilters(candidates, c, warnings)
 
                 // Rezepte nach Typ kategorisieren
                 val meatRecipes = seasonAware.filter { it.proteinType.lowercase() in listOf("fleisch", "meat", "geflügel", "poultry", "rind", "schwein") }
@@ -703,11 +747,11 @@ class WeekplanViewModel @Inject constructor(
             val recentIds = recipeHistoryDao.getRecentRecipeIds(since).toSet()
 
             val allRecipesList = recipesMap.values.filter { it.deleted == 0 }
-            val available = allRecipesList
+            val recencyFiltered = allRecipesList
                 .filter { it.id !in recentIds && it.id !in otherIds && it.id != target.recipeId }
-                .filter { it.mealSlot !in listOf("breakfast", "snack") }
                 .ifEmpty { allRecipesList.filter { it.id !in otherIds && it.id != target.recipeId } }
                 .ifEmpty { allRecipesList }
+            val available = applyRecipeFilters(recencyFiltered, c)
 
             val filtered = when {
                 meatCount >= c.maxMeatPerWeek && fishCount >= c.maxFishPerWeek ->
@@ -772,10 +816,11 @@ class WeekplanViewModel @Inject constructor(
             val recentIds = recipeHistoryDao.getRecentRecipeIds(since).toSet()
 
             val allRecipesList = recipesMap.values.filter { it.deleted == 0 }
-            val available = allRecipesList
+            val recencyFiltered = allRecipesList
                 .filter { it.id !in recentIds && it.id !in otherDayRecipeIds }
                 .ifEmpty { allRecipesList.filter { it.id !in otherDayRecipeIds } }
                 .ifEmpty { allRecipesList }
+            val available = applyRecipeFilters(recencyFiltered, c)
 
             // Constraint-basierte Auswahl
             val filtered = when {

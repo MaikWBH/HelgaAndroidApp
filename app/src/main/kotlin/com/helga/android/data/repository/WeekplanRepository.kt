@@ -6,6 +6,7 @@ import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.model.DayNutrition
+import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
@@ -106,7 +107,13 @@ class WeekplanRepository @Inject constructor(
         weekplanDao.setSkipped(dayId, if (skipped) 1 else 0, System.currentTimeMillis())
     }
 
-    suspend fun exportToShoppingList(dayIds: List<String>, shoppingListId: String, desiredServings: Int = 0) {
+    /**
+     * Sammelt alle Export-Kandidaten (Rezeptzutaten + Extras) für die angegebenen Tage, ohne
+     * etwas zu schreiben — Grundlage für die Export-Vorschau, in der einzelne Produkte vor der
+     * Übernahme abgewählt werden können.
+     */
+    suspend fun collectExportItems(dayIds: List<String>, desiredServings: Int = 0): List<WeekplanExportItem> {
+        val items = mutableListOf<WeekplanExportItem>()
         dayIds.forEach { dayId ->
             weekplanDao.recipesForDay(dayId).forEach { entry ->
                 val recipe = recipeDao.findById(entry.recipeId)
@@ -114,16 +121,43 @@ class WeekplanRepository @Inject constructor(
                 val scale = if (desiredServings > 0 && baseServings > 0) desiredServings.toDouble() / baseServings else 1.0
                 val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
                 ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
-                    shoppingRepository.addOrMergeItem(
-                        listId = shoppingListId,
-                        name = ingredient.food,
-                        quantity = ingredient.quantity * scale,
-                        unit = ingredient.unit,
-                        source = "weekplan",
-                        recipeName = recipe?.name ?: "",
+                    items.add(
+                        WeekplanExportItem(
+                            key = ingredient.id,
+                            name = ingredient.food,
+                            quantity = ingredient.quantity * scale,
+                            unit = ingredient.unit,
+                            recipeName = recipe?.name ?: "",
+                        )
                     )
                 }
             }
+            weekplanDao.extrasForDay(dayId).forEach { extra ->
+                items.add(
+                    WeekplanExportItem(
+                        key = extra.id,
+                        name = extra.itemText,
+                        quantity = 0.0,
+                        unit = "",
+                        recipeName = "",
+                    )
+                )
+            }
+        }
+        return items
+    }
+
+    /** Schreibt die (in der Vorschau bestätigten) Export-Positionen in die Einkaufsliste. */
+    suspend fun applyExportItems(items: List<WeekplanExportItem>, shoppingListId: String) {
+        items.forEach { item ->
+            shoppingRepository.addOrMergeItem(
+                listId = shoppingListId,
+                name = item.name,
+                quantity = item.quantity,
+                unit = item.unit,
+                source = "weekplan",
+                recipeName = item.recipeName,
+            )
         }
     }
 

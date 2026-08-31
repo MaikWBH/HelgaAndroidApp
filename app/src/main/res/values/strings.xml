@@ -248,6 +248,10 @@
     <string name="weekplan_pick_list">Einkaufsliste wählen</string>
     <string name="weekplan_servings">Portionen</string>
     <string name="weekplan_no_lists">Keine Einkaufslisten vorhanden</string>
+    <string name="weekplan_export_preview_continue">Weiter</string>
+    <string name="weekplan_export_preview_title">Was soll übernommen werden?</string>
+    <string name="weekplan_export_preview_empty">Keine Zutaten oder Extras für diese Auswahl</string>
+    <string name="weekplan_export_preview_confirm">Übernehmen</string>
     <string name="weekplan_export_day">Tag auf Einkaufsliste</string>
     <string name="weekplan_export_week">Woche auf Einkaufsliste</string>
     <string name="weekplan_regenerate_day">Tag neu generieren</string>

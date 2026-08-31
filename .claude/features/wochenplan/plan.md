@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 9 offen (5 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 7 offen (7 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -258,7 +258,7 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       ergänzen · S · Impact mittel — **umgesetzt:** `extraSuggestions` bzw. `allTags`, beide
       `key = { it }`
 - [ ] **A5** — Unit-Tests für Constraint-Auswertung und `weekBalance` · M · Impact hoch
-- [ ] **A6** — **Filterlogik in einem Griff** (2026-08-30 mit dem früheren A7 zusammengelegt,
+- [x] **A6** — **Filterlogik in einem Griff** (2026-08-30 mit dem früheren A7 zusammengelegt,
       weil beide dieselbe Stelle anfassen und A7 ohnehin die gemeinsame Funktion verlangte):
       1. mealSlot-Filter in `generateWeekplan()` von „nicht breakfast/snack" auf „ausschließlich
          lunch/dinner" verschärfen ODER `meal_slot` im Klassifikations-Prompt
@@ -267,7 +267,17 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
          Süßspeisen-als-Abendessen-Bug.
       2. Die Filter in eine gemeinsame Funktion ziehen und `regenerateDay()` darauf umstellen,
          das aktuell vier der Filter überspringt (Allergene, Kcal, Saison, mealSlot).
-      Nach A16 umsetzen, dann entfällt der Nutri-Score-Filter von selbst · M · Impact hoch
+      Nach A16 umsetzen, dann entfällt der Nutri-Score-Filter von selbst · M · Impact hoch —
+      **umgesetzt:** neue private Funktion `applyRecipeFilters()` in `WeekplanViewModel.kt`,
+      gemeinsam genutzt von `generateWeekplan()`, `regenerateDay()` und
+      `regenerateProposalDay()`. mealSlot-Filter von Blockliste (nur breakfast/snack raus) auf
+      Positivliste (nur lunch/dinner rein) umgestellt — behebt den Süßspeisen-Bug auch für
+      `"other"`, ohne auf eine Prompt-Änderung angewiesen zu sein. Saison-Filter ist jetzt
+      echter Hard-Filter statt in zwei der drei Pfade wirkungsloser Präferenz. A16 (Nutri-Score
+      entfernen) ist noch **nicht** umgesetzt — beim Nachgehen bestätigt, `minNutriScore` ist
+      weiterhin voll verdrahtet, keine Altannahme mehr übernommen; der Filter bleibt deshalb
+      vorerst in `applyRecipeFilters()` erhalten und fällt mit A16 automatisch weg. Kompiliert
+      erfolgreich.
 - **A7** — → **in A6 aufgegangen** (2026-08-30). Verweise auf A7 bleiben gültig, die Arbeit
       steckt dort.
 - [ ] **A8** — Constraints-Dialog vergrößern/direkter ins Wochenplan-UI integrieren; Richtung:
@@ -287,13 +297,24 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       (über „Auswärts/kein Kochen" hinaus). Der Basisfall ist durch A15 abgedeckt. Braucht
       eigene Rückfrage zum Datenmodell (Tag-artiges System) vor der Umsetzung · L · Impact
       niedrig
-- [ ] **A12** — **Export in die Einkaufsliste überarbeiten** (2026-08-30 mit dem früheren A13
+- [x] **A12** — **Export in die Einkaufsliste überarbeiten** (2026-08-30 mit dem früheren A13
       zusammengelegt — ein Ablauf, eine Umsetzung):
       1. Extra-Einträge (`WeekplanExtraEntity`) in `exportToShoppingList()`
          (`WeekplanRepository.kt:94-113`) mit exportieren, aktuell nur Rezept-Zutaten.
       2. Vorschau vor dem Übernehmen: alle Produkte (inkl. der Extras aus Schritt 1) zeigen,
          einzeln abwählbar; Listen-Rückfrage bleibt bestehen, aber mit der Standardliste
-         vorbelegt statt neutral zu starten · M · Impact hoch
+         vorbelegt statt neutral zu starten · M · Impact hoch — **umgesetzt:** Export in
+         `WeekplanRepository.kt` in „Collect (pure) + Apply (write)" aufgeteilt —
+         `collectExportItems()` liest jetzt zusätzlich `weekplanDao.extrasForDay()` (neuer
+         Typ `WeekplanExportItem`), `applyExportItems()` schreibt erst nach Bestätigung.
+         `WeekplanViewModel` hält den Zwischenstand in `ExportPreviewState` (`items`, `listId`,
+         `deselected`), neue Funktionen `startExportPreview`/`toggleExportItem`/
+         `confirmExportPreview`/`cancelExportPreview`. `WeekplanScreen.kt`:
+         `ShoppingListPickerDialog` wählt jetzt per `RadioButton` vor (Standardliste als
+         Vorauswahl über `defaultShoppingListId`) statt sofort feuernder Zeilen, neue
+         `ExportPreviewDialog` (Checkbox-Zeilen im `IngredientCheckRow`-Muster aus
+         `RecipeCookScreen.kt`) zeigt alle Positionen abwählbar vor dem Schreiben. Kompiliert
+         erfolgreich.
 - **A13** — → **in A12 aufgegangen** (2026-08-30). Verweise auf A13 bleiben gültig, die Arbeit
       steckt dort.
 - [ ] **A14** — Mahlzeiten-Tag je `WeekplanRecipeEntity`-Eintrag (mehrere Rezepte pro Mahlzeit
