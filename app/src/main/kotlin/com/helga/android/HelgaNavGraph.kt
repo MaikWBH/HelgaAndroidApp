@@ -151,6 +151,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                             navController.navigate(receiptScanRoute(listId))
                         },
                         onNavigateToReceipts = { navController.navigate(ROUTE_RECEIPTS) },
+                        onNavigateToStores = { navController.navigate(ROUTE_STORES) },
                     )
                 }
                 composable(ROUTE_RECIPES) {

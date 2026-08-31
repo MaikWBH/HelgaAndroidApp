@@ -1,6 +1,6 @@
 # Feature: Märkte & Gänge
 
-> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
 
 Bestimmt die Reihenfolge, in der die Einkaufsliste sortiert wird. Kleiner Bereich mit direkter
 Wirkung auf den Einkauf.
@@ -89,11 +89,12 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   gemeinsam mit [ki](../ki/plan.md) A4 denken — beide brauchen dieselbe Namensbereinigung
 - [ ] **A3** — Neue Märkte vorbefüllen: Standard-Gangsatz als Vorlage anbieten, alternativ
   Gänge von einem bestehenden Markt kopieren · M · Impact mittel
-- [ ] **A4** — Märkte direkter erreichbar machen: aktuell nur über Einstellungen → Märkte
+- [x] **A4** — Märkte direkter erreichbar machen: aktuell nur über Einstellungen → Märkte
   (`HelgaNavGraph.kt:210`, `onStoresClick` kommt ausschließlich aus `SettingsScreen`), zwei
   Hops tief. Gefunden im [plattform](../plattform/plan.md)-Interview ("zu langsam/versteckt").
   Naheliegend: Eintrag im Overflow-Menü der Einkaufsliste, analog zu „Kassenzettel" ·
-  S · Impact mittel
+  S · Impact mittel — **umgesetzt:** neuer `DropdownMenuItem` „Märkte" im Overflow-Menü der
+  Einkaufsliste, `onNavigateToStores`-Parameter durchgereicht bis `ROUTE_STORES`
 
 _Weitere Aufgaben nach dem Interview._
 

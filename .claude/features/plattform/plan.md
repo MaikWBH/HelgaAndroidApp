@@ -1,6 +1,6 @@
 # Feature: Plattform-Integration
 
-> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
 
 Alles, was die App mit dem Gerät und der Auslieferung verbindet: Widget, Wear OS, Share-Target,
 Build und CI. Kein Fachbereich, sondern die Hülle.
@@ -134,10 +134,13 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       [einkaufsliste/plan.md](../einkaufsliste/plan.md) A7. Der Nutzer erwartet künftig
       genau diesen Ablauf (Liste auf der Uhr beim Einkaufen abhaken); die Sideload-Hürde ist
       der einzige Grund für die aktuelle Nichtnutzung
-- [ ] **A4** — `POST_NOTIFICATIONS` im Manifest deklarieren und zur Laufzeit anfragen (Muster:
+- [x] **A4** — `POST_NOTIFICATIONS` im Manifest deklarieren und zur Laufzeit anfragen (Muster:
       Kamera-Abfrage in `ReceiptScanScreen.kt:112`). Ohne das sind die bestehenden Einkaufstag-
       und Koch-Erinnerungen auf Android 13+ wirkungslos · S · **Impact hoch** — Voraussetzung
-      für [rezepte](../rezepte/plan.md) A8 (Timer mit Benachrichtigung)
+      für [rezepte](../rezepte/plan.md) A8 (Timer mit Benachrichtigung) — **umgesetzt:**
+      Manifest-Eintrag, `NotificationScheduler.notify()` prüft die Berechtigung vor jedem Aufruf
+      (still übersprungen statt Crash/Fehlversand), `SettingsScreen` fragt die Berechtigung an,
+      sobald einer der beiden Erinnerungs-Schalter aktiviert wird
 
 _Weitere Aufgaben nach dem Interview. Widget-Nutzung bewusst nicht als Aufgabe aufgenommen —
 bestätigt kaum genutzt, aber kein Änderungswunsch geäußert, nur eine Beobachtung._

@@ -1,6 +1,12 @@
 package com.helga.android.ui.settings
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -94,6 +100,19 @@ fun SettingsScreen(
     var deleteList by remember { mutableStateOf<ShoppingListEntity?>(null) }
     var editEmoji by remember { mutableStateOf<QuickEmojiEntity?>(null) }
     var showAddEmoji by remember { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
+    fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     LaunchedEffect(exportJson) {
         exportJson?.let { json ->
@@ -267,7 +286,10 @@ fun SettingsScreen(
                 )
                 Switch(
                     checked = state.notifyShoppingDay,
-                    onCheckedChange = { viewModel.setNotifyShoppingDay(it) },
+                    onCheckedChange = {
+                        viewModel.setNotifyShoppingDay(it)
+                        if (it) requestNotificationPermissionIfNeeded()
+                    },
                 )
             }
             Row(
@@ -281,7 +303,10 @@ fun SettingsScreen(
                 )
                 Switch(
                     checked = state.notifyCookReminder,
-                    onCheckedChange = { viewModel.setNotifyCookReminder(it) },
+                    onCheckedChange = {
+                        viewModel.setNotifyCookReminder(it)
+                        if (it) requestNotificationPermissionIfNeeded()
+                    },
                 )
             }
 

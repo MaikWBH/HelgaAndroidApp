@@ -109,6 +109,7 @@ fun ShoppingListScreen(
     onNavigateToWeekplan: () -> Unit = {},
     onNavigateToReceiptScan: (String?) -> Unit = {},
     onNavigateToReceipts: () -> Unit = {},
+    onNavigateToStores: () -> Unit = {},
     viewModel: ShoppingListViewModel = hiltViewModel(),
 ) {
     val lists by viewModel.lists.collectAsStateWithLifecycle()
@@ -304,6 +305,14 @@ fun ShoppingListScreen(
                                 onClick = {
                                     showOverflow = false
                                     onNavigateToReceipts()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.stores_title)) },
+                                leadingIcon = { Icon(Icons.Filled.Store, null) },
+                                onClick = {
+                                    showOverflow = false
+                                    onNavigateToStores()
                                 },
                             )
                             DropdownMenuItem(

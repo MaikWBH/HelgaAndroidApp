@@ -7,6 +7,7 @@ import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.helga.android.data.preferences.AppPreferences
+import com.helga.android.data.sync.ForegroundSyncObserver
 import com.helga.android.data.sync.NetworkObserver
 import com.helga.android.data.sync.NotificationScheduler
 import dagger.hilt.android.HiltAndroidApp
@@ -20,6 +21,7 @@ class HelgaApp : Application(), Configuration.Provider, ImageLoaderFactory {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var networkObserver: NetworkObserver
+    @Inject lateinit var foregroundSyncObserver: ForegroundSyncObserver
     @Inject lateinit var okHttpClient: OkHttpClient
     @Inject lateinit var preferences: AppPreferences
 
@@ -36,6 +38,7 @@ class HelgaApp : Application(), Configuration.Provider, ImageLoaderFactory {
             enableStrictMode()
         }
         networkObserver.start()
+        foregroundSyncObserver.start()
         NotificationScheduler.schedule(this)
     }
 

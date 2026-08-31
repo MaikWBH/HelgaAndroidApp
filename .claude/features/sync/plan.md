@@ -1,6 +1,6 @@
 # Feature: Sync
 
-> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
 
 Bidirektionaler Abgleich mit dem Homeserver, Last-Write-Wins. Kein eigener Screen, aber
 Grundlage aller anderen Bereiche — und der einzige Bereich mit vorhandenen Tests.
@@ -112,10 +112,13 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Test, der alle Entities aus `AppDatabase` gegen `SyncDto`/`SyncEngine` abgleicht und bei fehlendem Anschluss fehlschlägt · M · Impact hoch — bestätigter Bedarf aus dem Interview
 - [ ] **A2** — Tests für Konfliktfälle: gleicher Zeitstempel, Teilfehler beim Push, Abbruch mitten im Sync · M · Impact hoch
-- [ ] **A3** — App-Foreground-Sync-Trigger implementieren (z. B. `ProcessLifecycleOwner` in der
+- [x] **A3** — App-Foreground-Sync-Trigger implementieren (z. B. `ProcessLifecycleOwner` in der
   Application-Klasse, `syncScheduler.triggerOneShot()` beim Vordergrundwechsel): kein
   bestehender Code-Pfad ruft das aus, obwohl `CLAUDE.md` es als Trigger dokumentiert · S ·
-  Impact hoch — root-caused Vorfall aus dem Interview
+  Impact hoch — root-caused Vorfall aus dem Interview — **umgesetzt:** neue
+  `ForegroundSyncObserver` (Muster von `NetworkObserver`), registriert sich auf
+  `ProcessLifecycleOwner`, `onStart()` triggert `syncScheduler.triggerOneShot()`; in `HelgaApp`
+  neben `networkObserver.start()` gestartet
 - [ ] **A4** — Bilder proaktiv im Hintergrund herunterladen (Download-Pendant zu
   `ImageUploadWorker`), damit sie auch offline auf einem neuen/zweiten Gerät verfügbar sind ·
   M · Impact mittel
