@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -67,6 +68,7 @@ fun AiGenerateScreen(
     viewModel: AiGenerateViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val serverReachable by viewModel.serverReachable.collectAsStateWithLifecycle()
 
     if (state.feedbackVisible) {
         FeedbackDialog(
@@ -107,6 +109,9 @@ fun AiGenerateScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                if (serverReachable == false) {
+                    item { ReachabilityBanner() }
+                }
                 item {
                     QuestionsCard(
                         dietType = state.dietType,
@@ -164,13 +169,43 @@ fun AiGenerateScreen(
                     Button(
                         onClick = viewModel::generate,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = state.prompt.isNotBlank() && status !is AiGenerateStatus.Generating,
+                        enabled = state.prompt.isNotBlank() && status !is AiGenerateStatus.Generating
+                                && serverReachable != false,
                     ) {
                         Text(stringResource(R.string.ai_generate_button))
                     }
                 }
                 item { Spacer(Modifier.height(32.dp)) }
             }
+        }
+    }
+}
+
+/**
+ * Persistenter Hinweis statt eines Fehlers erst nach gescheitertem Generieren (ki A3) —
+ * gespeist von [com.helga.android.data.sync.ServerReachabilityMonitor].
+ */
+@Composable
+private fun ReachabilityBanner() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.CloudOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Text(
+                text = stringResource(R.string.ai_server_unreachable),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
         }
     }
 }

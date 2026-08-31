@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +50,7 @@ fun AiRemixScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val source by viewModel.source.collectAsStateWithLifecycle()
+    val serverReachable by viewModel.serverReachable.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -85,6 +89,10 @@ fun AiRemixScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                if (serverReachable == false) {
+                    ReachabilityBanner()
+                }
+
                 source.recipe?.let { recipe ->
                     Text(
                         text = stringResource(R.string.ai_remix_original_label, recipe.name),
@@ -132,11 +140,40 @@ fun AiRemixScreen(
                     onClick = viewModel::remix,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = state.remixPrompt.isNotBlank() && source.recipe != null
-                            && status !is AiRemixStatus.Generating,
+                            && status !is AiRemixStatus.Generating && serverReachable != false,
                 ) {
                     Text(stringResource(R.string.ai_remix_button))
                 }
             }
+        }
+    }
+}
+
+/**
+ * Persistenter Hinweis statt eines Fehlers erst nach gescheitertem Remix (ki A3) — gespeist
+ * von [com.helga.android.data.sync.ServerReachabilityMonitor].
+ */
+@Composable
+private fun ReachabilityBanner() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.CloudOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Text(
+                text = stringResource(R.string.ai_server_unreachable),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
         }
     }
 }

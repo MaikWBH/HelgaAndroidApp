@@ -13,6 +13,7 @@ import javax.inject.Singleton
 @Singleton
 class ForegroundSyncObserver @Inject constructor(
     private val syncScheduler: SyncScheduler,
+    private val serverReachabilityMonitor: ServerReachabilityMonitor,
 ) : DefaultLifecycleObserver {
     private var registered = false
 
@@ -24,5 +25,6 @@ class ForegroundSyncObserver @Inject constructor(
 
     override fun onStart(owner: LifecycleOwner) {
         syncScheduler.triggerOneShot()
+        serverReachabilityMonitor.checkAsync()
     }
 }

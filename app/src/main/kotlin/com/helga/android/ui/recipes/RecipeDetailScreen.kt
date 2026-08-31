@@ -99,6 +99,7 @@ fun RecipeDetailScreen(
     viewModel: RecipeDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val serverReachable by viewModel.serverReachable.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val recipe = uiState.recipe
     val snackbarHostState = remember { SnackbarHostState() }
@@ -284,6 +285,8 @@ fun RecipeDetailScreen(
                                     text = {
                                         if (uiState.isClassifying) {
                                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                        } else if (serverReachable == false) {
+                                            Text(stringResource(R.string.recipe_classify_unreachable))
                                         } else {
                                             Text(stringResource(R.string.recipe_classify))
                                         }
@@ -293,7 +296,7 @@ fun RecipeDetailScreen(
                                         showOverflow = false
                                         viewModel.classify()
                                     },
-                                    enabled = !uiState.isClassifying && !alreadyClassified,
+                                    enabled = !uiState.isClassifying && !alreadyClassified && serverReachable != false,
                                 )
                                 HorizontalDivider()
                                 DropdownMenuItem(

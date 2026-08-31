@@ -1,6 +1,6 @@
 # Feature: KI
 
-> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 1 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
 
 Rezeptgenerierung, Remix und Klassifikation. Läuft ausschließlich serverseitig; die App sendet
 Prompts und empfängt Ergebnisse per SSE-Streaming.
@@ -114,10 +114,23 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   `IOException("Stream wurde vorzeitig beendet")` statt ein still abgeschnittenes Teilergebnis
   zurückzugeben. `AiGenerateViewModel`/`AiRemixViewModel` zeigen `e.message` bereits unverändert
   an — die neue Meldung kommt dadurch ohne weitere Anpassung im UI an.
-- [ ] **A3** — Server-Erreichbarkeit vor KI-Nutzung deutlich anzeigen (Generieren, Remix,
+- [x] **A3** — Server-Erreichbarkeit vor KI-Nutzung deutlich anzeigen (Generieren, Remix,
   Klassifikation): Reachability-Check + persistenter Hinweis, statt den Fehler erst nach einem
   gescheiterten Versuch zu zeigen. Kein bestehender Mechanismus im Code — neue Infrastruktur
-  nötig, potenziell auch für [sync](../sync/plan.md) relevant · L · Impact hoch
+  nötig, potenziell auch für [sync](../sync/plan.md) relevant · L · Impact hoch —
+  **umgesetzt:** neuer `ServerReachabilityMonitor` (Singleton, `data/sync/`) mit
+  `StateFlow<Boolean?>` (`null` = noch nicht geprüft), gefüllt über den bereits vorhandenen
+  `/api/health`-Endpoint (`SyncApi.health()` — existierte schon für Settings/Onboarding-„Testen",
+  war aber sonst nirgends verdrahtet). Mitgetriggert von `NetworkObserver.onAvailable` und
+  `ForegroundSyncObserver.onStart`, damit der Status meist schon aktuell ist, bevor ein
+  KI-Bildschirm überhaupt geöffnet wird; zusätzlich ein eigener Check in `init {}` von
+  `AiGenerateViewModel`/`AiRemixViewModel`/`RecipeDetailViewModel` als Fallback. Persistente
+  Karte (`ReachabilityBanner`, Icon `CloudOff`) oben in `AiGenerateScreen` und `AiRemixScreen`,
+  sichtbar sobald der Status bekannt unreachable ist; „Generieren"/„Remix"-Button zusätzlich
+  deaktiviert. Für die Klassifikation (kein eigener Bildschirm, nur ein Overflow-Menüeintrag in
+  `RecipeDetailScreen`) reicht eine volle Banner-Karte nicht proportional — stattdessen wird der
+  Menüeintrag deaktiviert und beschriftet sich um („KI klassifizieren (Server nicht erreichbar)")
+  statt einen Klick später mit einem Netzwerkfehler zu enden.
 - [x] **A4** — `IngredientLineParser` robuster für KI-generierte Zutatenzeilen machen
   (unbekannte Einheiten nicht verwerfen, Unicode-Brüche wie ½/¼ erkennen, reine Kopfzeilen wie
   „Für den Teig:" nicht als Zutat durchreichen) · M · Impact hoch — Testabdeckung dafür bereits

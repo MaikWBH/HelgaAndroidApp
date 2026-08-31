@@ -23,6 +23,7 @@ import com.helga.android.data.remote.dto.AiNutritionRequest
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.WeekplanRepository
+import com.helga.android.data.sync.ServerReachabilityMonitor
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -67,9 +68,17 @@ class RecipeDetailViewModel @Inject constructor(
     private val apiFactory: SyncApiFactory,
     private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
+    private val serverReachability: ServerReachabilityMonitor,
 ) : ViewModel() {
 
     val recipeId: String = checkNotNull(savedStateHandle["recipeId"])
+
+    /** ki A3 — sperrt „Klassifizieren", statt den Fehler erst nach einem Versuch zu zeigen. */
+    val serverReachable: StateFlow<Boolean?> = serverReachability.reachable
+
+    init {
+        serverReachability.checkAsync()
+    }
 
     private val _classifyState = MutableStateFlow(false to (null as String?))
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)

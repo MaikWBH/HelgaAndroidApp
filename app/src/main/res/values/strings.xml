@@ -155,6 +155,7 @@
     <string name="fab_remix">Rezept remixen</string>
 
     <!-- KI-Erstellung -->
+    <string name="ai_server_unreachable">Server nicht erreichbar — KI-Funktionen benötigen eine Verbindung zum Sync-Server.</string>
     <string name="ai_generate_title">KI Rezept erstellen</string>
     <string name="ai_generate_prompt_label">Was soll gekocht werden?</string>
     <string name="ai_generate_prompt_hint">z.B. „Curry mit Kichererbsen und Kokosmilch"</string>
@@ -187,6 +188,7 @@
 
     <!-- KI-Klassifikation -->
     <string name="recipe_classify">KI klassifizieren</string>
+    <string name="recipe_classify_unreachable">KI klassifizieren (Server nicht erreichbar)</string>
     <string name="recipe_favorite">Favorit</string>
     <string name="recipe_add_to_shopping">Zu Einkaufsliste hinzufügen</string>
     <string name="recipe_add_to_list">Zur „%1$s" hinzufügen</string>
