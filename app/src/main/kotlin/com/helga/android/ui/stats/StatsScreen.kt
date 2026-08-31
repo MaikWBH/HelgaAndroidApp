@@ -20,6 +20,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -31,9 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,8 +41,7 @@ fun StatsScreen(
     viewModel: StatsViewModel = hiltViewModel(),
 ) {
     val stats by viewModel.stats.collectAsStateWithLifecycle()
-    val monthName = LocalDate.now().month.getDisplayName(TextStyle.FULL, Locale.GERMAN)
-        .replaceFirstChar { it.uppercase() }
+    val period by viewModel.period.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -65,10 +63,23 @@ fun StatsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = monthName,
-                style = MaterialTheme.typography.headlineSmall,
-            )
+            TabRow(selectedTabIndex = period.ordinal) {
+                StatsPeriod.values().forEach { tab ->
+                    Tab(
+                        selected = period == tab,
+                        onClick = { viewModel.setPeriod(tab) },
+                        text = {
+                            Text(
+                                when (tab) {
+                                    StatsPeriod.WEEK -> stringResource(R.string.stats_period_week)
+                                    StatsPeriod.MONTH -> stringResource(R.string.stats_period_month)
+                                    StatsPeriod.ALL -> stringResource(R.string.stats_period_all)
+                                }
+                            )
+                        },
+                    )
+                }
+            }
 
             // Übersicht
             Card(modifier = Modifier.fillMaxWidth()) {

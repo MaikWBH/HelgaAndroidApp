@@ -1,6 +1,6 @@
 # Feature: Statistik
 
-> **Status:** Interview erledigt · **Aufgaben:** 2 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 1 offen (2 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐
 
 Auswertung der Kochhistorie. Der kleinste Bereich der App.
 
@@ -81,8 +81,16 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   planen · M · Impact hoch — **umgesetzt:** `ROUTE_STATS` neu angelegt, erreichbar über einen
   Insights-Icon-Button in der TopBar von `ReceiptListScreen` (dem neuen Bons-Tab), `onBack`
   führt zurück dorthin
-- [ ] **A3** — Zeitraumfilter ergänzen, analog zum Ausgabenüberblick
-  (`CostOverviewViewModel.setPeriod`-Muster wiederverwenden) · M · Impact hoch
+- [x] **A3** — Zeitraumfilter ergänzen, analog zum Ausgabenüberblick
+  (`CostOverviewViewModel.setPeriod`-Muster wiederverwenden) · M · Impact hoch —
+  **umgesetzt:** neues `StatsPeriod`-Enum (WEEK/MONTH/ALL, eigenständig statt Cross-Package-
+  Import aus `ui.receipts`, aber exakt dasselbe Verhalten). `stats`-StateFlow reagiert per
+  `flatMapLatest` auf den gewählten Zeitraum und berechnet das `since`-Datum dynamisch —
+  `RecipeHistoryDao.observeSince()` deckt das ohne neue Query ab, da eine obere Grenze nicht
+  nötig ist (`cooked = 1` schließt zukünftige Planungen ohnehin aus). `StatsScreen.kt` bekommt
+  dieselbe `TabRow`/`Tab`-Auswahl wie `CostOverviewScreen.kt`. Statischer Monatsname im Header
+  entfernt (war mit wählbarem Zeitraum irreführend), `stats_title` von „Monats-Report" auf
+  „Kochstatistik" umbenannt.
 
 _Weitere Aufgaben nach dem Interview._
 

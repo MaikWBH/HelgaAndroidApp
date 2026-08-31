@@ -329,10 +329,13 @@
     <string name="ingredient_mapping_title">Zutaten zuordnen</string>
 
     <!-- Statistik -->
-    <string name="stats_title">Monats-Report</string>
+    <string name="stats_title">Kochstatistik</string>
     <string name="stats_cooked">%1$d Rezepte gekocht</string>
     <string name="stats_top_recipes">Top-Rezepte</string>
     <string name="stats_first_timers">Entdeckungen</string>
+    <string name="stats_period_week">Woche</string>
+    <string name="stats_period_month">Monat</string>
+    <string name="stats_period_all">Alle</string>
 
     <!-- Export -->
     <string name="settings_export_data">Alle Daten exportieren</string>
