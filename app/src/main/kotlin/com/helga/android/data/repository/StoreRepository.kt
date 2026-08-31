@@ -11,6 +11,19 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Vorbefüllung für neu angelegte Märkte (maerkte A3) — spart das manuelle Eintippen jedes Gangs. */
+sealed interface StorePrefill {
+    data object None : StorePrefill
+    data object DefaultTemplate : StorePrefill
+    data class CopyFrom(val storeId: String) : StorePrefill
+}
+
+private val DEFAULT_AISLE_TEMPLATE = listOf(
+    "Obst & Gemüse", "Brot & Backwaren", "Milchprodukte & Eier", "Fleisch & Wurst",
+    "Fisch", "Tiefkühl", "Konserven & Trockenware", "Getränke", "Süßes & Snacks",
+    "Drogerie & Haushalt",
+)
+
 @Singleton
 class StoreRepository @Inject constructor(
     private val storeDao: StoreDao,
@@ -26,11 +39,31 @@ class StoreRepository @Inject constructor(
     fun observeStaples(listId: String): Flow<List<ShoppingListStapleEntity>> =
         storeDao.observeStaples(listId)
 
-    suspend fun createStore(name: String): String {
+    suspend fun createStore(name: String, prefill: StorePrefill = StorePrefill.None): String {
         val id = UUID.randomUUID().toString()
+        val ts = now()
         storeDao.upsertStore(
-            StoreEntity(id = id, name = name, isActive = 0, updatedAt = now(), dirty = 1)
+            StoreEntity(id = id, name = name, isActive = 0, updatedAt = ts, dirty = 1)
         )
+        val aisleNames = when (prefill) {
+            StorePrefill.None -> emptyList()
+            StorePrefill.DefaultTemplate -> DEFAULT_AISLE_TEMPLATE
+            is StorePrefill.CopyFrom -> storeDao.aislesForStore(prefill.storeId).map { it.aisleName }
+        }
+        if (aisleNames.isNotEmpty()) {
+            storeDao.upsertAisles(
+                aisleNames.mapIndexed { index, aisleName ->
+                    StoreAisleEntity(
+                        id = UUID.randomUUID().toString(),
+                        storeId = id,
+                        aisleName = aisleName,
+                        sortOrder = index,
+                        updatedAt = ts,
+                        dirty = 1,
+                    )
+                }
+            )
+        }
         return id
     }
 

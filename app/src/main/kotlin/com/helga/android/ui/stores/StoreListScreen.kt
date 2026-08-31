@@ -1,14 +1,17 @@
 package com.helga.android.ui.stores
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -32,6 +35,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,6 +65,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.repository.StorePrefill
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,9 +81,10 @@ fun StoreListScreen(
 
     if (showNewStoreDialog) {
         NewStoreDialog(
+            existingStores = stores,
             onDismiss = { showNewStoreDialog = false },
-            onCreate = { name ->
-                viewModel.createStore(name)
+            onCreate = { name, prefill ->
+                viewModel.createStore(name, prefill)
                 showNewStoreDialog = false
             },
         )
@@ -389,22 +395,53 @@ private fun AisleRow(
 }
 
 @Composable
-private fun NewStoreDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+private fun NewStoreDialog(
+    existingStores: List<StoreEntity>,
+    onDismiss: () -> Unit,
+    onCreate: (name: String, prefill: StorePrefill) -> Unit,
+) {
     var name by remember { mutableStateOf("") }
+    var prefill by remember { mutableStateOf<StorePrefill>(StorePrefill.DefaultTemplate) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.stores_new)) },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(stringResource(R.string.stores_name_label)) },
-                singleLine = true,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.stores_name_label)) },
+                    singleLine = true,
+                )
+                Text(
+                    text = stringResource(R.string.stores_prefill_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                PrefillOption(
+                    label = stringResource(R.string.stores_prefill_default),
+                    selected = prefill == StorePrefill.DefaultTemplate,
+                    onClick = { prefill = StorePrefill.DefaultTemplate },
+                )
+                existingStores.forEach { store ->
+                    PrefillOption(
+                        label = stringResource(R.string.stores_prefill_copy, store.name),
+                        selected = (prefill as? StorePrefill.CopyFrom)?.storeId == store.id,
+                        onClick = { prefill = StorePrefill.CopyFrom(store.id) },
+                    )
+                }
+                PrefillOption(
+                    label = stringResource(R.string.stores_prefill_empty),
+                    selected = prefill == StorePrefill.None,
+                    onClick = { prefill = StorePrefill.None },
+                )
+            }
         },
         confirmButton = {
             TextButton(
-                onClick = { if (name.isNotBlank()) onCreate(name.trim()) },
+                onClick = { if (name.isNotBlank()) onCreate(name.trim(), prefill) },
                 enabled = name.isNotBlank(),
             ) {
                 Text(stringResource(R.string.shopping_create))
@@ -416,4 +453,19 @@ private fun NewStoreDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
             }
         },
     )
+}
+
+@Composable
+private fun PrefillOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+    }
 }

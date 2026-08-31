@@ -226,6 +226,10 @@
     <string name="stores_aisle_hint">Gangname eingeben…</string>
     <string name="stores_aisles_drag_hint">Zum Sortieren gedrückt halten und ziehen</string>
     <string name="stores_aisle_drag_handle">Zum Verschieben ziehen</string>
+    <string name="stores_prefill_label">Gänge übernehmen</string>
+    <string name="stores_prefill_default">Standard-Gangsatz</string>
+    <string name="stores_prefill_copy">Wie „%1$s"</string>
+    <string name="stores_prefill_empty">Leer, selbst anlegen</string>
 
     <!-- Einstellungen – Einkaufen -->
     <string name="settings_shopping_section">Einkaufen</string>

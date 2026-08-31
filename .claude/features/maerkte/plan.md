@@ -1,6 +1,6 @@
 # Feature: Märkte & Gänge
 
-> **Status:** Interview erledigt · **Aufgaben:** 1 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 0 offen (4 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐
 
 Bestimmt die Reihenfolge, in der die Einkaufsliste sortiert wird. Kleiner Bereich mit direkter
 Wirkung auf den Einkauf.
@@ -106,8 +106,16 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   angewendet, damit das Format konsistent bleibt. Bewusst kein gemeinsamer Code mit
   [ki](../ki/plan.md) A4 — andere Zielsetzung (Lookup-Schlüssel bilden vs. Zutatenzeile in
   Menge/Einheit/Food zerlegen).
-- [ ] **A3** — Neue Märkte vorbefüllen: Standard-Gangsatz als Vorlage anbieten, alternativ
-  Gänge von einem bestehenden Markt kopieren · M · Impact mittel
+- [x] **A3** — Neue Märkte vorbefüllen: Standard-Gangsatz als Vorlage anbieten, alternativ
+  Gänge von einem bestehenden Markt kopieren · M · Impact mittel — **umgesetzt:**
+  `StorePrefill`-Sealed-Interface (`None`/`DefaultTemplate`/`CopyFrom(storeId)`) in
+  `StoreRepository.kt`; `createStore()` legt bei `DefaultTemplate` zehn feste Standard-Gänge an
+  (Obst & Gemüse, Brot & Backwaren, Milchprodukte & Eier, Fleisch & Wurst, Fisch, Tiefkühl,
+  Konserven & Trockenware, Getränke, Süßes & Snacks, Drogerie & Haushalt), bei `CopyFrom` die
+  Gangnamen des gewählten bestehenden Markts. `NewStoreDialog` bekommt eine Radio-Auswahl unter
+  dem Namensfeld — „Standard-Gangsatz" (vorausgewählt), je ein Eintrag „Wie „Markt X"" pro
+  bestehendem Markt, und „Leer, selbst anlegen" für das alte Verhalten. Keine Sync- oder
+  Schema-Änderung nötig — nutzt die bereits vorhandene `StoreAisleEntity`/`upsertAisles()`.
 - [x] **A4** — Märkte direkter erreichbar machen: aktuell nur über Einstellungen → Märkte
   (`HelgaNavGraph.kt:210`, `onStoresClick` kommt ausschließlich aus `SettingsScreen`), zwei
   Hops tief. Gefunden im [plattform](../plattform/plan.md)-Interview ("zu langsam/versteckt").
