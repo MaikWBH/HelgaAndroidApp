@@ -122,6 +122,12 @@
     <string name="settings_title">Einstellungen</string>
     <string name="settings_server_section">Server</string>
     <string name="settings_sync_section">Synchronisation</string>
+    <string name="settings_receipts_section">Bons</string>
+    <string name="settings_receipt_retention">Bon-Aufbewahrung</string>
+    <string name="settings_receipt_retention_never">Nie löschen</string>
+    <string name="settings_receipt_retention_1">1 Monat</string>
+    <string name="settings_receipt_retention_months">%1$d Monate</string>
+    <string name="settings_receipt_retention_12">1 Jahr</string>
     <string name="settings_account_section">Konto</string>
     <string name="settings_advanced_section">Erweitert</string>
     <string name="settings_save_and_test">Speichern &amp; Verbindung testen</string>

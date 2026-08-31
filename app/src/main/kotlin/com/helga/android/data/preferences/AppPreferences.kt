@@ -66,6 +66,12 @@ class AppPreferences @Inject constructor(
     val receiptReconciliationEnabled: Flow<Boolean> = ds.data.map {
         it[KEY_RECEIPT_RECONCILE] ?: true
     }
+
+    /** Automatische Bon-Löschung nach X Monaten (bons-kosten A4). 0 = nie löschen, Default 3. */
+    val receiptRetentionMonths: Flow<Int> = ds.data.map { prefs ->
+        val raw = prefs[KEY_RECEIPT_RETENTION_MONTHS] ?: 3
+        if (raw in setOf(0, 1, 3, 6, 12)) raw else 3
+    }
     val allergies: Flow<List<String>> = ds.data.map { prefs ->
         val json = prefs[KEY_ALLERGIES].orEmpty()
         if (json.isBlank()) emptyList()
@@ -154,6 +160,11 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_RECEIPT_RECONCILE] = enabled }
     }
 
+    suspend fun saveReceiptRetentionMonths(months: Int) {
+        val valid = if (months in setOf(0, 1, 3, 6, 12)) months else 3
+        ds.edit { it[KEY_RECEIPT_RETENTION_MONTHS] = valid }
+    }
+
     suspend fun saveAllergies(allergies: List<String>) {
         ds.edit {
             if (allergies.isEmpty()) it.remove(KEY_ALLERGIES)
@@ -194,5 +205,6 @@ class AppPreferences @Inject constructor(
         val KEY_ALLERGIES = stringPreferencesKey("allergies")
         val KEY_SCAN_REMINDER_THRESHOLD = floatPreferencesKey("scan_reminder_threshold")
         val KEY_RECEIPT_RECONCILE = booleanPreferencesKey("receipt_reconciliation_enabled")
+        val KEY_RECEIPT_RETENTION_MONTHS = intPreferencesKey("receipt_retention_months")
     }
 }

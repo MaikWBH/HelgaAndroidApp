@@ -568,6 +568,19 @@ fun SettingsScreen(
                 Spacer(Modifier.height(8.dp))
 
                 Text(
+                    text = stringResource(R.string.settings_receipts_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                SettingsReceiptRetentionDropdown(
+                    value = state.receiptRetentionMonths,
+                    onSelected = viewModel::setReceiptRetentionMonths,
+                )
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
                     text = stringResource(R.string.settings_ai_bulk_title),
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -682,6 +695,41 @@ private fun SettingsPlanDaysDropdown(value: Int, onSelected: (Int) -> Unit) {
                     text = { Text(stringResource(R.string.settings_plan_days_value, days)) },
                     onClick = {
                         onSelected(days)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsReceiptRetentionDropdown(value: Int, onSelected: (Int) -> Unit) {
+    val options = listOf(0, 1, 3, 6, 12)
+    @Composable
+    fun label(months: Int): String = when (months) {
+        0 -> stringResource(R.string.settings_receipt_retention_never)
+        1 -> stringResource(R.string.settings_receipt_retention_1)
+        12 -> stringResource(R.string.settings_receipt_retention_12)
+        else -> stringResource(R.string.settings_receipt_retention_months, months)
+    }
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        OutlinedTextField(
+            value = label(value),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.settings_receipt_retention)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { months ->
+                DropdownMenuItem(
+                    text = { Text(label(months)) },
+                    onClick = {
+                        onSelected(months)
                         expanded = false
                     },
                 )

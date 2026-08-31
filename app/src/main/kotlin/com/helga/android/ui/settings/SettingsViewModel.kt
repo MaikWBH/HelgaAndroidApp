@@ -72,6 +72,7 @@ class SettingsViewModel @Inject constructor(
             val checkMode = preferences.checkMode.first()
             val scanReminderThreshold = preferences.scanReminderThreshold.first()
             val reconcileEnabled = preferences.receiptReconciliationEnabled.first()
+            val receiptRetentionMonths = preferences.receiptRetentionMonths.first()
             val notifyShopping = preferences.notifyShoppingDay.first()
             val notifyCook = preferences.notifyCookReminder.first()
             _state.update {
@@ -86,6 +87,7 @@ class SettingsViewModel @Inject constructor(
                     checkMode = checkMode,
                     scanReminderThreshold = scanReminderThreshold,
                     receiptReconciliationEnabled = reconcileEnabled,
+                    receiptRetentionMonths = receiptRetentionMonths,
                     notifyShoppingDay = notifyShopping,
                     notifyCookReminder = notifyCook,
                     loaded = true,
@@ -131,6 +133,11 @@ class SettingsViewModel @Inject constructor(
     fun setReceiptReconciliationEnabled(enabled: Boolean) {
         _state.update { it.copy(receiptReconciliationEnabled = enabled) }
         viewModelScope.launch { preferences.saveReceiptReconciliationEnabled(enabled) }
+    }
+
+    fun setReceiptRetentionMonths(months: Int) {
+        _state.update { it.copy(receiptRetentionMonths = months) }
+        viewModelScope.launch { preferences.saveReceiptRetentionMonths(months) }
     }
 
     fun setNotifyShoppingDay(enabled: Boolean) {
@@ -433,6 +440,7 @@ data class SettingsState(
     val checkMode: String = "keep",
     val scanReminderThreshold: Float = 0.6f,
     val receiptReconciliationEnabled: Boolean = true,
+    val receiptRetentionMonths: Int = 3,
     val notifyShoppingDay: Boolean = false,
     val notifyCookReminder: Boolean = false,
     val loaded: Boolean = false,

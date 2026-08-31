@@ -241,6 +241,16 @@ class ReceiptRepository @Inject constructor(
         }
     }
 
+    /**
+     * Löscht (soft) alle Bons mit Kaufdatum vor [beforeEpochMillis] — für die einstellbare
+     * automatische Bon-Löschung (bons-kosten A4). Gibt die Anzahl gelöschter Bons zurück.
+     */
+    suspend fun purgeReceiptsOlderThan(beforeEpochMillis: Long): Int {
+        val ids = receiptDao.findIdsOlderThan(beforeEpochMillis)
+        ids.forEach { deleteReceipt(it) }
+        return ids.size
+    }
+
     suspend fun linkReceiptToShoppingList(receiptId: String, shoppingListId: String) {
         val receipt = receiptDao.findById(receiptId) ?: return
         receiptDao.upsertReceipt(

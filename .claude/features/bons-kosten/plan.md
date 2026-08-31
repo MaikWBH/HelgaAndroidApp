@@ -1,6 +1,6 @@
 # Feature: Bons & Kosten
 
-> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 1 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
 
 Kassenbon-Scan, Preisverlauf und Ausgabenüberblick. Der größte Bereich, der in keiner
 bisherigen Dokumentation auftauchte.
@@ -115,9 +115,17 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   (Icon `ReceiptLong`, String `nav_receipts` = „Bons"); Zurück-Pfeil auf `ReceiptListScreen`
   entfernt (wie die anderen drei Root-Screens); neuer Insights-Button in der TopBar führt zu
   `StatsScreen` (siehe [statistik](../statistik/plan.md) A2)
-- [ ] **A4** — Einstellbare automatische Löschung alter Bons (Einstellungen: Zeitraum, Default 3
+- [x] **A4** — Einstellbare automatische Löschung alter Bons (Einstellungen: Zeitraum, Default 3
   Monate; WorkManager- oder Sync-getriggerte Bereinigung von `ReceiptEntity`/`ReceiptItemEntity`
-  älter als Grenze) · M · Impact mittel
+  älter als Grenze) · M · Impact mittel — **umgesetzt:** Sync-getriggert statt eigener
+  WorkManager-Job — `SyncWorker.doWork()` ruft `purgeOldReceipts()` als allerersten Schritt auf,
+  unabhängig von Server-Konfiguration, läuft also bei jedem Worker-Lauf (periodisch,
+  Connectivity-Change, App-Vordergrund) auch offline. Neue `AppPreferences.receiptRetentionMonths`
+  (0/1/3/6/12, Default 3; 0 = nie löschen), `ReceiptDao.findIdsOlderThan()` +
+  `ReceiptRepository.purgeReceiptsOlderThan()` nutzen exakt denselben Soft-Delete-Pfad wie das
+  bestehende manuelle `deleteReceipt()` (kein rohes `DELETE`, `deleted=1`/`dirty=1` für den
+  Sync). Neuer Einstellungen-Abschnitt „Bons" mit Dropdown, analog zum bestehenden
+  `SettingsPlanDaysDropdown`-Muster.
 
 _Weitere Aufgaben nach dem Interview._
 

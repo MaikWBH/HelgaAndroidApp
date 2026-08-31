@@ -20,6 +20,10 @@ interface ReceiptDao {
     @Query("SELECT * FROM receipts WHERE id = :id")
     suspend fun findById(id: String): ReceiptEntity?
 
+    /** Für die automatische Bon-Löschung (bons-kosten A4) — purchaseDate liegt in epoch-ms vor. */
+    @Query("SELECT id FROM receipts WHERE deleted = 0 AND purchaseDate < :beforeEpochMillis")
+    suspend fun findIdsOlderThan(beforeEpochMillis: Long): List<String>
+
     @Query("SELECT * FROM receipt_items WHERE receiptId = :receiptId AND deleted = 0 ORDER BY position ASC")
     fun observeItems(receiptId: String): Flow<List<ReceiptItemEntity>>
 
