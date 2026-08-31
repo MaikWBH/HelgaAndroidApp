@@ -1,6 +1,6 @@
 # Feature: KI
 
-> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
 
 Rezeptgenerierung, Remix und Klassifikation. Läuft ausschließlich serverseitig; die App sendet
 Prompts und empfängt Ergebnisse per SSE-Streaming.
@@ -108,15 +108,28 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Unit-Tests für `RecipeJsonLdParser` · M · Impact mittel — deckt auch den
   Parser-Teil ab, der zuvor doppelt in [rezepte](../rezepte/plan.md) A3 stand
-- [ ] **A2** — Verhalten bei Stream-Abbruch prüfen und absichern · M · Impact hoch
+- [x] **A2** — Verhalten bei Stream-Abbruch prüfen und absichern · M · Impact hoch —
+  **umgesetzt:** `SseClient.kt` trackt jetzt, ob `[DONE]` tatsächlich empfangen wurde; bricht
+  die Verbindung vorher ab (Server-Timeout, Netzwerkabbruch), wirft `collect()` jetzt
+  `IOException("Stream wurde vorzeitig beendet")` statt ein still abgeschnittenes Teilergebnis
+  zurückzugeben. `AiGenerateViewModel`/`AiRemixViewModel` zeigen `e.message` bereits unverändert
+  an — die neue Meldung kommt dadurch ohne weitere Anpassung im UI an.
 - [ ] **A3** — Server-Erreichbarkeit vor KI-Nutzung deutlich anzeigen (Generieren, Remix,
   Klassifikation): Reachability-Check + persistenter Hinweis, statt den Fehler erst nach einem
   gescheiterten Versuch zu zeigen. Kein bestehender Mechanismus im Code — neue Infrastruktur
   nötig, potenziell auch für [sync](../sync/plan.md) relevant · L · Impact hoch
-- [ ] **A4** — `IngredientLineParser` robuster für KI-generierte Zutatenzeilen machen
+- [x] **A4** — `IngredientLineParser` robuster für KI-generierte Zutatenzeilen machen
   (unbekannte Einheiten nicht verwerfen, Unicode-Brüche wie ½/¼ erkennen, reine Kopfzeilen wie
   „Für den Teig:" nicht als Zutat durchreichen) · M · Impact hoch — Testabdeckung dafür bereits
-  in [einkaufsliste](../einkaufsliste/plan.md) A3 vorgemerkt
+  in [einkaufsliste](../einkaufsliste/plan.md) A3 vorgemerkt — **umgesetzt:** unbekannte
+  Einheiten wurden beim Nachgehen bereits nicht verworfen (Rest der Zeile blieb immer als
+  `food` erhalten, verifiziert statt angenommen). Neu: `UNICODE_FRACTION_RE` erkennt ½/¼/¾ und
+  die übrigen gängigen Unicode-Bruchzeichen, auch mit vorangestellter Ganzzahl ("1½"); neue
+  `isHeaderLine()`-Funktion erkennt Kopfzeilen (kein Ziffernzeichen **und** endet auf „:" oder
+  komplett in Markdown-Fettschrift), gefiltert vor `mapIndexed` in `AiGenerateViewModel.kt` und
+  `AiRemixViewModel.kt`. Beide Fixes zusätzlich nach `server/app/ingredient_parser.py` gespiegelt
+  (dessen Docstring verlangt Parität mit `IngredientLineParser.kt`) und im URL-Import
+  (`ai.py:import_url`) angewendet.
 
 _Weitere Aufgaben nach dem Interview._
 

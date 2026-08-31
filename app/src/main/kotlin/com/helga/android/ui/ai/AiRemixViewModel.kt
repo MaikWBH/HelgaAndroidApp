@@ -131,7 +131,7 @@ class AiRemixViewModel @Inject constructor(
                 localImageUri = "",
                 createdAt = now,
             )
-            val ingredients = recipe.ingredients.mapIndexed { idx, line ->
+            val ingredients = recipe.ingredients.filterNot(IngredientLineParser::isHeaderLine).mapIndexed { idx, line ->
                 val parsed = IngredientLineParser.parse(line)
                 IngredientEntity(
                     id = UUID.randomUUID().toString(),

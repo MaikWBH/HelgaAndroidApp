@@ -5,6 +5,7 @@ import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.util.AisleProductKey
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
@@ -89,7 +90,8 @@ class StoreRepository @Inject constructor(
     }
 
     suspend fun saveAisleProduct(productName: String, aisleName: String, storeId: String) {
-        val existing = storeDao.findAisleProductEntry(productName.lowercase(), storeId)
+        val key = AisleProductKey.normalize(productName)
+        val existing = storeDao.findAisleProductEntry(key, storeId)
         val ts = now()
         if (existing != null) {
             storeDao.upsertAisleProduct(
@@ -100,7 +102,7 @@ class StoreRepository @Inject constructor(
                 AisleProductEntity(
                     id = UUID.randomUUID().toString(),
                     aisleName = aisleName,
-                    productName = productName.lowercase(),
+                    productName = key,
                     storeId = storeId,
                     updatedAt = ts,
                     dirty = 1,
@@ -110,7 +112,7 @@ class StoreRepository @Inject constructor(
     }
 
     suspend fun findAisleForProduct(productName: String, storeId: String): String? =
-        storeDao.findAisleForProduct(productName.lowercase(), storeId)
+        storeDao.findAisleForProduct(AisleProductKey.normalize(productName), storeId)
 
     suspend fun findActiveStoreId(): String? = storeDao.findActiveStore()?.id
 

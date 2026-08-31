@@ -1,6 +1,6 @@
 # Feature: Rezepte
 
-> **Status:** Interview erledigt · **Aufgaben:** 8 offen (2 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 7 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Zweiter Bottom-Nav-Tab. Datenbasis für Wochenplan und Einkaufsliste.
 
@@ -195,10 +195,24 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       aber mit `IMPORTANCE_HIGH`. **Setzt [plattform](../plattform/plan.md) A4 voraus** · L · Impact hoch
 - [ ] **A9** — Portionsskalierung je Rezept persistieren (neues Feld in `RecipeEntity` +
       Room-Migration v31 + Sync-Anbindung) · M · Impact mittel
-- [ ] **A10** — URL-Import reparieren: `supported_only=False` in `server/app/ai.py:270`,
+- [x] **A10** — URL-Import reparieren: `supported_only=False` in `server/app/ai.py:270`,
       `WebsiteNotImplementedError` / `NoSchemaFoundInWildMode` / HTTP-Fehler getrennt behandeln
       und als verständliche deutsche Meldung ausgeben statt rohem `e.message`
-      (`UrlImportViewModel.kt:61-62`); `RecipeJsonLdParser` als Client-Fallback prüfen · M · Impact hoch
+      (`UrlImportViewModel.kt:61-62`); `RecipeJsonLdParser` als Client-Fallback prüfen · M ·
+      Impact hoch — **umgesetzt:** `import_url()` in `server/app/ai.py` fängt jetzt
+      `httpx.HTTPStatusError`/`httpx.RequestError` beim Abruf und
+      `WebsiteNotImplementedError`/`NoSchemaFoundInWildMode`/generische Scraper-Fehler getrennt
+      ab, jeweils als `HTTPException(422, detail="...")` mit verständlichem deutschen Text.
+      `scrape_html()` läuft jetzt mit `supported_only=False` — Seiten ohne dediziertem Scraper
+      werden per generischem schema.org-Parser versucht statt sofort abgelehnt zu werden, der
+      Haupt-Fehlerfall überhaupt. `UrlImportViewModel.kt` liest bei `HttpException` das
+      `detail`-Feld aus dem Fehlerbody (`org.json.JSONObject`, gleiches Muster wie
+      `SettingsViewModel.kt`) statt `e.message` zu zeigen; `IOException` (offline) und
+      unbekannte Fehler bleiben als Fallback. **Bewusst nicht umgesetzt:** clientseitiger
+      `RecipeJsonLdParser`-Fallback bei komplettem Scraper-Fehlschlag — eigenständige neue
+      Fähigkeit (Client müsste die Seite selbst laden), durch den serverseitigen Wild-Mode-Fix
+      deckt der Server jetzt bereits den weit überwiegenden Fehlerfall ab; als Folgeaufgabe
+      vermerkt statt in dieser Runde mit umgesetzt.
 
 ## Entscheidungen
 

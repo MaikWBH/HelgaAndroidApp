@@ -37,6 +37,27 @@ _QUANTITY_RE = re.compile(r"^(\d+[.,]?\d*)\s*(?:/\s*(\d+))?(?:\s*-\s*\d+[.,]?\d*
 _TRAILING_NOTE_RE = re.compile(r"\(([^()]*)\)\s*$")
 _FIRST_WORD_RE = re.compile(r"^([^\s,]+)\s*(.*)$")
 
+# Unicode-Bruchzeichen ("½ TL Salz", "1½ EL Öl") — viele Rezeptseiten schreiben Mengen so.
+_UNICODE_FRACTIONS = {
+    "¼": 0.25, "½": 0.5, "¾": 0.75,
+    "⅓": 1 / 3, "⅔": 2 / 3,
+    "⅕": 0.2, "⅖": 0.4, "⅗": 0.6, "⅘": 0.8,
+    "⅙": 1 / 6, "⅚": 5 / 6,
+    "⅛": 0.125, "⅜": 0.375, "⅝": 0.625, "⅞": 0.875,
+}
+_UNICODE_FRACTION_RE = re.compile(r"^(\d+)?\s*([¼½¾⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])\s*")
+
+# Kopfzeile innerhalb einer Zutatenliste ("Für den Teig:") statt einer echten Zutat — enthält
+# per Definition keine Zahl, sonst würde eine mengenlose Zutat ("Salz") fälschlich rausfallen.
+_MARKDOWN_HEADER_RE = re.compile(r"^\*{1,2}[^*]+\*{1,2}:?$")
+
+
+def is_header_line(raw: str) -> bool:
+    trimmed = raw.strip()
+    if not trimmed or any(ch.isdigit() for ch in trimmed):
+        return False
+    return trimmed.endswith(":") or bool(_MARKDOWN_HEADER_RE.match(trimmed))
+
 
 def parse_ingredient_line(raw: str) -> dict:
     """Zerlegt eine Freitext-Zutatenzeile ("200g Mehl") in quantity/unit/food/note.
@@ -56,15 +77,21 @@ def parse_ingredient_line(raw: str) -> dict:
         rest = (rest[: note_match.start()] + rest[note_match.end():]).strip()
 
     quantity = 0.0
-    qty_match = _QUANTITY_RE.match(rest)
-    if qty_match and qty_match.group(0).strip():
-        whole = float(qty_match.group(1).replace(",", "."))
-        fraction_denom = qty_match.group(2)
-        if fraction_denom and float(fraction_denom) != 0.0:
-            quantity = whole / float(fraction_denom)
-        else:
-            quantity = whole
-        rest = rest[qty_match.end():].strip()
+    unicode_match = _UNICODE_FRACTION_RE.match(rest)
+    if unicode_match:
+        whole = float(unicode_match.group(1)) if unicode_match.group(1) else 0.0
+        quantity = whole + _UNICODE_FRACTIONS[unicode_match.group(2)]
+        rest = rest[unicode_match.end():].strip()
+    else:
+        qty_match = _QUANTITY_RE.match(rest)
+        if qty_match and qty_match.group(0).strip():
+            whole = float(qty_match.group(1).replace(",", "."))
+            fraction_denom = qty_match.group(2)
+            if fraction_denom and float(fraction_denom) != 0.0:
+                quantity = whole / float(fraction_denom)
+            else:
+                quantity = whole
+            rest = rest[qty_match.end():].strip()
 
     unit = ""
     if rest:

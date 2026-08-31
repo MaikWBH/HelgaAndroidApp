@@ -107,12 +107,18 @@ class RecipeRepository @Inject constructor(
     suspend fun getRecipeNutrition(recipeId: String): RecipeNutrition {
         val recipe = recipeDao.findById(recipeId)
         val totalKcal = recipe?.nutritionKcal ?: 0.0
+        val protein = recipe?.nutritionProtein ?: 0.0
+        val fat = recipe?.nutritionFat ?: 0.0
+        val carbs = recipe?.nutritionCarbs ?: 0.0
         return RecipeNutrition(
             totalKcal = totalKcal,
             kcalPerPortion = totalKcal / NUTRITION_BASELINE_PORTIONS,
-            protein = recipe?.nutritionProtein ?: 0.0,
-            fat = recipe?.nutritionFat ?: 0.0,
-            carbs = recipe?.nutritionCarbs ?: 0.0,
+            protein = protein,
+            fat = fat,
+            carbs = carbs,
+            proteinPerPortion = protein / NUTRITION_BASELINE_PORTIONS,
+            fatPerPortion = fat / NUTRITION_BASELINE_PORTIONS,
+            carbsPerPortion = carbs / NUTRITION_BASELINE_PORTIONS,
             nutriScore = recipe?.nutritionNutriScore ?: "",
             source = recipe?.nutritionSource ?: "",
         )

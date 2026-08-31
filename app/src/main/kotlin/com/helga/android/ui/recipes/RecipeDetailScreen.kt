@@ -367,6 +367,7 @@ fun RecipeDetailScreen(
                     NutritionSection(
                         nutrition = nutrition,
                         isCalculating = uiState.isCalculatingNutrition,
+                        scaleFactor = scaleFactor,
                         onCalculateWithAi = { viewModel.calculateNutritionWithAi() },
                         onEditManual = { showNutritionDialog = true },
                     )
@@ -534,6 +535,7 @@ private fun MetadataSection(recipe: RecipeEntity) {
 private fun NutritionSection(
     nutrition: com.helga.android.data.model.RecipeNutrition?,
     isCalculating: Boolean,
+    scaleFactor: Float = 1f,
     onCalculateWithAi: () -> Unit,
     onEditManual: () -> Unit,
 ) {
@@ -556,10 +558,10 @@ private fun NutritionSection(
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
             ) {
-                NutritionItem(value = String.format("%.0f", nutrition.kcalPerPortion), unit = "kcal")
-                NutritionItem(value = String.format("%.1f", nutrition.protein), unit = "g Protein")
-                NutritionItem(value = String.format("%.1f", nutrition.fat), unit = "g Fett")
-                NutritionItem(value = String.format("%.1f", nutrition.carbs), unit = "g KH")
+                NutritionItem(value = String.format("%.0f", nutrition.kcalPerPortion * scaleFactor), unit = "kcal")
+                NutritionItem(value = String.format("%.1f", nutrition.proteinPerPortion * scaleFactor), unit = "g Protein")
+                NutritionItem(value = String.format("%.1f", nutrition.fatPerPortion * scaleFactor), unit = "g Fett")
+                NutritionItem(value = String.format("%.1f", nutrition.carbsPerPortion * scaleFactor), unit = "g KH")
             }
             if (nutrition.nutriScore.isNotBlank()) {
                 Row(

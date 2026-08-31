@@ -6,7 +6,7 @@ nach **Dringlichkeit × Aufwand**, damit Quick Wins nicht hinter großen Brocken
 Die Details bleiben im jeweiligen `plan.md`; diese Datei sagt nur, **in welcher Reihenfolge**.
 Statuspflege läuft weiter über die Bereichspläne und [README.md](README.md).
 
-**Stand:** 2026-08-30 · Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
+**Stand:** 2026-08-31 · Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 ---
 
@@ -51,21 +51,31 @@ Gang-Zuordnung, Zutaten-Parser, Export-Vorschau, Stream-Abbruch).
 
 ---
 
-## 🔧 Welle 2 — Kernabläufe reparieren · 7 Punkte, M
+## 🔧 Welle 2 — Kernabläufe reparieren — vollständig umgesetzt (2026-08-31)
 
 Die Dinge, die im Alltag heute nicht richtig funktionieren.
 
 | Punkt | Inhalt |
 |-------|--------|
-| **rezepte A10** | URL-Import reparieren (`supported_only=False` + verständliche Fehlermeldungen) |
+| ✅ **rezepte A10** | URL-Import reparieren (`supported_only=False` + verständliche Fehlermeldungen) |
 | ✅ **wochenplan A6** | Filterlogik: Süßspeisen-als-Abendessen-Bug + `regenerateDay()` auf dieselben Filter |
-| **naehrwerte A4** | Nährwerte korrekt pro Portion und mit dem Portionswähler skalierend |
-| **maerkte A2** | Gang-Zuordnung normalisieren — größter Reibungspunkt der Einkaufsliste |
-| **ki A4** | `IngredientLineParser` robuster (unbekannte Einheiten, ½/¼, Kopfzeilen) |
+| ✅ **naehrwerte A4** | Nährwerte korrekt pro Portion und mit dem Portionswähler skalierend |
+| ✅ **maerkte A2** | Gang-Zuordnung normalisieren — größter Reibungspunkt der Einkaufsliste |
+| ✅ **ki A4** | `IngredientLineParser` robuster (unbekannte Einheiten, ½/¼, Kopfzeilen) |
 | ✅ **wochenplan A12** | Export in die Einkaufsliste: Extras mitnehmen + abwählbare Vorschau |
-| **ki A2** | Verhalten bei Stream-Abbruch absichern |
+| ✅ **ki A2** | Verhalten bei Stream-Abbruch absichern |
 
-> maerkte A2 und ki A4 brauchen beide eine Namensnormalisierung — zusammen denken.
+maerkte A2 und ki A4 nutzen am Ende **keinen** gemeinsamen Normalisierungscode — beim Umsetzen
+zeigte sich, dass beide unterschiedliche Ziele verfolgen (Lookup-Schlüssel bilden vs.
+Zutatenzeile zerlegen); jeweils eigenständig gelöst (neues `AisleProductKey.normalize()` bzw.
+Erweiterung von `IngredientLineParser`).
+
+Details: [rezepte](rezepte/plan.md) A10, [wochenplan](wochenplan/plan.md) A6/A12,
+[naehrwerte](naehrwerte/plan.md) A4, [maerkte](maerkte/plan.md) A2, [ki](ki/plan.md) A2/A4 —
+jeweils mit „umgesetzt"-Vermerk.
+
+**Weiter geht's mit Welle 3** (Aufräumen & Fundament — Nutri-Score entfernen, Vorlagen-Feature
+ausbauen, Sync-Lücken schließen, Tests für sicherheitsrelevante Logik).
 
 ---
 

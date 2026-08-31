@@ -5,8 +5,9 @@ from typing import AsyncIterator
 
 import httpx
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
-from .ingredient_parser import parse_ingredient_line
+from .ingredient_parser import is_header_line, parse_ingredient_line
 from .models import (
     AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiNutritionRequest,
     AiUrlImportRequest,
@@ -262,16 +263,35 @@ def _safe(scraper, method: str, default=""):
 
 async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
     from recipe_scrapers import scrape_html
+    from recipe_scrapers._exceptions import NoSchemaFoundInWildMode, WebsiteNotImplementedError
 
-    async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-        resp = await client.get(req.url, headers={"User-Agent": "Mozilla/5.0"})
-        resp.raise_for_status()
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            resp = await client.get(req.url, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=422, detail=f"Seite antwortet mit Fehler {e.response.status_code}"
+        ) from e
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=422, detail="Seite nicht erreichbar") from e
 
-    scraper = scrape_html(resp.text, org_url=req.url)
+    try:
+        # supported_only=False: auch bei Seiten ohne dediziertem Scraper per generischem
+        # schema.org-Parser versuchen, statt nur die feste Domain-Liste zu erlauben.
+        scraper = scrape_html(resp.text, org_url=req.url, supported_only=False)
+    except WebsiteNotImplementedError as e:
+        raise HTTPException(status_code=422, detail="Diese Seite wird nicht unterstützt") from e
+    except NoSchemaFoundInWildMode as e:
+        raise HTTPException(status_code=422, detail="Kein Rezept auf dieser Seite gefunden") from e
+    except Exception as e:
+        raise HTTPException(status_code=422, detail="Rezept konnte nicht gelesen werden") from e
 
     raw_ingredients = _safe(scraper, "ingredients", [])
     ingredients = [
-        ImportedIngredient(**parse_ingredient_line(s)) for s in raw_ingredients if s.strip()
+        ImportedIngredient(**parse_ingredient_line(s))
+        for s in raw_ingredients
+        if s.strip() and not is_header_line(s)
     ]
 
     raw_instructions = _safe(scraper, "instructions_list", [])

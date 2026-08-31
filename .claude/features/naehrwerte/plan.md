@@ -1,6 +1,6 @@
 # Feature: Nährwerte & Allergene
 
-> **Status:** Interview erledigt · **Aufgaben:** 4 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐
 
 OpenFoodFacts-Anbindung, Nährwerte je Rezept, Nutri-Score und Allergenwarnungen. Querschnitts-
 funktion ohne eigenen Screen — sichtbar in Rezepten, Einkaufsliste und Wochenplan.
@@ -117,10 +117,19 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   Generierungs-Filter `WeekplanConstraintsEntity.minNutriScore` in
   [wochenplan](../wochenplan/plan.md). Room-Spalten bleiben bestehen (nicht destruktiv), werden
   nur nicht mehr befüllt/angezeigt · L · Impact hoch
-- [ ] **A4** — Nährwerte korrekt pro Portion berechnen und mit dem Portionswähler skalieren:
+- [x] **A4** — Nährwerte korrekt pro Portion berechnen und mit dem Portionswähler skalieren:
   `protein`/`fat`/`carbs` in `RecipeNutrition` sind aktuell fix für die 4er-Baseline
   (`NUTRITION_BASELINE_PORTIONS`), `NutritionSection` bekommt keinen `scaleFactor` · M · Impact
-  hoch
+  hoch — **umgesetzt:** `RecipeNutrition` bekommt drei neue Felder
+  `proteinPerPortion`/`fatPerPortion`/`carbsPerPortion` (analog zum bereits vorhandenen
+  `kcalPerPortion`), berechnet in `RecipeRepository.getRecipeNutrition()`. Die rohen
+  Batch-Totalwerte (`protein`/`fat`/`carbs`) bleiben unverändert erhalten — sie sind die
+  Grundlage für den Bearbeiten-Dialog (`NutritionEditDialog`), der sie direkt in
+  `saveNutrition()` zurückschreibt; ein Umstellen dieser Felder auf Pro-Portion-Werte hätte den
+  Rundweg dort kaputt gemacht (Wert würde bei jedem erneuten Speichern durch 4 geteilt).
+  `NutritionSection` bekommt neuen `scaleFactor: Float = 1f`-Parameter, multipliziert alle vier
+  angezeigten Werte damit; Aufrufstelle in `RecipeDetailScreen.kt` reicht den bereits im Scope
+  vorhandenen `scaleFactor` durch.
 
 _Weitere Aufgaben nach dem Interview._
 

@@ -5,11 +5,14 @@ package com.helga.android.data.model
 const val NUTRITION_BASELINE_PORTIONS = 4
 
 data class RecipeNutrition(
-    val totalKcal: Double,          // Gesamtkalorien für NUTRITION_BASELINE_PORTIONS Portionen
+    val totalKcal: Double,          // Gesamtkalorien für NUTRITION_BASELINE_PORTIONS Portionen — Basis für den Bearbeiten-Dialog
     val kcalPerPortion: Double,     // totalKcal / NUTRITION_BASELINE_PORTIONS
-    val protein: Double,            // g, für NUTRITION_BASELINE_PORTIONS Portionen
-    val fat: Double,                // g, für NUTRITION_BASELINE_PORTIONS Portionen
-    val carbs: Double,              // g, für NUTRITION_BASELINE_PORTIONS Portionen
+    val protein: Double,            // g, für NUTRITION_BASELINE_PORTIONS Portionen — Basis für den Bearbeiten-Dialog
+    val fat: Double,                // g, für NUTRITION_BASELINE_PORTIONS Portionen — Basis für den Bearbeiten-Dialog
+    val carbs: Double,              // g, für NUTRITION_BASELINE_PORTIONS Portionen — Basis für den Bearbeiten-Dialog
+    val proteinPerPortion: Double,  // protein / NUTRITION_BASELINE_PORTIONS — für die Anzeige
+    val fatPerPortion: Double,      // fat / NUTRITION_BASELINE_PORTIONS — für die Anzeige
+    val carbsPerPortion: Double,    // carbs / NUTRITION_BASELINE_PORTIONS — für die Anzeige
     val nutriScore: String,         // "a"-"e"
     val source: String,             // "manual", "ai" oder "" (noch nicht ermittelt)
 )

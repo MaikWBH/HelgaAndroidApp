@@ -1,6 +1,6 @@
 # Feature: Märkte & Gänge
 
-> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐
 
 Bestimmt die Reihenfolge, in der die Einkaufsliste sortiert wird. Kleiner Bereich mit direkter
 Wirkung auf den Einkauf.
@@ -81,12 +81,22 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Drag-and-Drop für die Gangreihenfolge · M · Impact mittel — bestätigter Bedarf
   aus dem Interview (mehrere Märkte, viele Gänge)
-- [ ] **A2** — Gang-Zuordnung robuster machen: `findAisleForProduct`/`findAisleProductEntry`
+- [x] **A2** — Gang-Zuordnung robuster machen: `findAisleForProduct`/`findAisleProductEntry`
   (`StoreDao.kt:31`/`:34`) matchen exakt, keine Normalisierung von Plural/Singular oder
   Klammerzusätzen (`Zwiebel` ↔ `Zwiebeln`, `Tomaten (klein)`) · M · Impact hoch — löst zugleich
   [einkaufsliste](../einkaufsliste/plan.md) A6 („falsche Gang-Zuordnung", größter Reibungspunkt
   aus dem Einkaufslisten-Interview); dort aufgelöst, hier umgesetzt. Normalisierung möglichst
-  gemeinsam mit [ki](../ki/plan.md) A4 denken — beide brauchen dieselbe Namensbereinigung
+  gemeinsam mit [ki](../ki/plan.md) A4 denken — beide brauchen dieselbe Namensbereinigung —
+  **umgesetzt:** neues `AisleProductKey.normalize()` (`data/util/AisleProductKey.kt`) bildet
+  einen stabilen Lookup-Schlüssel statt reinem `.lowercase()`: entfernt Klammerzusätze (gleiches
+  Regex-Prinzip wie `IngredientLineParser.TRAILING_NOTE_RE`) und faltet ein gängiges deutsches
+  Plural-Suffix weg (`en`/`er`/`n`/`e`, nur wenn der verbleibende Stamm ≥ 3 Zeichen hat) — kein
+  echter Lemmatisierer, sondern ein symmetrischer Faltungsschlüssel: „Zwiebel" und „Zwiebeln"
+  treffen denselben Schlüssel, ohne die grammatikalisch korrekte Grundform zu ermitteln. In
+  `StoreRepository.saveAisleProduct()` (Schreiben) und `findAisleForProduct()` (Lesen) identisch
+  angewendet, damit das Format konsistent bleibt. Bewusst kein gemeinsamer Code mit
+  [ki](../ki/plan.md) A4 — andere Zielsetzung (Lookup-Schlüssel bilden vs. Zutatenzeile in
+  Menge/Einheit/Food zerlegen).
 - [ ] **A3** — Neue Märkte vorbefüllen: Standard-Gangsatz als Vorlage anbieten, alternativ
   Gänge von einem bestehenden Markt kopieren · M · Impact mittel
 - [x] **A4** — Märkte direkter erreichbar machen: aktuell nur über Einstellungen → Märkte

@@ -26,6 +26,7 @@ class SseClient @Inject constructor(
             .post(bodyJson.toRequestBody("application/json".toMediaType()))
             .build()
         val sb = StringBuilder()
+        var streamCompleted = false
         httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             val source = response.body?.source() ?: throw IOException("Leere Antwort")
@@ -33,11 +34,17 @@ class SseClient @Inject constructor(
                 val line = source.readUtf8Line() ?: break
                 if (line.startsWith("data: ")) {
                     val data = line.removePrefix("data: ")
-                    if (data == "[DONE]") break
+                    if (data == "[DONE]") {
+                        streamCompleted = true
+                        break
+                    }
                     sb.append(data.replace("\\n", "\n"))
                 }
             }
         }
+        // Verbindung kann vor [DONE] abreißen (Server-Timeout, Netzwerkabbruch) — ohne diese
+        // Prüfung würde der Aufrufer ein stillschweigend abgeschnittenes Ergebnis erhalten.
+        if (!streamCompleted) throw IOException("Stream wurde vorzeitig beendet")
         sb.toString()
     }
 }

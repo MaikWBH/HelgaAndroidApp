@@ -49,6 +49,27 @@ object IngredientLineParser {
     private val TRAILING_NOTE_RE = Regex("""\(([^()]*)\)\s*$""")
     private val FIRST_WORD_RE = Regex("""^([^\s,]+)\s*(.*)$""")
 
+    // Unicode-Bruchzeichen ("½ TL Salz", "1½ EL Öl") — vor der ASCII-Mengenerkennung geprüft.
+    private val UNICODE_FRACTIONS: Map<Char, Double> = mapOf(
+        '¼' to 0.25, '½' to 0.5, '¾' to 0.75,
+        '⅓' to 1.0 / 3, '⅔' to 2.0 / 3,
+        '⅕' to 0.2, '⅖' to 0.4, '⅗' to 0.6, '⅘' to 0.8,
+        '⅙' to 1.0 / 6, '⅚' to 5.0 / 6,
+        '⅛' to 0.125, '⅜' to 0.375, '⅝' to 0.625, '⅞' to 0.875,
+    )
+    private val UNICODE_FRACTION_RE = Regex("""^(\d+)?\s*([¼½¾⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])\s*""")
+
+    // Kopfzeile innerhalb einer Zutatenliste ("Für den Teig:", "**Sauce**") statt einer echten
+    // Zutat — enthält per Definition keine Zahl, sonst würde eine mengenlose Zutat ("Salz")
+    // fälschlich mit rausfallen.
+    private val MARKDOWN_HEADER_RE = Regex("""^\*{1,2}[^*]+\*{1,2}:?$""")
+
+    fun isHeaderLine(raw: String): Boolean {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty() || trimmed.any { it.isDigit() }) return false
+        return trimmed.endsWith(":") || MARKDOWN_HEADER_RE.matches(trimmed)
+    }
+
     fun parse(raw: String): ParsedIngredientLine {
         var rest = raw.trim()
         if (rest.isEmpty()) return ParsedIngredientLine()
@@ -60,11 +81,19 @@ object IngredientLineParser {
         }
 
         var quantity = 0.0
-        QUANTITY_RE.find(rest)?.takeIf { it.value.isNotBlank() }?.let { match ->
-            val whole = match.groupValues[1].replace(",", ".").toDoubleOrNull() ?: 0.0
-            val fractionDenom = match.groupValues[2].toDoubleOrNull()
-            quantity = if (fractionDenom != null && fractionDenom != 0.0) whole / fractionDenom else whole
-            rest = rest.substring(match.value.length).trim()
+        val unicodeMatch = UNICODE_FRACTION_RE.find(rest)
+        if (unicodeMatch != null) {
+            val whole = unicodeMatch.groupValues[1].toDoubleOrNull() ?: 0.0
+            val fraction = UNICODE_FRACTIONS[unicodeMatch.groupValues[2][0]] ?: 0.0
+            quantity = whole + fraction
+            rest = rest.substring(unicodeMatch.value.length).trim()
+        } else {
+            QUANTITY_RE.find(rest)?.takeIf { it.value.isNotBlank() }?.let { match ->
+                val whole = match.groupValues[1].replace(",", ".").toDoubleOrNull() ?: 0.0
+                val fractionDenom = match.groupValues[2].toDoubleOrNull()
+                quantity = if (fractionDenom != null && fractionDenom != 0.0) whole / fractionDenom else whole
+                rest = rest.substring(match.value.length).trim()
+            }
         }
 
         var unit = ""
