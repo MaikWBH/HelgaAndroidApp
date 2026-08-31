@@ -1,6 +1,6 @@
 # Feature: Statistik
 
-> **Status:** Interview erledigt · **Aufgaben:** 3 offen · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
 
 Auswertung der Kochhistorie. Der kleinste Bereich der App.
 
@@ -75,10 +75,12 @@ Keine eigenen Entities; `recipeHistory` wird im Rezepte-Bereich gesynct.
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [ ] **A1** — Unit-Tests für die Aggregationslogik · S · Impact mittel
-- [ ] **A2** — Statistik-Screen erreichbar machen: keine Route in `HelgaNavGraph.kt`, `StatsScreen`
+- [x] **A2** — Statistik-Screen erreichbar machen: keine Route in `HelgaNavGraph.kt`, `StatsScreen`
   komplett unverdrahtet. Richtung: in den neuen Bons-Tab integrieren statt eigenem
   Bottom-Nav-Eintrag — bei Umsetzung mit [bons-kosten](../bons-kosten/plan.md) A3 zusammen
-  planen · M · Impact hoch
+  planen · M · Impact hoch — **umgesetzt:** `ROUTE_STATS` neu angelegt, erreichbar über einen
+  Insights-Icon-Button in der TopBar von `ReceiptListScreen` (dem neuen Bons-Tab), `onBack`
+  führt zurück dorthin
 - [ ] **A3** — Zeitraumfilter ergänzen, analog zum Ausgabenüberblick
   (`CostOverviewViewModel.setPeriod`-Muster wiederverwenden) · M · Impact hoch
 

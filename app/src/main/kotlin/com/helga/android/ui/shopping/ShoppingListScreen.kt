@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -110,6 +111,7 @@ fun ShoppingListScreen(
     onNavigateToReceiptScan: (String?) -> Unit = {},
     onNavigateToReceipts: () -> Unit = {},
     onNavigateToStores: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: ShoppingListViewModel = hiltViewModel(),
 ) {
     val lists by viewModel.lists.collectAsStateWithLifecycle()
@@ -313,6 +315,14 @@ fun ShoppingListScreen(
                                 onClick = {
                                     showOverflow = false
                                     onNavigateToStores()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.settings_title)) },
+                                leadingIcon = { Icon(Icons.Filled.Settings, null) },
+                                onClick = {
+                                    showOverflow = false
+                                    onNavigateToSettings()
                                 },
                             )
                             DropdownMenuItem(

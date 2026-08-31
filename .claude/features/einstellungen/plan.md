@@ -1,6 +1,6 @@
 # Feature: Einstellungen & Onboarding
 
-> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐
 
 Erste Einrichtung und zentrale Konfiguration. `SettingsViewModel` ist mit 25 öffentlichen
 Funktionen die Sammelstelle für Einstellungen aller anderen Bereiche.
@@ -102,10 +102,11 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
 - [x] **A1** — `!!` in `SettingsScreen.kt` (`syncError`) auflösen · S · Impact mittel —
       **umgesetzt:** lokale `val` statt `!!`
-- [ ] **A2** — Einstellungen von allen Hauptscreens erreichbar machen: `ShoppingListScreen`
+- [x] **A2** — Einstellungen von allen Hauptscreens erreichbar machen: `ShoppingListScreen`
   und `WeekplanScreen` bekommen einen Einstellungs-Zugang (z. B. Overflow-Menü, analog zum
   bereits vorhandenen Muster in `ShoppingListScreen.kt`), nicht nur `RecipeListScreen` ·
-  M · Impact hoch
+  M · Impact hoch — **umgesetzt:** neuer `DropdownMenuItem` „Einstellungen" in beiden
+  Overflow-Menüs, `onNavigateToSettings`-Parameter durchgereicht bis `ROUTE_SETTINGS`
 - [ ] **A3** — Einstellungen umstrukturieren: häufig genutzte Einstellungen (Einkaufsliste)
   vorn, Rest in „Erweitert" einklappen, um die flache 11-Bereiche-Liste zu entzerren ·
   M · Impact hoch

@@ -33,15 +33,18 @@ jeweils mit „umgesetzt"-Vermerk bei den betroffenen Punkten.
 
 ---
 
-## 🧭 Welle 1 — Sichtbarkeit · 4 Punkte, M
+## 🧭 Welle 1 — Sichtbarkeit · 3 von 4 Punkten erledigt (2026-08-30)
 
-Alles Navigation. Gemeinsam umsetzen, sonst wird `HelgaNavGraph.kt` viermal angefasst.
+Alles Navigation, gemeinsam in einem Durchgang durch `HelgaNavGraph.kt` umgesetzt.
 
 | Punkt | Inhalt |
 |-------|--------|
-| **bons-kosten A3 + statistik A2** | Vierter Bottom-Nav-Tab „Bons", der auch den heute komplett unverdrahteten Statistik-Screen erreichbar macht |
-| **einstellungen A2** | Einstellungen von allen Hauptscreens aus, nicht nur über Rezepte |
-| **einstellungen A3** | Einstellungen nach Nutzungshäufigkeit gliedern, Rest in „Erweitert" |
+| ✅ **bons-kosten A3 + statistik A2** | Vierter Bottom-Nav-Tab „Bons" (`ROUTE_RECEIPTS` als Root-Route), Insights-Button darin führt zum vorher komplett unverdrahteten Statistik-Screen |
+| ✅ **einstellungen A2** | Einstellungen jetzt auch aus Einkaufsliste und Wochenplan erreichbar (Overflow-Menü), nicht mehr nur über Rezepte |
+| **einstellungen A3** | Einstellungen nach Nutzungshäufigkeit gliedern, Rest in „Erweitert" — noch offen, größerer Umbau von `SettingsScreen.kt` |
+
+Details: [bons-kosten](bons-kosten/plan.md) A3, [statistik](statistik/plan.md) A2,
+[einstellungen](einstellungen/plan.md) A2.
 
 ---
 

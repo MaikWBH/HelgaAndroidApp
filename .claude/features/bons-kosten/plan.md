@@ -1,6 +1,6 @@
 # Feature: Bons & Kosten
 
-> **Status:** Interview erledigt · **Aufgaben:** 3 offen (1 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 2 offen (2 erledigt) · **Stand:** 2026-08-30 · **Priorität:** ⭐⭐
 
 Kassenbon-Scan, Preisverlauf und Ausgabenüberblick. Der größte Bereich, der in keiner
 bisherigen Dokumentation auftauchte.
@@ -106,12 +106,15 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [x] **A2** — `key`-Parameter in `ProductPriceDetailScreen.kt` ergänzen · S · Impact mittel —
       **umgesetzt:** `history.points` hat kein `id`-Feld, zusammengesetzter Schlüssel
       `key = { "${it.purchaseDate}_${it.storeId}" }`
-- [ ] **A3** — Vierten Bottom-Nav-Tab „Bons" ergänzen, der auf `ROUTE_RECEIPTS` zeigt; Menüpunkt
+- [x] **A3** — Vierten Bottom-Nav-Tab „Bons" ergänzen, der auf `ROUTE_RECEIPTS` zeigt; Menüpunkt
   „Kassenzettel" und das Erinnerungs-Banner in der Einkaufsliste können bleiben (zusätzlicher
   Weg schadet nicht) · M · Impact hoch — behebt die Kernursache aus dem Interview. Laut
   [statistik](../statistik/plan.md) A2 soll derselbe Tab auch den (aktuell unverdrahteten)
   Statistik-Screen erreichbar machen — bei Umsetzung zusammen planen, nicht zwei separate
-  Tabs bauen
+  Tabs bauen — **umgesetzt:** `ROUTE_RECEIPTS` ist jetzt vierter Root-Route/Bottom-Nav-Eintrag
+  (Icon `ReceiptLong`, String `nav_receipts` = „Bons"); Zurück-Pfeil auf `ReceiptListScreen`
+  entfernt (wie die anderen drei Root-Screens); neuer Insights-Button in der TopBar führt zu
+  `StatsScreen` (siehe [statistik](../statistik/plan.md) A2)
 - [ ] **A4** — Einstellbare automatische Löschung alter Bons (Einstellungen: Zeitraum, Default 3
   Monate; WorkManager- oder Sync-getriggerte Bereinigung von `ReceiptEntity`/`ReceiptItemEntity`
   älter als Grenze) · M · Impact mittel

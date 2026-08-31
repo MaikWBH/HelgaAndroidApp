@@ -297,6 +297,7 @@
     <string name="nav_shopping">Einkaufen</string>
     <string name="nav_recipes">Rezepte</string>
     <string name="nav_weekplan">Wochenplan</string>
+    <string name="nav_receipts">Bons</string>
 
     <!-- Erscheinungsbild -->
     <string name="settings_appearance_section">Erscheinungsbild</string>

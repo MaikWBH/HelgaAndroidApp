@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
@@ -109,6 +110,7 @@ fun WeekplanScreen(
     bottomPadding: Dp = 0.dp,
     onAddRecipeForDay: (dayId: String) -> Unit,
     onNavigateToRecipe: (recipeId: String) -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     viewModel: WeekplanViewModel = hiltViewModel(),
 ) {
     val days by viewModel.days.collectAsStateWithLifecycle()
@@ -251,6 +253,14 @@ fun WeekplanScreen(
                                 onClick = {
                                     showOverflowMenu = false
                                     viewModel.repeatLastWeek()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.settings_title)) },
+                                leadingIcon = { Icon(Icons.Filled.Settings, null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onNavigateToSettings()
                                 },
                             )
                         }
