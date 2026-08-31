@@ -1,6 +1,6 @@
 # Feature: Rezepte
 
-> **Status:** Interview erledigt · **Aufgaben:** 4 offen (6 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 3 offen (7 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Zweiter Bottom-Nav-Tab. Datenbasis für Wochenplan und Einkaufsliste.
 
@@ -207,8 +207,21 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       mehr. Die freie Sterne-Eingabe im Rezeptdetail (`RatingSection`) ist entfernt,
       `RecipeDetailViewModel.setRating()` gelöscht; die Sektion ist jetzt reine Anzeige und
       blendet sich aus, solange kein Feedback vorliegt.
-- [ ] **A7** — Kochansicht: geteilter Landscape-Modus mit Zutaten und aktuellem Schritt
-      nebeneinander · M · Impact hoch
+- [x] **A7** — Kochansicht: geteilter Landscape-Modus mit Zutaten und aktuellem Schritt
+      nebeneinander · M · Impact hoch — **umgesetzt:** neue `CookSplitView` in
+      `RecipeCookScreen.kt`, automatisch aktiv sobald `LocalConfiguration.current.orientation ==
+      Configuration.ORIENTATION_LANDSCAPE` — kein manueller Umschalter, ersetzt im Querformat
+      sowohl die Listen- als auch die bisherige Fokusansicht. Links eine eigene Spalte mit
+      Portionssteuerung + Zutaten-Checkliste (hier immer ausgeklappt, kein Auf-/Zuklappen wie im
+      Hochformat), rechts unverändert `CookFocusView` (Schritt-Pager mit Timer-Chips), nur
+      schmaler gerendert statt vollflächig — kein Duplikat, dieselbe Komponente. Der
+      Fokus-Umschalter im TopAppBar wird im Querformat ausgeblendet, da die Split-Ansicht ihn
+      ersetzt. Persönliche Notizen bleiben im Split bewusst außen vor (nicht Teil des Auftrags,
+      im Hochformat weiterhin sichtbar). Reine UI-Änderung, keine Datenmodell-Anpassung. **Nicht
+      visuell auf Emulator getestet** — diese Umgebung hat keinen laufenden Android-Emulator
+      (Standard-Vorgehen dieser Session: nur Compile + Unit-Tests als Verifikation), Rotation
+      und Split-Layout sollten vor dem nächsten Release einmal auf einem echten Gerät/Emulator
+      geprüft werden.
 - [ ] **A8** — Timer: mehrere parallel, laufen im Hintergrund weiter, melden sich per
       Benachrichtigung; Kanal `helga_reminders` aus `NotificationScheduler.kt` wiederverwendbar,
       aber mit `IMPORTANCE_HIGH`. **Setzt [plattform](../plattform/plan.md) A4 voraus** · L · Impact hoch

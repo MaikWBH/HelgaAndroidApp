@@ -1,5 +1,7 @@
 package com.helga.android.ui.recipes
 
+import android.content.res.Configuration
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,11 +10,13 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -58,6 +62,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -153,6 +158,7 @@ fun RecipeCookScreen(
     var timerRunning by remember { mutableStateOf(false) }
     var focusMode by remember { mutableStateOf(false) }
     var showRatingPrompt by remember { mutableStateOf(false) }
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     fun finish(liked: Int) {
         viewModel.confirmCooked(liked)
@@ -205,7 +211,7 @@ fun RecipeCookScreen(
                     }
                 },
                 actions = {
-                    if (instructions.isNotEmpty()) {
+                    if (instructions.isNotEmpty() && !isLandscape) {
                         IconButton(onClick = { focusMode = !focusMode }) {
                             Icon(
                                 imageVector = if (focusMode) Icons.Filled.FormatListBulleted else Icons.Filled.ViewCarousel,
@@ -238,6 +244,29 @@ fun RecipeCookScreen(
         }
 
         val total = instructions.size
+
+        if (isLandscape) {
+            CookSplitView(
+                ingredients = ingredients,
+                checkedIds = checkedIds,
+                scaleFactor = scaleFactor,
+                servings = servings,
+                baseServings = baseServings,
+                onToggleIngredient = viewModel::toggleIngredient,
+                onSetServings = viewModel::setServings,
+                instructions = instructions,
+                completedSteps = completedSteps,
+                onToggleStep = viewModel::toggleStep,
+                onStartTimer = { timer ->
+                    activeTimer = timer
+                    timerSeconds = timer.totalSeconds
+                    timerRunning = false
+                },
+                onDone = { showRatingPrompt = true },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
 
         if (focusMode) {
             CookFocusView(
@@ -437,6 +466,95 @@ fun RecipeCookScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * Geteilter Landscape-Modus (rezepte A7): Zutaten links, aktueller Schritt rechts — im Querformat
+ * automatisch statt der Wahl zwischen Listen- und Fokusansicht, die im Hochformat gilt. Zutaten
+ * bleiben hier immer ausgeklappt (kein Auf-/Zuklappen wie im Hochformat), weil die eigene Spalte
+ * dafür da ist; die rechte Seite ist [CookFocusView] unverändert, nur schmaler gerendert.
+ * Persönliche Notizen bleiben bewusst außen vor — der Auftrag war "Zutaten und aktueller Schritt
+ * nebeneinander", nicht die komplette Listenansicht gespiegelt.
+ */
+@Composable
+private fun CookSplitView(
+    ingredients: List<IngredientEntity>,
+    checkedIds: Set<String>,
+    scaleFactor: Float,
+    servings: Int,
+    baseServings: Int,
+    onToggleIngredient: (String) -> Unit,
+    onSetServings: (Int) -> Unit,
+    instructions: List<InstructionEntity>,
+    completedSteps: Set<Int>,
+    onToggleStep: (Int) -> Unit,
+    onStartTimer: (DetectedTimer) -> Unit,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .weight(0.4f)
+                .fillMaxHeight()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item(key = "header") {
+                Text(
+                    text = stringResource(R.string.recipe_detail_ingredients),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                HorizontalDivider()
+            }
+            if (baseServings > 0) {
+                item(key = "servings_control") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        IconButton(onClick = { onSetServings(servings - 1) }, enabled = servings > 1) {
+                            Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.servings_decrease))
+                        }
+                        Text(
+                            text = "$servings ${stringResource(R.string.recipe_detail_yield)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.widthIn(min = 100.dp),
+                        )
+                        IconButton(onClick = { onSetServings(servings + 1) }) {
+                            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.servings_increase))
+                        }
+                    }
+                }
+            }
+            items(ingredients, key = { it.id }) { ingredient ->
+                IngredientCheckRow(
+                    ingredient = ingredient,
+                    checked = ingredient.id in checkedIds,
+                    onToggle = { onToggleIngredient(ingredient.id) },
+                    scaleFactor = scaleFactor,
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(1.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant),
+        )
+        CookFocusView(
+            instructions = instructions,
+            completedSteps = completedSteps,
+            onToggleStep = onToggleStep,
+            onStartTimer = onStartTimer,
+            onDone = onDone,
+            modifier = Modifier
+                .weight(0.6f)
+                .fillMaxHeight(),
+        )
     }
 }
 
