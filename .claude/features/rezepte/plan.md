@@ -1,6 +1,6 @@
 # Feature: Rezepte
 
-> **Status:** Interview erledigt · **Aufgaben:** 7 offen (3 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt · **Aufgaben:** 6 offen (4 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Zweiter Bottom-Nav-Tab. Datenbasis für Wochenplan und Einkaufsliste.
 
@@ -182,9 +182,15 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       `RecipeJsonLdParser`-Teil war deckungsgleich mit [ki](../ki/plan.md) A1 und wird dort
       geführt (Parser liegt in `ui/ai/`)
 - [ ] **A4** — `recipeHistory`/`recipeFeedback` im Sync auf das `SyncDao`-Muster vereinheitlichen oder Abweichung dokumentieren · M · Impact niedrig
-- [ ] **A5** — Suche auf **Tags und Zutaten** erweitern und dabei vom In-Memory-Filter
+- [x] **A5** — Suche auf **Tags und Zutaten** erweitern und dabei vom In-Memory-Filter
       (`RecipeListViewModel.kt:69-74`) auf eine Room-Query umstellen; Muster liegen mit
-      `RecipeDao.observeRecipeIdsByTag(s)` (Zeile 33-36) und `searchIngredientNames` bereit · M · Impact hoch
+      `RecipeDao.observeRecipeIdsByTag(s)` (Zeile 33-36) und `searchIngredientNames` bereit · M ·
+      Impact hoch — **umgesetzt:** neue `RecipeDao.observeRecipeIdsByTagOrIngredientSearch()`
+      (`UNION` über `recipe_tags`/`recipe_ingredients`, `LIKE ... COLLATE NOCASE`) statt eines
+      In-Memory-Joins, da Tags/Zutaten in Nebentabellen liegen. Name/Beschreibung bleiben
+      bewusst als In-Memory-Filter (die Rezeptliste ist ohnehin schon vollständig geladen,
+      dafür lohnt sich keine eigene Query). `RecipeListViewModel.recipes` kombiniert beide
+      Ergebnisse per OR — ein Treffer in Name, Beschreibung, Tag ODER Zutat reicht.
 - [ ] **A6** — Bewertung zusammenlegen: `RecipeFeedbackEntity` wird alleinige Eingabequelle,
       `RecipeEntity.rating` daraus abgeleitet und im Detail nur noch angezeigt; Room-Migration
       und Sync-Anpassung nötig · L · Impact hoch

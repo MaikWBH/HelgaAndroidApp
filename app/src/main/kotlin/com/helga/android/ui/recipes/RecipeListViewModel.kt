@@ -13,6 +13,7 @@ import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +49,13 @@ class RecipeListViewModel @Inject constructor(
     val allTagNames: StateFlow<List<String>> = repository.observeAllTagNames()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    // Rezept-IDs, deren Tags oder Zutaten die Suchanfrage enthalten (rezepte A5) — per
+    // Room-Query statt In-Memory-Join, da Tags/Zutaten in Nebentabellen liegen.
+    private val searchMatchIds: Flow<Set<String>> = searchQuery.flatMapLatest { query ->
+        if (query.isBlank()) flowOf(emptySet())
+        else repository.observeRecipeIdsByTagOrIngredientSearch(query).map { it.toSet() }
+    }
+
     val serverUrl: StateFlow<String> = preferences.connection
         .map { it.serverUrl }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
@@ -66,11 +74,13 @@ class RecipeListViewModel @Inject constructor(
             SortOrder.RATING -> filtered.sortedByDescending { it.rating }
             SortOrder.UPDATED -> filtered.sortedByDescending { it.updatedAt }
         }
-    }.combine(searchQuery) { recipes, query ->
+    }.combine(searchQuery) { recipes, query -> recipes to query }
+    .combine(searchMatchIds) { (recipes, query), matchIds ->
         if (query.isBlank()) recipes
-        else recipes.filter {
-            it.name.contains(query, ignoreCase = true) ||
-            it.description.contains(query, ignoreCase = true)
+        else recipes.filter { recipe ->
+            recipe.name.contains(query, ignoreCase = true) ||
+            recipe.description.contains(query, ignoreCase = true) ||
+            recipe.id in matchIds
         }
     }.combine(showFavoritesOnly) { recipes, favOnly ->
         if (favOnly) recipes.filter { it.isFavorite == 1 } else recipes

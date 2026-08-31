@@ -36,6 +36,21 @@ interface RecipeDao {
     @Query("SELECT DISTINCT recipeId FROM recipe_tags WHERE name IN (:tags) AND deleted = 0")
     fun observeRecipeIdsByTags(tags: List<String>): Flow<List<String>>
 
+    // Freitextsuche über Tags und Zutaten (rezepte A5) — Name/Beschreibung bleiben In-Memory-
+    // Filter im ViewModel, da die Rezeptliste ohnehin schon vollständig geladen ist; Tags und
+    // Zutaten liegen dagegen in Nebentabellen und würden pro Rezept einen Join in Kotlin nötig
+    // machen, den SQLite hier effizienter erledigt.
+    @Query(
+        """
+        SELECT DISTINCT recipeId FROM recipe_tags
+        WHERE deleted = 0 AND name LIKE '%' || :query || '%' COLLATE NOCASE
+        UNION
+        SELECT DISTINCT recipeId FROM recipe_ingredients
+        WHERE deleted = 0 AND food LIKE '%' || :query || '%' COLLATE NOCASE
+        """
+    )
+    fun observeRecipeIdsByTagOrIngredientSearch(query: String): Flow<List<String>>
+
     @Query("UPDATE recipes SET rating = :rating, updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
     suspend fun updateRating(id: String, rating: Int, updatedAt: Long)
 
