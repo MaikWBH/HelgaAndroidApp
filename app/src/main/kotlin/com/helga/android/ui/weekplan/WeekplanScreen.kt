@@ -53,6 +53,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -139,7 +140,7 @@ fun WeekplanScreen(
     val userAllergies by viewModel.userAllergies.collectAsStateWithLifecycle()
     val canExtendWeek by viewModel.canExtendWeek.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
-    var constraintsEditorVisible by remember { mutableStateOf(false) }
+    var constraintsExpanded by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var skipConfirmDay by remember { mutableStateOf<WeekplanDayEntity?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -204,18 +205,6 @@ fun WeekplanScreen(
         )
     }
 
-    if (constraintsEditorVisible) {
-        ConstraintsEditorSheet(
-            constraints = constraints,
-            allergies = userAllergies,
-            onSave = { maxMeat, maxFish, minVeg, maxRepeat, maxKcal, prefOrganic, excludeAllergies ->
-                viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat, maxKcal, prefOrganic, excludeAllergies)
-                constraintsEditorVisible = false
-            },
-            onDismiss = { constraintsEditorVisible = false },
-        )
-    }
-
     val proposal = generateStatus as? WeekplanGenerateStatus.Proposal
     if (proposal != null) {
         ProposalSheet(
@@ -240,10 +229,12 @@ fun WeekplanScreen(
                             contentDescription = stringResource(R.string.weekplan_generate),
                         )
                     }
-                    IconButton(onClick = { constraintsEditorVisible = true }) {
+                    IconButton(onClick = { constraintsExpanded = !constraintsExpanded }) {
                         Icon(
                             imageVector = Icons.Filled.Tune,
                             contentDescription = stringResource(R.string.weekplan_constraints_title),
+                            tint = if (constraintsExpanded) MaterialTheme.colorScheme.primary
+                                    else LocalContentColor.current,
                         )
                     }
                     IconButton(onClick = { exportPicker = "all" }) {
@@ -324,6 +315,18 @@ fun WeekplanScreen(
                             )
                         }
                     }
+                }
+                item(key = "constraints_panel") {
+                    ConstraintsPanel(
+                        constraints = constraints,
+                        allergies = userAllergies,
+                        expanded = constraintsExpanded,
+                        onToggle = { constraintsExpanded = !constraintsExpanded },
+                        onSave = { maxMeat, maxFish, minVeg, maxRepeat, maxKcal, prefOrganic, excludeAllergies ->
+                            viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat, maxKcal, prefOrganic, excludeAllergies)
+                            constraintsExpanded = false
+                        },
+                    )
                 }
                 item(key = "week_balance") {
                     val total = weekBalance.meat + weekBalance.fish + weekBalance.veg + weekBalance.other
@@ -1069,15 +1072,58 @@ fun parseAllergenJson(json: String): List<String> = json
     .map { it.trim().trim('"') }
     .filter { it.isNotBlank() }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * Direkt im Wochenplan eingebettet statt als separates `ModalBottomSheet` (wochenplan A8) — im
+ * eingeklappten Zustand zeigt eine Kompaktzeile die aktiven Grenzwerte auf einen Blick, ohne
+ * dass man dafür erst ein Overlay öffnen muss.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ConstraintsEditorSheet(
+private fun ConstraintsPanel(
+    constraints: WeekplanConstraintsEntity,
+    allergies: List<String>,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "🥩≤${constraints.maxMeatPerWeek} 🐟≤${constraints.maxFishPerWeek} " +
+                    "🥬≥${constraints.minVegetarianPerWeek} · 🔥≤${constraints.maxKcalPerPortion}kcal",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.Filled.Tune,
+                contentDescription = stringResource(R.string.weekplan_constraints_title),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (expanded) {
+            ConstraintsEditorContent(
+                constraints = constraints,
+                allergies = allergies,
+                onSave = onSave,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ConstraintsEditorContent(
     constraints: WeekplanConstraintsEntity,
     allergies: List<String>,
     onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
-    onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var maxMeat by remember(constraints.maxMeatPerWeek) { mutableFloatStateOf(constraints.maxMeatPerWeek.toFloat()) }
     var maxFish by remember(constraints.maxFishPerWeek) { mutableFloatStateOf(constraints.maxFishPerWeek.toFloat()) }
     var minVeg by remember(constraints.minVegetarianPerWeek) { mutableFloatStateOf(constraints.minVegetarianPerWeek.toFloat()) }
@@ -1088,147 +1134,139 @@ private fun ConstraintsEditorSheet(
         mutableStateOf(parseAllergenJson(constraints.excludeAllergens))
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+        HorizontalDivider()
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = "${stringResource(R.string.weekplan_max_meat)}: ${maxMeat.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = maxMeat,
+            onValueChange = { maxMeat = it },
+            valueRange = 0f..7f,
+            steps = 6,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "${stringResource(R.string.weekplan_max_fish)}: ${maxFish.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = maxFish,
+            onValueChange = { maxFish = it },
+            valueRange = 0f..7f,
+            steps = 6,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "${stringResource(R.string.weekplan_min_veg)}: ${minVeg.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = minVeg,
+            onValueChange = { minVeg = it },
+            valueRange = 0f..7f,
+            steps = 6,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "${stringResource(R.string.weekplan_max_repeat)}: ${maxRepeat.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = maxRepeat,
+            onValueChange = { maxRepeat = it },
+            valueRange = 7f..28f,
+            steps = 20,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(16.dp))
+
+        HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "🔥 Nährwert-Budgets",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "Max kcal/Portion: ${maxKcal.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = maxKcal,
+            onValueChange = { maxKcal = it },
+            valueRange = 300f..1200f,
+            steps = 18,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = stringResource(R.string.weekplan_constraints_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                text = "${stringResource(R.string.weekplan_max_meat)}: ${maxMeat.toInt()}",
+                text = "🌿 Bio bevorzugt",
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Slider(
-                value = maxMeat,
-                onValueChange = { maxMeat = it },
-                valueRange = 0f..7f,
-                steps = 6,
-                modifier = Modifier.fillMaxWidth(),
+            androidx.compose.material3.Switch(
+                checked = preferOrganic,
+                onCheckedChange = { preferOrganic = it },
             )
-            Spacer(Modifier.height(8.dp))
+        }
 
+        if (allergies.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
             Text(
-                text = "${stringResource(R.string.weekplan_max_fish)}: ${maxFish.toInt()}",
+                text = "🚫 Allergene ausschließen",
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Slider(
-                value = maxFish,
-                onValueChange = { maxFish = it },
-                valueRange = 0f..7f,
-                steps = 6,
-                modifier = Modifier.fillMaxWidth(),
-            )
             Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "${stringResource(R.string.weekplan_min_veg)}: ${minVeg.toInt()}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = minVeg,
-                onValueChange = { minVeg = it },
-                valueRange = 0f..7f,
-                steps = 6,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "${stringResource(R.string.weekplan_max_repeat)}: ${maxRepeat.toInt()}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = maxRepeat,
-                onValueChange = { maxRepeat = it },
-                valueRange = 7f..28f,
-                steps = 20,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(16.dp))
-
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "🔥 Nährwert-Budgets",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Max kcal/Portion: ${maxKcal.toInt()}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = maxKcal,
-                onValueChange = { maxKcal = it },
-                valueRange = 300f..1200f,
-                steps = 18,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(
-                    text = "🌿 Bio bevorzugt",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                androidx.compose.material3.Switch(
-                    checked = preferOrganic,
-                    onCheckedChange = { preferOrganic = it },
-                )
-            }
-
-            if (allergies.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "🚫 Allergene ausschließen",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(8.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    allergies.forEach { allergen ->
-                        val selected = selectedAllergens.contains(allergen)
-                        FilterChip(
-                            selected = selected,
-                            onClick = {
-                                selectedAllergens = if (selected) {
-                                    selectedAllergens - allergen
-                                } else {
-                                    selectedAllergens + allergen
-                                }
-                            },
-                            label = { Text(allergen) },
-                        )
-                    }
+                allergies.forEach { allergen ->
+                    val selected = selectedAllergens.contains(allergen)
+                    FilterChip(
+                        selected = selected,
+                        onClick = {
+                            selectedAllergens = if (selected) {
+                                selectedAllergens - allergen
+                            } else {
+                                selectedAllergens + allergen
+                            }
+                        },
+                        label = { Text(allergen) },
+                    )
                 }
             }
-            Spacer(Modifier.height(16.dp))
-
-            Button(
-                onClick = { onSave(maxMeat.toInt(), maxFish.toInt(), minVeg.toInt(), maxRepeat.toInt(), maxKcal.toInt(), preferOrganic, selectedAllergens) },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.weekplan_constraints_save))
-            }
-            Spacer(Modifier.height(16.dp))
         }
+        Spacer(Modifier.height(16.dp))
+
+        Button(
+            onClick = { onSave(maxMeat.toInt(), maxFish.toInt(), minVeg.toInt(), maxRepeat.toInt(), maxKcal.toInt(), preferOrganic, selectedAllergens) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.weekplan_constraints_save))
+        }
+        Spacer(Modifier.height(8.dp))
     }
 }
 

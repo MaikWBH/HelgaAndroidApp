@@ -39,7 +39,7 @@ Ein Bereich, der zu groß wird, darf aufgeteilt werden — dann neuen Ordner nac
 |---|---------|------|-----------|----------|-----------|
 | 1 | Einkaufsliste | [einkaufsliste](einkaufsliste/plan.md) | erledigt | 2 offen (4 erledigt) | ⭐⭐⭐ |
 | 2 | Rezepte | [rezepte](rezepte/plan.md) | erledigt | 4 offen (6 erledigt) | ⭐⭐⭐ |
-| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 4 offen (10 erledigt) | ⭐⭐⭐ |
+| 3 | Wochenplan | [wochenplan](wochenplan/plan.md) | erledigt | 3 offen (11 erledigt) | ⭐⭐⭐ |
 | 4 | Bons & Kosten | [bons-kosten](bons-kosten/plan.md) | erledigt | 1 offen (3 erledigt) | ⭐⭐ |
 | 5 | KI | [ki](ki/plan.md) | erledigt | 2 offen (2 erledigt) | ⭐⭐ |
 | 6 | Nährwerte & Allergene | [naehrwerte](naehrwerte/plan.md) | erledigt | 0 offen (4 erledigt) | ⭐⭐ |

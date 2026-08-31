@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 4 offen (10 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 3 offen (11 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -291,9 +291,21 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       erfolgreich.
 - **A7** — → **in A6 aufgegangen** (2026-08-30). Verweise auf A7 bleiben gültig, die Arbeit
       steckt dort.
-- [ ] **A8** — Constraints-Dialog vergrößern/direkter ins Wochenplan-UI integrieren; Richtung:
+- [x] **A8** — Constraints-Dialog vergrößern/direkter ins Wochenplan-UI integrieren; Richtung:
       recherchiertes Muster (Sperren + Tages-Reroll direkt in der Tageskarte statt Extra-Dialog),
-      siehe A10 · L · Impact mittel
+      siehe A10 · L · Impact mittel — **umgesetzt:** Das inhaltliche Kernproblem hinter A8
+      (ungeeignete KI-Vorschläge, Süßspeisen als Abendessen) war schon durch A6 behoben — A8 blieb
+      damit ein reines UI-Problem: `ConstraintsEditorSheet` war ein `ModalBottomSheet`, nur über
+      das Tune-Icon erreichbar, komplett vom restlichen Wochenplan abgekoppelt („separates
+      Sheet" laut Interview-Kritik). Ersetzt durch `ConstraintsPanel`, eine Karte fest in der
+      Wochenplan-`LazyColumn` (zwischen Wochennavigation und Bilanzzeile) statt eines Overlays.
+      Eingeklappt zeigt sie eine Kompaktzeile mit allen aktiven Grenzwerten auf einen Blick
+      (🥩≤/🐟≤/🥬≥/🔥≤) — vorher waren diese Werte komplett unsichtbar, solange man den Dialog
+      nicht öffnete. Tippen auf die Karte oder das Tune-Icon (jetzt Toggle statt Dialog-Öffner)
+      klappt den vollen Editor (Slider, Bio-Switch, Allergie-Chips — Inhalt unverändert) direkt
+      darunter auf. `rememberModalBottomSheetState`/`ModalBottomSheet`-Wrapper entfernt, Inhalt in
+      `ConstraintsEditorContent` ausgelagert. Keine Datenmodell- oder ViewModel-Änderung nötig,
+      reines UI-Refactoring.
 - [x] **A16** — `WeekplanConstraintsEntity.minNutriScore` entfernen: Nutri-Score verschwindet laut
       [naehrwerte](../naehrwerte/plan.md) A3 komplett aus der App, der Generierungs-Filter in
       `WeekplanRepository.kt`/`WeekplanViewModel.kt` wird damit hinfällig · S · Impact mittel —
