@@ -168,7 +168,15 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [x] **A2** — `key`-Parameter in den `items()`-Aufrufen ergänzen · S · Impact mittel —
       **umgesetzt:** 3 Stellen (nicht 4 — bei der Umsetzung geprüft: 6 der 9 `items()`-Aufrufe
       hatten schon einen `key`)
-- [ ] **A3** — Unit-Tests für `ShoppingUnitConverter` und `IngredientLineParser` · M · Impact hoch
+- [x] **A3** — Unit-Tests für `ShoppingUnitConverter` und `IngredientLineParser` · M · Impact hoch
+      — **umgesetzt (2026-09-01):** `ShoppingUnitConverterTest.kt` (12 Tests: Massen-/Volumen-
+      Familien g/kg/gramm/gr bzw. ml/l/cl, Groß-/Kleinschreibung und Whitespace, inkompatible
+      und unbekannte Einheiten bleiben unverändert) und `IngredientLineParserTest.kt` (13 Tests:
+      Menge direkt an Einheit ohne Leerzeichen, Menge+Einheit+Klammer-Notiz, Komma als
+      Dezimaltrenner, Unicode-Bruch allein und mit Ganzzahl kombiniert, ASCII-Bruch „1/2",
+      Bereich „2-3" übernimmt die erste Zahl, Zeile ohne erkennbare Menge/Einheit bleibt
+      komplett als `food` erhalten, Abkürzung mit Punkt, unbekanntes Einheitswort wird nicht
+      abgetrennt, `isHeaderLine` für Markdown-Kopfzeilen vs. echte Zutatenzeilen)
 - [x] **A4** — `LaunchedEffect(Unit)` in `HelgaNavGraph.kt:96-104` auf die Onboarding-Route
       eingrenzen, behebt Rotationsbug (Listenwechsel + Rauswurf aus Kochansicht) · S · Impact hoch
 - [x] **A5** — `suggestItems()` um lokalen Room-Fallback ergänzt (Rezeptzutaten +

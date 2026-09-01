@@ -137,6 +137,9 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    // Echte JVM-Implementierung von org.json für Unit-Tests (z. B. RecipeJsonLdParserTest) —
+    // das android.jar-Stub wirft zur Laufzeit "Method not mocked" statt zu parsen.
+    testImplementation(libs.org.json)
 
     implementation(libs.androidx.profileinstaller)
 

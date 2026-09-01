@@ -74,7 +74,17 @@ Keine eigenen Entities; `recipeHistory` wird im Rezepte-Bereich gesynct.
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Unit-Tests für die Aggregationslogik · S · Impact mittel
+- [x] **A1** — Unit-Tests für die Aggregationslogik · S · Impact mittel —
+      **umgesetzt (2026-09-01):** Aggregation lebte inline in der `stats`-StateFlow-Lambda von
+      `StatsViewModel` mit direktem DAO-Zugriff — als reine Funktion `aggregateMonthStats()`
+      ausgelagert (gleiches Verhalten), die ViewModel lädt weiterhin `history`/`recipes`/
+      `previousRecipeIds` per DAO und reicht sie durch. `StatsAggregationTest.kt`, 10 Tests:
+      `totalCooked` zählt auch Wiederholungen, `topRecipes` nach Häufigkeit sortiert und auf 5
+      gedeckelt, gelöschte Rezepte werden übersprungen statt einen Null-Eintrag zu erzeugen,
+      Protein-Zählung nach exaktem deutschen Label (bewusst **kein** Synonym-Abgleich wie bei
+      `computeWeekBalance` im Wochenplan — eigener Test hält das fest, damit es nicht versehentlich
+      als Bug missverstanden wird), First-Timer (im Zeitraum gekocht, vorher nie), Dedupe bei
+      mehrfachem Kochen im selben Zeitraum, auf 5 gedeckelt, leere Historie → `MonthStats()`.
 - [x] **A2** — Statistik-Screen erreichbar machen: keine Route in `HelgaNavGraph.kt`, `StatsScreen`
   komplett unverdrahtet. Richtung: in den neuen Bons-Tab integrieren statt eigenem
   Bottom-Nav-Eintrag — bei Umsetzung mit [bons-kosten](../bons-kosten/plan.md) A3 zusammen

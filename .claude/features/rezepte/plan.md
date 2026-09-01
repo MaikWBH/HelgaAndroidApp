@@ -178,9 +178,14 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       S · Impact mittel — **umgesetzt:** lokale `val`s statt wiederholtem `!!`
 - [x] **A2** — `key`-Parameter in `RecipeListScreen.kt` ergänzen · S · Impact mittel —
       **umgesetzt:** `allTags` (key = it) und `unclassifiedRecipes` (key = it.id)
-- [ ] **A3** — Unit-Tests für die **Timer-Erkennung** · S · Impact mittel — der
+- [x] **A3** — Unit-Tests für die **Timer-Erkennung** · S · Impact mittel — der
       `RecipeJsonLdParser`-Teil war deckungsgleich mit [ki](../ki/plan.md) A1 und wird dort
-      geführt (Parser liegt in `ui/ai/`)
+      geführt (Parser liegt in `ui/ai/`) — **umgesetzt (2026-09-01):** `TimerDetectionTest.kt`,
+      10 Tests gegen `extractTimers()`/`DetectedTimer` aus `RecipeCookScreen.kt` — Minuten,
+      Stunden, Abkürzungen „Sek."/„Min"/„Std" mit und ohne Punkt, Groß-/Kleinschreibung,
+      Deduplizierung wenn zwei Formulierungen auf dieselbe Sekundenzahl führen („5 Minuten" /
+      „300 Sekunden"), Null-Dauer wird nicht als Timer zurückgegeben, Text ganz ohne
+      Zeitangabe, mehrere unterschiedliche Dauern in einem Schritt in Reihenfolge.
 - [ ] **A4** — `recipeHistory`/`recipeFeedback` im Sync auf das `SyncDao`-Muster vereinheitlichen oder Abweichung dokumentieren · M · Impact niedrig
 - [x] **A5** — Suche auf **Tags und Zutaten** erweitern und dabei vom In-Memory-Filter
       (`RecipeListViewModel.kt:69-74`) auf eine Room-Query umstellen; Muster liegen mit

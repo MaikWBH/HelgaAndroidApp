@@ -130,22 +130,35 @@ Veröffentlichung (außerhalb dieser Session) — Details im plattform-Plan.
 
 ---
 
-## 🧪 Tests — 8 Punkte, laufen mit
+## 🧪 Tests — 8 Punkte, 6 davon umgesetzt (2026-09-01)
 
 Entscheidung vom 2026-08-30: **nur bei kritischer Logik vorne**. `naehrwerte` A1 (Allergene)
-und `sync` A1 (Sync-Vollständigkeit) stehen deshalb schon in Welle 3. Der Rest läuft am besten
-zusammen mit dem Fix, der denselben Code ohnehin anfasst:
+und `sync` A1 (Sync-Vollständigkeit) stehen deshalb schon in Welle 3. Der Rest sollte
+zusammen mit dem Fix laufen, der denselben Code ohnehin anfasst — die ersten sechs sind
+inzwischen nachgezogen (ihr jeweiliger Auslöser war schon gelandet):
 
 | Punkt | Läuft mit |
 |-------|-----------|
-| **ki A1** (`RecipeJsonLdParser`) | ki A4 / rezepte A10 |
-| **einkaufsliste A3** (`ShoppingUnitConverter`, `IngredientLineParser`) | ki A4 |
-| **bons-kosten A1** (`ReceiptItemNormalizer`) | bons-kosten A4 |
-| **wochenplan A5** (Constraints, `weekBalance`) | wochenplan A6 |
-| **rezepte A3** (Timer-Erkennung) | rezepte A8 |
-| **statistik A1** (Aggregation) | statistik A3 |
+| ✅ **ki A1** (`RecipeJsonLdParser`) | ki A4 / rezepte A10 |
+| ✅ **einkaufsliste A3** (`ShoppingUnitConverter`, `IngredientLineParser`) | ki A4 |
+| ✅ **bons-kosten A1** (`ReceiptItemNormalizer`) | bons-kosten A4 |
+| ✅ **wochenplan A5** (Constraints, `weekBalance`) | wochenplan A6 |
+| ✅ **rezepte A3** (Timer-Erkennung) | rezepte A8 |
+| ✅ **statistik A1** (Aggregation) | statistik A3 |
 | **sync A2** (Konfliktfälle) | frei |
 | **rezepte A4** (History/Feedback-Sync vereinheitlichen) | frei · Impact niedrig |
+
+Details: [ki](ki/plan.md) A1, [einkaufsliste](einkaufsliste/plan.md) A3,
+[bons-kosten](bons-kosten/plan.md) A1, [wochenplan](wochenplan/plan.md) A5,
+[rezepte](rezepte/plan.md) A3, [statistik](statistik/plan.md) A1 — jeweils mit
+„umgesetzt"-Vermerk. Für die drei Tests, deren Logik bisher inline in einem ViewModel mit
+direktem DAO-Zugriff lag (`filterCandidateRecipes`/`computeWeekBalance` in
+`WeekplanViewModel.kt`, `aggregateMonthStats` in `StatsViewModel.kt`), wurde die Logik verhaltens-
+gleich in reine, Room-freie Top-Level-Funktionen ausgelagert — sonst wären sie ohne Robolectric/
+Fake-DAOs gar nicht sinnvoll unit-testbar gewesen. `RecipeJsonLdParserTest` brauchte zusätzlich
+`testImplementation(libs.org.json)` (echte JVM-Implementierung, das `android.jar`-Stub wirft zur
+Laufzeit „Method not mocked"). Verbleibend: **sync A2** und **rezepte A4** — beide „frei"
+laufend, kein Fix-Partner in den vier Wellen gelandet.
 
 ---
 

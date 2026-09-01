@@ -268,7 +268,23 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - [x] **A4** — `key`-Parameter in `WeekplanScreen.kt` und `WeekplanRecipePickerScreen.kt`
       ergänzen · S · Impact mittel — **umgesetzt:** `extraSuggestions` bzw. `allTags`, beide
       `key = { it }`
-- [ ] **A5** — Unit-Tests für Constraint-Auswertung und `weekBalance` · M · Impact hoch
+- [x] **A5** — Unit-Tests für Constraint-Auswertung und `weekBalance` · M · Impact hoch —
+      **umgesetzt (2026-09-01):** Beide Funktionen lebten bisher inline in `WeekplanViewModel`
+      mit direktem DAO-Zugriff (Constraint-Filter: bedingter `recipeDao.allActiveIngredients()`-
+      Aufruf; `weekBalance`: `weekplanDao.recipesForDay()` je Tag in der `combine`-Lambda) —
+      für echte Unit-Tests ohne Room als reine Top-Level-Funktionen ausgelagert (gleiches
+      Verhalten, keine Logikänderung): `filterCandidateRecipes()` bekommt die Zutaten als bereits
+      geladene `Map<String, List<String>>` durchgereicht (der `private suspend fun
+      applyRecipeFilters()`-Wrapper holt sie weiterhin nur bei Bedarf) und ein optionales
+      `today: LocalDate`-Argument, damit der Saison-Filter im Test ein festes Datum nutzt statt
+      vom Kalendertag abzuhängen; `computeWeekBalance()` nimmt die Tag→Rezepte-Zuordnung als
+      bereits geladene `Map` entgegen. `WeekplanFiltersTest.kt`, 14 Tests: mealSlot-Filter
+      (nur lunch/dinner, Fallback+Warnung wenn leer), Allergen-Filter (Ausschluss, Fallback+
+      Warnung wenn er alles leeren würde, kein Effekt ohne ausgeschlossene Allergene),
+      Kcal-Budget (unbewertete Rezepte immer behalten), Saison-Filter (aktuelle Saison +
+      „ganzjährig" + unbewertet, Fallback wenn er alles leeren würde), Protein-Zählung über
+      mehrere Tage, unbekannte `recipeId` zählt als „other", englische/deutsche Synonyme
+      case-insensitive, leere Woche → Nullen.
 - [x] **A6** — **Filterlogik in einem Griff** (2026-08-30 mit dem früheren A7 zusammengelegt,
       weil beide dieselbe Stelle anfassen und A7 ohnehin die gemeinsame Funktion verlangte):
       1. mealSlot-Filter in `generateWeekplan()` von „nicht breakfast/snack" auf „ausschließlich

@@ -106,8 +106,17 @@ Keine eigenen Entities. Erzeugte Rezepte laufen über den Rezept-Sync.
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Unit-Tests für `RecipeJsonLdParser` · M · Impact mittel — deckt auch den
-  Parser-Teil ab, der zuvor doppelt in [rezepte](../rezepte/plan.md) A3 stand
+- [x] **A1** — Unit-Tests für `RecipeJsonLdParser` · M · Impact mittel — deckt auch den
+  Parser-Teil ab, der zuvor doppelt in [rezepte](../rezepte/plan.md) A3 stand —
+  **umgesetzt (2026-09-01):** `RecipeJsonLdParserTest.kt`, 9 Tests — vollständiger JSON-LD-Block,
+  `recipeInstructions` als Plain-Strings statt HowToStep-Objekten, fehlende Felder/Defaults,
+  leere/blanke Zutaten und Instructions werden gefiltert, `cuisine`-Fallback auf
+  `rocks_cuisine`, kein `<script type="application/ld+json">` im HTML → `null`, wirklich
+  unparsbares JSON → `null` statt Exception (org.json toleriert z. B. einen trailing comma,
+  dafür braucht es ein unbalanciertes Objekt), Attribut-Reihenfolge im `<script>`-Tag egal.
+  Brauchte `testImplementation(libs.org.json)` (echte JVM-Implementierung von `org.json` für
+  Unit-Tests, `app/build.gradle.kts`) — das `android.jar`-Stub wirft sonst zur Laufzeit
+  „Method not mocked" statt zu parsen.
 - [x] **A2** — Verhalten bei Stream-Abbruch prüfen und absichern · M · Impact hoch —
   **umgesetzt:** `SseClient.kt` trackt jetzt, ob `[DONE]` tatsächlich empfangen wurde; bricht
   die Verbindung vorher ab (Server-Timeout, Netzwerkabbruch), wirft `collect()` jetzt

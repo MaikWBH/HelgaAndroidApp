@@ -81,7 +81,7 @@ Gilt für alle Pläne, hier einmal zentral festgehalten statt elfmal wiederholt:
 
 | Befund | Zahl | Guideline |
 |--------|------|-----------|
-| Testabdeckung | 5 Testklassen / 33 Tests bei 127 Kotlin-Dateien (`src/main`); ein `androidTest`-Quellverzeichnis existiert nicht | – |
+| Testabdeckung | 12 Testklassen / 109 Tests bei 131 Kotlin-Dateien (`app/src/main`); ein `androidTest`-Quellverzeichnis existiert nicht | – |
 | `!!`-Operator | 10 Stellen, verboten laut Guideline | [kotlin-quality](../guidelines/kotlin-quality.md) |
 | `items()` ohne `key` | 9 Stellen in Compose-Listen | [compose-performance](../guidelines/compose-performance.md) |
 | `contentDescription = null` | Durchsicht abgeschlossen (plattform A2): 27 von 82 Stellen waren unbeschriftete Bedienelemente, jetzt beschriftet; verbleibende 55 bewusst dekorativ/redundant | [ux-accessibility](../guidelines/ux-accessibility.md) |

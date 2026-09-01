@@ -102,7 +102,11 @@ String-Verarbeitung — ohne Tests ist jede Änderung daran riskant.
 
 Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 
-- [ ] **A1** — Unit-Tests für `ReceiptItemNormalizer` · M · Impact hoch
+- [x] **A1** — Unit-Tests für `ReceiptItemNormalizer` · M · Impact hoch —
+      **umgesetzt (2026-09-01):** `ReceiptItemNormalizerTest.kt`, 9 Tests — Kleinschreibung,
+      Trimmen, Kollabieren mehrfacher Leerzeichen, Entfernen einer angehängten einzelnen
+      Steuerklassen-Buchstabens/„EUR"/„€" (nur wenn durch Whitespace abgetrennt — ein direkt
+      angehängtes „1kg" bleibt bewusst unangetastet, da keine echte Steuerklasse), leere Eingabe
 - [x] **A2** — `key`-Parameter in `ProductPriceDetailScreen.kt` ergänzen · S · Impact mittel —
       **umgesetzt:** `history.points` hat kein `id`-Feld, zusammengesetzter Schlüssel
       `key = { "${it.purchaseDate}_${it.storeId}" }`
