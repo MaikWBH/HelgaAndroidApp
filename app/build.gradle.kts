@@ -51,6 +51,11 @@ android {
             applicationIdSuffix = ".debug"
         }
         release {
+            // Signiert mit demselben eingecheckten Keystore wie der Debug-Build. Kein eigener
+            // Release-Key, weil die App privat per Sideload verteilt wird (kein Play Store) —
+            // entscheidend ist nur, dass die Signatur über Updates hinweg gleich bleibt, sonst
+            // verlangt Android bei jedem Update eine Deinstallation.
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
