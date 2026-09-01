@@ -3,6 +3,8 @@ package com.helga.android.data.repository
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerAssignmentEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.model.DayNutrition
@@ -164,6 +166,58 @@ class WeekplanRepository @Inject constructor(
                 unit = item.unit,
                 source = "weekplan",
                 recipeName = item.recipeName,
+            )
+        }
+    }
+
+    // ── Tagesmarker (wochenplan A11) ────────────────────────────────────────────
+
+    fun observeMarkers(): Flow<List<WeekplanDayMarkerEntity>> = weekplanDao.observeMarkers()
+
+    fun observeMarkerAssignmentsForDays(dayIds: List<String>): Flow<List<WeekplanDayMarkerAssignmentEntity>> =
+        weekplanDao.observeMarkerAssignmentsForDays(dayIds)
+
+    suspend fun createMarker(name: String, color: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        weekplanDao.upsertMarker(
+            WeekplanDayMarkerEntity(
+                id = UUID.randomUUID().toString(),
+                name = trimmed,
+                color = color,
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
+        )
+    }
+
+    suspend fun updateMarker(marker: WeekplanDayMarkerEntity, name: String, color: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        weekplanDao.upsertMarker(
+            marker.copy(name = trimmed, color = color, updatedAt = System.currentTimeMillis(), dirty = 1)
+        )
+    }
+
+    suspend fun deleteMarker(marker: WeekplanDayMarkerEntity) {
+        weekplanDao.upsertMarker(marker.copy(deleted = 1, updatedAt = System.currentTimeMillis(), dirty = 1))
+    }
+
+    /** Ordnet einen Marker einem Tag zu oder entfernt ihn wieder, falls bereits zugeordnet. */
+    suspend fun toggleMarkerOnDay(dayId: String, markerId: String) {
+        val existing = weekplanDao.findMarkerAssignment(dayId, markerId)
+        val ts = System.currentTimeMillis()
+        if (existing != null) {
+            weekplanDao.upsertMarkerAssignment(existing.copy(deleted = 1, updatedAt = ts, dirty = 1))
+        } else {
+            weekplanDao.upsertMarkerAssignment(
+                WeekplanDayMarkerAssignmentEntity(
+                    id = UUID.randomUUID().toString(),
+                    weekplanDayId = dayId,
+                    markerId = markerId,
+                    updatedAt = ts,
+                    dirty = 1,
+                )
             )
         }
     }

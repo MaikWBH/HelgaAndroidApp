@@ -342,10 +342,37 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       obwohl `TABLE_COLUMNS`/`sync.py` die Spalte längst führten — jeder Push eines
       `weekplan_days`-Datensatzes wäre an der NOT-NULL-Constraint gescheitert (`rec_dict.get(c)`
       liefert `None` für ein nicht deklariertes Pydantic-Feld). Ergänzt, zusammen mit `is_locked`.
-- [ ] **A11** — Nur noch der weitergehende Teil: nutzerdefinierte, frei anlegbare Tagesmarker
+- [x] **A11** — Nur noch der weitergehende Teil: nutzerdefinierte, frei anlegbare Tagesmarker
       (über „Auswärts/kein Kochen" hinaus). Der Basisfall ist durch A15 abgedeckt. Braucht
       eigene Rückfrage zum Datenmodell (Tag-artiges System) vor der Umsetzung · L · Impact
-      niedrig
+      niedrig — **umgesetzt (2026-09-01):** Rückfrage per `AskUserQuestion` ergab die
+      Nutzerentscheidung „Wiederverwendbare Marker-Bibliothek" (statt Freitext-Tag oder festem
+      Enum) — ein neues Muster in dieser Codebase, das erstmals eine echte n:m-Beziehung über
+      eine separate Zuordnungstabelle abbildet (bisherige „Bibliotheken" wie `QuickEmojiEntity`
+      sind reine Einzeltabellen ohne Fremdreferenz). Neue Entities `WeekplanDayMarkerEntity`
+      (id, name, color als Hex-String `"#RRGGBB"` für plattformübergreifende Sync-Portabilität,
+      updatedAt/deleted/dirty) und `WeekplanDayMarkerAssignmentEntity` (id, weekplanDayId,
+      markerId, updatedAt/deleted/dirty) in `AppDatabase.kt` (`MIGRATION_35_36`, Version 36).
+      `WeekplanDao.kt`: `observeMarkers()`, `observeMarkerAssignmentsForDays()`,
+      `findMarkerAssignment()`, `upsertMarker(s)`, `upsertMarkerAssignment(s)`,
+      `dirtyMarkers()`/`dirtyMarkerAssignments()`, `clearMarkerDirty()`/
+      `clearMarkerAssignmentDirty()`. Voll an den Sync angebunden (`SyncDto.kt`, `SyncEngine.kt`
+      mit `toEntity()`/`toDto()`-Mapperpaaren, Server-Pendant in `db.py`/`models.py`/`sync.py`
+      inkl. zweier neuer Tabellen `weekplan_day_markers`/`weekplan_day_marker_assignments`).
+      `WeekplanRepository.kt` kapselt CRUD (`createMarker`/`updateMarker`/`deleteMarker`,
+      kein Cascade-Delete der Zuordnungen beim Löschen eines Markers — konsistent mit dem
+      bestehenden Muster bei `StoreRepository.deleteStore()`) und `toggleMarkerOnDay()`.
+      Verwaltung der Marker-Bibliothek (Name + Farbe aus fester Swatch-Palette,
+      `ui/components/DayMarker.kt` mit `dayMarkerColors`/`parseMarkerColor`/`DayMarkerChip`)
+      unter Einstellungen → Erweitert (`SettingsScreen.kt`/`SettingsViewModel.kt`), analog zu
+      Schnellbuttons aber bewusst hinter „Erweitert" versteckt (seltener genutztes,
+      organisatorisches Feature statt täglich gebrauchtes). Zuweisung zu Tagen direkt im
+      `WeekplanScreen.kt`/`DayCard`: zugewiesene Marker als `DayMarkerChip` (Farbe + Name, nie
+      Farbe allein — ux-accessibility Regel 7) immer sichtbar im Tageskopf, plus `FilterChip`-
+      Auswahl-Reihe im ausgeklappten Tag zum Zu-/Abwählen. `WeekplanViewModel.kt`:
+      `allMarkers`/`weekMarkers` (StateFlow, löst `markerId` über die Bibliothek auf, Muster wie
+      `weekRecipes`/`weekExtras`), `createMarker`/`updateMarker`/`deleteMarker`/
+      `toggleMarkerOnDay`.
 - [x] **A12** — **Export in die Einkaufsliste überarbeiten** (2026-08-30 mit dem früheren A13
       zusammengelegt — ein Ablauf, eine Umsetzung):
       1. Extra-Einträge (`WeekplanExtraEntity`) in `exportToShoppingList()`

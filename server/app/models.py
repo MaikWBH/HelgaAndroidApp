@@ -130,6 +130,16 @@ class WeekplanExtraRecord(SyncRecord):
     position: int = 0
 
 
+class WeekplanDayMarkerRecord(SyncRecord):
+    name: str = ""
+    color: str = ""
+
+
+class WeekplanDayMarkerAssignmentRecord(SyncRecord):
+    weekplan_day_id: str
+    marker_id: str
+
+
 class RecipeHistoryRecord(SyncRecord):
     recipe_id: str
     planned_date: str = ""
@@ -240,6 +250,8 @@ class SyncPayload(BaseModel):
     receipts: List[ReceiptRecord] = []
     receipt_items: List[ReceiptItemRecord] = []
     monthly_budgets: List[MonthlyBudgetRecord] = []
+    weekplan_day_markers: List[WeekplanDayMarkerRecord] = []
+    weekplan_day_marker_assignments: List[WeekplanDayMarkerAssignmentRecord] = []
 
 
 class SyncPullResponse(SyncPayload):

@@ -177,6 +177,24 @@ data class WeekplanDayDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class WeekplanDayMarkerDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    val name: String = "",
+    val color: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class WeekplanDayMarkerAssignmentDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "weekplan_day_id") val weekplanDayId: String,
+    @Json(name = "marker_id") val markerId: String,
+)
+
+@JsonClass(generateAdapter = true)
 data class WeekplanRecipeDto(
     val id: String,
     @Json(name = "updated_at") val updatedAt: Long,
@@ -434,6 +452,8 @@ data class SyncPullResponse(
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
     @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
     @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
+    @Json(name = "weekplan_day_markers") val weekplanDayMarkers: List<WeekplanDayMarkerDto> = emptyList(),
+    @Json(name = "weekplan_day_marker_assignments") val weekplanDayMarkerAssignments: List<WeekplanDayMarkerAssignmentDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -462,6 +482,8 @@ data class SyncPushRequest(
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
     @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
     @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
+    @Json(name = "weekplan_day_markers") val weekplanDayMarkers: List<WeekplanDayMarkerDto> = emptyList(),
+    @Json(name = "weekplan_day_marker_assignments") val weekplanDayMarkerAssignments: List<WeekplanDayMarkerAssignmentDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)

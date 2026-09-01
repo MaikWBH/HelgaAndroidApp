@@ -8,6 +8,7 @@ import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.model.WeekplanExportItem
@@ -166,6 +167,24 @@ class WeekplanViewModel @Inject constructor(
                 .map { extras -> extras.groupBy { it.weekplanDayId } }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    // Marker-Bibliothek (wochenplan A11) – nutzerdefinierte, wiederverwendbare Tagesmarker.
+    val allMarkers: StateFlow<List<WeekplanDayMarkerEntity>> = repository.observeMarkers()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // Marker je Tag der Woche, aufgelöst auf die volle Entity (Name+Farbe) über die Bibliothek.
+    val weekMarkers: StateFlow<Map<String, List<WeekplanDayMarkerEntity>>> = combine(
+        days.flatMapLatest { dayList ->
+            if (dayList.isEmpty()) flowOf(emptyList())
+            else repository.observeMarkerAssignmentsForDays(dayList.map { it.id })
+        },
+        allMarkers,
+    ) { assignments, markers ->
+        val markerById = markers.associateBy { it.id }
+        assignments
+            .mapNotNull { assignment -> markerById[assignment.markerId]?.let { assignment.weekplanDayId to it } }
+            .groupBy({ it.first }, { it.second })
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val allRecipes: StateFlow<Map<String, RecipeEntity>> = recipeDao.observeAll()
         .map { list -> list.associateBy { it.id } }
@@ -332,6 +351,36 @@ class WeekplanViewModel @Inject constructor(
     fun toggleLocked(day: WeekplanDayEntity) {
         viewModelScope.launch {
             weekplanDao.setLocked(day.id, if (day.isLocked == 0) 1 else 0, System.currentTimeMillis())
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    /** Wiederverwendbare Tagesmarker-Bibliothek pflegen (wochenplan A11). */
+    fun createMarker(name: String, color: String) {
+        viewModelScope.launch {
+            repository.createMarker(name, color)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun updateMarker(marker: WeekplanDayMarkerEntity, name: String, color: String) {
+        viewModelScope.launch {
+            repository.updateMarker(marker, name, color)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun deleteMarker(marker: WeekplanDayMarkerEntity) {
+        viewModelScope.launch {
+            repository.deleteMarker(marker)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    /** Ordnet einen Marker dem gewählten Tag zu oder entfernt ihn wieder. */
+    fun toggleMarkerOnDay(dayId: String, markerId: String) {
+        viewModelScope.launch {
+            repository.toggleMarkerOnDay(dayId, markerId)
             syncScheduler.triggerOneShot()
         }
     }

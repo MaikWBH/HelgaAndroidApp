@@ -42,6 +42,8 @@ SYNC_TABLES = [
     "receipts",
     "receipt_items",
     "monthly_budgets",
+    "weekplan_day_markers",
+    "weekplan_day_marker_assignments",
 ]
 
 SCHEMA = """
@@ -392,6 +394,24 @@ CREATE TABLE IF NOT EXISTS monthly_budgets (
     deleted         INTEGER NOT NULL DEFAULT 0
 );
 
+-- Wiederverwendbare Tagesmarker-Bibliothek (wochenplan A11) – Name+Farbe getrennt
+-- von der Zuordnung zu einem Tag, damit sie über die Woche konsistent bleiben.
+CREATE TABLE IF NOT EXISTS weekplan_day_markers (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL DEFAULT '',
+    color       TEXT NOT NULL DEFAULT '',
+    updated_at  INTEGER NOT NULL DEFAULT 0,
+    deleted     INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS weekplan_day_marker_assignments (
+    id              TEXT PRIMARY KEY,
+    weekplan_day_id TEXT NOT NULL,
+    marker_id       TEXT NOT NULL,
+    updated_at      INTEGER NOT NULL DEFAULT 0,
+    deleted         INTEGER NOT NULL DEFAULT 0
+);
+
 -- Globaler Monotonzähler für den Sync-Cursor (entkoppelt Auslieferung von
 -- der Bearbeitungs-Zeit/Client-Uhr). Wird bei jedem Push hochgezählt; jeder
 -- akzeptierte Schreibvorgang erhält die aktuelle Commit-Sequenz als server_seq.
@@ -439,6 +459,10 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_receipt ON receipt_items(receipt_id)",
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_updated ON receipt_items(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_monthly_budgets_updated ON monthly_budgets(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_weekplan_day_markers_updated ON weekplan_day_markers(updated_at)",
+    "CREATE INDEX IF NOT EXISTS idx_weekplan_day_marker_assignments_day ON weekplan_day_marker_assignments(weekplan_day_id)",
+    "CREATE INDEX IF NOT EXISTS idx_weekplan_day_marker_assignments_marker ON weekplan_day_marker_assignments(marker_id)",
+    "CREATE INDEX IF NOT EXISTS idx_weekplan_day_marker_assignments_updated ON weekplan_day_marker_assignments(updated_at)",
 ]
 
 

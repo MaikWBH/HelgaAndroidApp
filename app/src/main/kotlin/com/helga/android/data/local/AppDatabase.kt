@@ -38,13 +38,15 @@ import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerAssignmentEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
 
 @Database(
-    version = 35,
+    version = 36,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -70,6 +72,8 @@ import com.helga.android.data.local.entity.WeekplanSettingsEntity
         ReceiptItemEntity::class,
         MonthlyBudgetEntity::class,
         OffProductEntity::class,
+        WeekplanDayMarkerEntity::class,
+        WeekplanDayMarkerAssignmentEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -785,10 +789,45 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_35_36 = object : Migration(35, 36) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_day_markers (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL DEFAULT '',
+                        color TEXT NOT NULL DEFAULT '',
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_markers_updatedAt ON weekplan_day_markers(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_markers_deleted ON weekplan_day_markers(deleted)")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_day_marker_assignments (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        weekplanDayId TEXT NOT NULL,
+                        markerId TEXT NOT NULL,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_marker_assignments_weekplanDayId ON weekplan_day_marker_assignments(weekplanDayId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_marker_assignments_markerId ON weekplan_day_marker_assignments(markerId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_marker_assignments_updatedAt ON weekplan_day_marker_assignments(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_marker_assignments_deleted ON weekplan_day_marker_assignments(deleted)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36)
                 .build()
     }
 }

@@ -7,6 +7,7 @@ import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
@@ -14,6 +15,7 @@ import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.remote.dto.AiNutritionRequest
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
@@ -45,6 +47,7 @@ class SettingsViewModel @Inject constructor(
     private val recipeRepository: RecipeRepository,
     private val quickEmojiDao: QuickEmojiDao,
     private val weekplanSettingsDao: WeekplanSettingsDao,
+    private val weekplanRepository: WeekplanRepository,
     private val syncStatusHolder: SyncStatusHolder,
     private val database: AppDatabase,
 ) : ViewModel() {
@@ -63,6 +66,9 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val quickEmojis: StateFlow<List<QuickEmojiEntity>> = quickEmojiDao.observeEmojis()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val dayMarkers: StateFlow<List<WeekplanDayMarkerEntity>> = weekplanRepository.observeMarkers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
@@ -270,6 +276,27 @@ class SettingsViewModel @Inject constructor(
                     dirty = 1,
                 )
             )
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun addDayMarker(name: String, color: String) {
+        viewModelScope.launch {
+            weekplanRepository.createMarker(name, color)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun updateDayMarker(marker: WeekplanDayMarkerEntity, name: String, color: String) {
+        viewModelScope.launch {
+            weekplanRepository.updateMarker(marker, name, color)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun deleteDayMarker(marker: WeekplanDayMarkerEntity) {
+        viewModelScope.launch {
+            weekplanRepository.deleteMarker(marker)
             syncScheduler.triggerOneShot()
         }
     }

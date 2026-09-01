@@ -77,6 +77,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
+import com.helga.android.ui.components.dayMarkerColors
+import com.helga.android.ui.components.parseMarkerColor
 import java.text.DateFormat
 import java.time.DayOfWeek
 import java.time.format.TextStyle
@@ -96,6 +99,7 @@ fun SettingsScreen(
     val syncError by viewModel.syncError.collectAsStateWithLifecycle()
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
     val quickEmojis by viewModel.quickEmojis.collectAsStateWithLifecycle()
+    val dayMarkers by viewModel.dayMarkers.collectAsStateWithLifecycle()
     val exportJson by viewModel.exportJson.collectAsStateWithLifecycle()
     val bulkAiState by viewModel.bulkAiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -104,6 +108,8 @@ fun SettingsScreen(
     var deleteList by remember { mutableStateOf<ShoppingListEntity?>(null) }
     var editEmoji by remember { mutableStateOf<QuickEmojiEntity?>(null) }
     var showAddEmoji by remember { mutableStateOf(false) }
+    var editMarker by remember { mutableStateOf<WeekplanDayMarkerEntity?>(null) }
+    var showAddMarker by remember { mutableStateOf(false) }
     var showAdvanced by remember { mutableStateOf(false) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -206,6 +212,26 @@ fun SettingsScreen(
             onSave = { emoji, food, quantity, unit ->
                 viewModel.updateQuickEmoji(item, emoji, food, quantity, unit)
                 editEmoji = null
+            },
+        )
+    }
+
+    if (showAddMarker) {
+        DayMarkerDialog(
+            onDismiss = { showAddMarker = false },
+            onSave = { name, color ->
+                viewModel.addDayMarker(name, color)
+                showAddMarker = false
+            },
+        )
+    }
+    editMarker?.let { marker ->
+        DayMarkerDialog(
+            marker = marker,
+            onDismiss = { editMarker = null },
+            onSave = { name, color ->
+                viewModel.updateDayMarker(marker, name, color)
+                editMarker = null
             },
         )
     }
@@ -657,6 +683,48 @@ fun SettingsScreen(
                 Spacer(Modifier.height(8.dp))
 
                 Text(
+                    text = stringResource(R.string.settings_day_markers),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                OutlinedButton(onClick = { showAddMarker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Text(stringResource(R.string.settings_day_marker_add))
+                }
+                dayMarkers.forEach { marker ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(parseMarkerColor(marker.color)),
+                            )
+                            Text(marker.name)
+                        }
+                        Row {
+                            IconButton(onClick = { editMarker = marker }) {
+                                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.settings_day_marker_edit))
+                            }
+                            IconButton(onClick = { viewModel.deleteDayMarker(marker) }) {
+                                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
                     text = stringResource(R.string.settings_account_section),
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -875,6 +943,68 @@ private fun QuickEmojiDialog(
                     onSave(emoji.trim(), food.trim(), quantity, unit.trim())
                 },
                 enabled = emoji.isNotBlank() && food.isNotBlank(),
+            ) { Text(stringResource(R.string.recipe_form_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.recipe_delete_confirm_cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun DayMarkerDialog(
+    marker: WeekplanDayMarkerEntity? = null,
+    onDismiss: () -> Unit,
+    onSave: (name: String, color: String) -> Unit,
+) {
+    var name by remember(marker?.id) { mutableStateOf(marker?.name ?: "") }
+    var color by remember(marker?.id) { mutableStateOf(marker?.color?.ifBlank { dayMarkerColors.first() } ?: dayMarkerColors.first()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                if (marker == null) stringResource(R.string.settings_day_marker_add)
+                else stringResource(R.string.settings_day_marker_edit)
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.settings_day_marker_name_label)) },
+                    singleLine = true,
+                )
+                Text(
+                    text = stringResource(R.string.settings_day_marker_color_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    dayMarkerColors.forEach { hex ->
+                        val isSelected = color == hex
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    width = if (isSelected) 3.dp else 0.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                    shape = CircleShape,
+                                )
+                                .padding(if (isSelected) 3.dp else 0.dp)
+                                .clip(CircleShape)
+                                .background(parseMarkerColor(hex))
+                                .clickable { color = hex },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(name.trim(), color) },
+                enabled = name.isNotBlank(),
             ) { Text(stringResource(R.string.recipe_form_save)) }
         },
         dismissButton = {

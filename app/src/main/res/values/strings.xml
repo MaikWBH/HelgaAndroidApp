@@ -269,6 +269,11 @@
     <string name="settings_quick_buttons">Schnellbuttons</string>
     <string name="settings_quick_button_add">Schnellbutton hinzufügen</string>
     <string name="settings_quick_button_edit">Schnellbutton bearbeiten</string>
+    <string name="settings_day_markers">Eigene Tagesmarker</string>
+    <string name="settings_day_marker_add">Tagesmarker hinzufügen</string>
+    <string name="settings_day_marker_edit">Tagesmarker bearbeiten</string>
+    <string name="settings_day_marker_name_label">Name</string>
+    <string name="settings_day_marker_color_label">Farbe</string>
 
     <!-- Wochenplan -->
     <string name="weekplan_title">Wochenplan</string>
@@ -291,6 +296,8 @@
     <string name="weekplan_regenerate_day">Tag neu generieren</string>
     <string name="weekplan_lock_day">Tag sperren</string>
     <string name="weekplan_lock_badge">Gesperrt</string>
+    <string name="weekplan_markers_title">Tagesmarker</string>
+    <string name="weekplan_markers_empty_hint">Noch keine Tagesmarker angelegt — verwaltbar unter Einstellungen → Erweitert</string>
     <string name="weekplan_more">Mehr</string>
     <string name="weekplan_repeat_last_week">Letzte Woche übernehmen</string>
     <string name="weekplan_ai_generating">KI erstellt Wochenplan…</string>

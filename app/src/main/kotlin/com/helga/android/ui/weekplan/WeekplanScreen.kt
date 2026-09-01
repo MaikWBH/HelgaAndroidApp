@@ -96,14 +96,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
+import com.helga.android.ui.components.DayMarkerChip
 import com.helga.android.ui.components.MealSlots
 import com.helga.android.ui.components.mealSlotLabel
+import com.helga.android.ui.components.parseMarkerColor
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import com.helga.android.data.util.ImageUrls
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import java.time.DayOfWeek
@@ -132,6 +135,8 @@ fun WeekplanScreen(
     val daySummaries by viewModel.daySummaries.collectAsStateWithLifecycle()
     val weekRecipes by viewModel.weekRecipes.collectAsStateWithLifecycle()
     val weekExtras by viewModel.weekExtras.collectAsStateWithLifecycle()
+    val weekMarkers by viewModel.weekMarkers.collectAsStateWithLifecycle()
+    val allMarkers by viewModel.allMarkers.collectAsStateWithLifecycle()
     val constraints by viewModel.constraints.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
@@ -386,6 +391,8 @@ fun WeekplanScreen(
                         isSelected = isSelected,
                         weekplanRecipes = dayRecipes,
                         weekplanExtras = dayExtras,
+                        dayMarkers = weekMarkers[day.id] ?: emptyList(),
+                        allMarkers = allMarkers,
                         recipeCount = summary?.recipeCount ?: 0,
                         extraCount = summary?.extraCount ?: 0,
                         recipeById = recipeById,
@@ -413,6 +420,7 @@ fun WeekplanScreen(
                         feedbackMap = feedbackMap,
                         onFeedback = { recipeId, liked -> viewModel.setFeedback(recipeId, day.planDate, liked) },
                         onSetMealSlot = viewModel::setMealSlot,
+                        onToggleMarker = { markerId -> viewModel.toggleMarkerOnDay(day.id, markerId) },
                     )
                 }
                 if (canExtendWeek) {
@@ -454,12 +462,15 @@ fun WeekplanScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DayCard(
     day: WeekplanDayEntity,
     isSelected: Boolean,
     weekplanRecipes: List<WeekplanRecipeEntity>,
     weekplanExtras: List<WeekplanExtraEntity>,
+    dayMarkers: List<WeekplanDayMarkerEntity>,
+    allMarkers: List<WeekplanDayMarkerEntity>,
     recipeCount: Int,
     extraCount: Int,
     recipeById: (String) -> RecipeEntity?,
@@ -481,6 +492,7 @@ private fun DayCard(
     feedbackMap: Map<String, Int>,
     onFeedback: (recipeId: String, liked: Int) -> Unit,
     onSetMealSlot: (WeekplanRecipeEntity, String) -> Unit,
+    onToggleMarker: (markerId: String) -> Unit,
 ) {
     val date = remember(day.planDate) {
         runCatching { LocalDate.parse(day.planDate, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
@@ -539,6 +551,13 @@ private fun DayCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                    if (dayMarkers.isNotEmpty()) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            dayMarkers.forEach { marker ->
+                                DayMarkerChip(name = marker.name, color = marker.color)
+                            }
+                        }
                     }
                 }
                 if (isSelected) {
@@ -708,6 +727,39 @@ private fun DayCard(
                         enabled = extraInput.isNotBlank(),
                     ) {
                         Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.weekplan_extra_add))
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.weekplan_markers_title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (allMarkers.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.weekplan_markers_empty_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        allMarkers.forEach { marker ->
+                            val isAssigned = dayMarkers.any { it.id == marker.id }
+                            FilterChip(
+                                selected = isAssigned,
+                                onClick = { onToggleMarker(marker.id) },
+                                label = { Text(marker.name) },
+                                leadingIcon = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(RoundedCornerShape(50))
+                                            .background(parseMarkerColor(marker.color)),
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
 
