@@ -126,7 +126,27 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
   künftige bewusste Ausnahmen mit Begründung. Verifiziert: Test schlägt fehl, wenn eine Entity
   ohne Mapper-Paar eingespeist wird (Positiv- und Negativfall geprüft, letzterer über einen
   temporären Test-Patch statt Produktivcode).
-- [ ] **A2** — Tests für Konfliktfälle: gleicher Zeitstempel, Teilfehler beim Push, Abbruch mitten im Sync · M · Impact hoch
+- [x] **A2** — Tests für Konfliktfälle: gleicher Zeitstempel, Teilfehler beim Push, Abbruch mitten im Sync · M · Impact hoch
+      — **umgesetzt (2026-09-01):** Anders als die zuvor nachgezogenen Tests lässt sich hier keine
+      reine Formel extrahieren — alle drei Fälle sind Eigenschaften der Ablaufsteuerung in
+      `SyncEngine.runFullSync()` selbst (Reihenfolge Pull→Push→Cursor speichern, was bei einem
+      Fehler dazwischen bereits committet ist), nicht isolierbare Vergleichslogik wie bei
+      `filterServerWins` (das bereits `SyncLwwTest.kt` abdeckt). Deshalb `SyncEngineTest.kt` mit
+      MockK direkt gegen die echte `SyncEngine`-Klasse (16 Konstruktor-Dependencies, alle bis auf
+      `database`/`apiFactory`/`api` als `relaxed`-Mocks). `database.withTransaction {}`
+      (Room-KTX-Extension) läuft ohne echte Room-Instanz nicht — über
+      `mockkStatic("androidx.room.RoomDatabaseKt")` (die von Kotlin generierte
+      Multifile-Facade-Klasse) auf direktes Ausführen des Transaktions-Blocks gemockt. 6 Tests:
+      gleicher Zeitstempel behält die lokale Version, ein echt neuerer Server-Datensatz wird
+      übernommen, Teilfehler beim Push (Server nimmt einen Datensatz an — dessen dirty-Flag wird
+      gezielt gelöscht — und lehnt einen anderen ab, weil er dort selbst neuer ist — der wird
+      stattdessen lokal überschrieben), Abbruch mitten im Sync (Push wirft eine `IOException`,
+      nachdem der Pull schon angewendet wurde: die Pull-Daten bleiben erhalten, aber
+      `preferences.saveLastSyncTs()` wird nicht aufgerufen, damit der nächste Versuch sauber vom
+      alten Cursor neu startet statt den fehlgeschlagenen Push zu verlieren). Zwei der sechs Tests
+      sind gleichzeitig die Regressionstests für [rezepte](../rezepte/plan.md) A4 (siehe dort) —
+      empirisch verifiziert, dass sie gegen den alten Code tatsächlich fehlschlagen (per `git
+      stash` kurz zurückgesetzt und erneut laufen lassen), keine Attrappe.
 - [x] **A3** — App-Foreground-Sync-Trigger implementieren (z. B. `ProcessLifecycleOwner` in der
   Application-Klasse, `syncScheduler.triggerOneShot()` beim Vordergrundwechsel): kein
   bestehender Code-Pfad ruft das aus, obwohl `CLAUDE.md` es als Trigger dokumentiert · S ·

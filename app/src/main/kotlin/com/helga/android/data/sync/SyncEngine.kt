@@ -134,12 +134,8 @@ class SyncEngine @Inject constructor(
         val wpExtraWinners = filterServerWins(response.weekplanExtras, syncDao.weekplanExtraTimestamps()) { it.id to it.updatedAt }
         val wpSettingsWinners = filterServerWins(response.weekplanSettings, syncDao.weekplanSettingsTimestamps()) { it.id to it.updatedAt }
         val wpConstraintsWinners = filterServerWins(response.weekplanConstraints, syncDao.weekplanConstraintsTimestamps()) { it.id to it.updatedAt }
-        val historyWinners = response.recipeHistory.filter { dto ->
-            dto.updatedAt > 0L
-        }
-        val feedbackWinners = response.recipeFeedback.filter { dto ->
-            dto.updatedAt > 0L
-        }
+        val historyWinners = filterServerWins(response.recipeHistory, syncDao.historyTimestamps()) { it.id to it.updatedAt }
+        val feedbackWinners = filterServerWins(response.recipeFeedback, syncDao.feedbackTimestamps()) { it.id to it.updatedAt }
         val receiptWinners = filterServerWins(response.receipts, syncDao.receiptTimestamps()) { it.id to it.updatedAt }
         val receiptItemWinners = filterServerWins(response.receiptItems, syncDao.receiptItemTimestamps()) { it.id to it.updatedAt }
         val budgetWinners = filterServerWins(response.monthlyBudgets, syncDao.monthlyBudgetTimestamps()) { it.id to it.updatedAt }

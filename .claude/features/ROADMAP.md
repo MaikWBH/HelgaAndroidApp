@@ -130,12 +130,11 @@ Veröffentlichung (außerhalb dieser Session) — Details im plattform-Plan.
 
 ---
 
-## 🧪 Tests — 8 Punkte, 6 davon umgesetzt (2026-09-01)
+## 🧪 Tests — 8 Punkte, vollständig umgesetzt (2026-09-01)
 
 Entscheidung vom 2026-08-30: **nur bei kritischer Logik vorne**. `naehrwerte` A1 (Allergene)
 und `sync` A1 (Sync-Vollständigkeit) stehen deshalb schon in Welle 3. Der Rest sollte
-zusammen mit dem Fix laufen, der denselben Code ohnehin anfasst — die ersten sechs sind
-inzwischen nachgezogen (ihr jeweiliger Auslöser war schon gelandet):
+zusammen mit dem Fix laufen, der denselben Code ohnehin anfasst — inzwischen alle nachgezogen:
 
 | Punkt | Läuft mit |
 |-------|-----------|
@@ -145,20 +144,28 @@ inzwischen nachgezogen (ihr jeweiliger Auslöser war schon gelandet):
 | ✅ **wochenplan A5** (Constraints, `weekBalance`) | wochenplan A6 |
 | ✅ **rezepte A3** (Timer-Erkennung) | rezepte A8 |
 | ✅ **statistik A1** (Aggregation) | statistik A3 |
-| **sync A2** (Konfliktfälle) | frei |
-| **rezepte A4** (History/Feedback-Sync vereinheitlichen) | frei · Impact niedrig |
+| ✅ **sync A2** (Konfliktfälle) | frei |
+| ✅ **rezepte A4** (History/Feedback-Sync vereinheitlichen) | frei · Impact niedrig |
 
 Details: [ki](ki/plan.md) A1, [einkaufsliste](einkaufsliste/plan.md) A3,
 [bons-kosten](bons-kosten/plan.md) A1, [wochenplan](wochenplan/plan.md) A5,
-[rezepte](rezepte/plan.md) A3, [statistik](statistik/plan.md) A1 — jeweils mit
-„umgesetzt"-Vermerk. Für die drei Tests, deren Logik bisher inline in einem ViewModel mit
-direktem DAO-Zugriff lag (`filterCandidateRecipes`/`computeWeekBalance` in
-`WeekplanViewModel.kt`, `aggregateMonthStats` in `StatsViewModel.kt`), wurde die Logik verhaltens-
-gleich in reine, Room-freie Top-Level-Funktionen ausgelagert — sonst wären sie ohne Robolectric/
-Fake-DAOs gar nicht sinnvoll unit-testbar gewesen. `RecipeJsonLdParserTest` brauchte zusätzlich
-`testImplementation(libs.org.json)` (echte JVM-Implementierung, das `android.jar`-Stub wirft zur
-Laufzeit „Method not mocked"). Verbleibend: **sync A2** und **rezepte A4** — beide „frei"
-laufend, kein Fix-Partner in den vier Wellen gelandet.
+[rezepte](rezepte/plan.md) A3/A4, [statistik](statistik/plan.md) A1,
+[sync](sync/plan.md) A2 — jeweils mit „umgesetzt"-Vermerk. Für die drei Tests, deren Logik
+bisher inline in einem ViewModel mit direktem DAO-Zugriff lag
+(`filterCandidateRecipes`/`computeWeekBalance` in `WeekplanViewModel.kt`, `aggregateMonthStats`
+in `StatsViewModel.kt`), wurde die Logik verhaltensgleich in reine, Room-freie Top-Level-
+Funktionen ausgelagert — sonst wären sie ohne Robolectric/Fake-DAOs gar nicht sinnvoll
+unit-testbar gewesen. `RecipeJsonLdParserTest` brauchte zusätzlich `testImplementation(libs.org.json)`
+(echte JVM-Implementierung, das `android.jar`-Stub wirft zur Laufzeit „Method not mocked").
+**sync A2** ließ sich nicht auf eine reine Formel reduzieren (Ablaufsteuerung, nicht
+Vergleichslogik) — stattdessen `SyncEngineTest.kt` mit MockK direkt gegen die echte
+`SyncEngine`-Klasse, inkl. gemocktem `database.withTransaction {}`. Dabei fiel **rezepte A4**
+als echter Bug ab (nicht nur Stildeviation): `recipeHistory`/`recipeFeedback` prüften beim Pull
+nur `updatedAt > 0`, nicht LWW gegen den lokalen Stand wie jede andere Tabelle — ein älterer
+Server-Datensatz hätte eine neuere, noch nicht gepushte lokale Änderung stillschweigend
+überschrieben. Behoben (`SyncDao.historyTimestamps()`/`feedbackTimestamps()` ergänzt, Standard-
+`filterServerWins()` verwendet) und mit zwei `SyncEngineTest`-Fällen abgesichert — beide
+empirisch gegen den alten Code verifiziert (schlagen dort nachweislich fehl).
 
 ---
 

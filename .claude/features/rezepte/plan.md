@@ -186,7 +186,22 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       Deduplizierung wenn zwei Formulierungen auf dieselbe Sekundenzahl führen („5 Minuten" /
       „300 Sekunden"), Null-Dauer wird nicht als Timer zurückgegeben, Text ganz ohne
       Zeitangabe, mehrere unterschiedliche Dauern in einem Schritt in Reihenfolge.
-- [ ] **A4** — `recipeHistory`/`recipeFeedback` im Sync auf das `SyncDao`-Muster vereinheitlichen oder Abweichung dokumentieren · M · Impact niedrig
+- [x] **A4** — `recipeHistory`/`recipeFeedback` im Sync auf das `SyncDao`-Muster vereinheitlichen oder Abweichung dokumentieren · M · Impact niedrig
+      — **umgesetzt (2026-09-01), vereinheitlicht statt nur dokumentiert:** War tatsächlich ein
+      Bug, kein bewusster Kompromiss — `SyncEngine.applyServerChanges()` filterte für diese
+      beiden Tabellen nur `dto.updatedAt > 0L` statt wie jede andere der jetzt 25 synchronisierten
+      Tabellen echtes LWW über `syncDao.xTimestamps()` gegen den lokalen Stand zu prüfen. Fehlten
+      dafür schlicht `historyTimestamps()`/`feedbackTimestamps()` in `SyncDao.kt`. Auswirkung: ein
+      älterer Server-Datensatz (Bewertung/Kochhistorie von einem anderen, noch nicht
+      nachgezogenen Gerät) hätte eine bereits neuere, lokal noch nicht gepushte Änderung
+      stillschweigend überschrieben — inklusive Verlust des `dirty`-Flags, die lokale Änderung
+      wäre nie beim Server angekommen. Serverseitig war das nicht betroffen (`push_records()` in
+      `sync.py` ist generisch über `SYNC_TABLES` und behandelte beide Tabellen schon korrekt).
+      Fix: `historyTimestamps()`/`feedbackTimestamps()` in `SyncDao.kt` ergänzt, die beiden
+      Sonderfälle in `SyncEngine.applyServerChanges()` durch das Standard-`filterServerWins()`-
+      Muster ersetzt. `clearDirtyFlagsExcept()` folgte für beide Tabellen bereits dem Standard-
+      Diffing, dort war nichts zu ändern. Regressionsgesichert über zwei Tests in
+      [sync](../sync/plan.md) A2s `SyncEngineTest.kt`.
 - [x] **A5** — Suche auf **Tags und Zutaten** erweitern und dabei vom In-Memory-Filter
       (`RecipeListViewModel.kt:69-74`) auf eine Room-Query umstellen; Muster liegen mit
       `RecipeDao.observeRecipeIdsByTag(s)` (Zeile 33-36) und `searchIngredientNames` bereit · M ·
