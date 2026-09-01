@@ -33,6 +33,7 @@ mlkit-text-recognition = "16.0.0"
 camerax = "1.3.4"
 wearCompose = "1.2.0"
 horologist = "0.5.16"
+playServicesWearable = "18.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -105,6 +106,7 @@ androidx-wear-compose-foundation = { group = "androidx.wear.compose", name = "co
 androidx-wear-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "wearCompose" }
 horologist-compose-layout = { group = "com.google.android.horologist", name = "horologist-compose-layout", version.ref = "horologist" }
 horologist-compose-material = { group = "com.google.android.horologist", name = "horologist-compose-material", version.ref = "horologist" }
+google-play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -102,11 +102,11 @@ Bewertung, Wochenplan-Erweiterungen, u. a.).
 
 ---
 
-## 🏗 Welle 4 — Größere Features · 15 Punkte, überwiegend L
+## 🏗 Welle 4 — Größere Features — vollständig umgesetzt (2026-09-01)
 
 | Punkt | Inhalt |
 |-------|--------|
-| **plattform A3 → einkaufsliste A7** | Eigenes `:wear`-Modul, danach Abhaken auf der Uhr — der Ablauf, den du dir vom Einkaufen versprichst |
+| ✅ **plattform A3 → einkaufsliste A7** | Eigenes `:wear`-Modul, danach Abhaken auf der Uhr — der Ablauf, den du dir vom Einkaufen versprichst |
 | ✅ **rezepte A8** | Timer: mehrere parallel, Hintergrundlauf, Benachrichtigung (braucht plattform A4 ✓ aus den Quick Wins) |
 | ✅ **rezepte A7** | Kochansicht: geteilter Landscape-Modus |
 | ✅ **rezepte A6** | Bewertung zusammenlegen (nur beim Kochen bewerten) |
@@ -120,6 +120,13 @@ Bewertung, Wochenplan-Erweiterungen, u. a.).
 | ✅ **maerkte A3** | Neue Märkte per Standard-Gangsatz oder Kopie vorbefüllen |
 | ✅ **einstellungen A4** | Reset aller lokalen Daten ohne Neuinstallation |
 | ✅ **plattform A2** | 82× `contentDescription` durchsehen · Impact niedrig |
+
+Details: [plattform](plattform/plan.md) A2/A3, [einkaufsliste](einkaufsliste/plan.md) A7,
+[rezepte](rezepte/plan.md) A6–A9, [wochenplan](wochenplan/plan.md) A8/A10/A11/A14,
+[ki](ki/plan.md) A3, [maerkte](maerkte/plan.md) A1/A3, [einstellungen](einstellungen/plan.md) A4
+— jeweils mit „umgesetzt"-Vermerk. plattform A3 mit Einschränkung: die Data-Layer-Bridge zur Uhr
+steht, automatisches Mitinstallieren beim Koppeln bräuchte eine gemeinsame Play-Store-
+Veröffentlichung (außerhalb dieser Session) — Details im plattform-Plan.
 
 ---
 

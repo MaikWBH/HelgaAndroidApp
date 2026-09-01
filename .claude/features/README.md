@@ -3,7 +3,8 @@
 Routing-Einstieg für die Feature-für-Feature-Verbesserung. Diese Datei ist die **einzige
 Stelle mit Gesamtstatus**; der inhaltliche Stand liegt jeweils im `plan.md` des Bereichs.
 
-**Stand:** 2026-08-31 · **Basis:** DB v36, 130 Kotlin-Dateien, 25 Room-Entities — alle elf
+**Stand:** 2026-08-31 · **Basis:** DB v36, 131 Kotlin-Dateien (app-Modul; seit plattform A3 dazu
+ein eigenständiges `:wear`-Gradle-Modul, 4 Kotlin-Dateien), 25 Room-Entities — alle elf
 Bereiche interviewt
 
 ➡️ **Womit anfangen?** [ROADMAP.md](ROADMAP.md) sortiert alle 58 offenen Punkte nach

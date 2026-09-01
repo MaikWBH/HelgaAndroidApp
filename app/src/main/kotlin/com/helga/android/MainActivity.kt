@@ -1,7 +1,6 @@
 package com.helga.android
 
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,7 +8,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.helga.android.data.preferences.AppPreferences
-import com.helga.android.ui.shopping.ShoppingListWearScreen
 import com.helga.android.ui.theme.HelgaTheme
 import com.helga.android.ui.theme.ThemeMode
 import dagger.hilt.android.AndroidEntryPoint
@@ -31,17 +29,9 @@ class MainActivity : ComponentActivity() {
                 themeMode = ThemeMode.fromString(themeModeStr),
                 accentColorIndex = accentColor,
             ) {
-                if (isRunningOnWearOs()) {
-                    ShoppingListWearScreen()
-                } else {
-                    HelgaNavGraph(preferences = preferences, initialImportUrl = sharedUrl)
-                }
+                HelgaNavGraph(preferences = preferences, initialImportUrl = sharedUrl)
             }
         }
-    }
-
-    private fun isRunningOnWearOs(): Boolean {
-        return packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
     }
 
     private fun resolveSharedUrl(intent: Intent?): String? {

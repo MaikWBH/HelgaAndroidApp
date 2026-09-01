@@ -72,6 +72,20 @@
                 android:resource="@xml/today_recipe_widget_info" />
         </receiver>
 
+        <!-- Empfängt Abhak-Nachrichten von der Wear-App (plattform A3 / einkaufsliste A7),
+             siehe WearShoppingRepository.TOGGLE_ITEM_PATH im :wear-Modul. -->
+        <service
+            android:name=".data.wear.WearMessageListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/toggle_item"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>

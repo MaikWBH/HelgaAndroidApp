@@ -180,8 +180,15 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       Produktnamen exakt, ohne Normalisierung von Plural/Singular oder Klammerzusätzen
       (`Zwiebel` ↔ `Zwiebeln`). Umsetzung jetzt in [maerkte](../maerkte/plan.md) A2, hier kein
       eigener Punkt mehr.
-- [ ] **A7** — Abhaken auf dem Wear-Screen ausbauen (`ShoppingListWearScreen.kt`) · M · Impact
-      mittel — setzt das Wear-Modul aus [plattform](../plattform/plan.md) voraus
+- [x] **A7** — Abhaken auf dem Wear-Screen ausbauen (`ShoppingListWearScreen.kt`) · M · Impact
+      mittel — setzt das Wear-Modul aus [plattform](../plattform/plan.md) voraus —
+      **umgesetzt (2026-09-01) zusammen mit plattform A3:** Screen lebt jetzt als
+      `WearShoppingScreen.kt` im neuen `:wear`-Modul, Abhaken sendet eine `MessageClient`-
+      Nachricht (`/toggle_item`) ans Handy statt direkt in Room zu schreiben (die Uhr hat keine
+      eigene DB mehr) — App-seitig verarbeitet `WearMessageListenerService`
+      (`data/wear/`) das über `ShoppingRepository.toggleChecked()`, der neue Zustand kommt als
+      frischer `DataItem`-Push zurück. Details siehe plattform A3, inkl. der dortigen
+      Einschränkung zum Installationsweg.
 
 ## Entscheidungen
 

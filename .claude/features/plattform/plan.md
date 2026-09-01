@@ -148,12 +148,46 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       Textfeld-Label/Placeholder (Such-/URL-Icons). Keine einzige echte Regression gefunden — die
       Guideline-Vermutung "still overengineered accessibility debt" bestätigte sich nicht, es
       waren tatsächlich fehlende Labels an konkreten Bedienelementen.
-- [ ] **A3** — Eigenständiges `:wear`-Gradle-Modul statt Laufzeit-Unterscheidung in
+- [x] **A3** — Eigenständiges `:wear`-Gradle-Modul statt Laufzeit-Unterscheidung in
       `MainActivity.kt`, damit die Watch-App automatisch mit der Handy-App auf die gepaarte Uhr
       installiert wird · L · Impact **hoch** — Voraussetzung für
       [einkaufsliste/plan.md](../einkaufsliste/plan.md) A7. Der Nutzer erwartet künftig
       genau diesen Ablauf (Liste auf der Uhr beim Einkaufen abhaken); die Sideload-Hürde ist
-      der einzige Grund für die aktuelle Nichtnutzung
+      der einzige Grund für die aktuelle Nichtnutzung — **umgesetzt (2026-09-01), mit einer
+      wichtigen Einschränkung gegenüber der ursprünglichen Formulierung:** Rückfrage per
+      `AskUserQuestion` ergab die Entscheidung „Wearable Data Layer (Bluetooth-Bridge)" statt
+      direktem Server-Sync der Uhr — die Uhr hat keine eigene Room-DB/Server-Anbindung, sondern
+      spiegelt die aktive Einkaufsliste per `DataClient`/`MessageClient` vom Handy. Neues
+      eigenständiges `:wear`-Modul (`settings.gradle.kts`, `wear/build.gradle.kts`) mit eigenem
+      Manifest (`standalone=false`, `android.hardware.type.watch`), eigener minimaler
+      `WearApp`/`MainActivity`/`WearShoppingScreen` (kein Hilt/Room, nur
+      `WearShoppingRepository` als Data-Layer-Wrapper). App-Seite: `WearSyncPublisher`
+      (`data/wear/`, gestartet wie `NetworkObserver`/`ForegroundSyncObserver` aus
+      `HelgaApp.onCreate()`) pusht die aktive Liste (`preferences.defaultShoppingListId` +
+      `shoppingDao.observeItemsByList()`, dasselbe Kriterium wie
+      `ShoppingListViewModel.activeListId`) als `PutDataMapRequest` unter `/shopping_list`;
+      `WearMessageListenerService` (`WearableListenerService`, im Manifest per Intent-Filter auf
+      `/toggle_item` registriert, läuft auch wenn die App nicht offen ist) nimmt Abhak-Nachrichten
+      von der Uhr entgegen und ruft `ShoppingRepository.toggleChecked()`. Alte
+      Laufzeit-Unterscheidung entfernt: `MainActivity.isRunningOnWearOs()` und die alte
+      `ui/shopping/ShoppingListWearScreen.kt` (nach `wear/.../WearShoppingScreen.kt` portiert,
+      dort ohne Hilt-ViewModel/Room-Zugriff, sondern auf `WearShoppingRepository.state`
+      umgestellt) — `androidx.wear.compose.*` wanderte komplett ins neue Modul.
+      **Einschränkung:** Der ursprüngliche Wunsch „automatisch auf die gepaarte Uhr installiert"
+      ist mit reinen Gradle-Mitteln nicht mehr erreichbar — `wearApp(project(":wear"))` (die
+      klassische Wear-1.x/2.x-Bündelung) ist in AGP 8.7 als deprecated markiert (Entfernung in
+      AGP 9.0 angekündigt) und bettet die Wear-APK bei einem realen Build nachweislich nicht mehr
+      in die Handy-APK ein (verifiziert: kein `wearable_app.apk`-Ressourceneintrag im gebauten
+      APK) — deshalb wieder entfernt. Automatisches Mitinstallieren funktioniert nur noch über
+      eine gemeinsame Play-Store-Veröffentlichung beider APKs unter einem Eintrag (Play Console),
+      was außerhalb dieser Session liegt (kein Play-Console-Zugriff, keine Wear-Hardware zum
+      Testen). Die Sideload-Hürde bleibt also bestehen, ist aber kleiner geworden: statt der
+      kompletten Handy-App muss nur noch die kleine, eigenständige `:wear`-APK auf die Uhr
+      (`adb install` über die Android-Studio-Gerätekopplung o. ä.). Datenaustausch selbst
+      (Data-Layer-Bridge) ist unabhängig vom Installationsweg funktionsfähig, sobald beide Apps
+      installiert und die Geräte gekoppelt sind. `./gradlew :app:assembleDebug :wear:assembleDebug`
+      erfolgreich, keine Laufzeit-Verifikation möglich (keine Wear-Hardware/-Emulator in dieser
+      Umgebung)
 - [x] **A4** — `POST_NOTIFICATIONS` im Manifest deklarieren und zur Laufzeit anfragen (Muster:
       Kamera-Abfrage in `ReceiptScanScreen.kt:112`). Ohne das sind die bestehenden Einkaufstag-
       und Koch-Erinnerungen auf Android 13+ wirkungslos · S · **Impact hoch** — Voraussetzung

@@ -149,7 +149,6 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.camera.extensions)
 
-    // Wear OS
-    implementation(libs.androidx.wear.compose.foundation)
-    implementation(libs.androidx.wear.compose.material)
+    // Wear OS — Data Layer (DataClient/MessageClient), UI selbst lebt im :wear-Modul
+    implementation(libs.google.play.services.wearable)
 }
