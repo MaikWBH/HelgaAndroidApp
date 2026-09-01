@@ -48,6 +48,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -95,6 +96,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
+import com.helga.android.ui.components.MealSlots
+import com.helga.android.ui.components.mealSlotLabel
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import com.helga.android.data.util.ImageUrls
@@ -409,6 +412,7 @@ fun WeekplanScreen(
                         onToggleLock = { viewModel.toggleLocked(day) },
                         feedbackMap = feedbackMap,
                         onFeedback = { recipeId, liked -> viewModel.setFeedback(recipeId, day.planDate, liked) },
+                        onSetMealSlot = viewModel::setMealSlot,
                     )
                 }
                 if (canExtendWeek) {
@@ -476,6 +480,7 @@ private fun DayCard(
     onToggleLock: () -> Unit,
     feedbackMap: Map<String, Int>,
     onFeedback: (recipeId: String, liked: Int) -> Unit,
+    onSetMealSlot: (WeekplanRecipeEntity, String) -> Unit,
 ) {
     val date = remember(day.planDate) {
         runCatching { LocalDate.parse(day.planDate, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
@@ -605,10 +610,12 @@ private fun DayCard(
                         name = recipe?.name?.ifBlank { recipe.slug } ?: entry.recipeId,
                         imageUrl = imageUrl,
                         liked = feedbackMap[entry.recipeId] ?: 0,
+                        mealSlot = entry.mealSlot,
                         onNavigate = { onNavigateToRecipe(entry.recipeId) },
                         onRemove = { onRemoveRecipe(entry) },
                         onThumbUp = { onFeedback(entry.recipeId, 1) },
                         onThumbDown = { onFeedback(entry.recipeId, -1) },
+                        onMealSlotChange = { onSetMealSlot(entry, it) },
                     )
                 }
 
@@ -732,6 +739,7 @@ private fun DayCard(
                     DayPreviewRecipeRow(
                         name = recipe?.name?.ifBlank { recipe.slug } ?: entry.recipeId,
                         imageUrl = imageUrl,
+                        mealSlot = entry.mealSlot,
                         onNavigate = { onNavigateToRecipe(entry.recipeId) },
                     )
                 }
@@ -764,15 +772,64 @@ private fun DayCard(
     }
 }
 
+/**
+ * Mahlzeiten-Tag je Wochenplan-Eintrag (wochenplan A14) — dezente Material-3-Tonfarbe je
+ * Mahlzeitentyp, aber nie Farbe allein: Textlabel ist immer mit dabei (ux-accessibility
+ * Regel 7). Ohne [onMealSlotChange] rein lesend (Wochenübersicht), sonst öffnet Tippen eine
+ * Auswahl.
+ */
+@Composable
+private fun MealSlotBadge(mealSlot: String, onMealSlotChange: ((String) -> Unit)?) {
+    var expanded by remember { mutableStateOf(false) }
+    val color = when (mealSlot) {
+        MealSlots.BREAKFAST -> MaterialTheme.colorScheme.tertiaryContainer
+        MealSlots.LUNCH -> MaterialTheme.colorScheme.primaryContainer
+        MealSlots.DINNER -> MaterialTheme.colorScheme.secondaryContainer
+        MealSlots.SNACK -> MaterialTheme.colorScheme.surfaceVariant
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    }
+    val label = if (mealSlot.isBlank()) stringResource(R.string.weekplan_meal_slot_none) else mealSlotLabel(mealSlot)
+
+    Box {
+        Surface(
+            color = color,
+            shape = RoundedCornerShape(4.dp),
+            modifier = if (onMealSlotChange != null) Modifier.clickable { expanded = true } else Modifier,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
+        if (onMealSlotChange != null) {
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                listOf(MealSlots.BREAKFAST, MealSlots.LUNCH, MealSlots.DINNER, MealSlots.SNACK).forEach { slot ->
+                    DropdownMenuItem(
+                        text = { Text(mealSlotLabel(slot)) },
+                        onClick = { onMealSlotChange(slot); expanded = false },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.weekplan_meal_slot_none)) },
+                    onClick = { onMealSlotChange(""); expanded = false },
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun RecipeItemRow(
     name: String,
     imageUrl: String?,
     liked: Int,
+    mealSlot: String,
     onNavigate: () -> Unit,
     onRemove: () -> Unit,
     onThumbUp: () -> Unit,
     onThumbDown: () -> Unit,
+    onMealSlotChange: (String) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -819,6 +876,7 @@ private fun RecipeItemRow(
                 text = name,
                 style = MaterialTheme.typography.bodyMedium,
             )
+            MealSlotBadge(mealSlot = mealSlot, onMealSlotChange = onMealSlotChange)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(
                     onClick = onThumbUp,
@@ -854,6 +912,7 @@ private fun RecipeItemRow(
 private fun DayPreviewRecipeRow(
     name: String,
     imageUrl: String?,
+    mealSlot: String,
     onNavigate: () -> Unit,
 ) {
     Row(
@@ -903,6 +962,9 @@ private fun DayPreviewRecipeRow(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        if (mealSlot.isNotBlank()) {
+            MealSlotBadge(mealSlot = mealSlot, onMealSlotChange = null)
+        }
     }
 }
 

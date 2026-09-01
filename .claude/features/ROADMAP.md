@@ -113,7 +113,7 @@ Bewertung, Wochenplan-Erweiterungen, u. a.).
 | ✅ **rezepte A9** | Portionsskalierung je Rezept merken |
 | ✅ **wochenplan A10** | Ankerrezepte anbinden (`generateWithAnchors` ist toter Code) |
 | ✅ **wochenplan A8** | Constraints direkt ins UI statt Dialog |
-| **wochenplan A14** | Mahlzeiten-Tag je Eintrag |
+| ✅ **wochenplan A14** | Mahlzeiten-Tag je Eintrag |
 | **wochenplan A11** | Frei anlegbare Tagesmarker — braucht vorher eine Datenmodell-Rückfrage |
 | ✅ **ki A3** | Server-Erreichbarkeit vor jeder KI-Nutzung anzeigen |
 | ✅ **maerkte A1** | Drag-and-Drop für die Gangreihenfolge |

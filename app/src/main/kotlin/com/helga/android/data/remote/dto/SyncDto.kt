@@ -184,6 +184,7 @@ data class WeekplanRecipeDto(
     @Json(name = "weekplan_day_id") val weekplanDayId: String,
     @Json(name = "recipe_id") val recipeId: String,
     val position: Int = 0,
+    @Json(name = "meal_slot") val mealSlot: String = "",
 )
 
 @JsonClass(generateAdapter = true)

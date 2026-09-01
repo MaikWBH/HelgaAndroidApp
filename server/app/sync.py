@@ -51,7 +51,7 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "updated_at", "deleted",
     ],
     "weekplan_recipes": [
-        "id", "weekplan_day_id", "recipe_id", "position", "updated_at", "deleted",
+        "id", "weekplan_day_id", "recipe_id", "position", "meal_slot", "updated_at", "deleted",
     ],
     "weekplan_extras": [
         "id", "weekplan_day_id", "item_text", "position", "updated_at", "deleted",

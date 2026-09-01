@@ -20,6 +20,8 @@ data class WeekplanRecipeEntity(
     val weekplanDayId: String,
     val recipeId: String,
     val position: Int = 0,
+    /** Frühstück/Mittag/Abend/Snack je Eintrag (wochenplan A14), leer = kein Slot gesetzt. */
+    val mealSlot: String = "",
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

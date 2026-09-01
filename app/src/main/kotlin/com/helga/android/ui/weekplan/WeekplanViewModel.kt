@@ -391,6 +391,13 @@ class WeekplanViewModel @Inject constructor(
         }
     }
 
+    fun setMealSlot(entry: WeekplanRecipeEntity, mealSlot: String) {
+        viewModelScope.launch {
+            repository.setMealSlot(entry, mealSlot)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
     fun addExtra(dayId: String, text: String) {
         viewModelScope.launch {
             repository.addExtra(dayId, text)

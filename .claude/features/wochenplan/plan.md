@@ -1,6 +1,6 @@
 # Feature: Wochenplan
 
-> **Status:** Interview erledigt (8/8) · **Aufgaben:** 3 offen (11 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
+> **Status:** Interview erledigt (8/8) · **Aufgaben:** 2 offen (12 erledigt; A7→A6 und A13→A12 zusammengelegt) · **Stand:** 2026-08-31 · **Priorität:** ⭐⭐⭐
 
 Dritter Bottom-Nav-Tab und Bindeglied zwischen Rezepten und Einkaufsliste.
 
@@ -366,11 +366,24 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
          erfolgreich.
 - **A13** — → **in A12 aufgegangen** (2026-08-30). Verweise auf A13 bleiben gültig, die Arbeit
       steckt dort.
-- [ ] **A14** — Mahlzeiten-Tag je `WeekplanRecipeEntity`-Eintrag (mehrere Rezepte pro Mahlzeit
+- [x] **A14** — Mahlzeiten-Tag je `WeekplanRecipeEntity`-Eintrag (mehrere Rezepte pro Mahlzeit
       möglich, `position` existiert bereits als Sortierbasis), dezente Material-3-Tonfarbe je
       Mahlzeitentyp plus Textlabel (nie Farbe allein, siehe
       [ux-accessibility](../../guidelines/ux-accessibility.md) Regel 7); Room-Migration nötig ·
-      L · Impact mittel
+      L · Impact mittel — **umgesetzt:** neues Feld `WeekplanRecipeEntity.mealSlot` (leer = kein
+      Slot gesetzt), Room-Migration 34→35, volle Sync-Anbindung (App + Server, gleiches Muster
+      wie zuvor bei `isLocked`). Wiederverwendet die bereits vorhandenen `MealSlots`-Konstanten
+      und `mealSlotLabel()` aus `ui/components/MealSlot.kt` (bisher nur für die
+      KI-Klassifikation des Rezepts selbst genutzt) statt ein zweites Vokabular einzuführen.
+      Neue `MealSlotBadge` in `WeekplanScreen.kt`: dezente M3-Tonfarbe je Slot
+      (`tertiaryContainer`/`primaryContainer`/`secondaryContainer`/`surfaceVariant` für
+      Frühstück/Mittag/Abend/Snack) **immer mit Textlabel**, nie Farbe allein. In der
+      aufgeklappten Tagesansicht (`RecipeItemRow`) antippbar mit Auswahlmenü inkl. „Kein Slot"
+      zum Zurücksetzen; in der Wochenübersicht (`DayPreviewRecipeRow`) rein lesend und nur
+      sichtbar, wenn ein Slot gesetzt ist (kein Zusatzrauschen bei unklassifizierten Einträgen).
+      **Nicht auf einem Emulator getestet** (keine laufende Android-Umgebung in dieser Session)
+      — die Tonfarben-Zuordnung sollte vor dem nächsten Release einmal visuell in hell und
+      dunkel geprüft werden.
 - [x] **A15** — Woche einmalig anpassen (Nutzerwunsch, nicht aus dem Interview): neues Feld
       `isSkipped` auf `WeekplanDayEntity` (Basisfall von A11 „kein Kochen", gleiches UI-Muster
       wie `isQuickDay`/`isGuestDay`) markiert einen Tag als nicht zu planen — bleibt sichtbar,

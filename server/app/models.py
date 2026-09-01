@@ -121,6 +121,7 @@ class WeekplanRecipeRecord(SyncRecord):
     weekplan_day_id: str
     recipe_id: str
     position: int = 0
+    meal_slot: str = ""
 
 
 class WeekplanExtraRecord(SyncRecord):

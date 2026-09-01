@@ -221,6 +221,7 @@ CREATE TABLE IF NOT EXISTS weekplan_recipes (
     weekplan_day_id TEXT NOT NULL,
     recipe_id       TEXT NOT NULL,
     position        INTEGER DEFAULT 0,
+    meal_slot       TEXT NOT NULL DEFAULT '',
     updated_at      INTEGER NOT NULL DEFAULT 0,
     deleted         INTEGER NOT NULL DEFAULT 0
 );
@@ -478,6 +479,9 @@ ADDED_COLUMNS = {
         ("is_guest_day", "INTEGER NOT NULL DEFAULT 0"),
         ("is_skipped", "INTEGER NOT NULL DEFAULT 0"),
         ("is_locked", "INTEGER NOT NULL DEFAULT 0"),
+    ],
+    "weekplan_recipes": [
+        ("meal_slot", "TEXT NOT NULL DEFAULT ''"),
     ],
 }
 

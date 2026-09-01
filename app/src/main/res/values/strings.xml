@@ -75,6 +75,7 @@
     <string name="meal_slot_lunch">Mittagessen</string>
     <string name="meal_slot_dinner">Abendessen</string>
     <string name="meal_slot_snack">Snack</string>
+    <string name="weekplan_meal_slot_none">Kein Slot</string>
     <string name="meal_slot_other">Nicht kategorisiert</string>
     <string name="recipe_form_quantity">Menge</string>
     <string name="recipe_form_unit">Einheit</string>

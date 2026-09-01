@@ -420,7 +420,7 @@ private fun WeekplanDayDto.toEntity(): WeekplanDayEntity = WeekplanDayEntity(
 
 private fun WeekplanRecipeDto.toEntity(): WeekplanRecipeEntity = WeekplanRecipeEntity(
     id = id, weekplanDayId = weekplanDayId, recipeId = recipeId, position = position,
-    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+    mealSlot = mealSlot, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun WeekplanExtraDto.toEntity(): WeekplanExtraEntity = WeekplanExtraEntity(
@@ -435,7 +435,7 @@ private fun WeekplanDayEntity.toDto(): WeekplanDayDto = WeekplanDayDto(
 
 private fun WeekplanRecipeEntity.toDto(): WeekplanRecipeDto = WeekplanRecipeDto(
     id = id, updatedAt = updatedAt, deleted = deleted, weekplanDayId = weekplanDayId,
-    recipeId = recipeId, position = position,
+    recipeId = recipeId, position = position, mealSlot = mealSlot,
 )
 
 private fun WeekplanExtraEntity.toDto(): WeekplanExtraDto = WeekplanExtraDto(

@@ -66,6 +66,13 @@ class WeekplanRepository @Inject constructor(
         weekplanDao.softDeleteWeekplanRecipe(entry.id, System.currentTimeMillis())
     }
 
+    /** Mahlzeiten-Tag je Eintrag setzen/löschen (wochenplan A14) — leerer String = kein Slot. */
+    suspend fun setMealSlot(entry: WeekplanRecipeEntity, mealSlot: String) {
+        weekplanDao.upsertWeekplanRecipe(
+            entry.copy(mealSlot = mealSlot, updatedAt = System.currentTimeMillis(), dirty = 1)
+        )
+    }
+
     suspend fun addExtra(dayId: String, text: String) {
         val trimmed = text.trim()
         if (trimmed.isBlank()) return
