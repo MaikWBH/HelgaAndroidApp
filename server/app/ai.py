@@ -5,8 +5,9 @@ from typing import AsyncIterator
 
 import httpx
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
-from .ingredient_parser import parse_ingredient_line
+from .ingredient_parser import is_header_line, parse_ingredient_line
 from .models import (
     AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiNutritionRequest,
     AiUrlImportRequest,
@@ -209,9 +210,8 @@ async def estimate_nutrition(req: AiNutritionRequest) -> dict:
         f"ZUTATEN (bereits für {req.portions} Portionen bemessen):\n{ingredients_block}\n\n"
         "Schätze die GESAMT-Nährwerte für das komplette Rezept (alle Zutaten zusammen):\n"
         "- kcal: Gesamt-Kalorien\n- protein: Gesamt-Eiweiß in Gramm\n"
-        "- fat: Gesamt-Fett in Gramm\n- carbs: Gesamt-Kohlenhydrate in Gramm\n"
-        "- nutri_score: einer von [a, b, c, d, e] (a = am gesündesten)\n\n"
-        'Antworte mit: {"kcal":0,"protein":0,"fat":0,"carbs":0,"nutri_score":"c"}'
+        "- fat: Gesamt-Fett in Gramm\n- carbs: Gesamt-Kohlenhydrate in Gramm\n\n"
+        'Antworte mit: {"kcal":0,"protein":0,"fat":0,"carbs":0}'
     )
 
     text = (await _call_once(system, user)).strip()
@@ -225,16 +225,11 @@ async def estimate_nutrition(req: AiNutritionRequest) -> dict:
     except json.JSONDecodeError:
         return {}
 
-    nutri_score = str(data.get("nutri_score", "")).strip().lower()
-    if nutri_score not in ("a", "b", "c", "d", "e"):
-        nutri_score = ""
-
     return {
         "kcal": _to_float(data.get("kcal"), 0.0),
         "protein": _to_float(data.get("protein"), 0.0),
         "fat": _to_float(data.get("fat"), 0.0),
         "carbs": _to_float(data.get("carbs"), 0.0),
-        "nutri_score": nutri_score,
     }
 
 
@@ -262,16 +257,35 @@ def _safe(scraper, method: str, default=""):
 
 async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
     from recipe_scrapers import scrape_html
+    from recipe_scrapers._exceptions import NoSchemaFoundInWildMode, WebsiteNotImplementedError
 
-    async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-        resp = await client.get(req.url, headers={"User-Agent": "Mozilla/5.0"})
-        resp.raise_for_status()
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            resp = await client.get(req.url, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=422, detail=f"Seite antwortet mit Fehler {e.response.status_code}"
+        ) from e
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=422, detail="Seite nicht erreichbar") from e
 
-    scraper = scrape_html(resp.text, org_url=req.url)
+    try:
+        # supported_only=False: auch bei Seiten ohne dediziertem Scraper per generischem
+        # schema.org-Parser versuchen, statt nur die feste Domain-Liste zu erlauben.
+        scraper = scrape_html(resp.text, org_url=req.url, supported_only=False)
+    except WebsiteNotImplementedError as e:
+        raise HTTPException(status_code=422, detail="Diese Seite wird nicht unterstützt") from e
+    except NoSchemaFoundInWildMode as e:
+        raise HTTPException(status_code=422, detail="Kein Rezept auf dieser Seite gefunden") from e
+    except Exception as e:
+        raise HTTPException(status_code=422, detail="Rezept konnte nicht gelesen werden") from e
 
     raw_ingredients = _safe(scraper, "ingredients", [])
     ingredients = [
-        ImportedIngredient(**parse_ingredient_line(s)) for s in raw_ingredients if s.strip()
+        ImportedIngredient(**parse_ingredient_line(s))
+        for s in raw_ingredients
+        if s.strip() and not is_header_line(s)
     ]
 
     raw_instructions = _safe(scraper, "instructions_list", [])

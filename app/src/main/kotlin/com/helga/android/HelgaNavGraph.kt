@@ -2,6 +2,7 @@ package com.helga.android
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
@@ -38,6 +39,7 @@ import com.helga.android.ui.recipes.RecipeListScreen
 import com.helga.android.ui.recipes.UrlImportScreen
 import com.helga.android.ui.settings.SettingsScreen
 import com.helga.android.ui.shopping.ShoppingListScreen
+import com.helga.android.ui.stats.StatsScreen
 import com.helga.android.ui.stores.StoreListScreen
 import com.helga.android.ui.weekplan.WeekplanRecipePickerScreen
 import com.helga.android.ui.weekplan.WeekplanScreen
@@ -63,6 +65,7 @@ internal const val ROUTE_RECIPE_REMIX = "recipe/{recipeId}/remix"
 internal const val ROUTE_RECIPE_URL_IMPORT = "recipe/url-import"
 internal const val ROUTE_AI_GENERATE = "ai/generate"
 internal const val ROUTE_SETTINGS = "settings"
+internal const val ROUTE_STATS = "stats"
 internal const val ROUTE_WEEKPLAN_PICK_RECIPE = "weekplan/pick-recipe/{dayId}"
 
 internal fun recipeDetailRoute(id: String) = "recipe/$id"
@@ -76,7 +79,7 @@ internal fun receiptDetailRoute(receiptId: String) = "receipts/detail/$receiptId
 internal fun productPriceDetailRoute(key: String) =
     "receipts/products/${URLEncoder.encode(key, "UTF-8").replace("+", "%20")}"
 
-private val ROOT_ROUTES = setOf(ROUTE_SHOPPING, ROUTE_RECIPES, ROUTE_WEEKPLAN)
+private val ROOT_ROUTES = setOf(ROUTE_SHOPPING, ROUTE_RECIPES, ROUTE_WEEKPLAN, ROUTE_RECEIPTS)
 
 private data class BottomNavItem(val route: String, val icon: ImageVector, val labelRes: Int)
 
@@ -84,6 +87,7 @@ private val bottomNavItems = listOf(
     BottomNavItem(ROUTE_SHOPPING, Icons.Filled.ShoppingCart, R.string.nav_shopping),
     BottomNavItem(ROUTE_RECIPES, Icons.Filled.Restaurant, R.string.nav_recipes),
     BottomNavItem(ROUTE_WEEKPLAN, Icons.Filled.CalendarMonth, R.string.nav_weekplan),
+    BottomNavItem(ROUTE_RECEIPTS, Icons.Filled.ReceiptLong, R.string.nav_receipts),
 )
 
 @Composable
@@ -94,6 +98,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
     val showBottomNav = currentRoute in ROOT_ROUTES
 
     LaunchedEffect(Unit) {
+        if (currentRoute != ROUTE_ONBOARDING) return@LaunchedEffect
         val conn = preferences.connection.first()
         if (conn.isConfigured) {
             val dest = if (initialImportUrl != null) ROUTE_RECIPE_URL_IMPORT else ROUTE_SHOPPING
@@ -150,6 +155,8 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                             navController.navigate(receiptScanRoute(listId))
                         },
                         onNavigateToReceipts = { navController.navigate(ROUTE_RECEIPTS) },
+                        onNavigateToStores = { navController.navigate(ROUTE_STORES) },
+                        onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
                     )
                 }
                 composable(ROUTE_RECIPES) {
@@ -170,6 +177,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                             navController.navigate(weekplanPickRecipeRoute(dayId))
                         },
                         onNavigateToRecipe = { id -> navController.navigate(recipeDetailRoute(id)) },
+                        onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
                     )
                 }
                 composable(
@@ -214,12 +222,15 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                 }
                 composable(ROUTE_RECEIPTS) {
                     ReceiptListScreen(
-                        onBack = { navController.popBackStack() },
                         onReceiptClick = { id -> navController.navigate(receiptDetailRoute(id)) },
                         onScanClick = { navController.navigate(receiptScanRoute(null)) },
                         onCostOverviewClick = { navController.navigate(ROUTE_RECEIPTS_COST_OVERVIEW) },
                         onProductsClick = { navController.navigate(ROUTE_RECEIPTS_PRODUCTS) },
+                        onStatsClick = { navController.navigate(ROUTE_STATS) },
                     )
+                }
+                composable(ROUTE_STATS) {
+                    StatsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
                     route = ROUTE_RECEIPT_DETAIL,

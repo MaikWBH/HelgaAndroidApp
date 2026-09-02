@@ -3,9 +3,12 @@ package com.helga.android.data.repository
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerAssignmentEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.model.DayNutrition
+import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
@@ -65,6 +68,13 @@ class WeekplanRepository @Inject constructor(
         weekplanDao.softDeleteWeekplanRecipe(entry.id, System.currentTimeMillis())
     }
 
+    /** Mahlzeiten-Tag je Eintrag setzen/löschen (wochenplan A14) — leerer String = kein Slot. */
+    suspend fun setMealSlot(entry: WeekplanRecipeEntity, mealSlot: String) {
+        weekplanDao.upsertWeekplanRecipe(
+            entry.copy(mealSlot = mealSlot, updatedAt = System.currentTimeMillis(), dirty = 1)
+        )
+    }
+
     suspend fun addExtra(dayId: String, text: String) {
         val trimmed = text.trim()
         if (trimmed.isBlank()) return
@@ -84,14 +94,35 @@ class WeekplanRepository @Inject constructor(
         weekplanDao.softDeleteExtra(extra.id, System.currentTimeMillis())
     }
 
-    suspend fun deleteDay(dayId: String) {
+    /** Entfernt alle Rezepte und Extras eines Tages, lässt den Tag selbst aber bestehen. */
+    suspend fun clearDay(dayId: String) {
         val ts = System.currentTimeMillis()
         weekplanDao.recipesForDay(dayId).forEach { weekplanDao.softDeleteWeekplanRecipe(it.id, ts) }
         weekplanDao.extrasForDay(dayId).forEach { weekplanDao.softDeleteExtra(it.id, ts) }
-        weekplanDao.softDeleteDay(dayId, ts)
     }
 
-    suspend fun exportToShoppingList(dayIds: List<String>, shoppingListId: String, desiredServings: Int = 0) {
+    suspend fun deleteDay(dayId: String) {
+        clearDay(dayId)
+        weekplanDao.softDeleteDay(dayId, System.currentTimeMillis())
+    }
+
+    /**
+     * Markiert einen Tag als übersprungen (kein Kochen nötig) oder hebt das wieder auf.
+     * Beim Aktivieren werden vorhandene Rezepte/Extras entfernt — der Aufrufer muss vorher
+     * warnen, falls der Tag bereits belegt war.
+     */
+    suspend fun setSkipped(dayId: String, skipped: Boolean) {
+        if (skipped) clearDay(dayId)
+        weekplanDao.setSkipped(dayId, if (skipped) 1 else 0, System.currentTimeMillis())
+    }
+
+    /**
+     * Sammelt alle Export-Kandidaten (Rezeptzutaten + Extras) für die angegebenen Tage, ohne
+     * etwas zu schreiben — Grundlage für die Export-Vorschau, in der einzelne Produkte vor der
+     * Übernahme abgewählt werden können.
+     */
+    suspend fun collectExportItems(dayIds: List<String>, desiredServings: Int = 0): List<WeekplanExportItem> {
+        val items = mutableListOf<WeekplanExportItem>()
         dayIds.forEach { dayId ->
             weekplanDao.recipesForDay(dayId).forEach { entry ->
                 val recipe = recipeDao.findById(entry.recipeId)
@@ -99,16 +130,95 @@ class WeekplanRepository @Inject constructor(
                 val scale = if (desiredServings > 0 && baseServings > 0) desiredServings.toDouble() / baseServings else 1.0
                 val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
                 ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
-                    shoppingRepository.addOrMergeItem(
-                        listId = shoppingListId,
-                        name = ingredient.food,
-                        quantity = ingredient.quantity * scale,
-                        unit = ingredient.unit,
-                        source = "weekplan",
-                        recipeName = recipe?.name ?: "",
+                    items.add(
+                        WeekplanExportItem(
+                            key = ingredient.id,
+                            name = ingredient.food,
+                            quantity = ingredient.quantity * scale,
+                            unit = ingredient.unit,
+                            recipeName = recipe?.name ?: "",
+                        )
                     )
                 }
             }
+            weekplanDao.extrasForDay(dayId).forEach { extra ->
+                items.add(
+                    WeekplanExportItem(
+                        key = extra.id,
+                        name = extra.itemText,
+                        quantity = 0.0,
+                        unit = "",
+                        recipeName = "",
+                    )
+                )
+            }
+        }
+        return items
+    }
+
+    /** Schreibt die (in der Vorschau bestätigten) Export-Positionen in die Einkaufsliste. */
+    suspend fun applyExportItems(items: List<WeekplanExportItem>, shoppingListId: String) {
+        items.forEach { item ->
+            shoppingRepository.addOrMergeItem(
+                listId = shoppingListId,
+                name = item.name,
+                quantity = item.quantity,
+                unit = item.unit,
+                source = "weekplan",
+                recipeName = item.recipeName,
+            )
+        }
+    }
+
+    // ── Tagesmarker (wochenplan A11) ────────────────────────────────────────────
+
+    fun observeMarkers(): Flow<List<WeekplanDayMarkerEntity>> = weekplanDao.observeMarkers()
+
+    fun observeMarkerAssignmentsForDays(dayIds: List<String>): Flow<List<WeekplanDayMarkerAssignmentEntity>> =
+        weekplanDao.observeMarkerAssignmentsForDays(dayIds)
+
+    suspend fun createMarker(name: String, color: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        weekplanDao.upsertMarker(
+            WeekplanDayMarkerEntity(
+                id = UUID.randomUUID().toString(),
+                name = trimmed,
+                color = color,
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
+        )
+    }
+
+    suspend fun updateMarker(marker: WeekplanDayMarkerEntity, name: String, color: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        weekplanDao.upsertMarker(
+            marker.copy(name = trimmed, color = color, updatedAt = System.currentTimeMillis(), dirty = 1)
+        )
+    }
+
+    suspend fun deleteMarker(marker: WeekplanDayMarkerEntity) {
+        weekplanDao.upsertMarker(marker.copy(deleted = 1, updatedAt = System.currentTimeMillis(), dirty = 1))
+    }
+
+    /** Ordnet einen Marker einem Tag zu oder entfernt ihn wieder, falls bereits zugeordnet. */
+    suspend fun toggleMarkerOnDay(dayId: String, markerId: String) {
+        val existing = weekplanDao.findMarkerAssignment(dayId, markerId)
+        val ts = System.currentTimeMillis()
+        if (existing != null) {
+            weekplanDao.upsertMarkerAssignment(existing.copy(deleted = 1, updatedAt = ts, dirty = 1))
+        } else {
+            weekplanDao.upsertMarkerAssignment(
+                WeekplanDayMarkerAssignmentEntity(
+                    id = UUID.randomUUID().toString(),
+                    weekplanDayId = dayId,
+                    markerId = markerId,
+                    updatedAt = ts,
+                    dirty = 1,
+                )
+            )
         }
     }
 
@@ -116,14 +226,12 @@ class WeekplanRepository @Inject constructor(
         val days = weekplanDao.getDaysBetween(startDate, endDate)
         val dayNutritions = mutableListOf<DayNutrition>()
         var totalKcal = 0.0
-        var bestNutriScore = ""
         var totalRecipes = 0
 
         days.forEach { day ->
             val recipes = weekplanDao.recipesForDay(day.id)
             val dayRecipes = mutableListOf<String>()
             var dayTotalKcal = 0.0
-            var dayBestScore = ""
 
             recipes.forEach { entry ->
                 val recipe = recipeDao.findById(entry.recipeId)
@@ -131,11 +239,6 @@ class WeekplanRepository @Inject constructor(
                     dayRecipes.add(recipe.name)
                     val nutrition = recipeRepository.getRecipeNutrition(recipe.id)
                     dayTotalKcal += nutrition.kcalPerPortion
-                    if (nutrition.nutriScore.isNotBlank()) {
-                        if (dayBestScore.isEmpty() || nutrition.nutriScore < dayBestScore) {
-                            dayBestScore = nutrition.nutriScore
-                        }
-                    }
                     totalRecipes++
                 }
             }
@@ -146,7 +249,6 @@ class WeekplanRepository @Inject constructor(
                     date = day.planDate,
                     recipeNames = dayRecipes,
                     avgKcal = avgDayKcal,
-                    avgNutriScore = dayBestScore,
                     totalRecipes = recipes.size,
                 )
             )
@@ -154,19 +256,10 @@ class WeekplanRepository @Inject constructor(
         }
 
         val weekAvgKcal = if (days.isNotEmpty()) totalKcal / days.size else 0.0
-        var weekBestScore = ""
-        dayNutritions.forEach { day ->
-            if (day.avgNutriScore.isNotBlank()) {
-                if (weekBestScore.isEmpty() || day.avgNutriScore < weekBestScore) {
-                    weekBestScore = day.avgNutriScore
-                }
-            }
-        }
 
         return WeekplanNutrition(
             days = dayNutritions,
             weekAvgKcal = weekAvgKcal,
-            weekAvgNutriScore = weekBestScore,
             totalRecipes = totalRecipes,
         )
     }

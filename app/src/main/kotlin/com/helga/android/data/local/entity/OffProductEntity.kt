@@ -31,6 +31,8 @@ data class OffProductEntity(
     val proteins: Double = 0.0,
     val fats: Double = 0.0,
     val carbs: Double = 0.0,
+    // LEGACY: Nutri-Score-Feature entfernt (naehrwerte A3), Spalte bleibt aus
+    // Migrationsgründen erhalten (siehe RecipeEntity.mealType für dasselbe Muster).
     val nutriScore: String = "",
     val nova: Int = 0,
     val ecoScore: String = "",

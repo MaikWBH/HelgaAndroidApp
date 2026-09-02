@@ -20,6 +20,9 @@ data class WeekplanDayEntity(
     val note: String = "",
     val isQuickDay: Int = 0,
     val isGuestDay: Int = 0,
+    val isSkipped: Int = 0,
+    /** Gesperrt gegen Überschreiben bei Wochenplan-Generierung/Reroll (wochenplan A10). */
+    val isLocked: Int = 0,
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

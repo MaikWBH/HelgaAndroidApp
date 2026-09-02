@@ -1,3 +1,16 @@
+> **ARCHIVIERT am 2026-08-22 — nicht als Referenz verwenden.**
+>
+> Diese Datei beschreibt die **Flask-Vorgänger-App** (siehe „Original-Stack" unten), nicht die
+> Android-App. Sie war Migrationsvorlage und wurde nie auf den Android-Stand nachgezogen.
+> Abweichungen zum heutigen Code: Kassenbon-Scan, Preisverlauf, Nährwerte/OpenFoodFacts,
+> Allergene, Barcode, Statistik, Widget, Wear OS, Onboarding, Wochenplan-Vorlagen sowie
+> Rezept-Historie und -Feedback fehlen hier vollständig; der aufgeführte **Mealie-Import**
+> existiert umgekehrt weder in der App noch im Server.
+>
+> Aktuelles Inventar: [`.claude/features/README.md`](../features/README.md)
+
+---
+
 # Helga – Feature-Übersicht für Android-App
 
 **App-Zweck:** Self-hosted Rezeptverwaltung mit KI-gestützter Rezepterstellung, Wochenplanung und intelligentem Einkaufslistenmanagement.

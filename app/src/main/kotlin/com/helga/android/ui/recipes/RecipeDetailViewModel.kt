@@ -23,6 +23,7 @@ import com.helga.android.data.remote.dto.AiNutritionRequest
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.WeekplanRepository
+import com.helga.android.data.sync.ServerReachabilityMonitor
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -67,9 +68,17 @@ class RecipeDetailViewModel @Inject constructor(
     private val apiFactory: SyncApiFactory,
     private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
+    private val serverReachability: ServerReachabilityMonitor,
 ) : ViewModel() {
 
     val recipeId: String = checkNotNull(savedStateHandle["recipeId"])
+
+    /** ki A3 — sperrt „Klassifizieren", statt den Fehler erst nach einem Versuch zu zeigen. */
+    val serverReachable: StateFlow<Boolean?> = serverReachability.reachable
+
+    init {
+        serverReachability.checkAsync()
+    }
 
     private val _classifyState = MutableStateFlow(false to (null as String?))
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
@@ -116,7 +125,8 @@ class RecipeDetailViewModel @Inject constructor(
                 val base = parseServings(recipe.recipeYield)
                 if (base > 0) {
                     _baseServings.value = base
-                    _servings.value = base
+                    // Zuletzt gewählte Portionenzahl merken (rezepte A9), sonst Rezept-Standard.
+                    _servings.value = recipe.lastServings.takeIf { it > 0 } ?: base
                 }
                 _nutrition.value = repository.getRecipeNutrition(recipe.id)
             }
@@ -126,18 +136,18 @@ class RecipeDetailViewModel @Inject constructor(
     private fun parseServings(yieldStr: String): Int =
         Regex("""\d+""").find(yieldStr)?.value?.toIntOrNull() ?: 0
 
-    fun setServings(n: Int) { _servings.value = n.coerceIn(1, 99) }
-
-    fun savePersonalNotes(notes: String) {
+    fun setServings(n: Int) {
+        val coerced = n.coerceIn(1, 99)
+        _servings.value = coerced
         viewModelScope.launch {
-            repository.updatePersonalNotes(recipeId, notes)
+            repository.updateLastServings(recipeId, coerced)
             syncScheduler.triggerOneShot()
         }
     }
 
-    fun setRating(rating: Int) {
+    fun savePersonalNotes(notes: String) {
         viewModelScope.launch {
-            repository.updateRating(recipeId, rating)
+            repository.updatePersonalNotes(recipeId, notes)
             syncScheduler.triggerOneShot()
         }
     }
@@ -356,7 +366,6 @@ class RecipeDetailViewModel @Inject constructor(
                     protein = result.protein,
                     fat = result.fat,
                     carbs = result.carbs,
-                    nutriScore = result.nutriScore,
                     source = "ai",
                 )
                 _nutrition.value = repository.getRecipeNutrition(recipeId)
@@ -368,12 +377,12 @@ class RecipeDetailViewModel @Inject constructor(
         }
     }
 
-    fun saveManualNutrition(kcal: Double, protein: Double, fat: Double, carbs: Double, nutriScore: String) {
+    fun saveManualNutrition(kcal: Double, protein: Double, fat: Double, carbs: Double) {
         viewModelScope.launch {
             repository.saveNutrition(
                 recipeId = recipeId,
                 kcal = kcal, protein = protein, fat = fat, carbs = carbs,
-                nutriScore = nutriScore, source = "manual",
+                source = "manual",
             )
             _nutrition.value = repository.getRecipeNutrition(recipeId)
             syncScheduler.triggerOneShot()

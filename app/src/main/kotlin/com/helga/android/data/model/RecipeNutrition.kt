@@ -5,12 +5,14 @@ package com.helga.android.data.model
 const val NUTRITION_BASELINE_PORTIONS = 4
 
 data class RecipeNutrition(
-    val totalKcal: Double,          // Gesamtkalorien für NUTRITION_BASELINE_PORTIONS Portionen
+    val totalKcal: Double,          // Gesamtkalorien für NUTRITION_BASELINE_PORTIONS Portionen — Basis für den Bearbeiten-Dialog
     val kcalPerPortion: Double,     // totalKcal / NUTRITION_BASELINE_PORTIONS
-    val protein: Double,            // g, für NUTRITION_BASELINE_PORTIONS Portionen
-    val fat: Double,                // g, für NUTRITION_BASELINE_PORTIONS Portionen
-    val carbs: Double,              // g, für NUTRITION_BASELINE_PORTIONS Portionen
-    val nutriScore: String,         // "a"-"e"
+    val protein: Double,            // g, für NUTRITION_BASELINE_PORTIONS Portionen — Basis für den Bearbeiten-Dialog
+    val fat: Double,                // g, für NUTRITION_BASELINE_PORTIONS Portionen — Basis für den Bearbeiten-Dialog
+    val carbs: Double,              // g, für NUTRITION_BASELINE_PORTIONS Portionen — Basis für den Bearbeiten-Dialog
+    val proteinPerPortion: Double,  // protein / NUTRITION_BASELINE_PORTIONS — für die Anzeige
+    val fatPerPortion: Double,      // fat / NUTRITION_BASELINE_PORTIONS — für die Anzeige
+    val carbsPerPortion: Double,    // carbs / NUTRITION_BASELINE_PORTIONS — für die Anzeige
     val source: String,             // "manual", "ai" oder "" (noch nicht ermittelt)
 )
 
@@ -18,13 +20,11 @@ data class DayNutrition(
     val date: String,
     val recipeNames: List<String>,
     val avgKcal: Double,           // Durchschnitt der Rezepte des Tages
-    val avgNutriScore: String,     // Beste Score des Tages
     val totalRecipes: Int,
 )
 
 data class WeekplanNutrition(
     val days: List<DayNutrition>,
     val weekAvgKcal: Double,       // Durchschnitt über alle Tage
-    val weekAvgNutriScore: String, // Beste Score der Woche
     val totalRecipes: Int,
 )

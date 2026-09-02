@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -109,6 +110,8 @@ fun ShoppingListScreen(
     onNavigateToWeekplan: () -> Unit = {},
     onNavigateToReceiptScan: (String?) -> Unit = {},
     onNavigateToReceipts: () -> Unit = {},
+    onNavigateToStores: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: ShoppingListViewModel = hiltViewModel(),
 ) {
     val lists by viewModel.lists.collectAsStateWithLifecycle()
@@ -273,7 +276,7 @@ fun ShoppingListScreen(
                     }
                     Box {
                         IconButton(onClick = { showOverflow = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = null)
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more))
                         }
                         DropdownMenu(
                             expanded = showOverflow,
@@ -304,6 +307,22 @@ fun ShoppingListScreen(
                                 onClick = {
                                     showOverflow = false
                                     onNavigateToReceipts()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.stores_title)) },
+                                leadingIcon = { Icon(Icons.Filled.Store, null) },
+                                onClick = {
+                                    showOverflow = false
+                                    onNavigateToStores()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.settings_title)) },
+                                leadingIcon = { Icon(Icons.Filled.Settings, null) },
+                                onClick = {
+                                    showOverflow = false
+                                    onNavigateToSettings()
                                 },
                             )
                             DropdownMenuItem(
@@ -483,8 +502,9 @@ fun ShoppingListScreen(
                 }
             }
             // Cost estimate card
-            if (costEstimate != null && costEstimate!!.totalCost > 0) {
-                CostEstimateCard(estimate = costEstimate!!)
+            val estimate = costEstimate
+            if (estimate != null && estimate.totalCost > 0) {
+                CostEstimateCard(estimate = estimate)
             }
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
@@ -972,7 +992,7 @@ private fun AislePickerDialog(
         title = { Text(stringResource(R.string.shopping_assign_aisle)) },
         text = {
             LazyColumn {
-                items(aisles) { aisle ->
+                items(aisles, key = { it.id }) { aisle ->
                     TextButton(
                         onClick = { onPick(aisle.aisleName) },
                         modifier = Modifier.fillMaxWidth(),
@@ -1039,7 +1059,7 @@ private fun StaplesSheet(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(suggestions) { suggestion ->
+                    items(suggestions, key = { it }) { suggestion ->
                         SuggestionChip(
                             onClick = {
                                 onAddStaple(suggestion)
@@ -1078,7 +1098,7 @@ private fun StaplesSheet(
                         newName = ""
                     }
                 }) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.shopping_staple_add))
                 }
             }
             if (staples.isEmpty()) {
@@ -1103,7 +1123,7 @@ private fun StaplesSheet(
                                 IconButton(onClick = { onDeleteStaple(staple) }) {
                                     Icon(
                                         Icons.Filled.Delete,
-                                        contentDescription = null,
+                                        contentDescription = stringResource(R.string.recipe_delete),
                                         tint = MaterialTheme.colorScheme.error,
                                     )
                                 }
@@ -1176,7 +1196,7 @@ private fun QuickAddBar(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(suggestions) { suggestion ->
+                items(suggestions, key = { it }) { suggestion ->
                     SuggestionChip(
                         onClick = {
                             text = ""
@@ -1226,7 +1246,7 @@ private fun QuickAddBar(
                         suggestions = emptyList()
                         onAdd(name)
                     }) {
-                        Icon(Icons.Filled.Add, contentDescription = null)
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.shopping_add_item))
                     }
                 }
             },
@@ -1467,10 +1487,6 @@ private fun CatalogProductCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (product.nutriScore.isNotBlank()) {
-                NutriScoreBadge(product.nutriScore)
-                Spacer(Modifier.widthIn(min = 12.dp))
-            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = product.name.ifBlank { product.barcode },
@@ -1516,31 +1532,6 @@ private fun CatalogProductCard(
 }
 
 @Composable
-private fun NutriScoreBadge(score: String) {
-    Surface(
-        modifier = Modifier.size(36.dp),
-        shape = RoundedCornerShape(4.dp),
-        color = when (score.uppercase()) {
-            "A" -> Color(0xFF4CAF50)
-            "B" -> Color(0xFF8BC34A)
-            "C" -> Color(0xFFFFC107)
-            "D" -> Color(0xFFFF9800)
-            "E" -> Color(0xFFF44336)
-            else -> MaterialTheme.colorScheme.surfaceVariant
-        },
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = score.uppercase(),
-                color = Color.White,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            )
-        }
-    }
-}
-
-@Composable
 fun ScannedProductDialog(
     product: OffProductEntity,
     activeStore: StoreEntity?,
@@ -1557,43 +1548,6 @@ fun ScannedProductDialog(
         title = { Text(text = "📦 ${product.name}") },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // NutriScore
-                if (product.nutriScore.isNotBlank()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "NutriScore:",
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Surface(
-                            modifier = Modifier.size(32.dp),
-                            shape = RoundedCornerShape(4.dp),
-                            color = when (product.nutriScore.uppercase()) {
-                                "A" -> Color(0xFF4CAF50)
-                                "B" -> Color(0xFF8BC34A)
-                                "C" -> Color(0xFFFFC107)
-                                "D" -> Color(0xFFFF9800)
-                                "E" -> Color(0xFFF44336)
-                                else -> MaterialTheme.colorScheme.surfaceVariant
-                            },
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = product.nutriScore.uppercase(),
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                )
-                            }
-                        }
-                    }
-                }
-
                 // Nährwerte (pro 100 g) – übersichtlich in einer Karte gruppiert
                 if (product.kcalPerUnit > 0 || product.proteins > 0 ||
                     product.fats > 0 || product.carbs > 0

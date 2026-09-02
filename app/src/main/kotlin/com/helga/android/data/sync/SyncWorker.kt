@@ -5,10 +5,14 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.helga.android.data.preferences.AppPreferences
+import com.helga.android.data.repository.ReceiptRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.io.IOException
+import java.time.LocalDate
+import java.time.ZoneId
 
 @HiltWorker
 class SyncWorker @AssistedInject constructor(
@@ -17,9 +21,12 @@ class SyncWorker @AssistedInject constructor(
     private val syncEngine: SyncEngine,
     private val statusHolder: SyncStatusHolder,
     private val preferences: AppPreferences,
+    private val receiptRepository: ReceiptRepository,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        purgeOldReceipts()
+
         if (!preferences.currentConnection().isConfigured) {
             // Nichts zu tun – Onboarding noch nicht abgeschlossen.
             return Result.success()
@@ -39,6 +46,23 @@ class SyncWorker @AssistedInject constructor(
             Timber.e(e, "Sync error")
             statusHolder.update(SyncStatus.Error(e.message ?: e.javaClass.simpleName))
             Result.retry()
+        }
+    }
+
+    /**
+     * Rein lokale Bereinigung, unabhängig von Netzwerk/Server-Konfiguration – läuft bei jedem
+     * Worker-Lauf (periodisch, Connectivity-Change, App-Vordergrund), auch offline.
+     */
+    private suspend fun purgeOldReceipts() {
+        val months = preferences.receiptRetentionMonths.first()
+        if (months <= 0) return
+        try {
+            val cutoff = LocalDate.now().minusMonths(months.toLong())
+                .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val purged = receiptRepository.purgeReceiptsOlderThan(cutoff)
+            if (purged > 0) Timber.i("Automatische Bon-Löschung: $purged Bon(s) älter als $months Monate entfernt")
+        } catch (e: Exception) {
+            Timber.w(e, "Automatische Bon-Löschung fehlgeschlagen")
         }
     }
 

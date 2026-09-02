@@ -1,0 +1,135 @@
+# Feature: Märkte & Gänge
+
+> **Status:** Interview erledigt · **Aufgaben:** 0 offen (4 erledigt) · **Stand:** 2026-08-31 · **Priorität:** ⭐
+
+Bestimmt die Reihenfolge, in der die Einkaufsliste sortiert wird. Kleiner Bereich mit direkter
+Wirkung auf den Einkauf.
+
+## Umfang
+
+| Ebene | Dateien |
+|-------|---------|
+| UI | `app/src/main/kotlin/com/helga/android/ui/stores/StoreListScreen.kt`, `StoreListViewModel.kt` |
+| Room | `app/src/main/kotlin/com/helga/android/data/local/entity/StoreEntity.kt`, `StoreAisleEntity.kt`, `AisleProductEntity.kt` |
+| DAO | `app/src/main/kotlin/com/helga/android/data/local/dao/StoreDao.kt` |
+| Repository | `app/src/main/kotlin/com/helga/android/data/repository/StoreRepository.kt` |
+| Server | `/api/suggestions/aisles` in `server/app/main.py` |
+
+## Ist-Analyse
+
+- **Märkte:** anlegen, löschen, aktiven Markt setzen (`createStore`, `deleteStore`,
+  `setActiveStore`, `selectStore`).
+- **Gänge:** je Markt eigene Gangliste (`addAisle`, `deleteAisle`), Reihenfolge über
+  Hoch/Runter-Buttons (`moveAisleUp`, `moveAisleDown`) — kein Drag-and-Drop.
+- **Produktzuordnung:** `AisleProductEntity` merkt sich, welches Produkt zu welchem Gang gehört.
+  Zuordnungen entstehen automatisch beim Einkaufen und sind über den `AislePickerDialog` in der
+  Einkaufsliste nachträglich korrigierbar.
+- **Wirkung:** Die Einkaufsliste gruppiert und sortiert nach der Gangreihenfolge des gewählten
+  Markts.
+
+## Bekannte Lücken
+
+### Funktion & UX
+- Gangreihenfolge nur über Pfeil-Buttons. Bei vielen Gängen mühsam; Drag-and-Drop wäre der
+  erwartete Weg.
+- **Root Cause zu „muss oft korrigieren" (aus dem Interview):** Die Gang-Zuordnung matcht
+  Produktnamen exakt. `StoreDao.kt:31` (`findAisleForProduct`) und `:34`
+  (`findAisleProductEntry`) vergleichen mit `WHERE productName = :productName` — nur
+  klein geschrieben normalisiert (`StoreRepository.kt:92/103/113`), keine Normalisierung von
+  Plural/Singular, Klammerzusätzen oder Zubereitungshinweisen. „Zwiebel" (gelernt) und
+  „Zwiebeln" (nächstes Rezept) oder „Tomaten (klein)" treffen sich nie, obwohl dasselbe Produkt
+  gemeint ist — jede Abweichung erzwingt eine erneute manuelle Zuordnung.
+
+### Code-Qualität
+Keine `!!`-Zugriffe, keine `items()`-Verstöße in diesem Bereich.
+
+### Tests
+Keine.
+
+### Sync
+`stores`, `storeAisles` und `aisleProducts` sind vollständig angebunden. Keine Lücke.
+
+## Fragen
+
+1. **Wie viele Märkte und Gänge nutzt du tatsächlich?**
+   Antwort: Mehrere Märkte, viele Gänge — Drag-and-Drop lohnt sich.
+2. **Stimmt die gelernte Gang-Zuordnung meist, oder korrigierst du oft nach?**
+   Antwort: Muss oft korrigieren. Siehe Root Cause oben (exakter String-Match ohne
+   Normalisierung).
+3. **Soll ein Markt einen Standard-Gangsatz mitbringen?**
+   Antwort: Ja, wäre praktisch.
+4. **Wechselst du den aktiven Markt tatsächlich, oder ist faktisch immer derselbe aktiv?**
+   Antwort: Praktisch immer derselbe — kein Ausbau der Wechsel-UI nötig.
+5. **Sollen Gänge zwischen Märkten kopierbar sein?**
+   Antwort: Ja, wäre praktisch — ergänzt Frage 3 (beides löst „nicht bei null anfangen").
+6. **Fehlt etwas am Markt selbst (Öffnungszeiten, Adresse, Notiz)?**
+   Antwort: Nicht nötig.
+
+## Ziele
+
+- Gang-Zuordnung zuverlässiger lernen lassen — exaktes String-Matching ist die Hauptursache für
+  häufiges Nachkorrigieren, nicht die Lernlogik an sich.
+- Neue Märkte nicht bei null anfangen lassen — Standard-Gangsatz oder Kopie eines bestehenden
+  Markts als Startpunkt.
+- Drag-and-Drop für die Gangreihenfolge umsetzen — bei mehreren Märkten mit vielen Gängen
+  bestätigt sich der Bedarf aus der Ist-Analyse.
+- Markt-Wechsel-UI und Markt-Metadaten unverändert lassen — kein Bedarf geäußert.
+
+## Backlog
+
+Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
+
+- [x] **A1** — Drag-and-Drop für die Gangreihenfolge · M · Impact mittel — bestätigter Bedarf
+  aus dem Interview (mehrere Märkte, viele Gänge) — **umgesetzt:** die bisherigen Hoch/Runter-
+  Pfeile in `AisleEditorSheet`/`AisleRow` (`StoreListScreen.kt`) durch echtes Long-Press-Drag
+  ersetzt (`detectDragGesturesAfterLongPress`, gleiches Prinzip wie das bereits vorhandene
+  Wisch-Gesture in `ShoppingListScreen.kt` — keine externe Reorder-Library nötig). Neue
+  `ReorderableAisleList` hält während des Ziehens eine lokale Kopie der Reihenfolge (verhindert
+  Zurückspringen durch parallel einlaufende Flow-Updates), tauscht Positionen sobald über die
+  halbe Höhe des Nachbarn gezogen wurde, committet die finale Reihenfolge erst bei Drag-Ende über
+  `StoreRepository.reorderAisles()` (ersetzt `moveAisleUp`/`moveAisleDown`, die beide nur je einen
+  Platztausch konnten). `sortOrder` wird dabei per `storeDao.upsertAisles()` als Batch neu
+  geschrieben — bereits vorhandene DAO-Funktion, keine neue Query nötig.
+- [x] **A2** — Gang-Zuordnung robuster machen: `findAisleForProduct`/`findAisleProductEntry`
+  (`StoreDao.kt:31`/`:34`) matchen exakt, keine Normalisierung von Plural/Singular oder
+  Klammerzusätzen (`Zwiebel` ↔ `Zwiebeln`, `Tomaten (klein)`) · M · Impact hoch — löst zugleich
+  [einkaufsliste](../einkaufsliste/plan.md) A6 („falsche Gang-Zuordnung", größter Reibungspunkt
+  aus dem Einkaufslisten-Interview); dort aufgelöst, hier umgesetzt. Normalisierung möglichst
+  gemeinsam mit [ki](../ki/plan.md) A4 denken — beide brauchen dieselbe Namensbereinigung —
+  **umgesetzt:** neues `AisleProductKey.normalize()` (`data/util/AisleProductKey.kt`) bildet
+  einen stabilen Lookup-Schlüssel statt reinem `.lowercase()`: entfernt Klammerzusätze (gleiches
+  Regex-Prinzip wie `IngredientLineParser.TRAILING_NOTE_RE`) und faltet ein gängiges deutsches
+  Plural-Suffix weg (`en`/`er`/`n`/`e`, nur wenn der verbleibende Stamm ≥ 3 Zeichen hat) — kein
+  echter Lemmatisierer, sondern ein symmetrischer Faltungsschlüssel: „Zwiebel" und „Zwiebeln"
+  treffen denselben Schlüssel, ohne die grammatikalisch korrekte Grundform zu ermitteln. In
+  `StoreRepository.saveAisleProduct()` (Schreiben) und `findAisleForProduct()` (Lesen) identisch
+  angewendet, damit das Format konsistent bleibt. Bewusst kein gemeinsamer Code mit
+  [ki](../ki/plan.md) A4 — andere Zielsetzung (Lookup-Schlüssel bilden vs. Zutatenzeile in
+  Menge/Einheit/Food zerlegen).
+- [x] **A3** — Neue Märkte vorbefüllen: Standard-Gangsatz als Vorlage anbieten, alternativ
+  Gänge von einem bestehenden Markt kopieren · M · Impact mittel — **umgesetzt:**
+  `StorePrefill`-Sealed-Interface (`None`/`DefaultTemplate`/`CopyFrom(storeId)`) in
+  `StoreRepository.kt`; `createStore()` legt bei `DefaultTemplate` zehn feste Standard-Gänge an
+  (Obst & Gemüse, Brot & Backwaren, Milchprodukte & Eier, Fleisch & Wurst, Fisch, Tiefkühl,
+  Konserven & Trockenware, Getränke, Süßes & Snacks, Drogerie & Haushalt), bei `CopyFrom` die
+  Gangnamen des gewählten bestehenden Markts. `NewStoreDialog` bekommt eine Radio-Auswahl unter
+  dem Namensfeld — „Standard-Gangsatz" (vorausgewählt), je ein Eintrag „Wie „Markt X"" pro
+  bestehendem Markt, und „Leer, selbst anlegen" für das alte Verhalten. Keine Sync- oder
+  Schema-Änderung nötig — nutzt die bereits vorhandene `StoreAisleEntity`/`upsertAisles()`.
+- [x] **A4** — Märkte direkter erreichbar machen: aktuell nur über Einstellungen → Märkte
+  (`HelgaNavGraph.kt:210`, `onStoresClick` kommt ausschließlich aus `SettingsScreen`), zwei
+  Hops tief. Gefunden im [plattform](../plattform/plan.md)-Interview ("zu langsam/versteckt").
+  Naheliegend: Eintrag im Overflow-Menü der Einkaufsliste, analog zu „Kassenzettel" ·
+  S · Impact mittel — **umgesetzt:** neuer `DropdownMenuItem` „Märkte" im Overflow-Menü der
+  Einkaufsliste, `onNavigateToStores`-Parameter durchgereicht bis `ROUTE_STORES`
+
+_Weitere Aufgaben nach dem Interview._
+
+## Entscheidungen
+
+| Datum | Entscheidung | Begründung |
+|-------|--------------|------------|
+| 2026-08-30 | Drag-and-Drop wird umgesetzt | Mehrere Märkte mit vielen Gängen bestätigt den Bedarf |
+| 2026-08-30 | Gang-Zuordnung bekommt eine robustere Matching-Logik statt reinem Exakt-Match | Häufiges Nachkorrigieren ist der größte Reibungspunkt im Bereich |
+| 2026-08-30 | Neue Märkte lassen sich per Standard-Gangsatz oder Kopie vorbefüllen | Beide Wege wurden gewünscht, lösen dasselbe Problem gemeinsam |
+| 2026-08-30 | Markt-Wechsel-UI und Markt-Metadaten bleiben unverändert | Kein Bedarf geäußert |

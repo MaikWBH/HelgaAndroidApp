@@ -17,6 +17,7 @@ import javax.inject.Singleton
 class NetworkObserver @Inject constructor(
     @ApplicationContext private val context: Context,
     private val syncScheduler: SyncScheduler,
+    private val serverReachabilityMonitor: ServerReachabilityMonitor,
 ) {
     private var registered = false
 
@@ -33,6 +34,7 @@ class NetworkObserver @Inject constructor(
         cm.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 syncScheduler.triggerOneShot()
+                serverReachabilityMonitor.checkAsync()
             }
         })
     }

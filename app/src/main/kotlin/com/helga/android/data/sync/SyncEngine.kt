@@ -2,6 +2,7 @@ package com.helga.android.data.sync
 
 import com.helga.android.data.local.AppDatabase
 import com.helga.android.data.local.dao.MonthlyBudgetDao
+import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
@@ -18,6 +19,7 @@ import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
+import com.helga.android.data.local.entity.OffProductEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
@@ -31,6 +33,8 @@ import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerAssignmentEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
@@ -42,6 +46,7 @@ import com.helga.android.data.remote.dto.CategoryDto
 import com.helga.android.data.remote.dto.IngredientDto
 import com.helga.android.data.remote.dto.InstructionDto
 import com.helga.android.data.remote.dto.MonthlyBudgetDto
+import com.helga.android.data.remote.dto.OffProductDto
 import com.helga.android.data.remote.dto.QuickEmojiDto
 import com.helga.android.data.remote.dto.ReceiptDto
 import com.helga.android.data.remote.dto.ReceiptItemDto
@@ -58,6 +63,8 @@ import com.helga.android.data.remote.dto.RecipeFeedbackDto
 import com.helga.android.data.remote.dto.RecipeHistoryDto
 import com.helga.android.data.remote.dto.WeekplanConstraintsDto
 import com.helga.android.data.remote.dto.WeekplanDayDto
+import com.helga.android.data.remote.dto.WeekplanDayMarkerAssignmentDto
+import com.helga.android.data.remote.dto.WeekplanDayMarkerDto
 import com.helga.android.data.remote.dto.WeekplanExtraDto
 import com.helga.android.data.remote.dto.WeekplanRecipeDto
 import com.helga.android.data.remote.dto.WeekplanSettingsDto
@@ -80,6 +87,7 @@ class SyncEngine @Inject constructor(
     private val recipeFeedbackDao: RecipeFeedbackDao,
     private val receiptDao: ReceiptDao,
     private val monthlyBudgetDao: MonthlyBudgetDao,
+    private val offProductDao: OffProductDao,
     private val apiFactory: SyncApiFactory,
     private val preferences: AppPreferences,
 ) {
@@ -126,15 +134,14 @@ class SyncEngine @Inject constructor(
         val wpExtraWinners = filterServerWins(response.weekplanExtras, syncDao.weekplanExtraTimestamps()) { it.id to it.updatedAt }
         val wpSettingsWinners = filterServerWins(response.weekplanSettings, syncDao.weekplanSettingsTimestamps()) { it.id to it.updatedAt }
         val wpConstraintsWinners = filterServerWins(response.weekplanConstraints, syncDao.weekplanConstraintsTimestamps()) { it.id to it.updatedAt }
-        val historyWinners = response.recipeHistory.filter { dto ->
-            dto.updatedAt > 0L
-        }
-        val feedbackWinners = response.recipeFeedback.filter { dto ->
-            dto.updatedAt > 0L
-        }
+        val historyWinners = filterServerWins(response.recipeHistory, syncDao.historyTimestamps()) { it.id to it.updatedAt }
+        val feedbackWinners = filterServerWins(response.recipeFeedback, syncDao.feedbackTimestamps()) { it.id to it.updatedAt }
         val receiptWinners = filterServerWins(response.receipts, syncDao.receiptTimestamps()) { it.id to it.updatedAt }
         val receiptItemWinners = filterServerWins(response.receiptItems, syncDao.receiptItemTimestamps()) { it.id to it.updatedAt }
         val budgetWinners = filterServerWins(response.monthlyBudgets, syncDao.monthlyBudgetTimestamps()) { it.id to it.updatedAt }
+        val offProductWinners = filterServerWins(response.offProducts, syncDao.offProductTimestamps()) { it.id to it.updatedAt }
+        val markerWinners = filterServerWins(response.weekplanDayMarkers, syncDao.weekplanDayMarkerTimestamps()) { it.id to it.updatedAt }
+        val markerAssignmentWinners = filterServerWins(response.weekplanDayMarkerAssignments, syncDao.weekplanDayMarkerAssignmentTimestamps()) { it.id to it.updatedAt }
 
         if (recipeWinners.isEmpty() && ingredientWinners.isEmpty() &&
             instructionWinners.isEmpty() && tagWinners.isEmpty() && categoryWinners.isEmpty() &&
@@ -144,7 +151,8 @@ class SyncEngine @Inject constructor(
             wpDayWinners.isEmpty() && wpRecipeWinners.isEmpty() && wpExtraWinners.isEmpty() &&
             wpSettingsWinners.isEmpty() && wpConstraintsWinners.isEmpty() && historyWinners.isEmpty() &&
             feedbackWinners.isEmpty() && receiptWinners.isEmpty() && receiptItemWinners.isEmpty() &&
-            budgetWinners.isEmpty()
+            budgetWinners.isEmpty() && offProductWinners.isEmpty() &&
+            markerWinners.isEmpty() && markerAssignmentWinners.isEmpty()
         ) return
 
         database.withTransaction {
@@ -170,6 +178,9 @@ class SyncEngine @Inject constructor(
             if (receiptWinners.isNotEmpty()) receiptDao.upsertReceipts(receiptWinners.map { it.toEntity() })
             if (receiptItemWinners.isNotEmpty()) receiptDao.upsertItems(receiptItemWinners.map { it.toEntity() })
             if (budgetWinners.isNotEmpty()) monthlyBudgetDao.upsert(budgetWinners.first().toEntity())
+            if (offProductWinners.isNotEmpty()) offProductDao.upsertAll(offProductWinners.map { it.toEntity() })
+            if (markerWinners.isNotEmpty()) weekplanDao.upsertMarkers(markerWinners.map { it.toEntity() })
+            if (markerAssignmentWinners.isNotEmpty()) weekplanDao.upsertMarkerAssignments(markerAssignmentWinners.map { it.toEntity() })
         }
     }
 
@@ -197,6 +208,9 @@ class SyncEngine @Inject constructor(
         receipts = receiptDao.dirtyReceipts().map { it.toDto() },
         receiptItems = receiptDao.dirtyItems().map { it.toDto() },
         monthlyBudgets = monthlyBudgetDao.dirty().map { it.toDto() },
+        offProducts = offProductDao.dirtyProducts().map { it.toDto() },
+        weekplanDayMarkers = weekplanDao.dirtyMarkers().map { it.toDto() },
+        weekplanDayMarkerAssignments = weekplanDao.dirtyMarkerAssignments().map { it.toDto() },
     )
 
     private suspend fun clearDirtyFlagsExcept(
@@ -225,6 +239,9 @@ class SyncEngine @Inject constructor(
         val receiptIds = pushed.receipts.map { it.id } - serverWins.receipts.map { it.id }.toSet()
         val receiptItemIds = pushed.receiptItems.map { it.id } - serverWins.receiptItems.map { it.id }.toSet()
         val budgetIds = pushed.monthlyBudgets.map { it.id } - serverWins.monthlyBudgets.map { it.id }.toSet()
+        val offProductIds = pushed.offProducts.map { it.id } - serverWins.offProducts.map { it.id }.toSet()
+        val markerIds = pushed.weekplanDayMarkers.map { it.id } - serverWins.weekplanDayMarkers.map { it.id }.toSet()
+        val markerAssignmentIds = pushed.weekplanDayMarkerAssignments.map { it.id } - serverWins.weekplanDayMarkerAssignments.map { it.id }.toSet()
 
         database.withTransaction {
             if (recipeIds.isNotEmpty()) recipeDao.clearRecipeDirty(recipeIds)
@@ -249,6 +266,9 @@ class SyncEngine @Inject constructor(
             if (receiptIds.isNotEmpty()) receiptDao.clearReceiptDirty(receiptIds)
             if (receiptItemIds.isNotEmpty()) receiptDao.clearItemDirty(receiptItemIds)
             if (budgetIds.isNotEmpty()) monthlyBudgetDao.clearDirty(budgetIds.toList())
+            if (offProductIds.isNotEmpty()) offProductDao.clearDirty(offProductIds.toList())
+            if (markerIds.isNotEmpty()) weekplanDao.clearMarkerDirty(markerIds)
+            if (markerAssignmentIds.isNotEmpty()) weekplanDao.clearMarkerAssignmentDirty(markerAssignmentIds)
         }
     }
 
@@ -280,6 +300,7 @@ private fun RecipeDto.toEntity(): RecipeEntity = RecipeEntity(
     nutritionFat = nutritionFat, nutritionCarbs = nutritionCarbs,
     nutritionNutriScore = nutritionNutriScore, nutritionSource = nutritionSource,
     createdAt = createdAt, updatedAt = updatedAt, deleted = deleted, dirty = 0,
+    lastServings = lastServings,
 )
 
 private fun IngredientDto.toEntity(): IngredientEntity = IngredientEntity(
@@ -347,6 +368,7 @@ private fun RecipeEntity.toDto(): RecipeDto = RecipeDto(
     nutritionFat = nutritionFat, nutritionCarbs = nutritionCarbs,
     nutritionNutriScore = nutritionNutriScore, nutritionSource = nutritionSource,
     createdAt = createdAt,
+    lastServings = lastServings,
 )
 
 private fun IngredientEntity.toDto(): IngredientDto = IngredientDto(
@@ -404,12 +426,12 @@ private fun QuickEmojiEntity.toDto(): QuickEmojiDto = QuickEmojiDto(
 
 private fun WeekplanDayDto.toEntity(): WeekplanDayEntity = WeekplanDayEntity(
     id = id, planDate = planDate, note = note, isQuickDay = isQuickDay, isGuestDay = isGuestDay,
-    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+    isSkipped = isSkipped, isLocked = isLocked, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun WeekplanRecipeDto.toEntity(): WeekplanRecipeEntity = WeekplanRecipeEntity(
     id = id, weekplanDayId = weekplanDayId, recipeId = recipeId, position = position,
-    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+    mealSlot = mealSlot, updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
 private fun WeekplanExtraDto.toEntity(): WeekplanExtraEntity = WeekplanExtraEntity(
@@ -419,17 +441,35 @@ private fun WeekplanExtraDto.toEntity(): WeekplanExtraEntity = WeekplanExtraEnti
 
 private fun WeekplanDayEntity.toDto(): WeekplanDayDto = WeekplanDayDto(
     id = id, updatedAt = updatedAt, deleted = deleted, planDate = planDate, note = note,
-    isQuickDay = isQuickDay, isGuestDay = isGuestDay,
+    isQuickDay = isQuickDay, isGuestDay = isGuestDay, isSkipped = isSkipped, isLocked = isLocked,
 )
 
 private fun WeekplanRecipeEntity.toDto(): WeekplanRecipeDto = WeekplanRecipeDto(
     id = id, updatedAt = updatedAt, deleted = deleted, weekplanDayId = weekplanDayId,
-    recipeId = recipeId, position = position,
+    recipeId = recipeId, position = position, mealSlot = mealSlot,
 )
 
 private fun WeekplanExtraEntity.toDto(): WeekplanExtraDto = WeekplanExtraDto(
     id = id, updatedAt = updatedAt, deleted = deleted, weekplanDayId = weekplanDayId,
     itemText = itemText, position = position,
+)
+
+private fun WeekplanDayMarkerDto.toEntity(): WeekplanDayMarkerEntity = WeekplanDayMarkerEntity(
+    id = id, name = name, color = color, updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun WeekplanDayMarkerEntity.toDto(): WeekplanDayMarkerDto = WeekplanDayMarkerDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, name = name, color = color,
+)
+
+private fun WeekplanDayMarkerAssignmentDto.toEntity(): WeekplanDayMarkerAssignmentEntity = WeekplanDayMarkerAssignmentEntity(
+    id = id, weekplanDayId = weekplanDayId, markerId = markerId,
+    updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun WeekplanDayMarkerAssignmentEntity.toDto(): WeekplanDayMarkerAssignmentDto = WeekplanDayMarkerAssignmentDto(
+    id = id, updatedAt = updatedAt, deleted = deleted,
+    weekplanDayId = weekplanDayId, markerId = markerId,
 )
 
 private fun WeekplanSettingsDto.toEntity(): WeekplanSettingsEntity = WeekplanSettingsEntity(
@@ -528,4 +568,22 @@ private fun MonthlyBudgetDto.toEntity(): MonthlyBudgetEntity = MonthlyBudgetEnti
 private fun MonthlyBudgetEntity.toDto(): MonthlyBudgetDto = MonthlyBudgetDto(
     id = id, updatedAt = updatedAt, deleted = deleted,
     amount = amount, warnThreshold = warnThreshold,
+)
+
+private fun OffProductDto.toEntity(): OffProductEntity = OffProductEntity(
+    id = id, barcode = barcode, name = name, brand = brand, categories = categories,
+    kcalPerUnit = kcalPerUnit, proteins = proteins, fats = fats, carbs = carbs,
+    nutriScore = nutriScore, nova = nova, ecoScore = ecoScore, allergenes = allergenes,
+    additives = additives, isOrganic = isOrganic, vegan = vegan, vegetarian = vegetarian,
+    imagePath = imagePath, isFavorite = isFavorite, packageGrams = packageGrams,
+    packageGramsManual = packageGramsManual, updatedAt = updatedAt, deleted = deleted, dirty = 0,
+)
+
+private fun OffProductEntity.toDto(): OffProductDto = OffProductDto(
+    id = id, updatedAt = updatedAt, deleted = deleted, barcode = barcode, name = name,
+    brand = brand, categories = categories, kcalPerUnit = kcalPerUnit, proteins = proteins,
+    fats = fats, carbs = carbs, nutriScore = nutriScore, nova = nova, ecoScore = ecoScore,
+    allergenes = allergenes, additives = additives, isOrganic = isOrganic, vegan = vegan,
+    vegetarian = vegetarian, imagePath = imagePath, isFavorite = isFavorite,
+    packageGrams = packageGrams, packageGramsManual = packageGramsManual,
 )

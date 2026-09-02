@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import com.helga.android.data.local.entity.OffProductEntity
 import timber.log.Timber
 import java.time.DayOfWeek
@@ -376,12 +377,19 @@ class ShoppingListViewModel @Inject constructor(
 
     suspend fun suggestItems(query: String): List<String> {
         if (query.length < 2) return emptyList()
-        return try {
-            apiFactory.api().suggestItems(query).suggestions
+        val local = try {
+            repository.searchItemNames(query) + recipeDao.searchIngredientNames(query)
         } catch (e: Exception) {
-            Timber.d(e, "Failed to get suggestions")
+            Timber.d(e, "Local suggestion lookup failed")
             emptyList()
         }
+        val remote = try {
+            withTimeoutOrNull(1_500) { apiFactory.api().suggestItems(query).suggestions }.orEmpty()
+        } catch (e: Exception) {
+            Timber.d(e, "Failed to get server suggestions")
+            emptyList()
+        }
+        return (local + remote).distinctBy { it.lowercase() }.take(20)
     }
 
     fun addItemFromBarcode(barcode: String) {

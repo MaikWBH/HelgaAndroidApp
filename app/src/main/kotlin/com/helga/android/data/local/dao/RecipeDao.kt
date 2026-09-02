@@ -36,6 +36,21 @@ interface RecipeDao {
     @Query("SELECT DISTINCT recipeId FROM recipe_tags WHERE name IN (:tags) AND deleted = 0")
     fun observeRecipeIdsByTags(tags: List<String>): Flow<List<String>>
 
+    // Freitextsuche über Tags und Zutaten (rezepte A5) — Name/Beschreibung bleiben In-Memory-
+    // Filter im ViewModel, da die Rezeptliste ohnehin schon vollständig geladen ist; Tags und
+    // Zutaten liegen dagegen in Nebentabellen und würden pro Rezept einen Join in Kotlin nötig
+    // machen, den SQLite hier effizienter erledigt.
+    @Query(
+        """
+        SELECT DISTINCT recipeId FROM recipe_tags
+        WHERE deleted = 0 AND name LIKE '%' || :query || '%' COLLATE NOCASE
+        UNION
+        SELECT DISTINCT recipeId FROM recipe_ingredients
+        WHERE deleted = 0 AND food LIKE '%' || :query || '%' COLLATE NOCASE
+        """
+    )
+    fun observeRecipeIdsByTagOrIngredientSearch(query: String): Flow<List<String>>
+
     @Query("UPDATE recipes SET rating = :rating, updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
     suspend fun updateRating(id: String, rating: Int, updatedAt: Long)
 
@@ -44,6 +59,9 @@ interface RecipeDao {
 
     @Query("UPDATE recipes SET personalNotes = :notes, updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
     suspend fun updatePersonalNotes(id: String, notes: String, updatedAt: Long)
+
+    @Query("UPDATE recipes SET lastServings = :servings, updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
+    suspend fun updateLastServings(id: String, servings: Int, updatedAt: Long)
 
     @Query("SELECT * FROM recipes WHERE dirty = 1")
     suspend fun dirtyRecipes(): List<RecipeEntity>
@@ -114,6 +132,13 @@ interface RecipeDao {
     @Query("SELECT DISTINCT food FROM recipe_ingredients WHERE deleted = 0 AND food != '' ORDER BY food COLLATE NOCASE")
     fun observeDistinctIngredientNames(): Flow<List<String>>
 
+    @Query(
+        "SELECT DISTINCT food FROM recipe_ingredients WHERE deleted = 0 " +
+            "AND food LIKE '%' || :query || '%' COLLATE NOCASE " +
+            "ORDER BY food COLLATE NOCASE LIMIT 20"
+    )
+    suspend fun searchIngredientNames(query: String): List<String>
+
     @Query("SELECT * FROM recipe_instructions WHERE recipeId = :recipeId")
     suspend fun instructionsByRecipeId(recipeId: String): List<InstructionEntity>
 
@@ -122,6 +147,10 @@ interface RecipeDao {
 
     @Query("SELECT * FROM recipes WHERE localImageUri != '' AND deleted = 0")
     suspend fun recipesWithLocalImage(): List<RecipeEntity>
+
+    /** Für den proaktiven Bild-Download (sync A4) — Bild liegt auf dem Server, aber noch nicht lokal gecacht. */
+    @Query("SELECT * FROM recipes WHERE localImageUri = '' AND imagePath != '' AND deleted = 0")
+    suspend fun recipesNeedingImageDownload(): List<RecipeEntity>
 
     @Query("SELECT * FROM recipes WHERE deleted = 0 AND id NOT IN (:excludeIds) ORDER BY RANDOM() LIMIT :limit")
     suspend fun getRandomExcluding(excludeIds: List<String>, limit: Int): List<RecipeEntity>

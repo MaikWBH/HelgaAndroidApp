@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import retrofit2.HttpException
+import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 
@@ -58,10 +61,24 @@ class UrlImportViewModel @Inject constructor(
                 val api = apiFactory.api()
                 val result = api.importFromUrl(UrlImportRequest(url))
                 _state.update { it.copy(status = ImportStatus.Success(result)) }
+            } catch (e: HttpException) {
+                val detail = e.response()?.errorBody()?.string()?.let(::extractErrorDetail)
+                _state.update {
+                    it.copy(status = ImportStatus.Error(detail ?: "Import fehlgeschlagen (Fehler ${e.code()})"))
+                }
+            } catch (e: IOException) {
+                _state.update { it.copy(status = ImportStatus.Error("Server nicht erreichbar")) }
             } catch (e: Exception) {
                 _state.update { it.copy(status = ImportStatus.Error(e.message ?: "Unbekannter Fehler")) }
             }
         }
+    }
+
+    /** Extrahiert das `detail`-Feld aus einer FastAPI-Fehlerantwort, z. B. `{"detail": "..."}`. */
+    private fun extractErrorDetail(body: String): String? = try {
+        JSONObject(body).optString("detail").ifBlank { null }
+    } catch (_: Exception) {
+        null
     }
 
     fun save(recipe: ImportedRecipeDto, onSuccess: () -> Unit) {

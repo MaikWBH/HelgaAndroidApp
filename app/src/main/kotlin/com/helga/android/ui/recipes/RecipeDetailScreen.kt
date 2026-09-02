@@ -99,6 +99,7 @@ fun RecipeDetailScreen(
     viewModel: RecipeDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val serverReachable by viewModel.serverReachable.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val recipe = uiState.recipe
     val snackbarHostState = remember { SnackbarHostState() }
@@ -178,9 +179,9 @@ fun RecipeDetailScreen(
         NutritionEditDialog(
             nutrition = nutrition,
             onDismiss = { showNutritionDialog = false },
-            onSave = { kcal, protein, fat, carbs, nutriScore ->
+            onSave = { kcal, protein, fat, carbs ->
                 showNutritionDialog = false
-                viewModel.saveManualNutrition(kcal, protein, fat, carbs, nutriScore)
+                viewModel.saveManualNutrition(kcal, protein, fat, carbs)
             },
         )
     }
@@ -222,7 +223,7 @@ fun RecipeDetailScreen(
                         }
                         Box {
                             IconButton(onClick = { showOverflow = true }) {
-                                Icon(Icons.Filled.MoreVert, contentDescription = null)
+                                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more))
                             }
                             DropdownMenu(
                                 expanded = showOverflow,
@@ -284,6 +285,8 @@ fun RecipeDetailScreen(
                                     text = {
                                         if (uiState.isClassifying) {
                                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                        } else if (serverReachable == false) {
+                                            Text(stringResource(R.string.recipe_classify_unreachable))
                                         } else {
                                             Text(stringResource(R.string.recipe_classify))
                                         }
@@ -293,7 +296,7 @@ fun RecipeDetailScreen(
                                         showOverflow = false
                                         viewModel.classify()
                                     },
-                                    enabled = !uiState.isClassifying && !alreadyClassified,
+                                    enabled = !uiState.isClassifying && !alreadyClassified && serverReachable != false,
                                 )
                                 HorizontalDivider()
                                 DropdownMenuItem(
@@ -353,11 +356,8 @@ fun RecipeDetailScreen(
                         serverUrl = serverUrl,
                     )
                 }
-                item {
-                    RatingSection(
-                        rating = recipe.rating,
-                        onRatingChange = viewModel::setRating,
-                    )
+                if (recipe.rating > 0) {
+                    item { RatingSection(rating = recipe.rating) }
                 }
                 if (uiState.tags.isNotEmpty()) {
                     item { TagsSection(tags = uiState.tags) }
@@ -367,6 +367,7 @@ fun RecipeDetailScreen(
                     NutritionSection(
                         nutrition = nutrition,
                         isCalculating = uiState.isCalculatingNutrition,
+                        scaleFactor = scaleFactor,
                         onCalculateWithAi = { viewModel.calculateNutritionWithAi() },
                         onEditManual = { showNutritionDialog = true },
                     )
@@ -456,28 +457,36 @@ private fun HeroImage(
     }
 }
 
+/**
+ * Rein lesend — die Bewertung wird ausschließlich aus dem Kochfeedback abgeleitet
+ * (rezepte A6, siehe [RecipeRepository.recalculateRating]), nicht mehr hier frei gesetzt.
+ */
 @Composable
-private fun RatingSection(rating: Int, onRatingChange: (Int) -> Unit) {
-    Row(
+private fun RatingSection(rating: Int) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        for (i in 1..5) {
-            IconButton(
-                onClick = { onRatingChange(if (i == rating) 0 else i) },
-                modifier = Modifier.size(40.dp),
-            ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            for (i in 1..5) {
                 Icon(
                     imageVector = if (i <= rating) Icons.Filled.Star else Icons.Outlined.Star,
                     contentDescription = null,
                     tint = if (i <= rating) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(28.dp),
                 )
             }
         }
+        Text(
+            text = stringResource(R.string.recipe_rating_derived_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -534,6 +543,7 @@ private fun MetadataSection(recipe: RecipeEntity) {
 private fun NutritionSection(
     nutrition: com.helga.android.data.model.RecipeNutrition?,
     isCalculating: Boolean,
+    scaleFactor: Float = 1f,
     onCalculateWithAi: () -> Unit,
     onEditManual: () -> Unit,
 ) {
@@ -556,36 +566,10 @@ private fun NutritionSection(
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
             ) {
-                NutritionItem(value = String.format("%.0f", nutrition.kcalPerPortion), unit = "kcal")
-                NutritionItem(value = String.format("%.1f", nutrition.protein), unit = "g Protein")
-                NutritionItem(value = String.format("%.1f", nutrition.fat), unit = "g Fett")
-                NutritionItem(value = String.format("%.1f", nutrition.carbs), unit = "g KH")
-            }
-            if (nutrition.nutriScore.isNotBlank()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Nutri-Score:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = nutrition.nutriScore.uppercase(),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = when (nutrition.nutriScore.lowercase()) {
-                            "a" -> androidx.compose.ui.graphics.Color(0xFF22863A)
-                            "b" -> androidx.compose.ui.graphics.Color(0xFF28A745)
-                            "c" -> androidx.compose.ui.graphics.Color(0xFFFFC107)
-                            "d" -> androidx.compose.ui.graphics.Color(0xFFFF9800)
-                            else -> androidx.compose.ui.graphics.Color(0xFFD32F2F)
-                        },
-                    )
-                }
+                NutritionItem(value = String.format("%.0f", nutrition.kcalPerPortion * scaleFactor), unit = "kcal")
+                NutritionItem(value = String.format("%.1f", nutrition.proteinPerPortion * scaleFactor), unit = "g Protein")
+                NutritionItem(value = String.format("%.1f", nutrition.fatPerPortion * scaleFactor), unit = "g Fett")
+                NutritionItem(value = String.format("%.1f", nutrition.carbsPerPortion * scaleFactor), unit = "g KH")
             }
             Text(
                 text = stringResource(R.string.recipe_nutrition_baseline_hint) + " · " + stringResource(
@@ -619,13 +603,12 @@ private fun NutritionSection(
 private fun NutritionEditDialog(
     nutrition: com.helga.android.data.model.RecipeNutrition?,
     onDismiss: () -> Unit,
-    onSave: (kcal: Double, protein: Double, fat: Double, carbs: Double, nutriScore: String) -> Unit,
+    onSave: (kcal: Double, protein: Double, fat: Double, carbs: Double) -> Unit,
 ) {
     var kcal by remember { mutableStateOf(nutrition?.totalKcal?.takeIf { it > 0 }?.toString() ?: "") }
     var protein by remember { mutableStateOf(nutrition?.protein?.takeIf { it > 0 }?.toString() ?: "") }
     var fat by remember { mutableStateOf(nutrition?.fat?.takeIf { it > 0 }?.toString() ?: "") }
     var carbs by remember { mutableStateOf(nutrition?.carbs?.takeIf { it > 0 }?.toString() ?: "") }
-    var nutriScore by remember { mutableStateOf(nutrition?.nutriScore ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -659,13 +642,6 @@ private fun NutritionEditDialog(
                     label = { Text(stringResource(R.string.recipe_nutrition_carbs_label)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(Modifier.height(8.dp))
-                androidx.compose.material3.OutlinedTextField(
-                    value = nutriScore,
-                    onValueChange = { nutriScore = it },
-                    label = { Text(stringResource(R.string.recipe_nutrition_nutriscore_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         },
         confirmButton = {
@@ -675,7 +651,6 @@ private fun NutritionEditDialog(
                     protein.toDoubleOrNull() ?: 0.0,
                     fat.toDoubleOrNull() ?: 0.0,
                     carbs.toDoubleOrNull() ?: 0.0,
-                    nutriScore,
                 )
             }) {
                 Text(stringResource(R.string.recipe_nutrition_save))
@@ -804,7 +779,7 @@ private fun ServingsStepper(servings: Int, onDecrease: () -> Unit, onIncrease: (
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 IconButton(onClick = onDecrease, enabled = servings > 1) {
-                    Icon(Icons.Filled.Remove, contentDescription = null)
+                    Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.servings_decrease))
                 }
                 Text(
                     text = "$servings",
@@ -813,7 +788,7 @@ private fun ServingsStepper(servings: Int, onDecrease: () -> Unit, onIncrease: (
                     textAlign = TextAlign.Center,
                 )
                 IconButton(onClick = onIncrease, enabled = servings < 99) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.servings_increase))
                 }
             }
         }

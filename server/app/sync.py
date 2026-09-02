@@ -11,7 +11,7 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "cook_time", "total_time", "image_path", "source_url", "rating",
         "protein_type", "effort", "cuisine", "meal_type", "meal_slot", "season_fit",
         "nutrition_kcal", "nutrition_protein", "nutrition_fat", "nutrition_carbs",
-        "nutrition_nutri_score", "nutrition_source",
+        "nutrition_nutri_score", "nutrition_source", "last_servings",
         "created_at", "updated_at", "deleted",
     ],
     "recipe_ingredients": [
@@ -47,10 +47,11 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
         "id", "list_id", "name", "quantity", "sort_order", "updated_at", "deleted",
     ],
     "weekplan_days": [
-        "id", "plan_date", "note", "is_quick_day", "is_guest_day", "updated_at", "deleted",
+        "id", "plan_date", "note", "is_quick_day", "is_guest_day", "is_skipped", "is_locked",
+        "updated_at", "deleted",
     ],
     "weekplan_recipes": [
-        "id", "weekplan_day_id", "recipe_id", "position", "updated_at", "deleted",
+        "id", "weekplan_day_id", "recipe_id", "position", "meal_slot", "updated_at", "deleted",
     ],
     "weekplan_extras": [
         "id", "weekplan_day_id", "item_text", "position", "updated_at", "deleted",
@@ -90,6 +91,12 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     "monthly_budgets": [
         "id", "amount", "warn_threshold", "updated_at", "deleted",
     ],
+    "weekplan_day_markers": [
+        "id", "name", "color", "updated_at", "deleted",
+    ],
+    "weekplan_day_marker_assignments": [
+        "id", "weekplan_day_id", "marker_id", "updated_at", "deleted",
+    ],
 }
 
 # Mapping Tabellenname → Feldname im SyncPayload
@@ -117,6 +124,8 @@ PAYLOAD_FIELD = {
     "receipts": "receipts",
     "receipt_items": "receipt_items",
     "monthly_budgets": "monthly_budgets",
+    "weekplan_day_markers": "weekplan_day_markers",
+    "weekplan_day_marker_assignments": "weekplan_day_marker_assignments",
 }
 
 

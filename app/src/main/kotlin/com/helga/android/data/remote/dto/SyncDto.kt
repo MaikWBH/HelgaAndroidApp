@@ -35,6 +35,7 @@ data class RecipeDto(
     @Json(name = "nutrition_nutri_score") val nutritionNutriScore: String = "",
     @Json(name = "nutrition_source") val nutritionSource: String = "",
     @Json(name = "created_at") val createdAt: Long = 0,
+    @Json(name = "last_servings") val lastServings: Int = 0,
 )
 
 @JsonClass(generateAdapter = true)
@@ -171,6 +172,26 @@ data class WeekplanDayDto(
     val note: String = "",
     @Json(name = "is_quick_day") val isQuickDay: Int = 0,
     @Json(name = "is_guest_day") val isGuestDay: Int = 0,
+    @Json(name = "is_skipped") val isSkipped: Int = 0,
+    @Json(name = "is_locked") val isLocked: Int = 0,
+)
+
+@JsonClass(generateAdapter = true)
+data class WeekplanDayMarkerDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    val name: String = "",
+    val color: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class WeekplanDayMarkerAssignmentDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    @Json(name = "weekplan_day_id") val weekplanDayId: String,
+    @Json(name = "marker_id") val markerId: String,
 )
 
 @JsonClass(generateAdapter = true)
@@ -181,6 +202,7 @@ data class WeekplanRecipeDto(
     @Json(name = "weekplan_day_id") val weekplanDayId: String,
     @Json(name = "recipe_id") val recipeId: String,
     val position: Int = 0,
+    @Json(name = "meal_slot") val mealSlot: String = "",
 )
 
 @JsonClass(generateAdapter = true)
@@ -277,6 +299,33 @@ data class MonthlyBudgetDto(
     val deleted: Int = 0,
     val amount: Double = 0.0,
     @Json(name = "warn_threshold") val warnThreshold: Double = 0.8,
+)
+
+@JsonClass(generateAdapter = true)
+data class OffProductDto(
+    val id: String,
+    @Json(name = "updated_at") val updatedAt: Long,
+    val deleted: Int = 0,
+    val barcode: String = "",
+    val name: String = "",
+    val brand: String = "",
+    val categories: String = "[]",
+    @Json(name = "kcal_per_unit") val kcalPerUnit: Double = 0.0,
+    val proteins: Double = 0.0,
+    val fats: Double = 0.0,
+    val carbs: Double = 0.0,
+    @Json(name = "nutri_score") val nutriScore: String = "",
+    val nova: Int = 0,
+    @Json(name = "eco_score") val ecoScore: String = "",
+    val allergenes: String = "[]",
+    val additives: String = "[]",
+    @Json(name = "is_organic") val isOrganic: Int = 0,
+    val vegan: Int = 0,
+    val vegetarian: Int = 0,
+    @Json(name = "image_path") val imagePath: String = "",
+    @Json(name = "is_favorite") val isFavorite: Int = 0,
+    @Json(name = "package_grams") val packageGrams: Double = 0.0,
+    @Json(name = "package_grams_manual") val packageGramsManual: Int = 0,
 )
 
 @JsonClass(generateAdapter = true)
@@ -402,6 +451,9 @@ data class SyncPullResponse(
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
     @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
+    @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
+    @Json(name = "weekplan_day_markers") val weekplanDayMarkers: List<WeekplanDayMarkerDto> = emptyList(),
+    @Json(name = "weekplan_day_marker_assignments") val weekplanDayMarkerAssignments: List<WeekplanDayMarkerAssignmentDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -429,6 +481,9 @@ data class SyncPushRequest(
     val receipts: List<ReceiptDto> = emptyList(),
     @Json(name = "receipt_items") val receiptItems: List<ReceiptItemDto> = emptyList(),
     @Json(name = "monthly_budgets") val monthlyBudgets: List<MonthlyBudgetDto> = emptyList(),
+    @Json(name = "off_products") val offProducts: List<OffProductDto> = emptyList(),
+    @Json(name = "weekplan_day_markers") val weekplanDayMarkers: List<WeekplanDayMarkerDto> = emptyList(),
+    @Json(name = "weekplan_day_marker_assignments") val weekplanDayMarkerAssignments: List<WeekplanDayMarkerAssignmentDto> = emptyList(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -495,7 +550,6 @@ data class AiNutritionResponse(
     val protein: Double = 0.0,
     val fat: Double = 0.0,
     val carbs: Double = 0.0,
-    @Json(name = "nutri_score") val nutriScore: String = "",
 )
 
 @JsonClass(generateAdapter = true)
@@ -514,6 +568,7 @@ data class WeekplanAssignmentDto(
     val date: String = "",
     @Json(name = "recipe_id") val recipeId: String = "",
     @Json(name = "recipe_name") val recipeName: String = "",
+    val isLocked: Boolean = false,
 )
 
 @JsonClass(generateAdapter = true)

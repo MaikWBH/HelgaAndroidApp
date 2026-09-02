@@ -49,17 +49,23 @@ class SyncScheduler @Inject constructor(
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
             .build()
 
-        val imageRequest = OneTimeWorkRequestBuilder<ImageUploadWorker>()
+        val uploadRequest = OneTimeWorkRequestBuilder<ImageUploadWorker>()
             .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
             .build()
 
-        // Bilder erst nach dem Sync hochladen (Rezept muss auf Server bekannt sein)
+        val downloadRequest = OneTimeWorkRequestBuilder<ImageDownloadWorker>()
+            .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+            .build()
+
+        // Erst syncen (Rezept muss auf Server bekannt sein), dann eigene Bilder hochladen,
+        // dann Bilder herunterladen, die durch den Sync von anderen Geräten neu dazukamen.
         workManager.beginUniqueWork(
             SyncWorker.UNIQUE_ONESHOT,
             ExistingWorkPolicy.REPLACE,
             syncRequest,
-        ).then(imageRequest).enqueue()
+        ).then(uploadRequest).then(downloadRequest).enqueue()
     }
 
     fun cancelAll() {

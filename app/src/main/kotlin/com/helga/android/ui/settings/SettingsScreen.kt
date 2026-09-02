@@ -1,6 +1,12 @@
 package com.helga.android.ui.settings
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,8 +32,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,6 +77,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
+import com.helga.android.ui.components.dayMarkerColors
+import com.helga.android.ui.components.parseMarkerColor
 import java.text.DateFormat
 import java.time.DayOfWeek
 import java.time.format.TextStyle
@@ -87,13 +99,31 @@ fun SettingsScreen(
     val syncError by viewModel.syncError.collectAsStateWithLifecycle()
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
     val quickEmojis by viewModel.quickEmojis.collectAsStateWithLifecycle()
+    val dayMarkers by viewModel.dayMarkers.collectAsStateWithLifecycle()
     val exportJson by viewModel.exportJson.collectAsStateWithLifecycle()
     val bulkAiState by viewModel.bulkAiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
     var deleteList by remember { mutableStateOf<ShoppingListEntity?>(null) }
     var editEmoji by remember { mutableStateOf<QuickEmojiEntity?>(null) }
     var showAddEmoji by remember { mutableStateOf(false) }
+    var editMarker by remember { mutableStateOf<WeekplanDayMarkerEntity?>(null) }
+    var showAddMarker by remember { mutableStateOf(false) }
+    var showAdvanced by remember { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
+    fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     LaunchedEffect(exportJson) {
         exportJson?.let { json ->
@@ -122,6 +152,27 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
+                    Text(stringResource(R.string.recipe_delete_confirm_cancel))
+                }
+            },
+        )
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text(stringResource(R.string.settings_reset_confirm_title)) },
+            text = { Text(stringResource(R.string.settings_reset_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResetDialog = false
+                    viewModel.resetLocalData()
+                }) {
+                    Text(stringResource(R.string.settings_reset_confirm_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
                     Text(stringResource(R.string.recipe_delete_confirm_cancel))
                 }
             },
@@ -165,6 +216,26 @@ fun SettingsScreen(
         )
     }
 
+    if (showAddMarker) {
+        DayMarkerDialog(
+            onDismiss = { showAddMarker = false },
+            onSave = { name, color ->
+                viewModel.addDayMarker(name, color)
+                showAddMarker = false
+            },
+        )
+    }
+    editMarker?.let { marker ->
+        DayMarkerDialog(
+            marker = marker,
+            onDismiss = { editMarker = null },
+            onSave = { name, color ->
+                viewModel.updateDayMarker(marker, name, color)
+                editMarker = null
+            },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -188,237 +259,9 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = stringResource(R.string.settings_appearance_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            Text(
-                text = stringResource(R.string.settings_theme_mode),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            val themeModes = listOf("system", "light", "dark")
-            val themeModeLabels = listOf(
-                stringResource(R.string.settings_theme_system),
-                stringResource(R.string.settings_theme_light),
-                stringResource(R.string.settings_theme_dark),
-            )
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                themeModes.forEachIndexed { index, mode ->
-                    SegmentedButton(
-                        selected = state.themeMode == mode,
-                        onClick = { viewModel.setThemeMode(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(index, themeModes.size),
-                        label = { Text(themeModeLabels[index]) },
-                    )
-                }
-            }
-
-            Text(
-                text = stringResource(R.string.settings_accent_color),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                itemsIndexed(accentPrimaryColors) { index, color ->
-                    val isSelected = state.accentColor == index
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .border(
-                                width = if (isSelected) 3.dp else 0.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
-                                shape = CircleShape,
-                            )
-                            .padding(if (isSelected) 3.dp else 0.dp)
-                            .clip(CircleShape),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
-                                .background(color)
-                                .clickable { viewModel.setAccentColor(index) },
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.settings_notify_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_notify_shopping),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Switch(
-                    checked = state.notifyShoppingDay,
-                    onCheckedChange = { viewModel.setNotifyShoppingDay(it) },
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_notify_cook),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Switch(
-                    checked = state.notifyCookReminder,
-                    onCheckedChange = { viewModel.setNotifyCookReminder(it) },
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.settings_server_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            OutlinedTextField(
-                value = state.serverUrl,
-                onValueChange = viewModel::setServerUrl,
-                label = { Text(stringResource(R.string.onboarding_server_url)) },
-                placeholder = { Text(stringResource(R.string.onboarding_server_url_hint)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            OutlinedTextField(
-                value = state.apiKey,
-                onValueChange = viewModel::setApiKey,
-                label = { Text(stringResource(R.string.onboarding_api_key)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            ValidationFeedback(state.validation)
-
-            Button(
-                onClick = { viewModel.testAndSave() },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = state.validation != SettingsValidation.Testing &&
-                    state.serverUrl.isNotBlank() && state.apiKey.isNotBlank(),
-            ) {
-                if (state.validation == SettingsValidation.Testing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.height(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text(stringResource(R.string.settings_save_and_test))
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.settings_sync_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            Text(
-                text = stringResource(R.string.settings_last_sync, formatTimestamp(lastSyncTs)),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            if (syncError != null) {
-                Text(
-                    text = stringResource(R.string.sync_error_detail, syncError!!),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-
-            OutlinedButton(
-                onClick = { viewModel.syncNow() },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.sync_now))
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.settings_ai_bulk_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            OutlinedButton(
-                onClick = { viewModel.runBulkAi(BulkAiMode.NUTRITION) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !bulkAiState.isRunning,
-            ) {
-                Text(stringResource(R.string.settings_ai_bulk_nutrition))
-            }
-            OutlinedButton(
-                onClick = { viewModel.runBulkAi(BulkAiMode.CLASSIFY) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !bulkAiState.isRunning,
-            ) {
-                Text(stringResource(R.string.settings_ai_bulk_classify))
-            }
-            Button(
-                onClick = { viewModel.runBulkAi(BulkAiMode.BOTH) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !bulkAiState.isRunning,
-            ) {
-                if (bulkAiState.isRunning && bulkAiState.mode == BulkAiMode.BOTH) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.height(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text(stringResource(R.string.settings_ai_bulk_both))
-                }
-            }
-            if (bulkAiState.isRunning) {
-                Text(
-                    text = stringResource(R.string.settings_ai_bulk_progress, bulkAiState.processed, bulkAiState.total),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else if (bulkAiState.total > 0) {
-                Text(
-                    text = stringResource(R.string.settings_ai_bulk_done, bulkAiState.updated, bulkAiState.failed),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.clickable { viewModel.dismissBulkAiResult() },
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
+            // Häufig genutzt (siehe einstellungen-Interview): Einkaufsliste-Einstellungen und
+            // Schnellbuttons zuerst, direkt sichtbar. Alles andere wird nur einmal gesetzt und
+            // nie wieder angefasst — das steckt weiter unten hinter "Erweitert".
             Text(
                 text = stringResource(R.string.settings_shopping_section),
                 style = MaterialTheme.typography.titleMedium,
@@ -532,7 +375,7 @@ fun SettingsScreen(
                 ) {
                     Text(list.name, modifier = Modifier.weight(1f))
                     IconButton(onClick = { deleteList = list }) {
-                        Icon(Icons.Filled.Delete, contentDescription = null)
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
                     }
                 }
             }
@@ -557,10 +400,10 @@ fun SettingsScreen(
                     Text("${item.emoji} ${item.food}")
                     Row {
                         IconButton(onClick = { editEmoji = item }) {
-                            Icon(Icons.Filled.Edit, contentDescription = null)
+                            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.settings_quick_button_edit))
                         }
                         IconButton(onClick = { viewModel.deleteQuickEmoji(item) }) {
-                            Icon(Icons.Filled.Delete, contentDescription = null)
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
                         }
                     }
                 }
@@ -570,16 +413,336 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(8.dp))
 
-            Text(
-                text = stringResource(R.string.settings_account_section),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            OutlinedButton(
-                onClick = { showLogoutDialog = true },
-                modifier = Modifier.fillMaxWidth(),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showAdvanced = !showAdvanced },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.settings_logout))
+                Text(
+                    text = stringResource(R.string.settings_advanced_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Icon(
+                    imageVector = if (showAdvanced) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = null,
+                )
+            }
+
+            if (showAdvanced) {
+                Text(
+                    text = stringResource(R.string.settings_appearance_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Text(
+                    text = stringResource(R.string.settings_theme_mode),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                val themeModes = listOf("system", "light", "dark")
+                val themeModeLabels = listOf(
+                    stringResource(R.string.settings_theme_system),
+                    stringResource(R.string.settings_theme_light),
+                    stringResource(R.string.settings_theme_dark),
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    themeModes.forEachIndexed { index, mode ->
+                        SegmentedButton(
+                            selected = state.themeMode == mode,
+                            onClick = { viewModel.setThemeMode(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(index, themeModes.size),
+                            label = { Text(themeModeLabels[index]) },
+                        )
+                    }
+                }
+
+                Text(
+                    text = stringResource(R.string.settings_accent_color),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    itemsIndexed(accentPrimaryColors) { index, color ->
+                        val isSelected = state.accentColor == index
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    width = if (isSelected) 3.dp else 0.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
+                                    shape = CircleShape,
+                                )
+                                .padding(if (isSelected) 3.dp else 0.dp)
+                                .clip(CircleShape),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .clickable { viewModel.setAccentColor(index) },
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_notify_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_notify_shopping),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Switch(
+                        checked = state.notifyShoppingDay,
+                        onCheckedChange = {
+                            viewModel.setNotifyShoppingDay(it)
+                            if (it) requestNotificationPermissionIfNeeded()
+                        },
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_notify_cook),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Switch(
+                        checked = state.notifyCookReminder,
+                        onCheckedChange = {
+                            viewModel.setNotifyCookReminder(it)
+                            if (it) requestNotificationPermissionIfNeeded()
+                        },
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_server_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                OutlinedTextField(
+                    value = state.serverUrl,
+                    onValueChange = viewModel::setServerUrl,
+                    label = { Text(stringResource(R.string.onboarding_server_url)) },
+                    placeholder = { Text(stringResource(R.string.onboarding_server_url_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                OutlinedTextField(
+                    value = state.apiKey,
+                    onValueChange = viewModel::setApiKey,
+                    label = { Text(stringResource(R.string.onboarding_api_key)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                ValidationFeedback(state.validation)
+
+                Button(
+                    onClick = { viewModel.testAndSave() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.validation != SettingsValidation.Testing &&
+                        state.serverUrl.isNotBlank() && state.apiKey.isNotBlank(),
+                ) {
+                    if (state.validation == SettingsValidation.Testing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.height(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text(stringResource(R.string.settings_save_and_test))
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_sync_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Text(
+                    text = stringResource(R.string.settings_last_sync, formatTimestamp(lastSyncTs)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                val error = syncError
+                if (error != null) {
+                    Text(
+                        text = stringResource(R.string.sync_error_detail, error),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = { viewModel.syncNow() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.sync_now))
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_receipts_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                SettingsReceiptRetentionDropdown(
+                    value = state.receiptRetentionMonths,
+                    onSelected = viewModel::setReceiptRetentionMonths,
+                )
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_ai_bulk_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                OutlinedButton(
+                    onClick = { viewModel.runBulkAi(BulkAiMode.NUTRITION) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !bulkAiState.isRunning,
+                ) {
+                    Text(stringResource(R.string.settings_ai_bulk_nutrition))
+                }
+                OutlinedButton(
+                    onClick = { viewModel.runBulkAi(BulkAiMode.CLASSIFY) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !bulkAiState.isRunning,
+                ) {
+                    Text(stringResource(R.string.settings_ai_bulk_classify))
+                }
+                Button(
+                    onClick = { viewModel.runBulkAi(BulkAiMode.BOTH) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !bulkAiState.isRunning,
+                ) {
+                    if (bulkAiState.isRunning && bulkAiState.mode == BulkAiMode.BOTH) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.height(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text(stringResource(R.string.settings_ai_bulk_both))
+                    }
+                }
+                if (bulkAiState.isRunning) {
+                    Text(
+                        text = stringResource(R.string.settings_ai_bulk_progress, bulkAiState.processed, bulkAiState.total),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else if (bulkAiState.total > 0) {
+                    Text(
+                        text = stringResource(R.string.settings_ai_bulk_done, bulkAiState.updated, bulkAiState.failed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clickable { viewModel.dismissBulkAiResult() },
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_day_markers),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                OutlinedButton(onClick = { showAddMarker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Text(stringResource(R.string.settings_day_marker_add))
+                }
+                dayMarkers.forEach { marker ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(parseMarkerColor(marker.color)),
+                            )
+                            Text(marker.name)
+                        }
+                        Row {
+                            IconButton(onClick = { editMarker = marker }) {
+                                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.settings_day_marker_edit))
+                            }
+                            IconButton(onClick = { viewModel.deleteDayMarker(marker) }) {
+                                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_account_section),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                OutlinedButton(
+                    onClick = { showLogoutDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.settings_logout))
+                }
+
+                OutlinedButton(
+                    onClick = { showResetDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(stringResource(R.string.settings_reset_local_data))
+                }
             }
 
             Spacer(Modifier.height(24.dp))
@@ -631,6 +794,41 @@ private fun SettingsPlanDaysDropdown(value: Int, onSelected: (Int) -> Unit) {
                     text = { Text(stringResource(R.string.settings_plan_days_value, days)) },
                     onClick = {
                         onSelected(days)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsReceiptRetentionDropdown(value: Int, onSelected: (Int) -> Unit) {
+    val options = listOf(0, 1, 3, 6, 12)
+    @Composable
+    fun label(months: Int): String = when (months) {
+        0 -> stringResource(R.string.settings_receipt_retention_never)
+        1 -> stringResource(R.string.settings_receipt_retention_1)
+        12 -> stringResource(R.string.settings_receipt_retention_12)
+        else -> stringResource(R.string.settings_receipt_retention_months, months)
+    }
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        OutlinedTextField(
+            value = label(value),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.settings_receipt_retention)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { months ->
+                DropdownMenuItem(
+                    text = { Text(label(months)) },
+                    onClick = {
+                        onSelected(months)
                         expanded = false
                     },
                 )
@@ -745,6 +943,68 @@ private fun QuickEmojiDialog(
                     onSave(emoji.trim(), food.trim(), quantity, unit.trim())
                 },
                 enabled = emoji.isNotBlank() && food.isNotBlank(),
+            ) { Text(stringResource(R.string.recipe_form_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.recipe_delete_confirm_cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun DayMarkerDialog(
+    marker: WeekplanDayMarkerEntity? = null,
+    onDismiss: () -> Unit,
+    onSave: (name: String, color: String) -> Unit,
+) {
+    var name by remember(marker?.id) { mutableStateOf(marker?.name ?: "") }
+    var color by remember(marker?.id) { mutableStateOf(marker?.color?.ifBlank { dayMarkerColors.first() } ?: dayMarkerColors.first()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                if (marker == null) stringResource(R.string.settings_day_marker_add)
+                else stringResource(R.string.settings_day_marker_edit)
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.settings_day_marker_name_label)) },
+                    singleLine = true,
+                )
+                Text(
+                    text = stringResource(R.string.settings_day_marker_color_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    dayMarkerColors.forEach { hex ->
+                        val isSelected = color == hex
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    width = if (isSelected) 3.dp else 0.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                    shape = CircleShape,
+                                )
+                                .padding(if (isSelected) 3.dp else 0.dp)
+                                .clip(CircleShape)
+                                .background(parseMarkerColor(hex))
+                                .clickable { color = hex },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(name.trim(), color) },
+                enabled = name.isNotBlank(),
             ) { Text(stringResource(R.string.recipe_form_save)) }
         },
         dismissButton = {

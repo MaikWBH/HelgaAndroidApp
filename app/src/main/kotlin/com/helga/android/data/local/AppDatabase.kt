@@ -19,7 +19,6 @@ import com.helga.android.data.local.dao.SyncDao
 import com.helga.android.data.local.dao.WeekplanConstraintsDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
-import com.helga.android.data.local.dao.WeekplanTemplateDao
 import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -39,15 +38,15 @@ import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerAssignmentEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
 
 @Database(
-    version = 30,
+    version = 36,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -67,14 +66,14 @@ import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
         WeekplanExtraEntity::class,
         WeekplanSettingsEntity::class,
         WeekplanConstraintsEntity::class,
-        WeekplanTemplateEntity::class,
-        WeekplanTemplateEntryEntity::class,
         RecipeHistoryEntity::class,
         RecipeFeedbackEntity::class,
         ReceiptEntity::class,
         ReceiptItemEntity::class,
         MonthlyBudgetEntity::class,
         OffProductEntity::class,
+        WeekplanDayMarkerEntity::class,
+        WeekplanDayMarkerAssignmentEntity::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -87,7 +86,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun weekplanDao(): WeekplanDao
     abstract fun weekplanSettingsDao(): WeekplanSettingsDao
     abstract fun weekplanConstraintsDao(): WeekplanConstraintsDao
-    abstract fun weekplanTemplateDao(): WeekplanTemplateDao
     abstract fun recipeHistoryDao(): RecipeHistoryDao
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
     abstract fun receiptDao(): ReceiptDao
@@ -758,10 +756,78 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_30_31 = object : Migration(30, 31) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE weekplan_days ADD COLUMN isSkipped INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_31_32 = object : Migration(31, 32) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Vorlagen-Feature ersatzlos entfernt (wochenplan A1) – im UI nie erreichbar
+                // gewesen (TemplateSheet wurde nirgends aufgerufen), auch nicht sync-angebunden.
+                db.execSQL("DROP TABLE IF EXISTS weekplan_template_entries")
+                db.execSQL("DROP TABLE IF EXISTS weekplan_templates")
+            }
+        }
+
+        private val MIGRATION_32_33 = object : Migration(32, 33) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE recipes ADD COLUMN lastServings INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_33_34 = object : Migration(33, 34) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE weekplan_days ADD COLUMN isLocked INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_34_35 = object : Migration(34, 35) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE weekplan_recipes ADD COLUMN mealSlot TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val MIGRATION_35_36 = object : Migration(35, 36) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_day_markers (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL DEFAULT '',
+                        color TEXT NOT NULL DEFAULT '',
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_markers_updatedAt ON weekplan_day_markers(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_markers_deleted ON weekplan_day_markers(deleted)")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekplan_day_marker_assignments (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        weekplanDayId TEXT NOT NULL,
+                        markerId TEXT NOT NULL,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        deleted INTEGER NOT NULL DEFAULT 0,
+                        dirty INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_marker_assignments_weekplanDayId ON weekplan_day_marker_assignments(weekplanDayId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_marker_assignments_markerId ON weekplan_day_marker_assignments(markerId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_marker_assignments_updatedAt ON weekplan_day_marker_assignments(updatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weekplan_day_marker_assignments_deleted ON weekplan_day_marker_assignments(deleted)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36)
                 .build()
     }
 }

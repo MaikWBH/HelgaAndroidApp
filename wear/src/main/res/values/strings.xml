@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Helga</string>
+    <string name="wear_no_list">Keine Liste</string>
+    <string name="wear_no_items">Keine Einträge</string>
+    <string name="wear_no_phone">Warte auf Handy…</string>
+</resources>

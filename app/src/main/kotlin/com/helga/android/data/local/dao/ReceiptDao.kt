@@ -20,6 +20,10 @@ interface ReceiptDao {
     @Query("SELECT * FROM receipts WHERE id = :id")
     suspend fun findById(id: String): ReceiptEntity?
 
+    /** Für die automatische Bon-Löschung (bons-kosten A4) — purchaseDate liegt in epoch-ms vor. */
+    @Query("SELECT id FROM receipts WHERE deleted = 0 AND purchaseDate < :beforeEpochMillis")
+    suspend fun findIdsOlderThan(beforeEpochMillis: Long): List<String>
+
     @Query("SELECT * FROM receipt_items WHERE receiptId = :receiptId AND deleted = 0 ORDER BY position ASC")
     fun observeItems(receiptId: String): Flow<List<ReceiptItemEntity>>
 
@@ -52,6 +56,10 @@ interface ReceiptDao {
 
     @Query("SELECT * FROM receipts WHERE localImageUri != '' AND deleted = 0")
     suspend fun receiptsWithLocalImage(): List<ReceiptEntity>
+
+    /** Für den proaktiven Bild-Download (sync A4) — Bild liegt auf dem Server, aber noch nicht lokal gecacht. */
+    @Query("SELECT * FROM receipts WHERE localImageUri = '' AND imagePath != '' AND deleted = 0")
+    suspend fun receiptsNeedingImageDownload(): List<ReceiptEntity>
 
     @Query("UPDATE receipts SET imagePath = :imagePath, localImageUri = '', updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
     suspend fun setImagePathAndClearLocal(id: String, imagePath: String, updatedAt: Long)

@@ -18,6 +18,10 @@ interface RecipeFeedbackDao {
     @Query("SELECT * FROM recipe_feedback WHERE deleted = 0 AND recipeId = :recipeId AND plannedDate = :date LIMIT 1")
     suspend fun findByRecipeAndDate(recipeId: String, date: String): RecipeFeedbackEntity?
 
+    /** Für die aus Feedback abgeleitete Sternebewertung (rezepte A6). */
+    @Query("SELECT * FROM recipe_feedback WHERE deleted = 0 AND recipeId = :recipeId")
+    suspend fun feedbackForRecipe(recipeId: String): List<RecipeFeedbackEntity>
+
     @Query("SELECT * FROM recipe_feedback WHERE deleted = 0 AND plannedDate = :date")
     fun observeForDate(date: String): Flow<List<RecipeFeedbackEntity>>
 

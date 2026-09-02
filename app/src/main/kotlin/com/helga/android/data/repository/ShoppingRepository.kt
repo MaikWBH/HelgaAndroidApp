@@ -27,6 +27,8 @@ class ShoppingRepository @Inject constructor(
     fun observeItemsByList(listId: String): Flow<List<ShoppingItemEntity>> =
         shoppingDao.observeItemsByList(listId)
 
+    suspend fun searchItemNames(query: String): List<String> = shoppingDao.searchItemNames(query)
+
     suspend fun createList(name: String): String {
         val id = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()

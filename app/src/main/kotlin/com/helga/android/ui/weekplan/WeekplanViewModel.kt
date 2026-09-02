@@ -8,12 +8,13 @@ import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntryEntity
+import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.dao.ShoppingDao
@@ -22,7 +23,6 @@ import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import com.helga.android.data.repository.WeekplanRepository
-import com.helga.android.data.repository.WeekplanTemplateRepository
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -54,6 +54,95 @@ data class DaySummary(val recipeCount: Int, val extraCount: Int)
 
 data class WeekBalance(val meat: Int = 0, val fish: Int = 0, val veg: Int = 0, val other: Int = 0)
 
+/**
+ * Zählt Protein-Typen über alle Rezepte einer Woche (wochenplan A5 — als eigene Funktion
+ * ausgelagert, damit die Zähllogik ohne Room/DAO testbar ist).
+ */
+fun computeWeekBalance(
+    recipesByDay: Map<String, List<WeekplanRecipeEntity>>,
+    recipesById: Map<String, RecipeEntity>,
+): WeekBalance {
+    var meat = 0; var fish = 0; var veg = 0; var other = 0
+    recipesByDay.values.flatten().forEach { wr ->
+        val recipe = recipesById[wr.recipeId]
+        when (recipe?.proteinType?.lowercase()) {
+            in listOf("fleisch", "meat", "geflügel", "poultry", "rind", "schwein") -> meat++
+            in listOf("fisch", "fish", "meeresfrüchte", "seafood") -> fish++
+            in listOf("vegetarisch", "vegetarian", "vegan") -> veg++
+            else -> other++
+        }
+    }
+    return WeekBalance(meat, fish, veg, other)
+}
+
+/**
+ * Gemeinsame Kandidaten-Filter für Generierung und Neuwürfeln (wochenplan A5/A6): mealSlot (nur
+ * lunch/dinner, behebt den Süßspeisen-als-Abendessen-Bug), Allergene, Kcal-Budget, Saison. Jede
+ * Stufe fällt auf die vorherige zurück, wenn sie den Pool leer räumen würde. Der Saison-Filter
+ * war vorher in generateWeekplan() nur eine Sortier-Präferenz (durch nachfolgende stabile
+ * Sortierungen praktisch wirkungslos) — hier als echter Filter mit Fallback, damit er auch bei
+ * regenerateDay()/regenerateProposalDay() (reiner Zufallsgriff, keine Sortierung) tatsächlich
+ * etwas bewirkt. Als reine Funktion ausgelagert (statt DAO-Zugriff für den Allergen-Filter
+ * direkt hier drin), damit sie ohne Room testbar ist — [WeekplanViewModel.applyRecipeFilters]
+ * holt die Zutaten vorher und reicht sie als [ingredientsByRecipe] durch. [today] ist
+ * parametrisiert, damit der Saison-Filter in Tests ein festes Datum nutzen kann, statt vom
+ * tatsächlichen Kalendertag abzuhängen.
+ */
+fun filterCandidateRecipes(
+    candidates: List<RecipeEntity>,
+    constraints: WeekplanConstraintsEntity,
+    ingredientsByRecipe: Map<String, List<String>>,
+    warnings: MutableList<String>? = null,
+    today: LocalDate = LocalDate.now(),
+): List<RecipeEntity> {
+    val mealFiltered = candidates.filter { it.mealSlot in listOf("lunch", "dinner") }
+    if (mealFiltered.isEmpty()) {
+        warnings?.add("⚠️ Zu wenige klassifizierte Hauptgericht-Rezepte. Alle Rezepte werden verwendet.")
+    }
+    val mealFilteredSafe = mealFiltered.ifEmpty { candidates }
+
+    val excludeAllergens = parseAllergenJson(constraints.excludeAllergens)
+    val allergenFiltered = if (excludeAllergens.isEmpty()) {
+        mealFilteredSafe
+    } else {
+        mealFilteredSafe.filter { recipe ->
+            val foods = ingredientsByRecipe[recipe.id] ?: emptyList()
+            foods.none { food -> excludeAllergens.any { allergen -> food.contains(allergen, ignoreCase = true) } }
+        }
+    }
+    if (allergenFiltered.isEmpty() && excludeAllergens.isNotEmpty()) {
+        warnings?.add("⚠️ Keine Rezepte ohne ausgeschlossene Allergene gefunden. Allergen-Filter wird ignoriert.")
+    }
+    val allergenFilteredSafe = allergenFiltered.ifEmpty { mealFilteredSafe }
+
+    val kcalFiltered = allergenFilteredSafe.filter { recipe ->
+        recipe.nutritionKcal <= 0.0 || recipe.nutritionKcal <= constraints.maxKcalPerPortion
+    }
+    val kcalFilteredSafe = kcalFiltered.ifEmpty { allergenFilteredSafe }
+
+    val currentSeason = when (today.monthValue) {
+        in 3..5 -> "frühling"
+        in 6..8 -> "sommer"
+        in 9..11 -> "herbst"
+        else -> "winter"
+    }
+    val seasonFiltered = kcalFilteredSafe.filter { recipe ->
+        recipe.seasonFit.isBlank() ||
+            recipe.seasonFit.lowercase().let { it == "ganzjährig" || it == currentSeason }
+    }
+    return seasonFiltered.ifEmpty { kcalFilteredSafe }
+}
+
+/**
+ * Export-Vorschau: alle Kandidaten (Rezeptzutaten + Extras) für die gewählten Tage, bevor sie in
+ * die Einkaufsliste geschrieben werden. `deselected` hält die per Checkbox abgewählten Items.
+ */
+data class ExportPreviewState(
+    val items: List<WeekplanExportItem>,
+    val listId: String,
+    val deselected: Set<String> = emptySet(),
+)
+
 sealed interface WeekplanGenerateStatus {
     data object Idle : WeekplanGenerateStatus
     data object Loading : WeekplanGenerateStatus
@@ -67,8 +156,8 @@ sealed interface WeekplanGenerateStatus {
 @HiltViewModel
 class WeekplanViewModel @Inject constructor(
     private val repository: WeekplanRepository,
-    private val templateRepository: WeekplanTemplateRepository,
     private val recipeDao: RecipeDao,
+    private val recipeRepository: RecipeRepository,
     private val recipeHistoryDao: RecipeHistoryDao,
     private val recipeFeedbackDao: RecipeFeedbackDao,
     private val shoppingDao: ShoppingDao,
@@ -98,11 +187,18 @@ class WeekplanViewModel @Inject constructor(
     val days: StateFlow<List<WeekplanDayEntity>> = _weekOffset.flatMapLatest { offset ->
         val monday = mondayForOffset(offset)
         val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+        // Fenster bis zum Maximum der Zeitraum-Einstellung (7/10/14 Tage) statt fest auf
+        // Mo-So begrenzt – sonst blieben Tage 8-14 bei einer 10/14-Tage-Einstellung
+        // unsichtbar, und eine einmalige Verlängerung (addDayToWeek) hätte nichts anzuzeigen.
         repository.observeDaysBetween(
             startDate = monday.format(fmt),
-            endDate = monday.plusDays(6).format(fmt),
+            endDate = monday.plusDays(13).format(fmt),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Ob für die aktuell angezeigte Woche noch ein weiterer Tag angehängt werden kann (Deckel 14). */
+    val canExtendWeek: StateFlow<Boolean> = days.map { it.size < 14 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val weekplanRecipes: StateFlow<List<WeekplanRecipeEntity>> = _selectedDayId
         .flatMapLatest { id ->
@@ -151,24 +247,31 @@ class WeekplanViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    // Marker-Bibliothek (wochenplan A11) – nutzerdefinierte, wiederverwendbare Tagesmarker.
+    val allMarkers: StateFlow<List<WeekplanDayMarkerEntity>> = repository.observeMarkers()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // Marker je Tag der Woche, aufgelöst auf die volle Entity (Name+Farbe) über die Bibliothek.
+    val weekMarkers: StateFlow<Map<String, List<WeekplanDayMarkerEntity>>> = combine(
+        days.flatMapLatest { dayList ->
+            if (dayList.isEmpty()) flowOf(emptyList())
+            else repository.observeMarkerAssignmentsForDays(dayList.map { it.id })
+        },
+        allMarkers,
+    ) { assignments, markers ->
+        val markerById = markers.associateBy { it.id }
+        assignments
+            .mapNotNull { assignment -> markerById[assignment.markerId]?.let { assignment.weekplanDayId to it } }
+            .groupBy({ it.first }, { it.second })
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     val allRecipes: StateFlow<Map<String, RecipeEntity>> = recipeDao.observeAll()
         .map { list -> list.associateBy { it.id } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val weekBalance: StateFlow<WeekBalance> = combine(days, allRecipes) { dayList, recipesMap ->
-        var meat = 0; var fish = 0; var veg = 0; var other = 0
-        dayList.forEach { day ->
-            weekplanDao.recipesForDay(day.id).forEach { wr ->
-                val recipe = recipesMap[wr.recipeId]
-                when (recipe?.proteinType?.lowercase()) {
-                    in listOf("fleisch", "meat", "geflügel", "poultry", "rind", "schwein") -> meat++
-                    in listOf("fisch", "fish", "meeresfrüchte", "seafood") -> fish++
-                    in listOf("vegetarisch", "vegetarian", "vegan") -> veg++
-                    else -> other++
-                }
-            }
-        }
-        WeekBalance(meat, fish, veg, other)
+        val recipesByDay = dayList.associate { it.id to weekplanDao.recipesForDay(it.id) }
+        computeWeekBalance(recipesByDay, recipesMap)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekBalance())
 
     val weekNutrition: StateFlow<WeekplanNutrition?> = combine(days, weekRecipes) { dayList, _ ->
@@ -189,6 +292,12 @@ class WeekplanViewModel @Inject constructor(
     val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingDao.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val defaultShoppingListId: StateFlow<String> = preferences.defaultShoppingListId
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    private val _exportPreview = MutableStateFlow<ExportPreviewState?>(null)
+    val exportPreview: StateFlow<ExportPreviewState?> = _exportPreview.asStateFlow()
+
     val selectedDayId: StateFlow<String?> = _selectedDayId
 
     val constraints: StateFlow<WeekplanConstraintsEntity> = weekplanConstraintsDao.observe()
@@ -197,9 +306,6 @@ class WeekplanViewModel @Inject constructor(
 
     private val _generateStatus = MutableStateFlow<WeekplanGenerateStatus>(WeekplanGenerateStatus.Idle)
     val generateStatus: StateFlow<WeekplanGenerateStatus> = _generateStatus
-
-    val templates: StateFlow<List<WeekplanTemplateEntity>> = templateRepository.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val feedbackForSelectedDay: StateFlow<Map<String, Int>> = _selectedDayId
         .flatMapLatest { dayId ->
@@ -292,6 +398,78 @@ class WeekplanViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Markiert einen Tag als "kein Kochen nötig" oder hebt das wieder auf. Beim Aktivieren
+     * werden bereits zugewiesene Rezepte/Extras entfernt (siehe [WeekplanRepository.setSkipped])
+     * – der Aufrufer muss vorher warnen, falls der Tag noch belegt war.
+     */
+    fun toggleSkipped(day: WeekplanDayEntity) {
+        viewModelScope.launch {
+            repository.setSkipped(day.id, day.isSkipped == 0)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    /**
+     * Sperrt einen Tag gegen Überschreiben durch Wochenplan-Generierung und Reroll, oder hebt
+     * die Sperre wieder auf (wochenplan A10 — Ankerrezepte). Ersetzt den bisherigen impliziten
+     * Mechanismus ("jeder Tag mit Rezept bleibt automatisch stehen"): ohne Sperre wird ein Tag
+     * bei „Woche generieren" jetzt auch dann neu belegt, wenn er bereits ein Rezept hat.
+     */
+    fun toggleLocked(day: WeekplanDayEntity) {
+        viewModelScope.launch {
+            weekplanDao.setLocked(day.id, if (day.isLocked == 0) 1 else 0, System.currentTimeMillis())
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    /** Wiederverwendbare Tagesmarker-Bibliothek pflegen (wochenplan A11). */
+    fun createMarker(name: String, color: String) {
+        viewModelScope.launch {
+            repository.createMarker(name, color)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun updateMarker(marker: WeekplanDayMarkerEntity, name: String, color: String) {
+        viewModelScope.launch {
+            repository.updateMarker(marker, name, color)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun deleteMarker(marker: WeekplanDayMarkerEntity) {
+        viewModelScope.launch {
+            repository.deleteMarker(marker)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    /** Ordnet einen Marker dem gewählten Tag zu oder entfernt ihn wieder. */
+    fun toggleMarkerOnDay(dayId: String, markerId: String) {
+        viewModelScope.launch {
+            repository.toggleMarkerOnDay(dayId, markerId)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    /**
+     * Verlängert die aktuell angezeigte Woche einmalig um einen Tag (bis zu 14 Tage ab
+     * Montag), ohne die globale Zeitraum-Einstellung zu ändern.
+     */
+    fun addDayToWeek() {
+        viewModelScope.launch {
+            val monday = mondayForOffset(_weekOffset.value)
+            val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+            val maxDate = monday.plusDays(13)
+            val lastDate = days.value.maxOfOrNull { LocalDate.parse(it.planDate, fmt) }
+                ?: monday.minusDays(1)
+            if (lastDate >= maxDate) return@launch
+            repository.getOrCreateDay(lastDate.plusDays(1).format(fmt))
+            syncScheduler.triggerOneShot()
+        }
+    }
+
     fun setFeedback(recipeId: String, planDate: String, liked: Int) {
         viewModelScope.launch {
             val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, planDate)
@@ -309,6 +487,7 @@ class WeekplanViewModel @Inject constructor(
                 dirty = 1,
             )
             recipeFeedbackDao.upsert(entity)
+            recipeRepository.recalculateRating(recipeId)
             syncScheduler.triggerOneShot()
         }
     }
@@ -325,6 +504,13 @@ class WeekplanViewModel @Inject constructor(
     fun removeRecipe(entry: WeekplanRecipeEntity) {
         viewModelScope.launch {
             repository.removeRecipe(entry)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun setMealSlot(entry: WeekplanRecipeEntity, mealSlot: String) {
+        viewModelScope.launch {
+            repository.setMealSlot(entry, mealSlot)
             syncScheduler.triggerOneShot()
         }
     }
@@ -351,19 +537,37 @@ class WeekplanViewModel @Inject constructor(
         }
     }
 
-    fun exportToShoppingList(dayId: String, shoppingListId: String, servings: Int = 0) {
+    /** Startet die Export-Vorschau für einen Tag oder die ganze Woche — schreibt noch nichts. */
+    fun startExportPreview(dayId: String, shoppingListId: String, servings: Int = 0) {
         viewModelScope.launch {
-            repository.exportToShoppingList(listOf(dayId), shoppingListId, servings)
-            syncScheduler.triggerOneShot()
+            val dayIds = if (dayId == "all") days.value.map { it.id } else listOf(dayId)
+            val items = repository.collectExportItems(dayIds, servings)
+            _exportPreview.value = ExportPreviewState(items = items, listId = shoppingListId)
         }
     }
 
-    fun exportWeekToShoppingList(shoppingListId: String, servings: Int = 0) {
-        viewModelScope.launch {
-            val dayIds = days.value.map { it.id }
-            repository.exportToShoppingList(dayIds, shoppingListId, servings)
-            syncScheduler.triggerOneShot()
+    /** Wechselt die Abwahl eines einzelnen Produkts in der Export-Vorschau. */
+    fun toggleExportItem(key: String) {
+        _exportPreview.update { state ->
+            state?.copy(
+                deselected = if (key in state.deselected) state.deselected - key else state.deselected + key,
+            )
         }
+    }
+
+    /** Schreibt die in der Vorschau noch ausgewählten Produkte in die Einkaufsliste. */
+    fun confirmExportPreview() {
+        val state = _exportPreview.value ?: return
+        viewModelScope.launch {
+            val selected = state.items.filter { it.key !in state.deselected }
+            repository.applyExportItems(selected, state.listId)
+            syncScheduler.triggerOneShot()
+            _exportPreview.value = null
+        }
+    }
+
+    fun cancelExportPreview() {
+        _exportPreview.value = null
     }
 
     fun saveConstraints(
@@ -372,7 +576,6 @@ class WeekplanViewModel @Inject constructor(
         minVeg: Int,
         maxRepeat: Int,
         maxKcalPerPortion: Int = 700,
-        minNutriScore: String = "c",
         preferOrganic: Boolean = false,
         excludeAllergens: List<String> = emptyList(),
     ) {
@@ -388,7 +591,6 @@ class WeekplanViewModel @Inject constructor(
                     minVegetarianPerWeek = minVeg,
                     maxRepeatDays = maxRepeat,
                     maxKcalPerPortion = maxKcalPerPortion,
-                    minNutriScore = minNutriScore,
                     preferOrganic = if (preferOrganic) 1 else 0,
                     excludeAllergens = allergenJson,
                     updatedAt = now,
@@ -399,21 +601,41 @@ class WeekplanViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Gemeinsame Kandidaten-Filter für Generierung und Neuwürfeln — holt die für den
+     * Allergen-Filter nötigen Zutaten (nur wenn tatsächlich Allergene ausgeschlossen sind) und
+     * delegiert die eigentliche Filterlogik an die reine, testbare [filterCandidateRecipes].
+     */
+    private suspend fun applyRecipeFilters(
+        candidates: List<RecipeEntity>,
+        constraints: WeekplanConstraintsEntity,
+        warnings: MutableList<String>? = null,
+    ): List<RecipeEntity> {
+        val excludeAllergens = parseAllergenJson(constraints.excludeAllergens)
+        val ingredientsByRecipe = if (excludeAllergens.isEmpty()) {
+            emptyMap()
+        } else {
+            recipeDao.allActiveIngredients().groupBy({ it.recipeId }, { it.food })
+        }
+        return filterCandidateRecipes(candidates, constraints, ingredientsByRecipe, warnings)
+    }
+
     fun generateWeekplan() {
         _generateStatus.value = WeekplanGenerateStatus.Loading
         viewModelScope.launch {
             try {
                 val c = constraints.value
                 val dayCount = preferences.weekplanDays.first()
-                val currentDays = days.value.take(dayCount)
+                val currentDays = days.value.take(dayCount).filter { it.isSkipped == 0 }
                 if (currentDays.isEmpty()) {
                     _generateStatus.value = WeekplanGenerateStatus.Error("Keine Tage vorhanden")
                     return@launch
                 }
 
-                // --- Anker-Rezepte: Tage die bereits Rezepte haben, überspringen ---
+                // --- Anker-Rezepte: gesperrte Tage mit vorhandenem Rezept bleiben unangetastet,
+                // alle anderen (auch bereits befüllte) werden neu generiert (wochenplan A10) ---
                 val anchorDays = mutableMapOf<String, List<WeekplanRecipeEntity>>()
-                currentDays.forEach { day ->
+                currentDays.filter { it.isLocked == 1 }.forEach { day ->
                     val existing = weekplanDao.recipesForDay(day.id)
                     if (existing.isNotEmpty()) anchorDays[day.id] = existing
                 }
@@ -440,58 +662,8 @@ class WeekplanViewModel @Inject constructor(
                     return@launch
                 }
 
-                // mealSlot-Filter: Keine Frühstück/Snack ins Dinner-Rezept platzieren
                 val warnings = mutableListOf<String>()
-                val mealFiltered = candidates.filter { recipe ->
-                    recipe.mealSlot !in listOf("breakfast", "snack")
-                }
-                if (mealFiltered.isEmpty()) {
-                    warnings.add("⚠️ Zu wenige klassifizierte Hauptgericht-Rezepte. Alle Rezepte werden verwendet.")
-                }
-                val mealFilteredSafe = mealFiltered.ifEmpty { candidates }
-
-                // Allergen-Filter: Rezepte ausschließen deren Zutaten ein ausgeschlossenes Allergen enthalten
-                val excludeAllergens = parseAllergenJson(c.excludeAllergens)
-                val allergenFiltered = if (excludeAllergens.isEmpty()) {
-                    mealFilteredSafe
-                } else {
-                    val ingredientsByRecipe = recipeDao.allActiveIngredients().groupBy { it.recipeId }
-                    mealFilteredSafe.filter { recipe ->
-                        val foods = ingredientsByRecipe[recipe.id]?.map { it.food } ?: emptyList()
-                        foods.none { food -> excludeAllergens.any { allergen -> food.contains(allergen, ignoreCase = true) } }
-                    }
-                }
-                if (allergenFiltered.isEmpty() && excludeAllergens.isNotEmpty()) {
-                    warnings.add("⚠️ Keine Rezepte ohne ausgeschlossene Allergene gefunden. Allergen-Filter wird ignoriert.")
-                }
-                val allergenFilteredSafe = allergenFiltered.ifEmpty { mealFilteredSafe }
-
-                // Kcal-Budget-Filter: Rezepte mit bekanntem Kcal-Wert über dem Limit ausschließen
-                val kcalFiltered = allergenFilteredSafe.filter { recipe ->
-                    recipe.nutritionKcal <= 0.0 || recipe.nutritionKcal <= c.maxKcalPerPortion
-                }
-                val kcalFilteredSafe = kcalFiltered.ifEmpty { allergenFilteredSafe }
-
-                // Nutri-Score-Filter: Rezepte mit bekanntem, zu schlechtem Score ausschließen (a = beste, e = schlechteste)
-                val nutriScoreFiltered = kcalFilteredSafe.filter { recipe ->
-                    val score = recipe.nutritionNutriScore.lowercase()
-                    score.isBlank() || score <= c.minNutriScore.lowercase()
-                }
-                val nutriScoreFilteredSafe = nutriScoreFiltered.ifEmpty { kcalFilteredSafe }
-
-                // Saison-Filter: saisonale Rezepte bevorzugen
-                val currentSeason = when (LocalDate.now().monthValue) {
-                    in 3..5 -> "frühling"
-                    in 6..8 -> "sommer"
-                    in 9..11 -> "herbst"
-                    else -> "winter"
-                }
-                val seasonalCandidates = nutriScoreFilteredSafe.partition { recipe ->
-                    recipe.seasonFit.isBlank() ||
-                    recipe.seasonFit.lowercase().let { it == "ganzjährig" || it == currentSeason }
-                }
-                // Saisonale zuerst, dann Rest als Fallback
-                val seasonAware = seasonalCandidates.first + seasonalCandidates.second
+                val seasonAware = applyRecipeFilters(candidates, c, warnings)
 
                 // Rezepte nach Typ kategorisieren
                 val meatRecipes = seasonAware.filter { it.proteinType.lowercase() in listOf("fleisch", "meat", "geflügel", "poultry", "rind", "schwein") }
@@ -527,14 +699,16 @@ class WeekplanViewModel @Inject constructor(
 
                 for (day in currentDays) {
                     // Anker-Tag: bestehende Rezepte beibehalten
-                    if (day.id in anchorDays) {
-                        val anchorRecipe = anchorDays[day.id]!!.firstOrNull()
+                    val anchorList = anchorDays[day.id]
+                    if (anchorList != null) {
+                        val anchorRecipe = anchorList.firstOrNull()
                         val recipe = anchorRecipe?.let { allRecipes.value[it.recipeId] }
                         assignments.add(
                             WeekplanAssignmentDto(
                                 date = day.planDate,
                                 recipeId = anchorRecipe?.recipeId ?: "",
                                 recipeName = recipe?.name?.ifBlank { recipe.slug } ?: "Anker",
+                                isLocked = true,
                             )
                         )
                         continue
@@ -643,6 +817,7 @@ class WeekplanViewModel @Inject constructor(
         val current = (_generateStatus.value as? WeekplanGenerateStatus.Proposal) ?: return
         val assignments = current.assignments.toMutableList()
         val target = assignments[index]
+        if (target.isLocked) return
 
         viewModelScope.launch {
             val c = constraints.value
@@ -666,11 +841,11 @@ class WeekplanViewModel @Inject constructor(
             val recentIds = recipeHistoryDao.getRecentRecipeIds(since).toSet()
 
             val allRecipesList = recipesMap.values.filter { it.deleted == 0 }
-            val available = allRecipesList
+            val recencyFiltered = allRecipesList
                 .filter { it.id !in recentIds && it.id !in otherIds && it.id != target.recipeId }
-                .filter { it.mealSlot !in listOf("breakfast", "snack") }
                 .ifEmpty { allRecipesList.filter { it.id !in otherIds && it.id != target.recipeId } }
                 .ifEmpty { allRecipesList }
+            val available = applyRecipeFilters(recencyFiltered, c)
 
             val filtered = when {
                 meatCount >= c.maxMeatPerWeek && fishCount >= c.maxFishPerWeek ->
@@ -710,6 +885,7 @@ class WeekplanViewModel @Inject constructor(
     fun regenerateDay(dayId: String) {
         viewModelScope.launch {
             val day = days.value.find { it.id == dayId } ?: return@launch
+            if (day.isSkipped == 1 || day.isLocked == 1) return@launch
             val c = constraints.value
 
             // Sammle alle aktuellen Rezept-IDs der Woche (außer dem zu ersetzenden Tag)
@@ -734,10 +910,11 @@ class WeekplanViewModel @Inject constructor(
             val recentIds = recipeHistoryDao.getRecentRecipeIds(since).toSet()
 
             val allRecipesList = recipesMap.values.filter { it.deleted == 0 }
-            val available = allRecipesList
+            val recencyFiltered = allRecipesList
                 .filter { it.id !in recentIds && it.id !in otherDayRecipeIds }
                 .ifEmpty { allRecipesList.filter { it.id !in otherDayRecipeIds } }
                 .ifEmpty { allRecipesList }
+            val available = applyRecipeFilters(recencyFiltered, c)
 
             // Constraint-basierte Auswahl
             val filtered = when {
@@ -771,53 +948,6 @@ class WeekplanViewModel @Inject constructor(
             recordHistory(chosen.id, day.planDate)
             syncScheduler.triggerOneShot()
         }
-    }
-
-    fun saveCurrentWeekAsTemplate(name: String) {
-        if (name.isBlank()) return
-        viewModelScope.launch {
-            val monday = mondayForOffset(_weekOffset.value)
-            val fmt = DateTimeFormatter.ISO_LOCAL_DATE
-            val templateId = UUID.randomUUID().toString()
-            val entries = mutableListOf<WeekplanTemplateEntryEntity>()
-            days.value.forEach { day ->
-                val dayDate = LocalDate.parse(day.planDate, fmt)
-                val dayOffset = ChronoUnit.DAYS.between(monday, dayDate).toInt()
-                weekplanDao.recipesForDay(day.id).forEachIndexed { pos, recipe ->
-                    entries.add(
-                        WeekplanTemplateEntryEntity(
-                            id = UUID.randomUUID().toString(),
-                            templateId = templateId,
-                            dayOffset = dayOffset,
-                            recipeId = recipe.recipeId,
-                            position = pos,
-                        )
-                    )
-                }
-            }
-            templateRepository.save(id = templateId, name = name, entries = entries)
-        }
-    }
-
-    fun applyTemplate(templateId: String) {
-        viewModelScope.launch {
-            val monday = mondayForOffset(_weekOffset.value)
-            val fmt = DateTimeFormatter.ISO_LOCAL_DATE
-            val entries = templateRepository.entriesForTemplate(templateId)
-            entries.map { it.dayOffset }.toSet().forEach { offset ->
-                val day = repository.getOrCreateDay(monday.plusDays(offset.toLong()).format(fmt))
-                weekplanDao.recipesForDay(day.id).forEach { repository.removeRecipe(it) }
-            }
-            entries.forEach { entry ->
-                val day = repository.getOrCreateDay(monday.plusDays(entry.dayOffset.toLong()).format(fmt))
-                repository.addRecipe(day.id, entry.recipeId)
-            }
-            syncScheduler.triggerOneShot()
-        }
-    }
-
-    fun deleteTemplate(templateId: String) {
-        viewModelScope.launch { templateRepository.delete(templateId) }
     }
 
     fun repeatLastWeek() {
@@ -864,10 +994,6 @@ class WeekplanViewModel @Inject constructor(
                 _generateStatus.value = WeekplanGenerateStatus.Error(e.message ?: "Fehler")
             }
         }
-    }
-
-    fun generateWithAnchors(startDate: String) {
-        generateWeekplan()
     }
 
     private suspend fun recordHistory(recipeId: String, planDate: String) {

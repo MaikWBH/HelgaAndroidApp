@@ -10,6 +10,7 @@ import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SseClient
 import com.helga.android.data.remote.dto.AiGenerateRequest
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.data.sync.ServerReachabilityMonitor
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.util.IngredientLineParser
 import com.squareup.moshi.Moshi
@@ -50,12 +51,20 @@ class AiGenerateViewModel @Inject constructor(
     private val repository: RecipeRepository,
     private val syncScheduler: SyncScheduler,
     private val preferences: AppPreferences,
+    private val serverReachability: ServerReachabilityMonitor,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AiGenerateState())
     val state: StateFlow<AiGenerateState> = _state.asStateFlow()
 
+    /** ki A3 — Hinweis vor dem ersten Versuch statt Fehler erst nach einem gescheiterten Generieren. */
+    val serverReachable: StateFlow<Boolean?> = serverReachability.reachable
+
     private val generateAdapter by lazy { moshi.adapter(AiGenerateRequest::class.java) }
+
+    init {
+        serverReachability.checkAsync()
+    }
 
     fun setPrompt(p: String) = _state.update { it.copy(prompt = p, status = AiGenerateStatus.Idle) }
     fun setDietType(v: String) = _state.update { it.copy(dietType = v) }
@@ -134,7 +143,7 @@ class AiGenerateViewModel @Inject constructor(
                 localImageUri = "",
                 createdAt = now,
             )
-            val ingredients = recipe.ingredients.mapIndexed { idx, line ->
+            val ingredients = recipe.ingredients.filterNot(IngredientLineParser::isHeaderLine).mapIndexed { idx, line ->
                 val parsed = IngredientLineParser.parse(line)
                 IngredientEntity(
                     id = UUID.randomUUID().toString(),

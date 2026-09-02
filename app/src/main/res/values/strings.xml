@@ -38,6 +38,7 @@
     <!-- Rezept-Detail -->
     <string name="recipe_actions">Aktionen</string>
     <string name="recipe_detail_back">Zurück</string>
+    <string name="recipe_rating_derived_hint">Ergibt sich aus deiner Bewertung beim Kochen</string>
     <string name="recipe_detail_ingredients">Zutaten</string>
     <string name="recipe_detail_instructions">Zubereitung</string>
     <string name="recipe_detail_yield">Portionen</string>
@@ -74,13 +75,17 @@
     <string name="meal_slot_lunch">Mittagessen</string>
     <string name="meal_slot_dinner">Abendessen</string>
     <string name="meal_slot_snack">Snack</string>
+    <string name="weekplan_meal_slot_none">Kein Slot</string>
     <string name="meal_slot_other">Nicht kategorisiert</string>
     <string name="recipe_form_quantity">Menge</string>
     <string name="recipe_form_unit">Einheit</string>
     <string name="recipe_form_food">Zutat</string>
     <string name="recipe_form_step">Schritt</string>
     <string name="recipe_form_add_ingredient">Zutat hinzufügen</string>
+    <string name="recipe_form_remove_ingredient">Zutat entfernen</string>
     <string name="recipe_form_add_step">Schritt hinzufügen</string>
+    <string name="recipe_form_remove_step">Schritt entfernen</string>
+    <string name="recipe_form_add_tag">Tag hinzufügen</string>
     <string name="recipe_form_pick_image">Bild auswählen</string>
     <string name="recipe_form_save">Speichern</string>
 
@@ -110,11 +115,12 @@
     <string name="cook_next">Nächster Schritt</string>
     <string name="cook_prev">Vorheriger Schritt</string>
     <string name="cook_done">Fertig!</string>
+    <string name="cook_rating_title">Wie war\'s?</string>
+    <string name="cook_rating_skip">Überspringen</string>
     <string name="cook_no_steps">Keine Zubereitungsschritte vorhanden.</string>
-    <string name="cook_timer_start">Starten</string>
-    <string name="cook_timer_pause">Pause</string>
     <string name="cook_timer_reset">Zurücksetzen</string>
     <string name="cook_timer_done">Zeit abgelaufen!</string>
+    <string name="cook_timer_cancel">Timer abbrechen</string>
     <string name="cook_focus_mode_on">Fokusansicht aktivieren</string>
     <string name="cook_focus_mode_off">Listenansicht aktivieren</string>
 
@@ -122,7 +128,14 @@
     <string name="settings_title">Einstellungen</string>
     <string name="settings_server_section">Server</string>
     <string name="settings_sync_section">Synchronisation</string>
+    <string name="settings_receipts_section">Bons</string>
+    <string name="settings_receipt_retention">Bon-Aufbewahrung</string>
+    <string name="settings_receipt_retention_never">Nie löschen</string>
+    <string name="settings_receipt_retention_1">1 Monat</string>
+    <string name="settings_receipt_retention_months">%1$d Monate</string>
+    <string name="settings_receipt_retention_12">1 Jahr</string>
     <string name="settings_account_section">Konto</string>
+    <string name="settings_advanced_section">Erweitert</string>
     <string name="settings_save_and_test">Speichern &amp; Verbindung testen</string>
     <string name="settings_last_sync">Letzter Sync: %1$s</string>
     <string name="settings_last_sync_never">Noch nie</string>
@@ -130,11 +143,19 @@
     <string name="settings_logout_confirm_title">Abmelden?</string>
     <string name="settings_logout_confirm_text">Server-URL und API-Schlüssel werden entfernt. Lokale Rezepte bleiben erhalten.</string>
     <string name="settings_logout_confirm_ok">Abmelden</string>
+    <string name="settings_reset_local_data">Alle lokalen Daten zurücksetzen</string>
+    <string name="settings_reset_confirm_title">Wirklich alles zurücksetzen?</string>
+    <string name="settings_reset_confirm_text">Löscht alle lokalen Rezepte, Wochenpläne, Einkaufslisten und Bons auf diesem Gerät und holt anschließend alles vom Server neu. Server-URL und API-Schlüssel bleiben erhalten. Nur sinnvoll, wenn der Server als Backup erreichbar ist.</string>
+    <string name="settings_reset_confirm_ok">Zurücksetzen</string>
 
     <!-- Allgemein -->
     <string name="action_retry">Erneut versuchen</string>
     <string name="action_back">Zurück</string>
     <string name="action_settings">Einstellungen</string>
+    <string name="action_more">Mehr</string>
+    <string name="action_clear_search">Suche leeren</string>
+    <string name="servings_decrease">Portionen verringern</string>
+    <string name="servings_increase">Portionen erhöhen</string>
     <string name="action_dismiss">Schließen</string>
 
     <!-- FAB Speed-Dial -->
@@ -145,6 +166,7 @@
     <string name="fab_remix">Rezept remixen</string>
 
     <!-- KI-Erstellung -->
+    <string name="ai_server_unreachable">Server nicht erreichbar — KI-Funktionen benötigen eine Verbindung zum Sync-Server.</string>
     <string name="ai_generate_title">KI Rezept erstellen</string>
     <string name="ai_generate_prompt_label">Was soll gekocht werden?</string>
     <string name="ai_generate_prompt_hint">z.B. „Curry mit Kichererbsen und Kokosmilch"</string>
@@ -177,6 +199,7 @@
 
     <!-- KI-Klassifikation -->
     <string name="recipe_classify">KI klassifizieren</string>
+    <string name="recipe_classify_unreachable">KI klassifizieren (Server nicht erreichbar)</string>
     <string name="recipe_favorite">Favorit</string>
     <string name="recipe_add_to_shopping">Zu Einkaufsliste hinzufügen</string>
     <string name="recipe_add_to_list">Zur „%1$s" hinzufügen</string>
@@ -198,6 +221,8 @@
     <string name="shopping_staples_add_all">Alle hinzufügen</string>
     <string name="shopping_staples_empty">Keine Vorratsstapel konfiguriert</string>
     <string name="shopping_staple_hint">Artikel eingeben…</string>
+    <string name="shopping_staple_add">Artikel hinzufügen</string>
+    <string name="shopping_add_item">Hinzufügen</string>
     <string name="shopping_edit_item_title">Einkaufsartikel bearbeiten</string>
     <string name="shopping_no_store">Kein Markt</string>
     <string name="shopping_weekplan_export_banner">Wochenplan bereit – Zutaten zur Einkaufsliste hinzufügen</string>
@@ -212,6 +237,14 @@
     <string name="stores_edit_aisles">Gänge bearbeiten</string>
     <string name="stores_aisles_for">Gänge für %1$s</string>
     <string name="stores_aisle_hint">Gangname eingeben…</string>
+    <string name="stores_add_aisle">Gang hinzufügen</string>
+    <string name="stores_set_active">Als aktiven Markt festlegen</string>
+    <string name="stores_aisles_drag_hint">Zum Sortieren gedrückt halten und ziehen</string>
+    <string name="stores_aisle_drag_handle">Zum Verschieben ziehen</string>
+    <string name="stores_prefill_label">Gänge übernehmen</string>
+    <string name="stores_prefill_default">Standard-Gangsatz</string>
+    <string name="stores_prefill_copy">Wie „%1$s"</string>
+    <string name="stores_prefill_empty">Leer, selbst anlegen</string>
 
     <!-- Einstellungen – Einkaufen -->
     <string name="settings_shopping_section">Einkaufen</string>
@@ -236,10 +269,17 @@
     <string name="settings_quick_buttons">Schnellbuttons</string>
     <string name="settings_quick_button_add">Schnellbutton hinzufügen</string>
     <string name="settings_quick_button_edit">Schnellbutton bearbeiten</string>
+    <string name="settings_day_markers">Eigene Tagesmarker</string>
+    <string name="settings_day_marker_add">Tagesmarker hinzufügen</string>
+    <string name="settings_day_marker_edit">Tagesmarker bearbeiten</string>
+    <string name="settings_day_marker_name_label">Name</string>
+    <string name="settings_day_marker_color_label">Farbe</string>
 
     <!-- Wochenplan -->
     <string name="weekplan_title">Wochenplan</string>
     <string name="weekplan_add_recipe">Rezept hinzufügen</string>
+    <string name="weekplan_extra_add">Extra hinzufügen</string>
+    <string name="weekplan_extra_remove">Eintrag entfernen</string>
     <string name="weekplan_remove_recipe">Entfernen</string>
     <string name="weekplan_note_label">Notiz</string>
     <string name="weekplan_extra_hint">Extrazeile hinzufügen…</string>
@@ -247,15 +287,19 @@
     <string name="weekplan_pick_list">Einkaufsliste wählen</string>
     <string name="weekplan_servings">Portionen</string>
     <string name="weekplan_no_lists">Keine Einkaufslisten vorhanden</string>
+    <string name="weekplan_export_preview_continue">Weiter</string>
+    <string name="weekplan_export_preview_title">Was soll übernommen werden?</string>
+    <string name="weekplan_export_preview_empty">Keine Zutaten oder Extras für diese Auswahl</string>
+    <string name="weekplan_export_preview_confirm">Übernehmen</string>
     <string name="weekplan_export_day">Tag auf Einkaufsliste</string>
     <string name="weekplan_export_week">Woche auf Einkaufsliste</string>
     <string name="weekplan_regenerate_day">Tag neu generieren</string>
+    <string name="weekplan_lock_day">Tag sperren</string>
+    <string name="weekplan_lock_badge">Gesperrt</string>
+    <string name="weekplan_markers_title">Tagesmarker</string>
+    <string name="weekplan_markers_empty_hint">Noch keine Tagesmarker angelegt — verwaltbar unter Einstellungen → Erweitert</string>
     <string name="weekplan_more">Mehr</string>
     <string name="weekplan_repeat_last_week">Letzte Woche übernehmen</string>
-    <string name="weekplan_no_templates">Keine Vorlagen gespeichert</string>
-    <string name="weekplan_save_template">Aktuelle Woche als Vorlage speichern</string>
-    <string name="weekplan_template_name">Vorlagenname</string>
-    <string name="weekplan_ai_generate">KI-Wochenplan erstellen</string>
     <string name="weekplan_ai_generating">KI erstellt Wochenplan…</string>
     <string name="weekplan_constraints_title">Planungs-Constraints</string>
     <string name="weekplan_max_meat">Max. Fleisch-Tage</string>
@@ -276,21 +320,22 @@
     <string name="weekplan_anchor_subtitle">Wähle bis zu 3 Rezepte als Fixpunkte</string>
     <string name="weekplan_anchor_skip">Ohne Anker generieren</string>
     <string name="weekplan_anchor_generate">Plan erstellen</string>
-    <string name="weekplan_templates">Vorlagen</string>
-    <string name="weekplan_template_save_section">Aktuelle Woche als Vorlage speichern</string>
-    <string name="weekplan_template_name_hint">Vorlagenname…</string>
-    <string name="weekplan_template_save">Speichern</string>
-    <string name="weekplan_template_load_section">Vorlage laden</string>
-    <string name="weekplan_template_apply">Laden</string>
-    <string name="weekplan_template_delete">Löschen</string>
     <string name="weekplan_prev_week">Vorherige Woche</string>
     <string name="weekplan_next_week">Nächste Woche</string>
     <string name="weekplan_today">Heute</string>
+    <string name="weekplan_toggle_skip">Kein Kochen an diesem Tag</string>
+    <string name="weekplan_skip_badge">Kein Kochen</string>
+    <string name="weekplan_skip_confirm_title">Tag entfernen?</string>
+    <string name="weekplan_skip_confirm_text">Für diesen Tag ist bereits etwas geplant. Beim Markieren als \"kein Kochen\" wird die Zuweisung entfernt.</string>
+    <string name="weekplan_skip_confirm_action">Entfernen</string>
+    <string name="weekplan_skip_confirm_cancel">Abbrechen</string>
+    <string name="weekplan_add_day">Tag hinzufügen</string>
 
     <!-- Bottom Navigation -->
     <string name="nav_shopping">Einkaufen</string>
     <string name="nav_recipes">Rezepte</string>
     <string name="nav_weekplan">Wochenplan</string>
+    <string name="nav_receipts">Bons</string>
 
     <!-- Erscheinungsbild -->
     <string name="settings_appearance_section">Erscheinungsbild</string>
@@ -305,6 +350,8 @@
     <!-- Benachrichtigungen -->
     <string name="settings_notify_section">Benachrichtigungen</string>
     <string name="notify_channel_name">Erinnerungen</string>
+    <string name="notify_timer_channel_name">Kochtimer</string>
+    <string name="notify_timer_title">Timer abgelaufen ⏱</string>
     <string name="notify_shopping_title">Heute ist Einkaufstag 🛒</string>
     <string name="notify_shopping_text">%1$d Artikel auf der Einkaufsliste</string>
     <string name="notify_cook_title">Heute kochen 🍳</string>
@@ -327,10 +374,13 @@
     <string name="ingredient_mapping_title">Zutaten zuordnen</string>
 
     <!-- Statistik -->
-    <string name="stats_title">Monats-Report</string>
+    <string name="stats_title">Kochstatistik</string>
     <string name="stats_cooked">%1$d Rezepte gekocht</string>
     <string name="stats_top_recipes">Top-Rezepte</string>
     <string name="stats_first_timers">Entdeckungen</string>
+    <string name="stats_period_week">Woche</string>
+    <string name="stats_period_month">Monat</string>
+    <string name="stats_period_all">Alle</string>
 
     <!-- Export -->
     <string name="settings_export_data">Alle Daten exportieren</string>
@@ -375,7 +425,6 @@
     <string name="recipe_nutrition_protein_label">Protein (g)</string>
     <string name="recipe_nutrition_fat_label">Fett (g)</string>
     <string name="recipe_nutrition_carbs_label">Kohlenhydrate (g)</string>
-    <string name="recipe_nutrition_nutriscore_label">Nutri-Score (A–E, optional)</string>
     <string name="recipe_nutrition_save">Speichern</string>
 
     <!-- Settings: globale KI-Sammelaktionen für alle Rezepte -->

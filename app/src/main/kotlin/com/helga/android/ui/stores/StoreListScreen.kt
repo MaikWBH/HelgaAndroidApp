@@ -1,13 +1,17 @@
 package com.helga.android.ui.stores
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -15,9 +19,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
@@ -28,29 +31,41 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.repository.StorePrefill
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,9 +81,10 @@ fun StoreListScreen(
 
     if (showNewStoreDialog) {
         NewStoreDialog(
+            existingStores = stores,
             onDismiss = { showNewStoreDialog = false },
-            onCreate = { name ->
-                viewModel.createStore(name)
+            onCreate = { name, prefill ->
+                viewModel.createStore(name, prefill)
                 showNewStoreDialog = false
             },
         )
@@ -84,8 +100,7 @@ fun StoreListScreen(
             },
             onAddAisle = viewModel::addAisle,
             onDeleteAisle = viewModel::deleteAisle,
-            onMoveUp = viewModel::moveAisleUp,
-            onMoveDown = viewModel::moveAisleDown,
+            onReorder = viewModel::reorderAisles,
         )
     }
 
@@ -162,7 +177,7 @@ private fun StoreRow(
                         Icons.Filled.RadioButtonChecked
                     else
                         Icons.Filled.RadioButtonUnchecked,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.stores_set_active),
                     tint = if (store.isActive == 1)
                         MaterialTheme.colorScheme.primary
                     else
@@ -195,8 +210,7 @@ private fun AisleEditorSheet(
     onDismiss: () -> Unit,
     onAddAisle: (String) -> Unit,
     onDeleteAisle: (StoreAisleEntity) -> Unit,
-    onMoveUp: (StoreAisleEntity) -> Unit,
-    onMoveDown: (StoreAisleEntity) -> Unit,
+    onReorder: (orderedIds: List<String>) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var newAisleName by remember { mutableStateOf("") }
@@ -241,22 +255,99 @@ private fun AisleEditorSheet(
                         }
                     }
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.stores_add_aisle))
                 }
             }
             HorizontalDivider()
-            LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
-                items(aisles, key = { it.id }) { aisle ->
-                    AisleRow(
-                        aisle = aisle,
-                        isFirst = aisles.first().id == aisle.id,
-                        isLast = aisles.last().id == aisle.id,
-                        onMoveUp = { onMoveUp(aisle) },
-                        onMoveDown = { onMoveDown(aisle) },
-                        onDelete = { onDeleteAisle(aisle) },
-                    )
-                }
-            }
+            Text(
+                text = stringResource(R.string.stores_aisles_drag_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+            ReorderableAisleList(
+                aisles = aisles,
+                onReorder = onReorder,
+                onDeleteAisle = onDeleteAisle,
+            )
+        }
+    }
+}
+
+/**
+ * Handgerollter Drag-and-Drop-Reorder ohne externe Library (maerkte A1) — löst die
+ * bisherigen Hoch/Runter-Pfeile ab, die bei vielen Gängen pro Verschiebung einen eigenen
+ * Tap brauchten. Zieht per Long-Press, tauscht die Position sobald über die halbe Höhe des
+ * Nachbar-Eintrags gezogen wurde (gleiches Prinzip wie andernorts bereits per
+ * `detectDragGesturesAfterLongPress` in [com.helga.android.ui.shopping.ShoppingListScreen]).
+ * Lokale Kopie der Reihenfolge, damit die Liste während des Ziehens nicht durch neu vom
+ * Server/DB einlaufende Flow-Updates zurückspringt; erst bei Drag-Ende wird [onReorder] mit
+ * der finalen Reihenfolge aufgerufen.
+ */
+@Composable
+private fun ReorderableAisleList(
+    aisles: List<StoreAisleEntity>,
+    onReorder: (orderedIds: List<String>) -> Unit,
+    onDeleteAisle: (StoreAisleEntity) -> Unit,
+) {
+    var localOrder by remember { mutableStateOf(aisles) }
+    var draggedId by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    val itemHeights = remember { mutableStateMapOf<String, Int>() }
+    val haptics = LocalHapticFeedback.current
+
+    LaunchedEffect(aisles) {
+        if (draggedId == null) localOrder = aisles
+    }
+
+    LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
+        items(localOrder, key = { it.id }) { aisle ->
+            val isDragging = aisle.id == draggedId
+            AisleRow(
+                aisle = aisle,
+                isDragging = isDragging,
+                dragOffsetY = if (isDragging) dragOffset else 0f,
+                modifier = Modifier
+                    .onSizeChanged { itemHeights[aisle.id] = it.height }
+                    .pointerInput(aisle.id) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                draggedId = aisle.id
+                                dragOffset = 0f
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDrag = { change, offset ->
+                                change.consume()
+                                dragOffset += offset.y
+                                val currentId = draggedId ?: return@detectDragGesturesAfterLongPress
+                                val currentIndex = localOrder.indexOfFirst { it.id == currentId }
+                                val height = itemHeights[currentId]?.toFloat() ?: return@detectDragGesturesAfterLongPress
+                                if (dragOffset > height / 2 && currentIndex < localOrder.lastIndex) {
+                                    localOrder = localOrder.toMutableList().apply {
+                                        add(currentIndex + 1, removeAt(currentIndex))
+                                    }
+                                    dragOffset -= height
+                                } else if (dragOffset < -height / 2 && currentIndex > 0) {
+                                    localOrder = localOrder.toMutableList().apply {
+                                        add(currentIndex - 1, removeAt(currentIndex))
+                                    }
+                                    dragOffset += height
+                                }
+                            },
+                            onDragEnd = {
+                                draggedId = null
+                                dragOffset = 0f
+                                onReorder(localOrder.map { it.id })
+                            },
+                            onDragCancel = {
+                                draggedId = null
+                                dragOffset = 0f
+                                localOrder = aisles
+                            },
+                        )
+                    },
+                onDelete = { onDeleteAisle(aisle) },
+            )
         }
     }
 }
@@ -264,52 +355,93 @@ private fun AisleEditorSheet(
 @Composable
 private fun AisleRow(
     aisle: StoreAisleEntity,
-    isFirst: Boolean,
-    isLast: Boolean,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
+    isDragging: Boolean,
+    dragOffsetY: Float,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    ListItem(
-        headlineContent = { Text(aisle.aisleName) },
-        trailingContent = {
-            Row {
-                IconButton(onClick = onMoveUp, enabled = !isFirst) {
-                    Icon(Icons.Filled.ArrowUpward, contentDescription = null)
-                }
-                IconButton(onClick = onMoveDown, enabled = !isLast) {
-                    Icon(Icons.Filled.ArrowDownward, contentDescription = null)
-                }
+    Column(
+        modifier = Modifier
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer { translationY = dragOffsetY }
+            .then(modifier),
+    ) {
+        ListItem(
+            headlineContent = { Text(aisle.aisleName) },
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Filled.DragHandle,
+                    contentDescription = stringResource(R.string.stores_aisle_drag_handle),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            trailingContent = {
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Filled.Delete,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.recipe_delete),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
-            }
-        },
-    )
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            },
+            colors = if (isDragging) {
+                ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            } else {
+                ListItemDefaults.colors()
+            },
+        )
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    }
 }
 
 @Composable
-private fun NewStoreDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+private fun NewStoreDialog(
+    existingStores: List<StoreEntity>,
+    onDismiss: () -> Unit,
+    onCreate: (name: String, prefill: StorePrefill) -> Unit,
+) {
     var name by remember { mutableStateOf("") }
+    var prefill by remember { mutableStateOf<StorePrefill>(StorePrefill.DefaultTemplate) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.stores_new)) },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(stringResource(R.string.stores_name_label)) },
-                singleLine = true,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.stores_name_label)) },
+                    singleLine = true,
+                )
+                Text(
+                    text = stringResource(R.string.stores_prefill_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                PrefillOption(
+                    label = stringResource(R.string.stores_prefill_default),
+                    selected = prefill == StorePrefill.DefaultTemplate,
+                    onClick = { prefill = StorePrefill.DefaultTemplate },
+                )
+                existingStores.forEach { store ->
+                    PrefillOption(
+                        label = stringResource(R.string.stores_prefill_copy, store.name),
+                        selected = (prefill as? StorePrefill.CopyFrom)?.storeId == store.id,
+                        onClick = { prefill = StorePrefill.CopyFrom(store.id) },
+                    )
+                }
+                PrefillOption(
+                    label = stringResource(R.string.stores_prefill_empty),
+                    selected = prefill == StorePrefill.None,
+                    onClick = { prefill = StorePrefill.None },
+                )
+            }
         },
         confirmButton = {
             TextButton(
-                onClick = { if (name.isNotBlank()) onCreate(name.trim()) },
+                onClick = { if (name.isNotBlank()) onCreate(name.trim(), prefill) },
                 enabled = name.isNotBlank(),
             ) {
                 Text(stringResource(R.string.shopping_create))
@@ -321,4 +453,19 @@ private fun NewStoreDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
             }
         },
     )
+}
+
+@Composable
+private fun PrefillOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+    }
 }

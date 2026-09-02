@@ -17,7 +17,9 @@ data class WeekplanConstraintsEntity(
     val minVegetarianPerWeek: Int = 2,
     val maxRepeatDays: Int = 14,
     val maxKcalPerPortion: Int = 700,
-    val minNutriScore: String = "c", // "a", "b", "c"
+    // LEGACY: Nutri-Score-Filter entfernt (naehrwerte A3/wochenplan A16), Spalte bleibt aus
+    // Migrationsgründen erhalten (siehe RecipeEntity.mealType für dasselbe Muster).
+    val minNutriScore: String = "c",
     val preferOrganic: Int = 0, // boolean flag
     val excludeAllergens: String = "[]", // JSON array of allergen strings
     val updatedAt: Long = 0L,

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.repository.StorePrefill
 import com.helga.android.data.repository.StoreRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,9 +41,9 @@ class StoreListViewModel @Inject constructor(
         _selectedStoreId.value = storeId
     }
 
-    fun createStore(name: String) {
+    fun createStore(name: String, prefill: StorePrefill = StorePrefill.None) {
         viewModelScope.launch {
-            repository.createStore(name)
+            repository.createStore(name, prefill)
             syncScheduler.triggerOneShot()
         }
     }
@@ -76,11 +77,11 @@ class StoreListViewModel @Inject constructor(
         }
     }
 
-    fun moveAisleUp(aisle: StoreAisleEntity) {
-        viewModelScope.launch { repository.moveAisleUp(aisle); syncScheduler.triggerOneShot() }
-    }
-
-    fun moveAisleDown(aisle: StoreAisleEntity) {
-        viewModelScope.launch { repository.moveAisleDown(aisle); syncScheduler.triggerOneShot() }
+    fun reorderAisles(orderedIds: List<String>) {
+        val storeId = _selectedStoreId.value ?: return
+        viewModelScope.launch {
+            repository.reorderAisles(storeId, orderedIds)
+            syncScheduler.triggerOneShot()
+        }
     }
 }

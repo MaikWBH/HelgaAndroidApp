@@ -1,3 +1,14 @@
+> **ARCHIVIERT am 2026-08-22 — inhaltlich abgeschlossen.**
+>
+> Die Phasen 15–19 dieses Plans sind im Code umgesetzt: Freitextsuche und Favoriten (15),
+> Portionsskalierung (16), Zutaten-Merge, Wischgesten und Ein-Tipp-Export (17),
+> Wochennavigation und Vorlagen (18), Zutaten-Abhaken und Timer (19). Die technischen Angaben
+> sind zudem überholt — der Plan rechnet mit Room-Migration v8/v9, die Datenbank steht auf v30.
+>
+> Aktuelle Planung: [`.claude/features/README.md`](../features/README.md)
+
+---
+
 # Helga Android – Verbesserungsplan (Phase 15+)
 
 Ziel: Schnellster möglicher Workflow von „Was kochen wir diese Woche?" → Wochenplan → Einkaufsliste.

@@ -61,4 +61,11 @@ interface ShoppingDao {
 
     @Query("SELECT * FROM shopping_items WHERE listId = :listId AND name = :name COLLATE NOCASE AND isChecked = 0 AND deleted = 0")
     suspend fun findUncheckedItemsByName(listId: String, name: String): List<ShoppingItemEntity>
+
+    @Query(
+        "SELECT DISTINCT name FROM shopping_items WHERE deleted = 0 " +
+            "AND name LIKE '%' || :query || '%' COLLATE NOCASE " +
+            "ORDER BY name COLLATE NOCASE LIMIT 20"
+    )
+    suspend fun searchItemNames(query: String): List<String>
 }

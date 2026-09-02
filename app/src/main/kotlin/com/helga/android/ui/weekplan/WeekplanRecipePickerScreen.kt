@@ -110,7 +110,7 @@ fun WeekplanRecipePickerScreen(
                 trailingIcon = {
                     if (searchQuery.isNotBlank()) {
                         IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                            Icon(Icons.Filled.Close, contentDescription = null)
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_clear_search))
                         }
                     }
                 },
@@ -191,7 +191,7 @@ private fun PickerFilterBar(
                     label = { Text(stringResource(R.string.recipes_filter_all)) },
                 )
             }
-            items(allTags) { tag ->
+            items(allTags, key = { it }) { tag ->
                 FilterChip(
                     selected = tag == selectedTag,
                     onClick = { onTagSelect(if (tag == selectedTag) null else tag) },

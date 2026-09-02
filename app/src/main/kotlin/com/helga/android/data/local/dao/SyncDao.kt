@@ -70,6 +70,21 @@ interface SyncDao {
 
     @Query("SELECT id, updatedAt FROM monthly_budgets")
     suspend fun monthlyBudgetTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM off_products")
+    suspend fun offProductTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM recipe_history")
+    suspend fun historyTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM recipe_feedback")
+    suspend fun feedbackTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM weekplan_day_markers")
+    suspend fun weekplanDayMarkerTimestamps(): List<TimestampRow>
+
+    @Query("SELECT id, updatedAt FROM weekplan_day_marker_assignments")
+    suspend fun weekplanDayMarkerAssignmentTimestamps(): List<TimestampRow>
 }
 
 data class TimestampRow(val id: String, val updatedAt: Long)

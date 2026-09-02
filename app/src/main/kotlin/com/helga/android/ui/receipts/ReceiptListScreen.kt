@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,11 +48,11 @@ internal fun formatQuantity(value: Double): String =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiptListScreen(
-    onBack: () -> Unit,
     onReceiptClick: (String) -> Unit,
     onScanClick: () -> Unit,
     onCostOverviewClick: () -> Unit,
     onProductsClick: () -> Unit,
+    onStatsClick: () -> Unit = {},
     viewModel: ReceiptListViewModel = hiltViewModel(),
 ) {
     val receipts = viewModel.receipts.collectAsState().value
@@ -61,17 +61,15 @@ fun ReceiptListScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Einkäufe") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Zurück")
-                    }
-                },
                 actions = {
                     IconButton(onClick = onProductsClick) {
                         Icon(Icons.Filled.TrendingUp, contentDescription = "Preise")
                     }
                     IconButton(onClick = onCostOverviewClick) {
                         Icon(Icons.Filled.BarChart, contentDescription = "Kostenübersicht")
+                    }
+                    IconButton(onClick = onStatsClick) {
+                        Icon(Icons.Filled.Insights, contentDescription = "Statistik")
                     }
                 },
             )

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,10 +31,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
@@ -44,14 +48,18 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
@@ -79,6 +87,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -87,15 +96,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
+import com.helga.android.ui.components.DayMarkerChip
+import com.helga.android.ui.components.MealSlots
+import com.helga.android.ui.components.mealSlotLabel
+import com.helga.android.ui.components.parseMarkerColor
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import com.helga.android.data.util.ImageUrls
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
+import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
-import com.helga.android.data.local.entity.WeekplanTemplateEntity
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -108,6 +121,7 @@ fun WeekplanScreen(
     bottomPadding: Dp = 0.dp,
     onAddRecipeForDay: (dayId: String) -> Unit,
     onNavigateToRecipe: (recipeId: String) -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     viewModel: WeekplanViewModel = hiltViewModel(),
 ) {
     val days by viewModel.days.collectAsStateWithLifecycle()
@@ -115,10 +129,14 @@ fun WeekplanScreen(
     val weekplanExtras by viewModel.weekplanExtras.collectAsStateWithLifecycle()
     val allRecipes by viewModel.allRecipes.collectAsStateWithLifecycle()
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
+    val defaultShoppingListId by viewModel.defaultShoppingListId.collectAsStateWithLifecycle()
+    val exportPreview by viewModel.exportPreview.collectAsStateWithLifecycle()
     val selectedDayId by viewModel.selectedDayId.collectAsStateWithLifecycle()
     val daySummaries by viewModel.daySummaries.collectAsStateWithLifecycle()
     val weekRecipes by viewModel.weekRecipes.collectAsStateWithLifecycle()
     val weekExtras by viewModel.weekExtras.collectAsStateWithLifecycle()
+    val weekMarkers by viewModel.weekMarkers.collectAsStateWithLifecycle()
+    val allMarkers by viewModel.allMarkers.collectAsStateWithLifecycle()
     val constraints by viewModel.constraints.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
@@ -128,9 +146,11 @@ fun WeekplanScreen(
     val weekBalance by viewModel.weekBalance.collectAsStateWithLifecycle()
     val weekNutrition by viewModel.weekNutrition.collectAsStateWithLifecycle()
     val userAllergies by viewModel.userAllergies.collectAsStateWithLifecycle()
+    val canExtendWeek by viewModel.canExtendWeek.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
-    var constraintsEditorVisible by remember { mutableStateOf(false) }
+    var constraintsExpanded by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
+    var skipConfirmDay by remember { mutableStateOf<WeekplanDayEntity?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val recipeById: (String) -> RecipeEntity? = { id -> allRecipes[id] }
@@ -149,28 +169,47 @@ fun WeekplanScreen(
         }
     }
 
-    if (exportPicker != null) {
+    val pendingExportDayId = exportPicker
+    if (pendingExportDayId != null) {
         ShoppingListPickerDialog(
             lists = shoppingLists,
-            onPick = { listId, servings ->
-                val dayId = exportPicker!!
-                if (dayId == "all") viewModel.exportWeekToShoppingList(listId, servings)
-                else viewModel.exportToShoppingList(dayId, listId, servings)
+            defaultListId = defaultShoppingListId,
+            onConfirm = { listId, servings ->
+                viewModel.startExportPreview(pendingExportDayId, listId, servings)
                 exportPicker = null
             },
             onDismiss = { exportPicker = null },
         )
     }
 
-    if (constraintsEditorVisible) {
-        ConstraintsEditorSheet(
-            constraints = constraints,
-            allergies = userAllergies,
-            onSave = { maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies ->
-                viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat, maxKcal, minScore, prefOrganic, excludeAllergies)
-                constraintsEditorVisible = false
+    exportPreview?.let { preview ->
+        ExportPreviewDialog(
+            preview = preview,
+            onToggle = viewModel::toggleExportItem,
+            onConfirm = viewModel::confirmExportPreview,
+            onDismiss = viewModel::cancelExportPreview,
+        )
+    }
+
+    val confirmSkipDay = skipConfirmDay
+    if (confirmSkipDay != null) {
+        AlertDialog(
+            onDismissRequest = { skipConfirmDay = null },
+            title = { Text(stringResource(R.string.weekplan_skip_confirm_title)) },
+            text = { Text(stringResource(R.string.weekplan_skip_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.toggleSkipped(confirmSkipDay)
+                    skipConfirmDay = null
+                }) {
+                    Text(stringResource(R.string.weekplan_skip_confirm_action))
+                }
             },
-            onDismiss = { constraintsEditorVisible = false },
+            dismissButton = {
+                TextButton(onClick = { skipConfirmDay = null }) {
+                    Text(stringResource(R.string.weekplan_skip_confirm_cancel))
+                }
+            },
         )
     }
 
@@ -198,10 +237,12 @@ fun WeekplanScreen(
                             contentDescription = stringResource(R.string.weekplan_generate),
                         )
                     }
-                    IconButton(onClick = { constraintsEditorVisible = true }) {
+                    IconButton(onClick = { constraintsExpanded = !constraintsExpanded }) {
                         Icon(
                             imageVector = Icons.Filled.Tune,
                             contentDescription = stringResource(R.string.weekplan_constraints_title),
+                            tint = if (constraintsExpanded) MaterialTheme.colorScheme.primary
+                                    else LocalContentColor.current,
                         )
                     }
                     IconButton(onClick = { exportPicker = "all" }) {
@@ -226,6 +267,14 @@ fun WeekplanScreen(
                                 onClick = {
                                     showOverflowMenu = false
                                     viewModel.repeatLastWeek()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.settings_title)) },
+                                leadingIcon = { Icon(Icons.Filled.Settings, null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onNavigateToSettings()
                                 },
                             )
                         }
@@ -275,6 +324,18 @@ fun WeekplanScreen(
                         }
                     }
                 }
+                item(key = "constraints_panel") {
+                    ConstraintsPanel(
+                        constraints = constraints,
+                        allergies = userAllergies,
+                        expanded = constraintsExpanded,
+                        onToggle = { constraintsExpanded = !constraintsExpanded },
+                        onSave = { maxMeat, maxFish, minVeg, maxRepeat, maxKcal, prefOrganic, excludeAllergies ->
+                            viewModel.saveConstraints(maxMeat, maxFish, minVeg, maxRepeat, maxKcal, prefOrganic, excludeAllergies)
+                            constraintsExpanded = false
+                        },
+                    )
+                }
                 item(key = "week_balance") {
                     val total = weekBalance.meat + weekBalance.fish + weekBalance.veg + weekBalance.other
                     if (total > 0) {
@@ -315,12 +376,6 @@ fun WeekplanScreen(
                                 "🔥 Ø ${nutrition.weekAvgKcal.toInt()} kcal/Tag",
                                 style = MaterialTheme.typography.labelMedium,
                             )
-                            if (nutrition.weekAvgNutriScore.isNotBlank()) {
-                                Text(
-                                    "Nutri-Score ${nutrition.weekAvgNutriScore.uppercase()}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
                         }
                     }
                 }
@@ -336,6 +391,8 @@ fun WeekplanScreen(
                         isSelected = isSelected,
                         weekplanRecipes = dayRecipes,
                         weekplanExtras = dayExtras,
+                        dayMarkers = weekMarkers[day.id] ?: emptyList(),
+                        allMarkers = allMarkers,
                         recipeCount = summary?.recipeCount ?: 0,
                         extraCount = summary?.extraCount ?: 0,
                         recipeById = recipeById,
@@ -351,10 +408,32 @@ fun WeekplanScreen(
                         onNavigateToRecipe = onNavigateToRecipe,
                         onToggleQuick = { viewModel.toggleQuickDay(day) },
                         onToggleGuest = { viewModel.toggleGuestDay(day) },
+                        onToggleSkip = {
+                            if (day.isSkipped == 0 && (summary?.recipeCount ?: 0) > 0) {
+                                skipConfirmDay = day
+                            } else {
+                                viewModel.toggleSkipped(day)
+                            }
+                        },
                         onRegenerateDay = { viewModel.regenerateDay(day.id) },
+                        onToggleLock = { viewModel.toggleLocked(day) },
                         feedbackMap = feedbackMap,
                         onFeedback = { recipeId, liked -> viewModel.setFeedback(recipeId, day.planDate, liked) },
+                        onSetMealSlot = viewModel::setMealSlot,
+                        onToggleMarker = { markerId -> viewModel.toggleMarkerOnDay(day.id, markerId) },
                     )
+                }
+                if (canExtendWeek) {
+                    item(key = "add_day") {
+                        OutlinedButton(
+                            onClick = viewModel::addDayToWeek,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null)
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.weekplan_add_day))
+                        }
+                    }
                 }
             }
 
@@ -383,12 +462,15 @@ fun WeekplanScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DayCard(
     day: WeekplanDayEntity,
     isSelected: Boolean,
     weekplanRecipes: List<WeekplanRecipeEntity>,
     weekplanExtras: List<WeekplanExtraEntity>,
+    dayMarkers: List<WeekplanDayMarkerEntity>,
+    allMarkers: List<WeekplanDayMarkerEntity>,
     recipeCount: Int,
     extraCount: Int,
     recipeById: (String) -> RecipeEntity?,
@@ -404,9 +486,13 @@ private fun DayCard(
     onNavigateToRecipe: (String) -> Unit,
     onToggleQuick: () -> Unit,
     onToggleGuest: () -> Unit,
+    onToggleSkip: () -> Unit,
     onRegenerateDay: () -> Unit,
+    onToggleLock: () -> Unit,
     feedbackMap: Map<String, Int>,
     onFeedback: (recipeId: String, liked: Int) -> Unit,
+    onSetMealSlot: (WeekplanRecipeEntity, String) -> Unit,
+    onToggleMarker: (markerId: String) -> Unit,
 ) {
     val date = remember(day.planDate) {
         runCatching { LocalDate.parse(day.planDate, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
@@ -443,6 +529,21 @@ private fun DayCard(
                         if (day.isGuestDay == 1) {
                             Text("👥", style = MaterialTheme.typography.bodySmall)
                         }
+                        if (day.isSkipped == 1) {
+                            Text(
+                                text = "🚫 " + stringResource(R.string.weekplan_skip_badge),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (day.isLocked == 1) {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = stringResource(R.string.weekplan_lock_badge),
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                     if (dateLabel.isNotBlank()) {
                         Text(
@@ -450,6 +551,13 @@ private fun DayCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                    if (dayMarkers.isNotEmpty()) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            dayMarkers.forEach { marker ->
+                                DayMarkerChip(name = marker.name, color = marker.color)
+                            }
+                        }
                     }
                 }
                 if (isSelected) {
@@ -467,6 +575,21 @@ private fun DayCard(
                                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         )
                     }
+                    IconButton(onClick = onToggleSkip) {
+                        Text(
+                            text = "🚫",
+                            color = if (day.isSkipped == 1) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        )
+                    }
+                    IconButton(onClick = onToggleLock) {
+                        Icon(
+                            imageVector = if (day.isLocked == 1) Icons.Filled.Lock else Icons.Filled.LockOpen,
+                            contentDescription = stringResource(R.string.weekplan_lock_day),
+                            tint = if (day.isLocked == 1) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        )
+                    }
                     IconButton(onClick = onExport) {
                         Icon(
                             imageVector = Icons.Filled.ShoppingCart,
@@ -474,11 +597,12 @@ private fun DayCard(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    IconButton(onClick = onRegenerateDay) {
+                    IconButton(onClick = onRegenerateDay, enabled = day.isLocked == 0) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
                             contentDescription = stringResource(R.string.weekplan_regenerate_day),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (day.isLocked == 0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         )
                     }
                 }
@@ -505,10 +629,12 @@ private fun DayCard(
                         name = recipe?.name?.ifBlank { recipe.slug } ?: entry.recipeId,
                         imageUrl = imageUrl,
                         liked = feedbackMap[entry.recipeId] ?: 0,
+                        mealSlot = entry.mealSlot,
                         onNavigate = { onNavigateToRecipe(entry.recipeId) },
                         onRemove = { onRemoveRecipe(entry) },
                         onThumbUp = { onFeedback(entry.recipeId, 1) },
                         onThumbDown = { onFeedback(entry.recipeId, -1) },
+                        onMealSlotChange = { onSetMealSlot(entry, it) },
                     )
                 }
 
@@ -560,7 +686,7 @@ private fun DayCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        items(extraSuggestions) { suggestion ->
+                        items(extraSuggestions, key = { it }) { suggestion ->
                             SuggestionChip(
                                 onClick = {
                                     onAddExtra(suggestion)
@@ -600,7 +726,40 @@ private fun DayCard(
                         },
                         enabled = extraInput.isNotBlank(),
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = null)
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.weekplan_extra_add))
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.weekplan_markers_title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (allMarkers.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.weekplan_markers_empty_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        allMarkers.forEach { marker ->
+                            val isAssigned = dayMarkers.any { it.id == marker.id }
+                            FilterChip(
+                                selected = isAssigned,
+                                onClick = { onToggleMarker(marker.id) },
+                                label = { Text(marker.name) },
+                                leadingIcon = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(RoundedCornerShape(50))
+                                            .background(parseMarkerColor(marker.color)),
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
 
@@ -632,6 +791,7 @@ private fun DayCard(
                     DayPreviewRecipeRow(
                         name = recipe?.name?.ifBlank { recipe.slug } ?: entry.recipeId,
                         imageUrl = imageUrl,
+                        mealSlot = entry.mealSlot,
                         onNavigate = { onNavigateToRecipe(entry.recipeId) },
                     )
                 }
@@ -664,15 +824,64 @@ private fun DayCard(
     }
 }
 
+/**
+ * Mahlzeiten-Tag je Wochenplan-Eintrag (wochenplan A14) — dezente Material-3-Tonfarbe je
+ * Mahlzeitentyp, aber nie Farbe allein: Textlabel ist immer mit dabei (ux-accessibility
+ * Regel 7). Ohne [onMealSlotChange] rein lesend (Wochenübersicht), sonst öffnet Tippen eine
+ * Auswahl.
+ */
+@Composable
+private fun MealSlotBadge(mealSlot: String, onMealSlotChange: ((String) -> Unit)?) {
+    var expanded by remember { mutableStateOf(false) }
+    val color = when (mealSlot) {
+        MealSlots.BREAKFAST -> MaterialTheme.colorScheme.tertiaryContainer
+        MealSlots.LUNCH -> MaterialTheme.colorScheme.primaryContainer
+        MealSlots.DINNER -> MaterialTheme.colorScheme.secondaryContainer
+        MealSlots.SNACK -> MaterialTheme.colorScheme.surfaceVariant
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    }
+    val label = if (mealSlot.isBlank()) stringResource(R.string.weekplan_meal_slot_none) else mealSlotLabel(mealSlot)
+
+    Box {
+        Surface(
+            color = color,
+            shape = RoundedCornerShape(4.dp),
+            modifier = if (onMealSlotChange != null) Modifier.clickable { expanded = true } else Modifier,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
+        if (onMealSlotChange != null) {
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                listOf(MealSlots.BREAKFAST, MealSlots.LUNCH, MealSlots.DINNER, MealSlots.SNACK).forEach { slot ->
+                    DropdownMenuItem(
+                        text = { Text(mealSlotLabel(slot)) },
+                        onClick = { onMealSlotChange(slot); expanded = false },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.weekplan_meal_slot_none)) },
+                    onClick = { onMealSlotChange(""); expanded = false },
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun RecipeItemRow(
     name: String,
     imageUrl: String?,
     liked: Int,
+    mealSlot: String,
     onNavigate: () -> Unit,
     onRemove: () -> Unit,
     onThumbUp: () -> Unit,
     onThumbDown: () -> Unit,
+    onMealSlotChange: (String) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -719,6 +928,7 @@ private fun RecipeItemRow(
                 text = name,
                 style = MaterialTheme.typography.bodyMedium,
             )
+            MealSlotBadge(mealSlot = mealSlot, onMealSlotChange = onMealSlotChange)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(
                     onClick = onThumbUp,
@@ -754,6 +964,7 @@ private fun RecipeItemRow(
 private fun DayPreviewRecipeRow(
     name: String,
     imageUrl: String?,
+    mealSlot: String,
     onNavigate: () -> Unit,
 ) {
     Row(
@@ -803,6 +1014,9 @@ private fun DayPreviewRecipeRow(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        if (mealSlot.isNotBlank()) {
+            MealSlotBadge(mealSlot = mealSlot, onMealSlotChange = null)
+        }
     }
 }
 
@@ -823,7 +1037,7 @@ private fun ExtraChip(text: String, onRemove: () -> Unit) {
         IconButton(onClick = onRemove) {
             Icon(
                 imageVector = Icons.Filled.Close,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.weekplan_extra_remove),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -833,10 +1047,12 @@ private fun ExtraChip(text: String, onRemove: () -> Unit) {
 @Composable
 private fun ShoppingListPickerDialog(
     lists: List<ShoppingListEntity>,
-    onPick: (String, Int) -> Unit,
+    defaultListId: String,
+    onConfirm: (String, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var servings by remember { mutableIntStateOf(2) }
+    var selectedListId by remember { mutableStateOf(defaultListId.ifBlank { lists.firstOrNull()?.id.orEmpty() }) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -851,11 +1067,11 @@ private fun ShoppingListPickerDialog(
                     Text(stringResource(R.string.weekplan_servings), style = MaterialTheme.typography.bodyMedium)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { if (servings > 1) servings-- }) {
-                            Icon(Icons.Filled.Remove, contentDescription = null)
+                            Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.servings_decrease))
                         }
                         Text("$servings", style = MaterialTheme.typography.titleMedium)
                         IconButton(onClick = { if (servings < 12) servings++ }) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
+                            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.servings_increase))
                         }
                     }
                 }
@@ -864,17 +1080,96 @@ private fun ShoppingListPickerDialog(
                     Text(stringResource(R.string.weekplan_no_lists))
                 } else {
                     lists.forEach { list ->
-                        TextButton(
-                            onClick = { onPick(list.id, servings) },
-                            modifier = Modifier.fillMaxWidth(),
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedListId = list.id }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            RadioButton(selected = list.id == selectedListId, onClick = { selectedListId = list.id })
                             Text(list.name, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(selectedListId, servings) },
+                enabled = selectedListId.isNotBlank(),
+            ) {
+                Text(stringResource(R.string.weekplan_export_preview_continue))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.recipe_delete_confirm_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun ExportPreviewDialog(
+    preview: ExportPreviewState,
+    onToggle: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.weekplan_export_preview_title)) },
+        text = {
+            if (preview.items.isEmpty()) {
+                Text(stringResource(R.string.weekplan_export_preview_empty))
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                    items(preview.items, key = { it.key }) { item ->
+                        val checked = item.key !in preview.deselected
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggle(item.key) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = checked, onCheckedChange = { onToggle(item.key) })
+                            Column {
+                                val label = buildString {
+                                    if (item.quantity > 0) {
+                                        val q = item.quantity
+                                        append(if (q % 1.0 < 0.01) q.toInt().toString() else "%.1f".format(q))
+                                        append(" ")
+                                    }
+                                    if (item.unit.isNotBlank()) { append(item.unit); append(" ") }
+                                    append(item.name)
+                                }
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        textDecoration = if (checked) TextDecoration.None else TextDecoration.LineThrough,
+                                    ),
+                                    color = if (checked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                if (item.recipeName.isNotBlank()) {
+                                    Text(
+                                        text = item.recipeName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = preview.items.size > preview.deselected.size) {
+                Text(stringResource(R.string.weekplan_export_preview_confirm))
+            }
+        },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.recipe_delete_confirm_cancel))
@@ -891,190 +1186,201 @@ fun parseAllergenJson(json: String): List<String> = json
     .map { it.trim().trim('"') }
     .filter { it.isNotBlank() }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * Direkt im Wochenplan eingebettet statt als separates `ModalBottomSheet` (wochenplan A8) — im
+ * eingeklappten Zustand zeigt eine Kompaktzeile die aktiven Grenzwerte auf einen Blick, ohne
+ * dass man dafür erst ein Overlay öffnen muss.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ConstraintsEditorSheet(
+private fun ConstraintsPanel(
     constraints: WeekplanConstraintsEntity,
     allergies: List<String>,
-    onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, minScore: String, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
-    onDismiss: () -> Unit,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "🥩≤${constraints.maxMeatPerWeek} 🐟≤${constraints.maxFishPerWeek} " +
+                    "🥬≥${constraints.minVegetarianPerWeek} · 🔥≤${constraints.maxKcalPerPortion}kcal",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.Filled.Tune,
+                contentDescription = stringResource(R.string.weekplan_constraints_title),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (expanded) {
+            ConstraintsEditorContent(
+                constraints = constraints,
+                allergies = allergies,
+                onSave = onSave,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ConstraintsEditorContent(
+    constraints: WeekplanConstraintsEntity,
+    allergies: List<String>,
+    onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
+) {
     var maxMeat by remember(constraints.maxMeatPerWeek) { mutableFloatStateOf(constraints.maxMeatPerWeek.toFloat()) }
     var maxFish by remember(constraints.maxFishPerWeek) { mutableFloatStateOf(constraints.maxFishPerWeek.toFloat()) }
     var minVeg by remember(constraints.minVegetarianPerWeek) { mutableFloatStateOf(constraints.minVegetarianPerWeek.toFloat()) }
     var maxRepeat by remember(constraints.maxRepeatDays) { mutableFloatStateOf(constraints.maxRepeatDays.toFloat()) }
     var maxKcal by remember(constraints.maxKcalPerPortion) { mutableFloatStateOf(constraints.maxKcalPerPortion.toFloat()) }
-    var minNutriScore by remember(constraints.minNutriScore) { mutableStateOf(constraints.minNutriScore) }
     var preferOrganic by remember(constraints.preferOrganic) { mutableStateOf(constraints.preferOrganic == 1) }
     var selectedAllergens by remember(constraints.excludeAllergens) {
         mutableStateOf(parseAllergenJson(constraints.excludeAllergens))
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+        HorizontalDivider()
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = "${stringResource(R.string.weekplan_max_meat)}: ${maxMeat.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = maxMeat,
+            onValueChange = { maxMeat = it },
+            valueRange = 0f..7f,
+            steps = 6,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "${stringResource(R.string.weekplan_max_fish)}: ${maxFish.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = maxFish,
+            onValueChange = { maxFish = it },
+            valueRange = 0f..7f,
+            steps = 6,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "${stringResource(R.string.weekplan_min_veg)}: ${minVeg.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = minVeg,
+            onValueChange = { minVeg = it },
+            valueRange = 0f..7f,
+            steps = 6,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "${stringResource(R.string.weekplan_max_repeat)}: ${maxRepeat.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = maxRepeat,
+            onValueChange = { maxRepeat = it },
+            valueRange = 7f..28f,
+            steps = 20,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(16.dp))
+
+        HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "🔥 Nährwert-Budgets",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "Max kcal/Portion: ${maxKcal.toInt()}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = maxKcal,
+            onValueChange = { maxKcal = it },
+            valueRange = 300f..1200f,
+            steps = 18,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = stringResource(R.string.weekplan_constraints_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                text = "${stringResource(R.string.weekplan_max_meat)}: ${maxMeat.toInt()}",
+                text = "🌿 Bio bevorzugt",
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Slider(
-                value = maxMeat,
-                onValueChange = { maxMeat = it },
-                valueRange = 0f..7f,
-                steps = 6,
-                modifier = Modifier.fillMaxWidth(),
+            androidx.compose.material3.Switch(
+                checked = preferOrganic,
+                onCheckedChange = { preferOrganic = it },
             )
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "${stringResource(R.string.weekplan_max_fish)}: ${maxFish.toInt()}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = maxFish,
-                onValueChange = { maxFish = it },
-                valueRange = 0f..7f,
-                steps = 6,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "${stringResource(R.string.weekplan_min_veg)}: ${minVeg.toInt()}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = minVeg,
-                onValueChange = { minVeg = it },
-                valueRange = 0f..7f,
-                steps = 6,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "${stringResource(R.string.weekplan_max_repeat)}: ${maxRepeat.toInt()}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = maxRepeat,
-                onValueChange = { maxRepeat = it },
-                valueRange = 7f..28f,
-                steps = 20,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(16.dp))
-
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "🔥 Nährwert-Budgets",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Max kcal/Portion: ${maxKcal.toInt()}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = maxKcal,
-                onValueChange = { maxKcal = it },
-                valueRange = 300f..1200f,
-                steps = 18,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Min Nutri-Score",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf("c", "b", "a").forEach { score ->
-                    Button(
-                        onClick = { minNutriScore = score },
-                        modifier = Modifier.weight(1f),
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = if (minNutriScore == score) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.surfaceVariant,
-                        ),
-                    ) {
-                        Text(score.uppercase())
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "🌿 Bio bevorzugt",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                androidx.compose.material3.Switch(
-                    checked = preferOrganic,
-                    onCheckedChange = { preferOrganic = it },
-                )
-            }
-
-            if (allergies.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "🚫 Allergene ausschließen",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(8.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    allergies.forEach { allergen ->
-                        val selected = selectedAllergens.contains(allergen)
-                        FilterChip(
-                            selected = selected,
-                            onClick = {
-                                selectedAllergens = if (selected) {
-                                    selectedAllergens - allergen
-                                } else {
-                                    selectedAllergens + allergen
-                                }
-                            },
-                            label = { Text(allergen) },
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-
-            Button(
-                onClick = { onSave(maxMeat.toInt(), maxFish.toInt(), minVeg.toInt(), maxRepeat.toInt(), maxKcal.toInt(), minNutriScore, preferOrganic, selectedAllergens) },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.weekplan_constraints_save))
-            }
-            Spacer(Modifier.height(16.dp))
         }
+
+        if (allergies.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "🚫 Allergene ausschließen",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(8.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                allergies.forEach { allergen ->
+                    val selected = selectedAllergens.contains(allergen)
+                    FilterChip(
+                        selected = selected,
+                        onClick = {
+                            selectedAllergens = if (selected) {
+                                selectedAllergens - allergen
+                            } else {
+                                selectedAllergens + allergen
+                            }
+                        },
+                        label = { Text(allergen) },
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        Button(
+            onClick = { onSave(maxMeat.toInt(), maxFish.toInt(), minVeg.toInt(), maxRepeat.toInt(), maxKcal.toInt(), preferOrganic, selectedAllergens) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.weekplan_constraints_save))
+        }
+        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -1184,12 +1490,21 @@ private fun ProposalSheet(
                             }
                         }
                     }
-                    IconButton(onClick = { onRegenerateDay(index) }) {
+                    if (assignment.isLocked) {
                         Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = stringResource(R.string.weekplan_regenerate_day),
+                            imageVector = Icons.Filled.Lock,
+                            contentDescription = stringResource(R.string.weekplan_lock_badge),
                             modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    } else {
+                        IconButton(onClick = { onRegenerateDay(index) }) {
+                            Icon(
+                                imageVector = Icons.Filled.Refresh,
+                                contentDescription = stringResource(R.string.weekplan_regenerate_day),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -1211,117 +1526,3 @@ private fun ProposalSheet(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TemplateSheet(
-    templates: List<WeekplanTemplateEntity>,
-    onApply: (String) -> Unit,
-    onSave: (String) -> Unit,
-    onDelete: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var newTemplateName by remember { mutableStateOf("") }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.weekplan_templates),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(12.dp))
-
-            // Vorhandene Templates
-            if (templates.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.weekplan_no_templates),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                templates.forEach { template ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onApply(template.id) }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.ContentCopy,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = template.name,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        IconButton(onClick = { onDelete(template.id) }) {
-                            Icon(
-                                imageVector = Icons.Filled.Delete,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(12.dp))
-
-            // Neue Vorlage speichern
-            Text(
-                text = stringResource(R.string.weekplan_save_template),
-                style = MaterialTheme.typography.labelLarge,
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = newTemplateName,
-                    onValueChange = { newTemplateName = it },
-                    label = { Text(stringResource(R.string.weekplan_template_name)) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            if (newTemplateName.isNotBlank()) {
-                                onSave(newTemplateName.trim())
-                                newTemplateName = ""
-                            }
-                        },
-                    ),
-                )
-                Spacer(Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        if (newTemplateName.isNotBlank()) {
-                            onSave(newTemplateName.trim())
-                            newTemplateName = ""
-                        }
-                    },
-                    enabled = newTemplateName.isNotBlank(),
-                ) {
-                    Text(stringResource(R.string.weekplan_proposal_accept))
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-    }
-}

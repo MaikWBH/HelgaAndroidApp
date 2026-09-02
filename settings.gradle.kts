@@ -22,4 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "HelgaAndroid"
 include(":app")
+include(":wear")
 // include(":benchmark")  // Deaktiviert wegen Plugin-Konflikt, später aktivieren

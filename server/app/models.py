@@ -32,6 +32,7 @@ class RecipeRecord(SyncRecord):
     nutrition_nutri_score: str = ""
     nutrition_source: str = ""
     created_at: int = 0
+    last_servings: int = 0
 
 
 class IngredientRecord(SyncRecord):
@@ -112,18 +113,31 @@ class WeekplanDayRecord(SyncRecord):
     note: str = ""
     is_quick_day: int = 0
     is_guest_day: int = 0
+    is_skipped: int = 0
+    is_locked: int = 0
 
 
 class WeekplanRecipeRecord(SyncRecord):
     weekplan_day_id: str
     recipe_id: str
     position: int = 0
+    meal_slot: str = ""
 
 
 class WeekplanExtraRecord(SyncRecord):
     weekplan_day_id: str
     item_text: str = ""
     position: int = 0
+
+
+class WeekplanDayMarkerRecord(SyncRecord):
+    name: str = ""
+    color: str = ""
+
+
+class WeekplanDayMarkerAssignmentRecord(SyncRecord):
+    weekplan_day_id: str
+    marker_id: str
 
 
 class RecipeHistoryRecord(SyncRecord):
@@ -236,6 +250,8 @@ class SyncPayload(BaseModel):
     receipts: List[ReceiptRecord] = []
     receipt_items: List[ReceiptItemRecord] = []
     monthly_budgets: List[MonthlyBudgetRecord] = []
+    weekplan_day_markers: List[WeekplanDayMarkerRecord] = []
+    weekplan_day_marker_assignments: List[WeekplanDayMarkerAssignmentRecord] = []
 
 
 class SyncPullResponse(SyncPayload):

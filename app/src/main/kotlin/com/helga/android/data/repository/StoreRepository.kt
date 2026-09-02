@@ -5,10 +5,24 @@ import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.util.AisleProductKey
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Vorbefüllung für neu angelegte Märkte (maerkte A3) — spart das manuelle Eintippen jedes Gangs. */
+sealed interface StorePrefill {
+    data object None : StorePrefill
+    data object DefaultTemplate : StorePrefill
+    data class CopyFrom(val storeId: String) : StorePrefill
+}
+
+private val DEFAULT_AISLE_TEMPLATE = listOf(
+    "Obst & Gemüse", "Brot & Backwaren", "Milchprodukte & Eier", "Fleisch & Wurst",
+    "Fisch", "Tiefkühl", "Konserven & Trockenware", "Getränke", "Süßes & Snacks",
+    "Drogerie & Haushalt",
+)
 
 @Singleton
 class StoreRepository @Inject constructor(
@@ -25,11 +39,31 @@ class StoreRepository @Inject constructor(
     fun observeStaples(listId: String): Flow<List<ShoppingListStapleEntity>> =
         storeDao.observeStaples(listId)
 
-    suspend fun createStore(name: String): String {
+    suspend fun createStore(name: String, prefill: StorePrefill = StorePrefill.None): String {
         val id = UUID.randomUUID().toString()
+        val ts = now()
         storeDao.upsertStore(
-            StoreEntity(id = id, name = name, isActive = 0, updatedAt = now(), dirty = 1)
+            StoreEntity(id = id, name = name, isActive = 0, updatedAt = ts, dirty = 1)
         )
+        val aisleNames = when (prefill) {
+            StorePrefill.None -> emptyList()
+            StorePrefill.DefaultTemplate -> DEFAULT_AISLE_TEMPLATE
+            is StorePrefill.CopyFrom -> storeDao.aislesForStore(prefill.storeId).map { it.aisleName }
+        }
+        if (aisleNames.isNotEmpty()) {
+            storeDao.upsertAisles(
+                aisleNames.mapIndexed { index, aisleName ->
+                    StoreAisleEntity(
+                        id = UUID.randomUUID().toString(),
+                        storeId = id,
+                        aisleName = aisleName,
+                        sortOrder = index,
+                        updatedAt = ts,
+                        dirty = 1,
+                    )
+                }
+            )
+        }
         return id
     }
 
@@ -68,28 +102,19 @@ class StoreRepository @Inject constructor(
         storeDao.upsertAisle(aisle.copy(deleted = 1, updatedAt = now(), dirty = 1))
     }
 
-    suspend fun moveAisleUp(aisle: StoreAisleEntity) {
-        val aisles = storeDao.aislesForStore(aisle.storeId)
-        val idx = aisles.indexOfFirst { it.id == aisle.id }
-        if (idx <= 0) return
-        val prev = aisles[idx - 1]
+    /** Übernimmt die per Drag-and-Drop gezogene Reihenfolge (maerkte A1). */
+    suspend fun reorderAisles(storeId: String, orderedIds: List<String>) {
+        val byId = storeDao.aislesForStore(storeId).associateBy { it.id }
         val ts = now()
-        storeDao.upsertAisle(aisle.copy(sortOrder = prev.sortOrder, updatedAt = ts, dirty = 1))
-        storeDao.upsertAisle(prev.copy(sortOrder = aisle.sortOrder, updatedAt = ts, dirty = 1))
-    }
-
-    suspend fun moveAisleDown(aisle: StoreAisleEntity) {
-        val aisles = storeDao.aislesForStore(aisle.storeId)
-        val idx = aisles.indexOfFirst { it.id == aisle.id }
-        if (idx < 0 || idx >= aisles.lastIndex) return
-        val next = aisles[idx + 1]
-        val ts = now()
-        storeDao.upsertAisle(aisle.copy(sortOrder = next.sortOrder, updatedAt = ts, dirty = 1))
-        storeDao.upsertAisle(next.copy(sortOrder = aisle.sortOrder, updatedAt = ts, dirty = 1))
+        val updated = orderedIds.mapIndexedNotNull { index, id ->
+            byId[id]?.takeIf { it.sortOrder != index }?.copy(sortOrder = index, updatedAt = ts, dirty = 1)
+        }
+        if (updated.isNotEmpty()) storeDao.upsertAisles(updated)
     }
 
     suspend fun saveAisleProduct(productName: String, aisleName: String, storeId: String) {
-        val existing = storeDao.findAisleProductEntry(productName.lowercase(), storeId)
+        val key = AisleProductKey.normalize(productName)
+        val existing = storeDao.findAisleProductEntry(key, storeId)
         val ts = now()
         if (existing != null) {
             storeDao.upsertAisleProduct(
@@ -100,7 +125,7 @@ class StoreRepository @Inject constructor(
                 AisleProductEntity(
                     id = UUID.randomUUID().toString(),
                     aisleName = aisleName,
-                    productName = productName.lowercase(),
+                    productName = key,
                     storeId = storeId,
                     updatedAt = ts,
                     dirty = 1,
@@ -110,7 +135,7 @@ class StoreRepository @Inject constructor(
     }
 
     suspend fun findAisleForProduct(productName: String, storeId: String): String? =
-        storeDao.findAisleForProduct(productName.lowercase(), storeId)
+        storeDao.findAisleForProduct(AisleProductKey.normalize(productName), storeId)
 
     suspend fun findActiveStoreId(): String? = storeDao.findActiveStore()?.id
 

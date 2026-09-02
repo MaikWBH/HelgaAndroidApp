@@ -51,6 +51,11 @@ android {
             applicationIdSuffix = ".debug"
         }
         release {
+            // Signiert mit demselben eingecheckten Keystore wie der Debug-Build. Kein eigener
+            // Release-Key, weil die App privat per Sideload verteilt wird (kein Play Store) —
+            // entscheidend ist nur, dass die Signatur über Updates hinweg gleich bleibt, sonst
+            // verlangt Android bei jedem Update eine Deinstallation.
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -89,6 +94,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)
 
     implementation(platform(libs.androidx.compose.bom))
@@ -136,6 +142,9 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    // Echte JVM-Implementierung von org.json für Unit-Tests (z. B. RecipeJsonLdParserTest) —
+    // das android.jar-Stub wirft zur Laufzeit "Method not mocked" statt zu parsen.
+    testImplementation(libs.org.json)
 
     implementation(libs.androidx.profileinstaller)
 
@@ -148,7 +157,6 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.camera.extensions)
 
-    // Wear OS
-    implementation(libs.androidx.wear.compose.foundation)
-    implementation(libs.androidx.wear.compose.material)
+    // Wear OS — Data Layer (DataClient/MessageClient), UI selbst lebt im :wear-Modul
+    implementation(libs.google.play.services.wearable)
 }
