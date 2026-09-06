@@ -26,6 +26,18 @@ class OnboardingViewModel @Inject constructor(
     private val _state = MutableStateFlow(OnboardingState())
     val state: StateFlow<OnboardingState> = _state.asStateFlow()
 
+    init {
+        // Bereits gespeicherte Verbindung vorbelegen. Normalerweise wird dieser Screen bei
+        // konfigurierter App gar nicht erst angezeigt — landet man doch hier (z. B. weil der
+        // Server gerade nicht erreichbar war), muss niemand den 64-Zeichen-API-Key abtippen.
+        viewModelScope.launch {
+            val conn = preferences.currentConnection()
+            if (conn.isConfigured) {
+                _state.update { it.copy(serverUrl = conn.serverUrl, apiKey = conn.apiKey) }
+            }
+        }
+    }
+
     fun setServerUrl(url: String) = _state.update { it.copy(serverUrl = url, validation = Validation.Idle) }
     fun setApiKey(key: String) = _state.update { it.copy(apiKey = key, validation = Validation.Idle) }
 
