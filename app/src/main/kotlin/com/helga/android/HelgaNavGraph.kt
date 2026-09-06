@@ -97,7 +97,14 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
     val currentRoute = navBackStack?.destination?.route
     val showBottomNav = currentRoute in ROOT_ROUTES
 
-    LaunchedEffect(Unit) {
+    // Key ist bewusst currentRoute, nicht Unit: beim ersten Frame hat der NavHost seinen Graph
+    // noch nicht gesetzt, currentRoute ist dann null. Mit Unit als Key würde der Effekt genau
+    // einmal mit diesem null laufen, an der Route-Prüfung abbrechen und nie wieder starten —
+    // die App bliebe trotz gespeicherter Verbindung dauerhaft im Onboarding hängen. Mit
+    // currentRoute als Key läuft er erneut, sobald die Startroute steht. Die Prüfung selbst
+    // bleibt nötig, damit ein Konfigurationswechsel (Rotation) nicht aus einem anderen Screen
+    // herausnavigiert (einkaufsliste A4).
+    LaunchedEffect(currentRoute) {
         if (currentRoute != ROUTE_ONBOARDING) return@LaunchedEffect
         val conn = preferences.connection.first()
         if (conn.isConfigured) {
