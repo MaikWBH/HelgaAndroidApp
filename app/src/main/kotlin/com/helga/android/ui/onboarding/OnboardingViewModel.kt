@@ -2,6 +2,8 @@ package com.helga.android.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.helga.android.data.pairing.PairingCodec
+import com.helga.android.data.pairing.PairingResult
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.sync.SyncScheduler
@@ -36,31 +38,58 @@ class OnboardingViewModel @Inject constructor(
             _state.update { it.copy(validation = Validation.InvalidUrl) }
             return
         }
-        _state.update { it.copy(validation = Validation.Testing) }
-        viewModelScope.launch {
-            try {
-                val api = apiFactory.apiForOnboarding(url, key)
-                api.health()
-                preferences.saveConnection(url, key)
-                syncScheduler.schedulePeriodic()
-                syncScheduler.triggerOneShot()
-                _state.update { it.copy(validation = Validation.Success) }
-                onSuccess()
-            } catch (e: HttpException) {
-                Timber.w(e, "Healthcheck HTTP-Fehler")
+        viewModelScope.launch { validateAndSave(url, key, onSuccess) }
+    }
+
+    /**
+     * Übernimmt einen gescannten Pairing-QR-Code. Die Zugangsdaten landen erst nach demselben
+     * Healthcheck im Speicher wie bei manueller Eingabe — der Scan ist nur ein bequemerer Weg,
+     * die Felder zu füllen, keine Abkürzung an der Prüfung vorbei.
+     */
+    fun onScanned(raw: String, onSuccess: () -> Unit) {
+        when (val result = PairingCodec.decode(raw)) {
+            is PairingResult.Success -> {
+                val payload = result.payload
                 _state.update {
                     it.copy(
-                        validation = if (e.code() == 401 || e.code() == 403)
-                            Validation.Unauthorized else Validation.Unreachable
+                        serverUrl = payload.serverUrl,
+                        apiKey = payload.apiKey,
+                        validation = Validation.Idle,
                     )
                 }
-            } catch (e: IOException) {
-                Timber.w(e, "Healthcheck offline")
-                _state.update { it.copy(validation = Validation.Unreachable) }
-            } catch (e: Exception) {
-                Timber.e(e, "Healthcheck unbekannter Fehler")
-                _state.update { it.copy(validation = Validation.Unreachable) }
+                viewModelScope.launch { validateAndSave(payload.serverUrl, payload.apiKey, onSuccess) }
             }
+            PairingResult.NotHelgaCode,
+            PairingResult.UnsupportedVersion,
+            PairingResult.Malformed,
+            -> _state.update { it.copy(validation = Validation.InvalidQr) }
+        }
+    }
+
+    private suspend fun validateAndSave(url: String, key: String, onSuccess: () -> Unit) {
+        _state.update { it.copy(validation = Validation.Testing) }
+        try {
+            val api = apiFactory.apiForOnboarding(url, key)
+            api.health()
+            preferences.saveConnection(url, key)
+            syncScheduler.schedulePeriodic()
+            syncScheduler.triggerOneShot()
+            _state.update { it.copy(validation = Validation.Success) }
+            onSuccess()
+        } catch (e: HttpException) {
+            Timber.w(e, "Healthcheck HTTP-Fehler")
+            _state.update {
+                it.copy(
+                    validation = if (e.code() == 401 || e.code() == 403)
+                        Validation.Unauthorized else Validation.Unreachable
+                )
+            }
+        } catch (e: IOException) {
+            Timber.w(e, "Healthcheck offline")
+            _state.update { it.copy(validation = Validation.Unreachable) }
+        } catch (e: Exception) {
+            Timber.e(e, "Healthcheck unbekannter Fehler")
+            _state.update { it.copy(validation = Validation.Unreachable) }
         }
     }
 }
@@ -78,4 +107,5 @@ sealed interface Validation {
     data object InvalidUrl : Validation
     data object Unreachable : Validation
     data object Unauthorized : Validation
+    data object InvalidQr : Validation
 }

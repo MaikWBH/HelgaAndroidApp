@@ -1,5 +1,10 @@
 package com.helga.android.ui.onboarding
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,13 +23,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.helga.android.R
+import com.helga.android.ui.components.BarcodeScanner
 
 @Composable
 fun OnboardingScreen(
@@ -32,6 +44,37 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var showScanner by remember { mutableStateOf(false) }
+    var cameraDenied by remember { mutableStateOf(false) }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        cameraDenied = !granted
+        showScanner = granted
+    }
+
+    fun startScan() {
+        cameraDenied = false
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) showScanner = true else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    if (showScanner) {
+        BarcodeScanner(
+            onBarcodeDetected = { raw ->
+                showScanner = false
+                viewModel.onScanned(raw, onSuccess = onContinue)
+            },
+            onDismiss = { showScanner = false },
+            modifier = Modifier.fillMaxSize(),
+            formats = Barcode.FORMAT_QR_CODE,
+        )
+        return
+    }
 
     Scaffold { padding ->
         Column(
@@ -53,6 +96,33 @@ fun OnboardingScreen(
             )
 
             Spacer(Modifier.height(8.dp))
+
+            Button(
+                onClick = { startScan() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.onboarding_scan_qr))
+            }
+            Text(
+                text = stringResource(R.string.onboarding_scan_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (cameraDenied) {
+                Text(
+                    text = stringResource(R.string.onboarding_camera_denied),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.onboarding_or_manual),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
 
             OutlinedTextField(
                 value = state.serverUrl,
@@ -110,6 +180,8 @@ private fun ValidationFeedback(validation: Validation) {
         Validation.Unreachable -> stringResource(R.string.onboarding_error_unreachable) to
             MaterialTheme.colorScheme.error
         Validation.Unauthorized -> stringResource(R.string.onboarding_error_unauthorized) to
+            MaterialTheme.colorScheme.error
+        Validation.InvalidQr -> stringResource(R.string.onboarding_error_invalid_qr) to
             MaterialTheme.colorScheme.error
     }
     Text(text = text, color = color, style = MaterialTheme.typography.bodyMedium)

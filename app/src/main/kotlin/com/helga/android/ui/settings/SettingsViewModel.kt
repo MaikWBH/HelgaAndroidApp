@@ -9,6 +9,8 @@ import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
+import com.helga.android.data.pairing.PairingCodec
+import com.helga.android.data.pairing.PairingPayload
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
@@ -70,6 +72,14 @@ class SettingsViewModel @Inject constructor(
 
     val dayMarkers: StateFlow<List<WeekplanDayMarkerEntity>> = weekplanRepository.observeMarkers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Inhalt des Pairing-QR-Codes, oder null solange keine Verbindung eingerichtet ist. */
+    val pairingCode: StateFlow<String?> = preferences.connection
+        .map { conn ->
+            if (!conn.isConfigured) null
+            else PairingCodec.encode(PairingPayload(conn.serverUrl, conn.apiKey))
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
         viewModelScope.launch {

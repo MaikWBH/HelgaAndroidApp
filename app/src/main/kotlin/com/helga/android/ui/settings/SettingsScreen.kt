@@ -1,9 +1,11 @@
 package com.helga.android.ui.settings
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -11,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,6 +60,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,6 +84,7 @@ import com.helga.android.R
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
+import com.helga.android.ui.components.QrCodeImage
 import com.helga.android.ui.components.dayMarkerColors
 import com.helga.android.ui.components.parseMarkerColor
 import java.text.DateFormat
@@ -113,6 +118,8 @@ fun SettingsScreen(
     var editMarker by remember { mutableStateOf<WeekplanDayMarkerEntity?>(null) }
     var showAddMarker by remember { mutableStateOf(false) }
     var showAdvanced by remember { mutableStateOf(false) }
+    var showPairingDialog by remember { mutableStateOf(false) }
+    val pairingCode by viewModel.pairingCode.collectAsStateWithLifecycle()
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -137,6 +144,11 @@ fun SettingsScreen(
             context.startActivity(Intent.createChooser(intent, "Export"))
             viewModel.clearExport()
         }
+    }
+
+    val code = pairingCode
+    if (showPairingDialog && code != null) {
+        PairingDialog(code = code, onDismiss = { showPairingDialog = false })
     }
 
     if (showLogoutDialog) {
@@ -732,6 +744,14 @@ fun SettingsScreen(
                 )
 
                 OutlinedButton(
+                    onClick = { showPairingDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = pairingCode != null,
+                ) {
+                    Text(stringResource(R.string.pairing_add_device))
+                }
+
+                OutlinedButton(
                     onClick = { showLogoutDialog = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -762,6 +782,54 @@ fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+/**
+ * Zeigt die Zugangsdaten als QR-Code zum Einrichten eines weiteren Geräts.
+ *
+ * Der Code enthält den API-Schlüssel im Klartext, deshalb setzt der Dialog solange er offen ist
+ * `FLAG_SECURE` — das unterbindet Screenshots und die Vorschau im App-Umschalter.
+ */
+@Composable
+private fun PairingDialog(code: String, onDismiss: () -> Unit) {
+    val window = (LocalContext.current as? Activity)?.window
+    DisposableEffect(window) {
+        window?.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.pairing_title)) },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.pairing_instruction),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                QrCodeImage(
+                    content = code,
+                    contentDescription = stringResource(R.string.pairing_qr_description),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .background(Color.White)
+                        .padding(8.dp),
+                )
+                Text(
+                    text = stringResource(R.string.pairing_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.pairing_close)) }
+        },
+    )
 }
 
 @Composable

@@ -26,17 +26,24 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * [formats] schränkt die erkannten Codetypen ein (Werte aus [Barcode], z. B.
+ * `Barcode.FORMAT_QR_CODE`). Das Geräte-Pairing nutzt das, um Produkt-Barcodes gar nicht erst
+ * auszuwerten; der Kassenzettel-Scanner bleibt beim Standard über alle Formate.
+ */
 @Composable
 fun BarcodeScanner(
     onBarcodeDetected: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    formats: Int = Barcode.FORMAT_ALL_FORMATS,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -57,7 +64,9 @@ fun BarcodeScanner(
                     val preview = Preview.Builder().build().also {
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
-                    val scanner = BarcodeScanning.getClient()
+                    val scanner = BarcodeScanning.getClient(
+                        BarcodeScannerOptions.Builder().setBarcodeFormats(formats).build(),
+                    )
                     val analysis = ImageAnalysis.Builder()
                         .setTargetResolution(Size(1280, 720))
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)

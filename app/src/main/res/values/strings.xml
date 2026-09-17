@@ -15,6 +15,19 @@
     <string name="onboarding_error_invalid_url">URL ist ungültig</string>
     <string name="onboarding_error_unreachable">Server nicht erreichbar</string>
     <string name="onboarding_error_unauthorized">API-Schlüssel ungültig</string>
+    <string name="onboarding_scan_qr">QR-Code scannen</string>
+    <string name="onboarding_scan_hint">Auf einem bereits eingerichteten Gerät: Einstellungen → Weiteres Gerät hinzufügen</string>
+    <string name="onboarding_or_manual">oder manuell eingeben</string>
+    <string name="onboarding_error_invalid_qr">Kein Helga-Pairing-Code</string>
+    <string name="onboarding_camera_denied">Ohne Kamera-Berechtigung ist kein Scannen möglich</string>
+
+    <!-- Geräte-Pairing -->
+    <string name="pairing_add_device">Weiteres Gerät hinzufügen</string>
+    <string name="pairing_title">Weiteres Gerät hinzufügen</string>
+    <string name="pairing_instruction">Auf dem neuen Gerät die App öffnen und „QR-Code scannen“ wählen.</string>
+    <string name="pairing_warning">Dieser Code enthält deinen API-Schlüssel. Nicht weitergeben und nicht abfotografieren.</string>
+    <string name="pairing_qr_description">QR-Code mit den Zugangsdaten</string>
+    <string name="pairing_close">Schließen</string>
 
     <!-- Rezeptliste -->
     <string name="recipes_title">Rezepte</string>
