@@ -5,14 +5,19 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
@@ -97,15 +102,18 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
     val currentRoute = navBackStack?.destination?.route
     val showBottomNav = currentRoute in ROOT_ROUTES
 
-    LaunchedEffect(Unit) {
-        if (currentRoute != ROUTE_ONBOARDING) return@LaunchedEffect
-        val conn = preferences.connection.first()
-        if (conn.isConfigured) {
-            val dest = if (initialImportUrl != null) ROUTE_RECIPE_URL_IMPORT else ROUTE_SHOPPING
-            navController.navigate(dest) {
-                popUpTo(ROUTE_ONBOARDING) { inclusive = true }
-            }
+    // Das Startziel wird aus den gespeicherten Zugangsdaten abgeleitet, statt nachträglich vom
+    // Onboarding wegzunavigieren – siehe [startRouteFor]. `produceState` liest einmal je
+    // Komposition und liefert nach einer Activity-Neuerstellung frisch den korrekten Wert.
+    val startRoute by produceState<String?>(initialValue = null, initialImportUrl) {
+        value = startRouteFor(preferences.connection.first().isConfigured, initialImportUrl)
+    }
+    val route = startRoute
+    if (route == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
         }
+        return
     }
 
     Scaffold(
@@ -136,7 +144,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = ROUTE_ONBOARDING,
+            startDestination = route,
         ) {
                 composable(ROUTE_ONBOARDING) {
                     OnboardingScreen(
