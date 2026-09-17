@@ -14,8 +14,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -103,10 +106,12 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
     val showBottomNav = currentRoute in ROOT_ROUTES
 
     // Das Startziel wird aus den gespeicherten Zugangsdaten abgeleitet, statt nachträglich vom
-    // Onboarding wegzunavigieren – siehe [startRouteFor]. `produceState` liest einmal je
-    // Komposition und liefert nach einer Activity-Neuerstellung frisch den korrekten Wert.
-    val startRoute by produceState<String?>(initialValue = null, initialImportUrl) {
-        value = startRouteFor(preferences.connection.first().isConfigured, initialImportUrl)
+    // Onboarding wegzunavigieren – siehe [startRouteFor]. Einmal je Komposition gelesen, nach
+    // einer Activity-Neuerstellung also frisch und korrekt. Der Effekt hat bewusst keine
+    // Abhängigkeit zum Navigationszustand und navigiert nicht: genau das war der alte Fehler.
+    var startRoute by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(initialImportUrl) {
+        startRoute = startRouteFor(preferences.connection.first().isConfigured, initialImportUrl)
     }
     val route = startRoute
     if (route == null) {
