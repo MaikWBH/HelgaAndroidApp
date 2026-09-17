@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Der Debug-Build läuft unter der eigenen Application-ID com.helga.android.debug und hat
+        damit einen komplett getrennten Datenbestand. Ohne eigenen Namen sind beide Varianten am
+        Homescreen nicht auseinanderzuhalten — wer versehentlich die andere öffnet, sieht ein
+        leeres Onboarding und hält sich für abgemeldet.
+    -->
+    <string name="app_name">Helga (Debug)</string>
+</resources>

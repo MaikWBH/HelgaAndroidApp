@@ -70,10 +70,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.helga.android.ui.theme.accentPrimaryColors
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.helga.android.BuildConfig
 import com.helga.android.R
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
@@ -744,6 +746,18 @@ fun SettingsScreen(
                     Text(stringResource(R.string.settings_reset_local_data))
                 }
             }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Macht im Zweifelsfall sichtbar, welche Variante gerade läuft — Debug und Release
+            // haben getrennte Datenbestände und sahen bisher identisch aus.
+            Text(
+                text = "${BuildConfig.APPLICATION_ID} · ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
 
             Spacer(Modifier.height(24.dp))
         }

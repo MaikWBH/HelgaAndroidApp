@@ -2,4 +2,11 @@
 <full-backup-content>
     <exclude domain="sharedpref" path="." />
     <exclude domain="database" path="." />
+    <!--
+        DataStore liegt unter files/datastore und wäre sonst als Einzige der drei Schichten im
+        Backup. Ein wiederhergestellter Snapshot brächte veraltete Zugangsdaten und einen
+        veralteten Sync-Cursor zurück, während die Room-DB (oben ausgeschlossen) leer startet und
+        erst vom Server aufgebaut wird — beides zusammen ist inkonsistent.
+    -->
+    <exclude domain="file" path="datastore/" />
 </full-backup-content>
