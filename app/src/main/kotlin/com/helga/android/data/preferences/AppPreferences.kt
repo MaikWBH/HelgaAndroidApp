@@ -33,14 +33,44 @@ data class HelgaConnection(
 @Singleton
 class AppPreferences @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val credentialCipher: CredentialCipher,
 ) {
     private val ds get() = context.dataStore
 
     val connection: Flow<HelgaConnection> = ds.data.map {
         HelgaConnection(
-            serverUrl = it[KEY_SERVER_URL].orEmpty(),
-            apiKey = it[KEY_API_KEY].orEmpty(),
+            serverUrl = readCredential(it[KEY_SERVER_URL]),
+            apiKey = readCredential(it[KEY_API_KEY]),
         )
+    }
+
+    /**
+     * Liest einen Zugangsdaten-Wert. Altbestände liegen im Klartext vor (die Verschlüsselung kam
+     * später dazu) und werden unverändert zurückgegeben, damit ein App-Update niemanden
+     * abmeldet; [migrateCredentials] schreibt sie später verschlüsselt zurück. Lässt sich ein
+     * verschlüsselter Wert nicht entschlüsseln, gilt er als nicht gesetzt — die App zeigt dann
+     * die Ersteinrichtung statt zu abstürzen.
+     */
+    private fun readCredential(stored: String?): String {
+        val value = stored.orEmpty()
+        if (value.isEmpty()) return ""
+        return if (CredentialCipher.isEncrypted(value)) credentialCipher.decrypt(value).orEmpty()
+        else value
+    }
+
+    /**
+     * Schreibt noch unverschlüsselt gespeicherte Zugangsdaten einmalig verschlüsselt zurück.
+     * Idempotent — bereits verschlüsselte Werte bleiben unangetastet.
+     */
+    suspend fun migrateCredentials() {
+        ds.edit { prefs ->
+            listOf(KEY_SERVER_URL, KEY_API_KEY).forEach { key ->
+                val value = prefs[key].orEmpty()
+                if (value.isNotEmpty() && !CredentialCipher.isEncrypted(value)) {
+                    prefs[key] = credentialCipher.encrypt(value)
+                }
+            }
+        }
     }
 
     val lastSyncTs: Flow<Long> = ds.data.map { it[KEY_LAST_SYNC_TS] ?: 0L }
@@ -100,8 +130,8 @@ class AppPreferences @Inject constructor(
 
     suspend fun saveConnection(serverUrl: String, apiKey: String) {
         ds.edit {
-            it[KEY_SERVER_URL] = serverUrl
-            it[KEY_API_KEY] = apiKey
+            it[KEY_SERVER_URL] = credentialCipher.encrypt(serverUrl)
+            it[KEY_API_KEY] = credentialCipher.encrypt(apiKey)
         }
     }
 

@@ -96,6 +96,8 @@ class SyncEngine @Inject constructor(
         val api = apiFactory.api()
 
         preferences.ensureSyncProtocol()
+        // Zugangsdaten aus Installationen von vor der Verschlüsselung einmalig nachziehen.
+        preferences.migrateCredentials()
 
         val lastSyncTs = preferences.currentLastSyncTs()
         val pull = api.pull(since = lastSyncTs)
