@@ -46,7 +46,7 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
 
 @Database(
-    version = 36,
+    version = 37,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -824,10 +824,71 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Bugfix wochenplan A16: Ein Race zwischen `savePeriod()` und dem durch die Änderung
+         * von `currentPeriod` erneut ausgelösten `ensureWeek()` konnte beim Verlängern eines
+         * Zeitraums zwei `weekplan_days`-Zeilen mit demselben `planDate` erzeugen (doppelte
+         * Tageskarten). Der Race selbst ist in [com.helga.android.data.repository.WeekplanRepository]
+         * per Mutex behoben — hier werden bereits entstandene Duplikate einmalig zusammengeführt:
+         * Kind-Zeilen (Rezepte, Extras, Markerzuordnungen) wandern zur jeweils zuerst angelegten
+         * Zeile, die übrigen Duplikate werden soft-gelöscht und als dirty markiert, damit die
+         * Bereinigung auch zum Server synct.
+         */
+        private val MIGRATION_36_37 = object : Migration(36, 37) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val now = System.currentTimeMillis()
+                db.execSQL(
+                    """
+                    CREATE TEMP TABLE dup_keep AS
+                    SELECT planDate, MIN(id) AS keep_id
+                    FROM weekplan_days
+                    WHERE deleted = 0
+                    GROUP BY planDate
+                    HAVING COUNT(*) > 1
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TEMP TABLE dup_map AS
+                    SELECT wd.id AS old_id, dk.keep_id AS keep_id
+                    FROM weekplan_days wd
+                    JOIN dup_keep dk ON wd.planDate = dk.planDate
+                    WHERE wd.deleted = 0 AND wd.id != dk.keep_id
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    UPDATE weekplan_recipes
+                    SET weekplanDayId = (SELECT keep_id FROM dup_map WHERE old_id = weekplanDayId), dirty = 1
+                    WHERE weekplanDayId IN (SELECT old_id FROM dup_map)
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    UPDATE weekplan_extras
+                    SET weekplanDayId = (SELECT keep_id FROM dup_map WHERE old_id = weekplanDayId), dirty = 1
+                    WHERE weekplanDayId IN (SELECT old_id FROM dup_map)
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    UPDATE weekplan_day_marker_assignments
+                    SET weekplanDayId = (SELECT keep_id FROM dup_map WHERE old_id = weekplanDayId), dirty = 1
+                    WHERE weekplanDayId IN (SELECT old_id FROM dup_map)
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "UPDATE weekplan_days SET deleted = 1, dirty = 1, updatedAt = $now WHERE id IN (SELECT old_id FROM dup_map)"
+                )
+                db.execSQL("DROP TABLE IF EXISTS dup_map")
+                db.execSQL("DROP TABLE IF EXISTS dup_keep")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37)
                 .build()
     }
 }

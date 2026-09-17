@@ -11,6 +11,8 @@ import com.helga.android.data.model.DayNutrition
 import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,6 +25,13 @@ class WeekplanRepository @Inject constructor(
     private val shoppingRepository: ShoppingRepository,
 ) {
 
+    // Serialisiert getOrCreateDay(): das WeekplanScreen ruft ensureWeek() bei jeder Änderung von
+    // currentPeriod erneut auf (LaunchedEffect), während z. B. savePeriod() für dieselben Tage
+    // parallel dieselbe Funktion aufruft. Ohne Sperre können beide "existiert nicht" sehen, bevor
+    // eine von beiden den Tag anlegt — Ergebnis: zwei WeekplanDayEntity-Zeilen mit demselben
+    // planDate (doppelte Tageskarte).
+    private val dayCreationMutex = Mutex()
+
     fun observeDays(): Flow<List<WeekplanDayEntity>> = weekplanDao.observeDays()
 
     fun observeDaysBetween(startDate: String, endDate: String): Flow<List<WeekplanDayEntity>> =
@@ -34,9 +43,9 @@ class WeekplanRepository @Inject constructor(
     fun observeExtrasForDay(dayId: String): Flow<List<WeekplanExtraEntity>> =
         weekplanDao.observeExtrasForDay(dayId)
 
-    suspend fun getOrCreateDay(planDate: String): WeekplanDayEntity {
+    suspend fun getOrCreateDay(planDate: String): WeekplanDayEntity = dayCreationMutex.withLock {
         val existing = weekplanDao.findDayByDate(planDate)
-        if (existing != null) return existing
+        if (existing != null) return@withLock existing
         val day = WeekplanDayEntity(
             id = UUID.randomUUID().toString(),
             planDate = planDate,
@@ -44,7 +53,7 @@ class WeekplanRepository @Inject constructor(
             dirty = 1,
         )
         weekplanDao.upsertDay(day)
-        return day
+        day
     }
 
     suspend fun updateNote(dayId: String, note: String) {

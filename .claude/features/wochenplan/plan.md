@@ -455,6 +455,23 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       `dl.google.com` und damit das Android-SDK dort per Egress-Policy gesperrt sind.
       **Auf einem Gerät noch nicht durchgeklickt.**
 
+- [x] **A17** — Doppelte Tageskarten beim Erweitern eines Zeitraums (Nutzermeldung nach A17-
+      Gerätetest, Bugfix-Runde 2026-09-17): Bug in A16 selbst eingeführt. `savePeriod()` legt
+      die Tage des neuen Zeitraums per `getOrCreateDay()` an; parallel dazu löst die Änderung
+      von `currentPeriod` in `WeekplanScreen` erneut `LaunchedEffect(currentPeriod) {
+      ensureWeek() }` aus, das für dieselben neuen Tage denselben Aufruf startet — ohne Sperre
+      konnten beide Coroutinen `findDayByDate() == null` sehen, bevor eine von beiden den Tag
+      anlegt, wodurch zwei `WeekplanDayEntity`-Zeilen mit demselben `planDate` entstanden (nur
+      bei neu hinzukommenden Tagen, nicht bei bereits vorhandenen) · S · Impact hoch —
+      **umgesetzt:** `WeekplanRepository.getOrCreateDay` mit `Mutex` serialisiert (behebt den
+      Race an der Wurzel), Room-Migration 36→37 (`AppDatabase.kt`) führt bereits entstandene
+      Duplikate einmalig zusammen (Kind-Zeilen aus `weekplan_recipes`/`weekplan_extras`/
+      `weekplan_day_marker_assignments` auf die zuerst angelegte Zeile umgehängt, die
+      übrigen Duplikate soft-gelöscht und `dirty` markiert, damit die Bereinigung auch zum
+      Server synct), `WeekplanRepositoryDayCreationTest` (20 parallele `getOrCreateDay`-Aufrufe
+      mit erzwungenem Suspension-Point ⇒ genau eine Zeile). Von der CI verifiziert (Lauf
+      folgt); lokal nicht baubar (siehe A16-Notiz zur Sandbox).
+
 _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 
 ## Entscheidungen
