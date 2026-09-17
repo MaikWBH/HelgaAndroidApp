@@ -329,7 +329,11 @@
     <string name="weekplan_skip_confirm_text">Für diesen Tag ist bereits etwas geplant. Beim Markieren als \"kein Kochen\" wird die Zuweisung entfernt.</string>
     <string name="weekplan_skip_confirm_action">Entfernen</string>
     <string name="weekplan_skip_confirm_cancel">Abbrechen</string>
-    <string name="weekplan_add_day">Tag hinzufügen</string>
+    <string name="weekplan_period_title">Zeitraum planen</string>
+    <string name="weekplan_period_hint">Wähle Start- und Enddatum. Der Folgezeitraum passt sich automatisch an und endet wieder am gewohnten Einkaufstag.</string>
+    <string name="weekplan_period_too_long">Maximal %1$d Tage pro Zeitraum.</string>
+    <string name="weekplan_period_save">Übernehmen</string>
+    <string name="weekplan_period_cancel">Abbrechen</string>
 
     <!-- Bottom Navigation -->
     <string name="nav_shopping">Einkaufen</string>

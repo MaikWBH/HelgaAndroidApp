@@ -46,8 +46,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -57,7 +59,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -91,6 +92,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -102,6 +105,8 @@ import com.helga.android.ui.components.mealSlotLabel
 import com.helga.android.ui.components.parseMarkerColor
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
+import com.helga.android.data.model.PlanPeriod
+import com.helga.android.data.model.PlanPeriods
 import com.helga.android.data.util.ImageUrls
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
@@ -109,10 +114,12 @@ import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
-import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -139,15 +146,16 @@ fun WeekplanScreen(
     val allMarkers by viewModel.allMarkers.collectAsStateWithLifecycle()
     val constraints by viewModel.constraints.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
-    val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
+    val periodIndex by viewModel.periodIndex.collectAsStateWithLifecycle()
+    val currentPeriod by viewModel.currentPeriod.collectAsStateWithLifecycle()
     val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
     val generateStatus by viewModel.generateStatus.collectAsStateWithLifecycle()
     val feedbackMap by viewModel.feedbackForSelectedDay.collectAsStateWithLifecycle()
     val weekBalance by viewModel.weekBalance.collectAsStateWithLifecycle()
     val weekNutrition by viewModel.weekNutrition.collectAsStateWithLifecycle()
     val userAllergies by viewModel.userAllergies.collectAsStateWithLifecycle()
-    val canExtendWeek by viewModel.canExtendWeek.collectAsStateWithLifecycle()
     var exportPicker by remember { mutableStateOf<String?>(null) }
+    var showPeriodPicker by remember { mutableStateOf(false) }
     var constraintsExpanded by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var skipConfirmDay by remember { mutableStateOf<WeekplanDayEntity?>(null) }
@@ -155,7 +163,19 @@ fun WeekplanScreen(
 
     val recipeById: (String) -> RecipeEntity? = { id -> allRecipes[id] }
 
-    LaunchedEffect(weekOffset) { viewModel.ensureWeek() }
+    LaunchedEffect(currentPeriod) { viewModel.ensureWeek() }
+
+    val pickerPeriod = currentPeriod
+    if (showPeriodPicker && pickerPeriod != null) {
+        PeriodPickerDialog(
+            period = pickerPeriod,
+            onConfirm = { start, end ->
+                viewModel.savePeriod(start, end)
+                showPeriodPicker = false
+            },
+            onDismiss = { showPeriodPicker = false },
+        )
+    }
 
     LaunchedEffect(Unit) {
         viewModel.exportEvent.collect {
@@ -305,13 +325,17 @@ fun WeekplanScreen(
                                 contentDescription = stringResource(R.string.weekplan_prev_week),
                             )
                         }
-                        Text(
-                            text = weekLabel,
+                        TextButton(
+                            onClick = { showPeriodPicker = true },
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleSmall,
-                            textAlign = TextAlign.Center,
-                        )
-                        if (weekOffset != 0) {
+                        ) {
+                            Text(
+                                text = weekLabel,
+                                style = MaterialTheme.typography.titleSmall,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                        if (periodIndex != 0) {
                             TextButton(onClick = viewModel::goToCurrentWeek) {
                                 Text(stringResource(R.string.weekplan_today))
                             }
@@ -422,18 +446,6 @@ fun WeekplanScreen(
                         onSetMealSlot = viewModel::setMealSlot,
                         onToggleMarker = { markerId -> viewModel.toggleMarkerOnDay(day.id, markerId) },
                     )
-                }
-                if (canExtendWeek) {
-                    item(key = "add_day") {
-                        OutlinedButton(
-                            onClick = viewModel::addDayToWeek,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
-                            Spacer(Modifier.width(4.dp))
-                            Text(stringResource(R.string.weekplan_add_day))
-                        }
-                    }
                 }
             }
 
@@ -1526,3 +1538,88 @@ private fun ProposalSheet(
     }
 }
 
+
+/**
+ * Kalender zum Festlegen des Planungszeitraums (Von–Bis). Ersetzt den früheren
+ * „Tag hinzufügen"-Button: verlängert und verkürzt wird jetzt über das Enddatum.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PeriodPickerDialog(
+    period: PlanPeriod,
+    onConfirm: (LocalDate, LocalDate) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val state = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = period.start.toUtcMillis(),
+        initialSelectedEndDateMillis = period.end.toUtcMillis(),
+    )
+    val start = state.selectedStartDateMillis?.toUtcLocalDate()
+    val end = state.selectedEndDateMillis?.toUtcLocalDate()
+    val dayCount = if (start != null && end != null) {
+        ChronoUnit.DAYS.between(start, end).toInt() + 1
+    } else {
+        0
+    }
+    val tooLong = dayCount > PlanPeriods.MAX_PERIOD_DAYS
+
+    // Vollbild-Dialog: der DateRangePicker braucht mehr Breite, als ein AlertDialog zulässt.
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.weekplan_period_cancel),
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.weekplan_period_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        enabled = dayCount in 1..PlanPeriods.MAX_PERIOD_DAYS,
+                        onClick = { if (start != null && end != null) onConfirm(start, end) },
+                    ) {
+                        Text(stringResource(R.string.weekplan_period_save))
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.weekplan_period_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                if (tooLong) {
+                    Text(
+                        text = stringResource(R.string.weekplan_period_too_long, PlanPeriods.MAX_PERIOD_DAYS),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+                DateRangePicker(
+                    state = state,
+                    modifier = Modifier.weight(1f),
+                    title = null,
+                )
+            }
+        }
+    }
+}
+
+private fun LocalDate.toUtcMillis(): Long =
+    atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun Long.toUtcLocalDate(): LocalDate =
+    Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()

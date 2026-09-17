@@ -11,6 +11,8 @@ import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
+import com.helga.android.data.model.PlanPeriod
+import com.helga.android.data.model.PlanPeriods
 import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
 import com.helga.android.data.local.dao.RecipeDao
@@ -40,7 +42,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -170,35 +171,43 @@ class WeekplanViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _selectedDayId = MutableStateFlow<String?>(null)
-    private val _weekOffset = MutableStateFlow(0)
-    val weekOffset: StateFlow<Int> = _weekOffset.asStateFlow()
+    private val _periodIndex = MutableStateFlow(0)
+    val periodIndex: StateFlow<Int> = _periodIndex.asStateFlow()
 
-    private fun mondayForOffset(offset: Int): LocalDate =
-        LocalDate.now().with(DayOfWeek.MONDAY).plusWeeks(offset.toLong())
+    /**
+     * Der aktuell angezeigte Planungszeitraum. Regulär sind es [AppPreferences.weekplanDays] Tage
+     * ab dem Einkaufstag; ein im Kalender gewählter Zeitraum wirkt als einmalige Ausnahme
+     * (siehe [PlanPeriods]).
+     */
+    val currentPeriod: StateFlow<PlanPeriod?> = combine(
+        _periodIndex,
+        preferences.shoppingDay,
+        preferences.weekplanDays,
+        preferences.planPeriodOverrides,
+    ) { index, shoppingDay, length, overrides ->
+        PlanPeriods.periodFor(index, LocalDate.now(), PlanPeriods.anchorOf(shoppingDay), length, overrides)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val weekLabel: StateFlow<String> = _weekOffset.map { offset ->
-        val monday = mondayForOffset(offset)
-        val sunday = monday.plusDays(6)
-        val kw = monday.get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear())
-        val fmt = DateTimeFormatter.ofPattern("dd.MM.")
-        "KW $kw · ${monday.format(fmt)}–${sunday.format(fmt)}"
+    val weekLabel: StateFlow<String> = currentPeriod.map { period ->
+        if (period == null) "" else {
+            val kw = period.start.get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear())
+            val fmt = DateTimeFormatter.ofPattern("dd.MM.")
+            "KW $kw · ${period.start.format(fmt)}–${period.end.format(fmt)} (${period.dayCount} Tage)"
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
 
-    val days: StateFlow<List<WeekplanDayEntity>> = _weekOffset.flatMapLatest { offset ->
-        val monday = mondayForOffset(offset)
-        val fmt = DateTimeFormatter.ISO_LOCAL_DATE
-        // Fenster bis zum Maximum der Zeitraum-Einstellung (7/10/14 Tage) statt fest auf
-        // Mo-So begrenzt – sonst blieben Tage 8-14 bei einer 10/14-Tage-Einstellung
-        // unsichtbar, und eine einmalige Verlängerung (addDayToWeek) hätte nichts anzuzeigen.
-        repository.observeDaysBetween(
-            startDate = monday.format(fmt),
-            endDate = monday.plusDays(13).format(fmt),
-        )
+    // Genau die Tage des Zeitraums – das frühere feste 14-Tage-Fenster ab Montag zeigte die Tage
+    // der Folgewoche mit an, sobald diese existierten (jeder Wochentag doppelt).
+    val days: StateFlow<List<WeekplanDayEntity>> = currentPeriod.flatMapLatest { period ->
+        if (period == null) flowOf(emptyList())
+        else {
+            val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+            repository.observeDaysBetween(
+                startDate = period.start.format(fmt),
+                endDate = period.end.format(fmt),
+            )
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /** Ob für die aktuell angezeigte Woche noch ein weiterer Tag angehängt werden kann (Deckel 14). */
-    val canExtendWeek: StateFlow<Boolean> = days.map { it.size < 14 }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val weekplanRecipes: StateFlow<List<WeekplanRecipeEntity>> = _selectedDayId
         .flatMapLatest { id ->
@@ -316,32 +325,59 @@ class WeekplanViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    /** Klappt einen Tag auf; erneutes Antippen desselben Tages klappt ihn wieder zu. */
     fun selectDay(id: String) {
-        _selectedDayId.value = id
+        _selectedDayId.value = if (_selectedDayId.value == id) null else id
     }
 
     fun nextWeek() {
-        _weekOffset.value++
+        _periodIndex.value++
         _selectedDayId.value = null
     }
 
     fun prevWeek() {
-        _weekOffset.value--
+        _periodIndex.value--
         _selectedDayId.value = null
     }
 
     fun goToCurrentWeek() {
-        _weekOffset.value = 0
+        _periodIndex.value = 0
         _selectedDayId.value = null
     }
 
+    /** Legt für jeden Tag des angezeigten Zeitraums eine Tageskarte an, falls noch keine da ist. */
     fun ensureWeek() {
         viewModelScope.launch {
-            val dayCount = preferences.weekplanDays.first()
-            val monday = mondayForOffset(_weekOffset.value)
+            val period = currentPeriod.value ?: return@launch
             val fmt = DateTimeFormatter.ISO_LOCAL_DATE
-            (0 until dayCount).forEach { offset ->
-                repository.getOrCreateDay(monday.plusDays(offset.toLong()).format(fmt))
+            period.dates().forEach { date -> repository.getOrCreateDay(date.format(fmt)) }
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    /**
+     * Übernimmt einen im Kalender gewählten Zeitraum als einmalige Ausnahme und legt dessen Tage
+     * an. Einkaufstag und Standardlänge bleiben unverändert — der Folgezeitraum füllt nur bis zur
+     * nächsten regulären Grenze auf, danach läuft der gewohnte Rhythmus weiter.
+     */
+    fun savePeriod(start: LocalDate, end: LocalDate) {
+        viewModelScope.launch {
+            val current = currentPeriod.value ?: return@launch
+            if (end.isBefore(start)) return@launch
+            if (ChronoUnit.DAYS.between(start, end) >= PlanPeriods.MAX_PERIOD_DAYS) return@launch
+            val updated = PlanPeriods.withOverride(
+                overrides = preferences.planPeriodOverrides.first(),
+                currentStart = current.start,
+                newStart = start,
+                newEnd = end,
+                anchor = PlanPeriods.anchorOf(preferences.shoppingDay.first()),
+                length = preferences.weekplanDays.first(),
+            )
+            preferences.savePlanPeriodOverrides(updated)
+            _selectedDayId.value = null
+            val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+            PlanPeriod(start, end).dates().forEach { date ->
+                repository.getOrCreateDay(date.format(fmt))
             }
             syncScheduler.triggerOneShot()
         }
@@ -449,23 +485,6 @@ class WeekplanViewModel @Inject constructor(
     fun toggleMarkerOnDay(dayId: String, markerId: String) {
         viewModelScope.launch {
             repository.toggleMarkerOnDay(dayId, markerId)
-            syncScheduler.triggerOneShot()
-        }
-    }
-
-    /**
-     * Verlängert die aktuell angezeigte Woche einmalig um einen Tag (bis zu 14 Tage ab
-     * Montag), ohne die globale Zeitraum-Einstellung zu ändern.
-     */
-    fun addDayToWeek() {
-        viewModelScope.launch {
-            val monday = mondayForOffset(_weekOffset.value)
-            val fmt = DateTimeFormatter.ISO_LOCAL_DATE
-            val maxDate = monday.plusDays(13)
-            val lastDate = days.value.maxOfOrNull { LocalDate.parse(it.planDate, fmt) }
-                ?: monday.minusDays(1)
-            if (lastDate >= maxDate) return@launch
-            repository.getOrCreateDay(lastDate.plusDays(1).format(fmt))
             syncScheduler.triggerOneShot()
         }
     }
@@ -625,8 +644,9 @@ class WeekplanViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val c = constraints.value
-                val dayCount = preferences.weekplanDays.first()
-                val currentDays = days.value.take(dayCount).filter { it.isSkipped == 0 }
+                // Alle Tage des angezeigten Zeitraums – nicht mehr auf die Standardlänge gekappt,
+                // sonst bliebe ein verlängerter Zeitraum am Ende unbefüllt.
+                val currentDays = days.value.filter { it.isSkipped == 0 }
                 if (currentDays.isEmpty()) {
                     _generateStatus.value = WeekplanGenerateStatus.Error("Keine Tage vorhanden")
                     return@launch
@@ -954,12 +974,22 @@ class WeekplanViewModel @Inject constructor(
         _generateStatus.value = WeekplanGenerateStatus.Loading
         viewModelScope.launch {
             try {
-                val monday = mondayForOffset(_weekOffset.value)
-                val lastMonday = monday.minusWeeks(1)
+                val current = currentPeriod.value
+                if (current == null) {
+                    _generateStatus.value = WeekplanGenerateStatus.Error("Kein Zeitraum geladen")
+                    return@launch
+                }
+                val previous = PlanPeriods.periodFor(
+                    index = _periodIndex.value - 1,
+                    today = LocalDate.now(),
+                    anchor = PlanPeriods.anchorOf(preferences.shoppingDay.first()),
+                    length = preferences.weekplanDays.first(),
+                    overrides = preferences.planPeriodOverrides.first(),
+                )
                 val fmt = DateTimeFormatter.ISO_LOCAL_DATE
                 val lastDays = weekplanDao.getDaysBetween(
-                    lastMonday.format(fmt),
-                    lastMonday.plusDays(6).format(fmt),
+                    previous.start.format(fmt),
+                    previous.end.format(fmt),
                 )
                 if (lastDays.isEmpty()) {
                     _generateStatus.value = WeekplanGenerateStatus.Error("Keine Vorwoche gefunden")
@@ -968,9 +998,12 @@ class WeekplanViewModel @Inject constructor(
                 val assignments = mutableListOf<WeekplanAssignmentDto>()
                 val currentDays = days.value
                 lastDays.forEach { lastDay ->
+                    // Positionsgleich übertragen (1. Tag → 1. Tag usw.), damit die Übernahme auch
+                    // bei unterschiedlich langen oder versetzt startenden Zeiträumen passt.
                     val lastDate = LocalDate.parse(lastDay.planDate, fmt)
-                    val dayOfWeek = lastDate.dayOfWeek
-                    val newDate = monday.with(dayOfWeek)
+                    val offset = ChronoUnit.DAYS.between(previous.start, lastDate)
+                    val newDate = current.start.plusDays(offset)
+                    if (newDate.isAfter(current.end)) return@forEach
                     val matchingCurrentDay = currentDays.find { it.planDate == newDate.format(fmt) }
                     if (matchingCurrentDay != null) {
                         val recipes = weekplanDao.recipesForDay(lastDay.id)

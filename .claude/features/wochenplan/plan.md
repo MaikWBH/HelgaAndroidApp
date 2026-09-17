@@ -441,6 +441,18 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       `WeekplanScreen` (Badge, Toggle, Bestätigungsdialog, „+ Tag"-Button), Sync
       (`SyncDto`/`SyncEngine`/`server/app/db.py`/`server/app/sync.py`). Kompiliert erfolgreich.
 
+- [x] **A16** — Freier Planungszeitraum statt „+ Tag" (Nutzerwunsch, Bugfix-Runde 2026-09-17):
+      behebt die Doppelanzeige der Wochentage und ersetzt den A15-Button · M · Impact hoch —
+      **umgesetzt:** neue reine Zeitraum-Logik `data/model/PlanPeriods.kt`
+      (`PlanPeriod`, Raster ab Einkaufstag, einmalige Ausnahmen, Ser-/Deserialisierung),
+      `AppPreferences` (`planPeriodOverrides`), `WeekplanViewModel`
+      (`currentPeriod`/`periodIndex` statt `weekOffset`, `savePeriod`, `ensureWeek` auf den
+      Zeitraum umgestellt, `addDayToWeek`/`canExtendWeek` entfernt, `selectDay` als Toggle,
+      `generateWeekplan` und `repeatLastWeek` an variable Zeitraumlängen angepasst),
+      `WeekplanScreen` (`PeriodPickerDialog`, anklickbares Kopf-Label, „+ Tag" entfernt),
+      `PlanPeriodsTest` (8 Fälle). **Nicht kompiliert/getestet** — Maven Central und
+      dl.google.com sind in der Session-Sandbox gesperrt, ein Gradle-Build war nicht möglich.
+
 _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 
 ## Entscheidungen
@@ -453,3 +465,7 @@ _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 | 2026-08-22 | Export-Listenauswahl bleibt bestehen, aber mit Standardliste vorbelegt statt neutral | Interview: erst „nur Standardliste", nach Rückfrage präzisiert auf „Rückfrage behalten, nur vorbelegt" |
 | 2026-08-22 | Woche einmalig anpassen nutzt denselben Mechanismus wie der A11-Basisfall (ein `isSkipped`-Feld statt zwei getrennter Features) | Nutzerentscheidung: „Dasselbe – ein Mechanismus" |
 | 2026-08-22 | Entfernte Tage bleiben in der Wochenansicht sichtbar (nur markiert), keine Navigationslücken; bei bereits geplantem Rezept erst Warnung, dann Löschen | Nutzerentscheidung: „Warnen vor Verlust" |
+| 2026-09-17 | Planungszeitraum wird frei per Kalender (Von–Bis, max. 28 Tage) gewählt; der „+ Tag"-Button aus A15 entfällt ersatzlos | Nutzerentscheidung: ein einziger Weg, den Zeitraum zu ändern — der zweite Mechanismus war die Ursache der Doppelanzeige |
+| 2026-09-17 | Regulärer Rhythmus sind 7 Tage ab dem Einkaufstag; eine Zeitraum-Änderung gilt nur einmalig, der Folgezeitraum füllt bis zur nächsten regulären Grenze auf | Nutzerentscheidung: „immer genau planen ab dem Tag, wo man einkauft" — Mo–Di ⇒ Folgezeitraum Mi–So, danach wieder Mo–So |
+| 2026-09-17 | Tage außerhalb des Zeitraums bleiben in Room und im Sync erhalten und werden nur ausgeblendet | Nutzerentscheidung: „nur Ansicht filtern" — kein Datenverlust durch eine reine Ansichtsänderung |
+| 2026-09-17 | Tageskarten verhalten sich als Akkordeon: erneutes Antippen desselben Tages klappt ihn wieder zu | Nutzerentscheidung; `selectDay` setzte die Auswahl bisher nur, hob sie aber nie auf |

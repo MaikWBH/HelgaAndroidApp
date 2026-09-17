@@ -16,8 +16,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.helga.android.data.model.PlanPeriods
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
+import java.time.LocalDate
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "helga_prefs")
 
@@ -45,6 +47,13 @@ class AppPreferences @Inject constructor(
     val weekplanDays: Flow<Int> = ds.data.map { prefs ->
         val raw = prefs[KEY_WEEKPLAN_DAYS] ?: 7
         if (raw in setOf(7, 10, 14)) raw else 7
+    }
+    /**
+     * Einmalige Zeitraum-Ausnahmen des Wochenplans (`Zeitraum-Start → abweichendes Ende`).
+     * Reine Ansichts-/Planungseinstellung, siehe [PlanPeriods].
+     */
+    val planPeriodOverrides: Flow<Map<LocalDate, LocalDate>> = ds.data.map {
+        PlanPeriods.decodeOverrides(it[KEY_PLAN_PERIOD_OVERRIDES].orEmpty())
     }
     val shoppingDay: Flow<Int> = ds.data.map { prefs ->
         val raw = prefs[KEY_SHOPPING_DAY] ?: 0
@@ -121,6 +130,14 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_WEEKPLAN_DAYS] = valid }
     }
 
+    suspend fun savePlanPeriodOverrides(overrides: Map<LocalDate, LocalDate>) {
+        val encoded = PlanPeriods.encodeOverrides(overrides)
+        ds.edit {
+            if (encoded.isBlank()) it.remove(KEY_PLAN_PERIOD_OVERRIDES)
+            else it[KEY_PLAN_PERIOD_OVERRIDES] = encoded
+        }
+    }
+
     suspend fun saveShoppingDay(day: Int) {
         ds.edit { it[KEY_SHOPPING_DAY] = day.coerceIn(0, 6) }
     }
@@ -195,6 +212,7 @@ class AppPreferences @Inject constructor(
         val KEY_LAST_SYNC_TS = longPreferencesKey("last_sync_ts")
         val KEY_SYNC_PROTOCOL = intPreferencesKey("sync_protocol_version")
         val KEY_WEEKPLAN_DAYS = intPreferencesKey("weekplan_days")
+        val KEY_PLAN_PERIOD_OVERRIDES = stringPreferencesKey("plan_period_overrides")
         val KEY_SHOPPING_DAY = intPreferencesKey("shopping_day")
         val KEY_DEFAULT_SHOPPING_LIST_ID = stringPreferencesKey("default_shopping_list_id")
         val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
