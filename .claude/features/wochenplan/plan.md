@@ -450,8 +450,10 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       Zeitraum umgestellt, `addDayToWeek`/`canExtendWeek` entfernt, `selectDay` als Toggle,
       `generateWeekplan` und `repeatLastWeek` an variable Zeitraumlängen angepasst),
       `WeekplanScreen` (`PeriodPickerDialog`, anklickbares Kopf-Label, „+ Tag" entfernt),
-      `PlanPeriodsTest` (8 Fälle). **Nicht kompiliert/getestet** — Maven Central und
-      dl.google.com sind in der Session-Sandbox gesperrt, ein Gradle-Build war nicht möglich.
+      `PlanPeriodsTest` (8 Fälle). Von der CI verifiziert (Lint, Unit-Tests, `assembleDebug`
+      grün, Lauf 87 auf `claude/vibrant-tesla-toy2xn`); lokal in der Session nicht baubar, weil
+      `dl.google.com` und damit das Android-SDK dort per Egress-Policy gesperrt sind.
+      **Auf einem Gerät noch nicht durchgeklickt.**
 
 _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 
