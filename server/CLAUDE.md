@@ -77,18 +77,22 @@ SSE-Format: `data: <chunk>\n\n`, Abschluss: `data: [DONE]\n\n`. Zeilenumbrüche 
 
 ## Deployment
 
-```bash
-# Ersteinrichtung (einmalig auf dem Server)
-git clone <repo-url> /opt/helga-sync
-cp .env.example .env   # API_KEY + AI_API_KEY befüllen
-docker compose -f docker-compose.prod.yml up -d --build
+Produktiv läuft der Server **nicht** aus diesem Clone, sondern als Git-Submodule im Homelab-Repo `server_home_lab` (`apps/helga`, Service `helga-sync`, Port 8000, öffentlich über `food.rockshomeassistant.casa` per Cloudflare Tunnel). `docker-compose.prod.yml` bleibt die maßgebliche Compose-Datei. Das Homelab legt nur ein Override darüber (Datenpfad, Containername).
 
-# Update vom Entwicklungsrechner (SERVER_HOST in Makefile anpassen)
-make deploy
+```bash
+# Lokal entwickeln (unabhängig vom Homelab)
+cp .env.example .env   # API_KEY + AI_API_KEY befüllen
+make dev
+
+# Neue Version ausrollen
+git tag vX.Y.Z && git push --tags
+# dann in server_home_lab: scripts/app.sh bump helga vX.Y.Z → commit → Release → scripts/deploy.sh
 
 # Helga-Daten importieren (einmalig)
 make migrate           # Pfad zur Helga-DB im Makefile-Rezept anpassen
 ```
+
+Da die API öffentlich erreichbar ist, muss `API_KEY` in Produktion gesetzt sein. Ohne ihn ist `require_auth` offen, und `validate-env.sh` im Homelab bricht deshalb ab.
 
 Alle weiteren Befehle: `make help`
 
@@ -96,7 +100,7 @@ Alle weiteren Befehle: `make help`
 
 ## Konventionen
 
-- Auth immer über `Depends(require_auth)` – nie weglassen
+- Auth immer über `Depends(require_auth)` – nie weglassen (API hängt öffentlich im Internet)
 - Pfad-Traversal bei Bildabruf abwehren: `Path(filename).name`
 - Schema-Änderungen sind **nicht destruktiv** – nur `ALTER TABLE ... ADD COLUMN`
 - `deleted = 1` ist Soft-Delete – nie physisch löschen (würde Sync brechen)
