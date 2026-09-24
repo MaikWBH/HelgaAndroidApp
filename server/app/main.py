@@ -1,3 +1,4 @@
+import hmac
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -44,7 +45,7 @@ def require_auth(request: Request):
     if not API_KEY:
         return  # Kein Key konfiguriert → offen (nur für lokale Entwicklung)
     key = request.headers.get("X-Api-Key", "")
-    if key != API_KEY:
+    if not hmac.compare_digest(key.encode(), API_KEY.encode()):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiger API-Key")
 
 
