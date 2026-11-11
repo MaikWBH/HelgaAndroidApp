@@ -2,6 +2,7 @@ package com.helga.android
 
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.Icons
@@ -154,7 +155,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
         },
     ) { padding ->
         NavHost(
-            modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding).imePadding(),
             navController = navController,
             startDestination = start,
         ) {

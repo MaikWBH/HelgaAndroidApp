@@ -239,7 +239,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
   `android:enableOnBackInvokedCallback="true"`. Vorher prüfen: `grep -rn 'onBackPressed\|OnBackPressedCallback' app/src/main`
   muss leer sein, sonst stoppen. Akzeptanz: Attribut vorhanden, Lint/Build grün. Prüfliste (Gerät, Android 14+ mit
   Gestennavigation): Zurück-Geste zeigt Vorschau und schließt Sheets/Dialoge vor dem Screen.
-- [ ] **S10 Tastatur-Insets** — Dateien: `AndroidManifest.xml`, `$B/HelgaNavGraph.kt`. `MainActivity`:
+- [x] **S10 Tastatur-Insets** — Dateien: `AndroidManifest.xml`, `$B/HelgaNavGraph.kt`. `MainActivity`:
   `android:windowSoftInputMode="adjustResize"`. `NavHost`-Modifier aus S6 erweitern zu
   `Modifier.padding(padding).consumeWindowInsets(padding).imePadding()`. Sonst nirgends `imePadding` ergänzen. Akzeptanz:
   `grep -rn 'imePadding' $B | wc -l` = 1. Prüfliste (Gerät): QuickAdd-Feld der Einkaufsliste und unterste Felder in
