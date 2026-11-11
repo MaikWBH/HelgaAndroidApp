@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import date
 from typing import AsyncIterator
 
@@ -7,6 +8,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import HTTPException
 
+from . import categories, receipt_text
 from .ingredient_parser import is_header_line, parse_ingredient_line
 from .models import (
     AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiNutritionRequest,
@@ -559,53 +561,55 @@ RECEIPT_PARSE_SYSTEM = (
     "Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt – kein Markdown, keine Erklärungen."
 )
 
-RECEIPT_PARSE_USER = (
-    "Lies diesen Kassenbon vollständig aus und gib die Daten als JSON zurück.\n\n"
-    "VORGEHEN (wichtig für Vollständigkeit):\n"
-    "- Gehe den Bon Zeile für Zeile von OBEN nach UNTEN durch.\n"
-    "- Erfasse JEDE Artikelzeile zwischen Kopf (Markt/Adresse) und Summenblock. "
-    "Überspringe oder kürze nichts, auch wenn es viele Positionen sind.\n"
-    "- Ein Artikelname kann über ZWEI Zeilen gehen (z. B. Marke in Zeile 1, "
-    "Produkt in Zeile 2) – fasse ihn zu EINEM Eintrag zusammen.\n"
-    "- Wenn ein Name oder Preis teils unleserlich ist: trage trotzdem deine BESTE "
-    "Schätzung ein und setze eine niedrige confidence. Lasse die Position NICHT weg.\n\n"
-    "FELDER:\n"
-    "- store_name: Name des Markts/Geschäfts (z. B. 'REWE', 'ALDI', 'EDEKA', 'Lidl'). "
-    "Leer lassen, wenn nicht erkennbar.\n"
-    "- purchase_date: Kaufdatum im Format 'YYYY-MM-DD'. Leer lassen, wenn nicht erkennbar.\n"
-    "- total_amount: Gesamtbetrag (Summe/zu zahlen) als Zahl mit Punkt als Dezimaltrennzeichen.\n"
-    "- items: Liste ALLER gekauften Artikel. Pro Artikel:\n"
-    "    - name: Produktname wie auf dem Bon, ohne nachgestelltes Steuerkennzeichen "
-    "(z. B. einzelnes 'A'/'B' am Zeilenende) und ohne den Preis.\n"
-    "    - quantity: Menge/Anzahl (Standard 1; bei Gewicht das Gewicht, z. B. 0.512).\n"
-    "    - unit_price: Einzel-/Grundpreis pro Stück bzw. pro Einheit. "
-    "Falls nur ein Preis erkennbar ist, setze unit_price = total_price.\n"
-    "    - total_price: Gesamtpreis dieser Position.\n"
-    "    - confidence: Wie sicher du dir bei dieser Position bist (0.0–1.0). "
-    "Niedrig wählen, wenn Name oder Preis verschwommen/unleserlich sind.\n"
-    "- confidence: Gesamt-Sicherheit über den ganzen Bon (0.0–1.0).\n\n"
-    "WICHTIG:\n"
-    "- Deutsche Preise nutzen Komma (1,99) – wandle sie in Punkt-Notation um (1.99).\n"
-    "- Pfand ('PFAND', 'LEERGUT') als eigene Position aufnehmen (Leergut-Rückgabe negativ).\n"
-    "- Mengenzeilen wie '2 x 1,99' oder '3 Stk x 0,89': quantity=Anzahl, "
-    "unit_price=Stückpreis, total_price=Summe.\n"
-    "- Bei Gewichtsabrechnung ('0,512 kg x 2,99 €/kg'): quantity=Gewicht, "
-    "unit_price=Preis pro Einheit, total_price=berechneter Betrag.\n"
-    "- Ignoriere Zwischensummen, MwSt-/Steuer-Zeilen, Zahlart (EC/BAR/Kartenzahlung), "
-    "Rückgeld, Kundenkarten-/Payback-Punkte, Bon-Nummern, Uhrzeit und Adresse.\n"
-    "- Plausibilitätscheck: Die Summe der total_price aller items sollte ungefähr "
-    "total_amount ergeben (abzüglich evtl. Rabatte). Weicht sie stark ab, hast du "
-    "vermutlich Positionen übersehen – lies noch einmal genau.\n\n"
-    "BEISPIEL (nur Format, nicht den Inhalt übernehmen):\n"
-    'Bon-Zeilen "G&G H-MILCH 3,5% 0,95 A" und "2 x BANANE 1,98 B" werden zu '
-    '[{"name":"G&G H-Milch 3,5%","quantity":1,"unit_price":0.95,"total_price":0.95,'
-    '"confidence":0.95},{"name":"Banane","quantity":2,"unit_price":0.99,'
-    '"total_price":1.98,"confidence":0.9}]\n\n'
-    'Antworte mit EXAKT diesem Format (nur JSON, kein Markdown): '
-    '{"store_name":"...","purchase_date":"YYYY-MM-DD",'
-    '"total_amount":0.00,"confidence":0.0,"items":[{"name":"...","quantity":1,'
-    '"unit_price":0.00,"total_price":0.00,"confidence":0.0}]}'
-)
+RECEIPT_PARSE_TEMPLATE = r'''Lies diesen Kassenbon vollständig aus und gib die Daten als JSON zurück.
+
+VORGEHEN:
+- Gehe den Bon Zeile für Zeile von OBEN nach UNTEN durch.
+- Erfasse JEDE Artikelzeile zwischen Kopf und Summenblock. Überspringe oder kürze nichts.
+- Ein Artikelname kann über ZWEI Zeilen gehen (Marke in Zeile 1, Produkt in Zeile 2): fasse ihn zu EINEM Eintrag zusammen.
+- Ist ein Name oder Preis teils unleserlich: trage deine beste Schätzung ein und setze eine niedrige confidence. Lasse die Position nicht weg.
+
+KOPF:
+- store_name: Name der Kette oder des Geschäfts (z. B. "REWE", "ALDI SÜD", "EDEKA", "Lidl", "dm"). Leer, wenn nicht erkennbar.
+- store_address: Filiale und Adresse in einer Zeile, so weit gedruckt (z. B. "REWE Markt Müller oHG, Hauptstr. 12, 12345 Musterstadt"). Leer, wenn nicht gedruckt. Keine Telefonnummer, keine Steuernummer.
+- purchase_date: Kaufdatum als "YYYY-MM-DD". Leer, wenn nicht erkennbar.
+- purchase_time: Uhrzeit des Kaufs als "HH:MM" (24 Stunden). Leer, wenn nicht gedruckt.
+- total_amount: zu zahlender Gesamtbetrag (Summe / zu zahlen) als Zahl.
+- discount_total: Summe aller Rabatte, die für den GANZEN Bon gelten (Coupon, "5% auf alles", Mitarbeiterrabatt, Treuerabatt), als positive Zahl. 0, wenn keine.
+- confidence: deine Gesamt-Sicherheit für den ganzen Bon (0.0 bis 1.0).
+
+POSITIONEN (items), je Artikel:
+- name: Text der Artikelzeile GENAU wie auf dem Bon, ohne Preis und ohne nachgestelltes Steuerkennzeichen (einzelnes A/B am Zeilenende).
+- product_name: gut lesbarer deutscher Artikelname ohne Kürzel (aus "G&G H-MILCH 3,5%" wird "H-Milch 3,5 %", aus "BIO BAN." wird "Bio-Bananen"). Marke nur, wenn sie zum Erkennen nötig ist.
+- category: genau EIN Schlüssel aus der Liste KATEGORIEN. Passt nichts: "sonstiges".
+- quantity: Anzahl oder Gewicht/Volumen als Zahl (Standard 1; bei "0,512 kg" also 0.512).
+- unit: "stk" für Stück, "kg", "g", "l" oder "ml" bei Abrechnung nach Gewicht oder Volumen. Unklar: "stk".
+- unit_price: Preis je Einheit. Ist nur ein Preis erkennbar: gleich total_price.
+- total_price: Betrag der Zeile, wie er rechts steht, VOR einem Rabatt dieser Position.
+- discount: Rabatt, der nur für DIESE Position gilt (Zeile direkt darunter wie "Rabatt -0,50", "Aktionsnachlass", "Preisvorteil", "-30%"), als positive Zahl. 0, wenn keiner. Eine solche Rabattzeile ist KEINE eigene Position.
+- is_deposit: true bei Pfand und Leergut ("PFAND", "EINWEG", "MEHRWEG", "LEERGUT"), sonst false. Pfand immer als eigene Position mit category "pfand"; Leergut-Rückgabe mit negativem total_price.
+- confidence: deine Sicherheit für diese Position (0.0 bis 1.0).
+
+KATEGORIEN:
+{categories}
+
+REGELN:
+- Deutsche Preise nutzen Komma (1,99): gib Zahlen mit Punkt aus (1.99).
+- "2 x 1,99" oder "3 Stk x 0,89": quantity = Anzahl, unit = "stk", unit_price = Stückpreis, total_price = Summe.
+- "0,512 kg x 2,99 EUR/kg": quantity = 0.512, unit = "kg", unit_price = 2.99, total_price = gedruckter Betrag.
+- Keine Positionen sind: Zwischensummen, MwSt-Zeilen, Zahlart, Rückgeld, Kundenkarten- und Punktezeilen, Bon-Nummern.
+- Prüfe am Ende: Summe aus (total_price minus discount) aller Positionen, minus discount_total, ergibt ungefähr total_amount. Weicht es stark ab, hast du Positionen oder Rabatte übersehen: lies noch einmal.
+
+BEISPIEL (nur Format):
+Die Zeilen "G&G H-MILCH 3,5% 0,95 A", "2 x BANANE 1,98 B", "Rabatt -0,30" und "PFAND 0,25 A" werden zu
+[{"name":"G&G H-MILCH 3,5%","product_name":"H-Milch 3,5 %","category":"milch_eier","quantity":1,"unit":"stk","unit_price":0.95,"total_price":0.95,"discount":0,"is_deposit":false,"confidence":0.95},
+ {"name":"BANANE","product_name":"Bananen","category":"obst_gemuese","quantity":2,"unit":"stk","unit_price":0.99,"total_price":1.98,"discount":0.30,"is_deposit":false,"confidence":0.9},
+ {"name":"PFAND","product_name":"Pfand","category":"pfand","quantity":1,"unit":"stk","unit_price":0.25,"total_price":0.25,"discount":0,"is_deposit":true,"confidence":0.95}]
+
+Antworte mit genau diesem Format, nur JSON, kein Markdown:
+{"store_name":"","store_address":"","purchase_date":"YYYY-MM-DD","purchase_time":"HH:MM","total_amount":0.00,"discount_total":0.00,"confidence":0.0,"items":[{"name":"","product_name":"","category":"","quantity":1,"unit":"stk","unit_price":0.00,"total_price":0.00,"discount":0.00,"is_deposit":false,"confidence":0.0}]}'''
+
+RECEIPT_PARSE_USER = RECEIPT_PARSE_TEMPLATE.replace("{categories}", categories.prompt_lines())
 
 
 def _to_float(v, default: float = 0.0) -> float:
@@ -627,26 +631,102 @@ def _to_float(v, default: float = 0.0) -> float:
         return default
 
 
-def _iso_to_ms(s) -> int:
-    if not s:
-        return 0
+_ALLOWED_UNITS = {"stk", "kg", "g", "l", "ml"}
+_TIME_RE = re.compile(r"^(\d{1,2}):(\d{2})")
+
+
+def _clamp01(value) -> float:
+    return min(max(_to_float(value, 1.0), 0.0), 1.0)
+
+
+def _truthy(value) -> int:
+    if isinstance(value, bool):
+        return 1 if value else 0
+    if isinstance(value, (int, float)):
+        return 1 if value else 0
+    return 1 if str(value).strip().lower() in ("true", "1", "ja") else 0
+
+
+def _normalize_day(value) -> str:
     try:
-        from datetime import datetime
-        d = date.fromisoformat(str(s)[:10])
-        return int(datetime(d.year, d.month, d.day).timestamp() * 1000)
-    except (ValueError, TypeError):
-        return 0
+        return date.fromisoformat(str(value or "").strip()[:10]).isoformat()
+    except ValueError:
+        return ""
 
 
-async def parse_receipt(image_b64: str, mime_type: str = "image/jpeg") -> dict:
-    """Extrahiert Markt, Datum, Gesamtbetrag und Positionen aus einem Bon-Foto.
+def _normalize_time(value) -> str:
+    match = _TIME_RE.match(str(value or "").strip())
+    if not match:
+        return ""
+    hours, minutes = int(match.group(1)), int(match.group(2))
+    if hours > 23 or minutes > 59:
+        return ""
+    return f"{hours:02d}:{minutes:02d}"
 
-    Gibt einen Dict im Format der ReceiptParseResponse zurück.
-    """
-    empty = {"store_name": "", "purchase_date": 0, "total_amount": 0.0,
-             "confidence": 0.0, "items": []}
 
-    raw = (await _vision_once(RECEIPT_PARSE_SYSTEM, RECEIPT_PARSE_USER, image_b64, mime_type)).strip()
+def normalize_parsed_receipt(data: dict) -> dict:
+    """Bringt die KI-Antwort in die feste Form (rein, ohne Netz). Siehe server-vertrag.md 5.3."""
+    day = _normalize_day(data.get("purchase_date"))
+    address = ", ".join(
+        part.strip() for part in str(data.get("store_address") or "").splitlines() if part.strip()
+    )[:200].strip()
+
+    items = []
+    for it in data.get("items") or []:
+        if not isinstance(it, dict):
+            continue
+        raw_text = str(it.get("name") or "").strip()
+        product_name = str(it.get("product_name") or "").strip()
+        name = product_name or raw_text
+        if not raw_text and not name:
+            continue
+        qty = _to_float(it.get("quantity"), 1.0) or 1.0
+        unit_price = _to_float(it.get("unit_price"), 0.0)
+        total = _to_float(it.get("total_price"), 0.0)
+        if total == 0.0 and unit_price != 0.0:
+            total = round(unit_price * qty, 2)
+        if unit_price == 0.0 and total != 0.0:
+            unit_price = round(total / qty, 2) if qty else total
+        unit = str(it.get("unit") or "").strip().lower()
+        if unit not in _ALLOWED_UNITS:
+            unit = "stk"
+        is_deposit = _truthy(it.get("is_deposit"))
+        items.append({
+            "raw_text": raw_text,
+            "name": name,
+            "quantity": qty,
+            "unit": unit,
+            "unit_price": unit_price,
+            "total_price": total,
+            "discount": abs(_to_float(it.get("discount"), 0.0)),
+            "is_deposit": is_deposit,
+            "category": "pfand" if is_deposit else categories.coerce(it.get("category")),
+            "confidence": _clamp01(it.get("confidence")),
+        })
+
+    return {
+        "store_name": str(data.get("store_name") or "").strip(),
+        "store_address": address,
+        "purchase_day": day,
+        "purchase_time": _normalize_time(data.get("purchase_time")),
+        "purchase_date": receipt_text.day_to_ms(day),
+        "total_amount": _to_float(data.get("total_amount"), 0.0),
+        "discount_total": abs(_to_float(data.get("discount_total"), 0.0)),
+        "confidence": _clamp01(data.get("confidence")),
+        "items": items,
+    }
+
+
+async def parse_receipt(image_b64: str, mime_type: str = "image/jpeg", model: str | None = None) -> dict:
+    """Extrahiert Kopfdaten und Positionen aus einem Bon-Foto (Bon-Modell, siehe _receipt_model)."""
+    used_model = model or _receipt_model()
+    empty = normalize_parsed_receipt({})
+    empty["confidence"] = 0.0
+    empty["model"] = used_model
+
+    raw = (await _receipt_once(
+        RECEIPT_PARSE_SYSTEM, RECEIPT_PARSE_USER, image_b64, mime_type, used_model
+    )).strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1].lstrip("json").strip()
     start, end = raw.find("{"), raw.rfind("}") + 1
@@ -656,40 +736,12 @@ async def parse_receipt(image_b64: str, mime_type: str = "image/jpeg") -> dict:
         data = json.loads(raw[start:end])
     except json.JSONDecodeError:
         return empty
+    if not isinstance(data, dict):
+        return empty
 
-    items = []
-    for it in data.get("items", []):
-        if not isinstance(it, dict):
-            continue
-        name = str(it.get("name", "")).strip()
-        if not name:
-            continue
-        qty = _to_float(it.get("quantity"), 1.0) or 1.0
-        unit = _to_float(it.get("unit_price"), 0.0)
-        total = _to_float(it.get("total_price"), 0.0)
-        if total == 0.0 and unit != 0.0:
-            total = round(unit * qty, 2)
-        if unit == 0.0 and total != 0.0:
-            unit = round(total / qty, 2) if qty else total
-        conf = _to_float(it.get("confidence"), 1.0)
-        conf = min(max(conf, 0.0), 1.0)
-        items.append({
-            "name": name,
-            "quantity": qty,
-            "unit_price": unit,
-            "total_price": total,
-            "confidence": conf,
-        })
-
-    overall = min(max(_to_float(data.get("confidence"), 1.0), 0.0), 1.0)
-
-    return {
-        "store_name": str(data.get("store_name", "")).strip(),
-        "purchase_date": _iso_to_ms(data.get("purchase_date", "")),
-        "total_amount": _to_float(data.get("total_amount"), 0.0),
-        "confidence": overall,
-        "items": items,
-    }
+    result = normalize_parsed_receipt(data)
+    result["model"] = used_model
+    return result
 
 
 # ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
@@ -727,7 +779,7 @@ async def reconcile_receipt(checked_items: list, receipt_items: list) -> dict:
         '"missing":["<shopping_item_id, das nicht auf dem Bon ist>"]}'
     )
 
-    raw = (await _call_once(system, user)).strip()
+    raw = (await _receipt_once(system, user)).strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1].lstrip("json").strip()
     start, end = raw.find("{"), raw.rfind("}") + 1

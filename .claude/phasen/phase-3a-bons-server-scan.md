@@ -198,7 +198,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `output_config == {"effort": "medium"}` und **keinen** Schlüssel `temperature`/`thinking`;
   `_receipt_payload("claude-sonnet-4-6", …)` hat `temperature == 0` und kein `output_config`; `max_tokens == 16000`.
   Akzeptanz: `VS` grün.
-- [ ] **S6 Prompt und Normalisierung** — Dateien: `$SA/ai.py`, `$SA/models.py`, `$SA/main.py`, neu
+- [x] **S6 Prompt und Normalisierung** — Dateien: `$SA/ai.py`, `$SA/models.py`, `$SA/main.py`, neu
   `$ST/test_parse_receipt.py`. `RECEIPT_PARSE_USER` durch den Text aus Vertrag 5.2 ersetzen (`{categories}` per
   `.replace` mit `categories.prompt_lines()`; kein `str.format`, der Text enthält geschweifte Klammern).
   `normalize_parsed_receipt(data)` nach Vertrag 5.3. `parse_receipt(image_b64, mime_type="image/jpeg", model=None)`:
@@ -214,7 +214,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `"07:05"` bleibt; (5) kein JSON → leeres Ergebnis; (6) `product_name` leer → `name == raw_text`; (7) Prompt enthält
   alle 17 Schlüssel und weder `{categories}` noch „Uhrzeit und Adresse". Akzeptanz: `VS` grün;
   `grep -n '_iso_to_ms' $SA/*.py` leer.
-- [ ] **S7 Abgleich auf Bon-Modell, Tests** — Dateien: `$SA/ai.py`, neu `$ST/test_reconcile_receipt.py`.
+- [x] **S7 Abgleich auf Bon-Modell, Tests** — Dateien: `$SA/ai.py`, neu `$ST/test_reconcile_receipt.py`.
   `reconcile_receipt` (Z.604–656) ruft `_receipt_once(system, user)` statt `_call_once`; sonst unverändert. Test
   (Attrappe): gültige Zuordnung; erfundene IDs werden gefiltert; kein JSON → drei leere Listen; leere Eingaben →
   Platzhalter „(keine)" im Nutzertext. Akzeptanz: `VS` grün; `grep -n '_call_once' $SA/ai.py` zeigt `reconcile_receipt`

@@ -392,16 +392,25 @@ class ReceiptParseRequest(BaseModel):
 
 
 class ReceiptParseItem(BaseModel):
-    name: str = ""
+    name: str = ""  # lesbarer Artikelname
+    raw_text: str = ""  # Text wie auf dem Bon
     quantity: float = 1.0
+    unit: str = ""
     unit_price: float = 0.0
     total_price: float = 0.0
+    discount: float = 0.0
+    is_deposit: int = 0
+    category: str = ""
     confidence: float = 1.0  # 0.0–1.0, Modell-Sicherheit für diese Position
 
 
 class ReceiptParseResponse(BaseModel):
     store_name: str = ""
+    store_address: str = ""
     purchase_date: int = 0  # Unix-ms, 0 wenn nicht erkennbar
+    purchase_day: str = ""
+    purchase_time: str = ""
     total_amount: float = 0.0
+    discount_total: float = 0.0
     confidence: float = 1.0  # 0.0–1.0, Gesamt-Sicherheit
     items: List[ReceiptParseItem] = []
