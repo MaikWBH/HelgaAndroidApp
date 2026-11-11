@@ -96,7 +96,7 @@ Ziel: `WeekplanViewModel.kt` unter 500 Zeilen, Verhalten unverändert. `computeW
 - Erledigt: S0–S15 (Block 0, A, B, C und S15 aus D). Gepusht nach Block 0, A, B, C (Branch `ccr-c53a7201-5hd57f`), S15 liegt committed, Stand zum Push siehe Git-Log.
 - **STOPP bei S16 (nicht umgesetzt):** `data/weekplan/WeekplanGenerator.kt` braucht `filterCandidateRecipes`, `WeekplanGenerateStatus` und `parseAllergenJson` (letztere in `ui/weekplan/WeekplanScreen.kt:1181`). Eine Datenschicht, die aus `ui/` importiert, widerspricht der Schichtung in CLAUDE.md. Der Plan legt nicht fest, wie das aufzulösen ist (Helfer verschieben oder Ergebnistyp neu definieren). Entscheidung nötig, bevor S16 weitergeht.
 - Nicht umgesetzt wegen des Stopps: S16, S17, S18, S19 (ArchitectureRulesTest), S20 (Guideline, Feature-Index, Bereichs-`plan.md`).
-- `WeekplanViewModel.kt` aktuell: 1019 Zeilen (Ziel < 500, noch nicht erreicht).
+- `WeekplanViewModel.kt` aktuell: 1008 Zeilen (Ziel < 500, noch nicht erreicht).
 
 Abweichungen und Auffälligkeiten (Stufe B):
 - S1: Plan verlangt `@Binds` in `NetworkModule`. `NetworkModule` ist ein `object`, und `@Binds` braucht ein abstraktes Modul. Umgesetzt als `@Provides fun provideApiProvider(factory: SyncApiFactory): ApiProvider = factory` in `di/NetworkModule.kt`.
