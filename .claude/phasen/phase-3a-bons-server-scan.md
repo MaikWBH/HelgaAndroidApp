@@ -156,13 +156,13 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `asyncio.run(coro)`. Test: `/api/health` 200; mit `API_KEY = "x"` liefert `/api/sync?since=0` ohne Header 401, mit
   Header 200; frische DB liefert leere Listen. Akzeptanz: `VS` ≥ 14 passed; `grep -n 'os.getenv("API_KEY"' $SA/main.py`
   leer.
-- [ ] **S2 Kategorien-Katalog** — Dateien: neu `$SA/categories.py`, neu `$ST/test_categories.py`. `CATEGORIES:
+- [x] **S2 Kategorien-Katalog** — Dateien: neu `$SA/categories.py`, neu `$ST/test_categories.py`. `CATEGORIES:
   list[tuple[str, str]]` mit den 17 Einträgen aus `$D/kategorien.md` in Tabellenreihenfolge; `CATEGORY_KEYS`
   (Menge); `AISLE_CATEGORY_KEYS` (Einträge 1–15); `coerce(key) -> str` (getrimmt, kleingeschrieben, unbekannt → `""`);
   `prompt_lines(include_deposit=True) -> str` (`- <schluessel>: <Name>` je Zeile). Test: exakte Schlüsselliste in
   Reihenfolge (im Test ausgeschrieben), `coerce(" Obst_Gemuese ") == "obst_gemuese"`, `coerce("xyz") == ""`,
   `prompt_lines(False)` enthält kein `pfand`. Akzeptanz: `VS` grün.
-- [ ] **S3 Schema** — Dateien: `$SA/db.py`, neu `$ST/test_schema_migration.py`. (a) `ADDED_COLUMNS` um `receipts` und
+- [x] **S3 Schema** — Dateien: `$SA/db.py`, neu `$ST/test_schema_migration.py`. (a) `ADDED_COLUMNS` um `receipts` und
   `receipt_items` nach Vertrag 1.1 ergänzen, `COLUMN_BACKFILL` um die zwei Einträge. (b) Die zwei Tabellen und drei
   Indizes aus Vertrag 1.2 in `SCHEMA`/`INDICES`. (c) Annahme 4: die `CREATE TABLE` für `ingredient_product_mappings`,
   `product_prices`, `product_purchases` (Z.322–354) und ihre 9 Indexzeilen (Z.446–454) löschen; den Kommentar Z.19–20
