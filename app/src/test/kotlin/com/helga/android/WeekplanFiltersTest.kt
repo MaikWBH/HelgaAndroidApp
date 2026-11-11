@@ -5,7 +5,7 @@ import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.ui.weekplan.WeekBalance
 import com.helga.android.ui.weekplan.computeWeekBalance
-import com.helga.android.ui.weekplan.filterCandidateRecipes
+import com.helga.android.data.weekplan.filterCandidateRecipes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -4,10 +4,10 @@ import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
-import com.helga.android.ui.weekplan.candidatePool
-import com.helga.android.ui.weekplan.repeatCutoffDate
-import com.helga.android.ui.weekplan.selectAnchorDays
-import com.helga.android.ui.weekplan.sumFeedbackScores
+import com.helga.android.data.weekplan.candidatePool
+import com.helga.android.data.weekplan.repeatCutoffDate
+import com.helga.android.data.weekplan.selectAnchorDays
+import com.helga.android.data.weekplan.sumFeedbackScores
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate

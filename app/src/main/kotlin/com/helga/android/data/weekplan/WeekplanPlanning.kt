@@ -1,4 +1,4 @@
-package com.helga.android.ui.weekplan
+package com.helga.android.data.weekplan
 
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity

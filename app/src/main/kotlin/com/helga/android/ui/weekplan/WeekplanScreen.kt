@@ -1,5 +1,8 @@
 package com.helga.android.ui.weekplan
 
+import com.helga.android.data.weekplan.WeekplanGenerateStatus
+import com.helga.android.data.weekplan.parseAllergenJson
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -1177,14 +1180,6 @@ private fun ExportPreviewDialog(
         },
     )
 }
-
-fun parseAllergenJson(json: String): List<String> = json
-    .trim()
-    .removePrefix("[")
-    .removeSuffix("]")
-    .split(",")
-    .map { it.trim().trim('"') }
-    .filter { it.isNotBlank() }
 
 /**
  * Direkt im Wochenplan eingebettet statt als separates `ModalBottomSheet` (wochenplan A8) — im
