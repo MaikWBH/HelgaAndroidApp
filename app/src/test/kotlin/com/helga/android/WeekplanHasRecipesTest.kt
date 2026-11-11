@@ -19,6 +19,7 @@ class WeekplanHasRecipesTest {
     private val repo = WeekplanRepository(
         weekplanDao = dao,
         weekplanSettingsDao = mockk(relaxed = true),
+        weekplanConstraintsDao = mockk(relaxed = true),
         recipeDao = mockk(relaxed = true),
         recipeRepository = mockk<RecipeRepository>(relaxed = true),
         shoppingRepository = mockk<ShoppingRepository>(relaxed = true),

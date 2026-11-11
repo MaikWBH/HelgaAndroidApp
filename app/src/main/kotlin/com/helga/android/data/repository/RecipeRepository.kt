@@ -60,6 +60,25 @@ class RecipeRepository @Inject constructor(
     }
 
     /** Speichert 👍/👎 zum Kochdatum und aktualisiert die abgeleitete Bewertung. */
+    fun observeFeedbackForDate(date: String): Flow<List<RecipeFeedbackEntity>> = recipeFeedbackDao.observeForDate(date)
+
+    /** Wie 👍/👎 im Wochenplan: erneuter gleicher Wert hebt die Bewertung auf (0). */
+    suspend fun toggleFeedback(recipeId: String, date: String, liked: Int, now: Long) {
+        val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, date)
+        val newLiked = if (existing?.liked == liked) 0 else liked
+        val entity = existing?.copy(liked = newLiked, updatedAt = now, dirty = 1)
+            ?: RecipeFeedbackEntity(
+                id = UUID.randomUUID().toString(),
+                recipeId = recipeId,
+                plannedDate = date,
+                liked = newLiked,
+                updatedAt = now,
+                dirty = 1,
+            )
+        recipeFeedbackDao.upsert(entity)
+        recalculateRating(recipeId)
+    }
+
     suspend fun saveFeedback(recipeId: String, date: String, liked: Int, now: Long) {
         val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, date)
         val entity = existing?.copy(liked = liked, updatedAt = now, dirty = 1)

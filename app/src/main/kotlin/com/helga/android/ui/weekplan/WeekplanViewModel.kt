@@ -3,7 +3,6 @@ package com.helga.android.ui.weekplan
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.RecipeEntity
-import com.helga.android.data.local.entity.RecipeFeedbackEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
@@ -12,15 +11,8 @@ import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
-import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.ShoppingRepository
-import com.helga.android.data.local.dao.RecipeFeedbackDao
-import com.helga.android.data.local.dao.RecipeHistoryDao
-import com.helga.android.data.local.dao.ShoppingDao
-import com.helga.android.data.local.dao.WeekplanConstraintsDao
-import com.helga.android.data.local.dao.WeekplanDao
-import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import com.helga.android.data.weekplan.WeekplanGenerateStatus
 import com.helga.android.data.weekplan.WeekplanGenerator
@@ -47,7 +39,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.Locale
-import java.util.UUID
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -90,14 +81,7 @@ data class ExportPreviewState(
 @HiltViewModel
 class WeekplanViewModel @Inject constructor(
     private val repository: WeekplanRepository,
-    private val recipeDao: RecipeDao,
     private val recipeRepository: RecipeRepository,
-    private val recipeHistoryDao: RecipeHistoryDao,
-    private val recipeFeedbackDao: RecipeFeedbackDao,
-    private val shoppingDao: ShoppingDao,
-    private val weekplanDao: WeekplanDao,
-    private val weekplanSettingsDao: WeekplanSettingsDao,
-    private val weekplanConstraintsDao: WeekplanConstraintsDao,
     private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
     private val shoppingRepository: ShoppingRepository,
@@ -155,8 +139,8 @@ class WeekplanViewModel @Inject constructor(
             else {
                 val countFlows = dayList.map { day ->
                     combine(
-                        weekplanDao.observeRecipeCount(day.id),
-                        weekplanDao.observeExtraCount(day.id),
+                        repository.observeRecipeCount(day.id),
+                        repository.observeExtraCount(day.id),
                     ) { rc, ec -> day.id to DaySummary(rc, ec) }
                 }
                 combine(countFlows) { pairs -> pairs.toMap() }
@@ -168,7 +152,7 @@ class WeekplanViewModel @Inject constructor(
     val weekRecipes: StateFlow<Map<String, List<WeekplanRecipeEntity>>> = days
         .flatMapLatest { dayList ->
             if (dayList.isEmpty()) flowOf(emptyMap())
-            else weekplanDao.observeRecipesForDays(dayList.map { it.id })
+            else repository.observeRecipesForDays(dayList.map { it.id })
                 .map { recipes -> recipes.groupBy { it.weekplanDayId } }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
@@ -177,7 +161,7 @@ class WeekplanViewModel @Inject constructor(
     val weekExtras: StateFlow<Map<String, List<WeekplanExtraEntity>>> = days
         .flatMapLatest { dayList ->
             if (dayList.isEmpty()) flowOf(emptyMap())
-            else weekplanDao.observeExtrasForDays(dayList.map { it.id })
+            else repository.observeExtrasForDays(dayList.map { it.id })
                 .map { extras -> extras.groupBy { it.weekplanDayId } }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
@@ -200,12 +184,12 @@ class WeekplanViewModel @Inject constructor(
             .groupBy({ it.first }, { it.second })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    val allRecipes: StateFlow<Map<String, RecipeEntity>> = recipeDao.observeAll()
+    val allRecipes: StateFlow<Map<String, RecipeEntity>> = recipeRepository.observeAll()
         .map { list -> list.associateBy { it.id } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val weekBalance: StateFlow<WeekBalance> = combine(days, allRecipes) { dayList, recipesMap ->
-        val recipesByDay = dayList.associate { it.id to weekplanDao.recipesForDay(it.id) }
+        val recipesByDay = dayList.associate { it.id to repository.recipesForDay(it.id) }
         computeWeekBalance(recipesByDay, recipesMap)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekBalance())
 
@@ -224,7 +208,7 @@ class WeekplanViewModel @Inject constructor(
     val userAllergies: StateFlow<List<String>> = preferences.allergies
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingDao.observeLists()
+    val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingRepository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val defaultShoppingListId: StateFlow<String> = preferences.defaultShoppingListId
@@ -235,7 +219,7 @@ class WeekplanViewModel @Inject constructor(
 
     val selectedDayId: StateFlow<String?> = _selectedDayId
 
-    val constraints: StateFlow<WeekplanConstraintsEntity> = weekplanConstraintsDao.observe()
+    val constraints: StateFlow<WeekplanConstraintsEntity> = repository.observeConstraints()
         .map { it ?: WeekplanConstraintsEntity() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekplanConstraintsEntity())
 
@@ -246,7 +230,7 @@ class WeekplanViewModel @Inject constructor(
         .flatMapLatest { dayId ->
             val planDate = days.value.find { it.id == dayId }?.planDate
             if (planDate == null) flowOf(emptyMap())
-            else recipeFeedbackDao.observeForDate(planDate)
+            else recipeRepository.observeFeedbackForDate(planDate)
                 .map { list -> list.associate { it.recipeId to it.liked } }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
@@ -286,18 +270,9 @@ class WeekplanViewModel @Inject constructor(
         viewModelScope.launch {
             val validDays = if (planDays in setOf(7, 10, 14)) planDays else 7
             val validShoppingDay = shoppingDay.coerceIn(0, 6)
-            val now = System.currentTimeMillis()
             preferences.saveWeekplanDays(validDays)
             preferences.saveShoppingDay(validShoppingDay)
-            weekplanSettingsDao.upsert(
-                com.helga.android.data.local.entity.WeekplanSettingsEntity(
-                    id = "global",
-                    planDays = validDays,
-                    shoppingDay = validShoppingDay,
-                    updatedAt = now,
-                    dirty = 1,
-                )
-            )
+            repository.saveSettings(validDays, validShoppingDay)
             syncScheduler.triggerOneShot()
         }
     }
@@ -316,7 +291,7 @@ class WeekplanViewModel @Inject constructor(
                 updatedAt = System.currentTimeMillis(),
                 dirty = 1,
             )
-            weekplanDao.upsertDay(updated)
+            repository.upsertDay(updated)
             syncScheduler.triggerOneShot()
         }
     }
@@ -328,7 +303,7 @@ class WeekplanViewModel @Inject constructor(
                 updatedAt = System.currentTimeMillis(),
                 dirty = 1,
             )
-            weekplanDao.upsertDay(updated)
+            repository.upsertDay(updated)
             syncScheduler.triggerOneShot()
         }
     }
@@ -353,7 +328,7 @@ class WeekplanViewModel @Inject constructor(
      */
     fun toggleLocked(day: WeekplanDayEntity) {
         viewModelScope.launch {
-            weekplanDao.setLocked(day.id, if (day.isLocked == 0) 1 else 0, System.currentTimeMillis())
+            repository.setLocked(day.id, if (day.isLocked == 0) 1 else 0, System.currentTimeMillis())
             syncScheduler.triggerOneShot()
         }
     }
@@ -407,22 +382,7 @@ class WeekplanViewModel @Inject constructor(
 
     fun setFeedback(recipeId: String, planDate: String, liked: Int) {
         viewModelScope.launch {
-            val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, planDate)
-            val newLiked = if (existing?.liked == liked) 0 else liked
-            val entity = existing?.copy(
-                liked = newLiked,
-                updatedAt = System.currentTimeMillis(),
-                dirty = 1,
-            ) ?: RecipeFeedbackEntity(
-                id = java.util.UUID.randomUUID().toString(),
-                recipeId = recipeId,
-                plannedDate = planDate,
-                liked = newLiked,
-                updatedAt = System.currentTimeMillis(),
-                dirty = 1,
-            )
-            recipeFeedbackDao.upsert(entity)
-            recipeRepository.recalculateRating(recipeId)
+            recipeRepository.toggleFeedback(recipeId, planDate, liked, System.currentTimeMillis())
             syncScheduler.triggerOneShot()
         }
     }
@@ -518,7 +478,7 @@ class WeekplanViewModel @Inject constructor(
             val now = System.currentTimeMillis()
             val allergenJson = com.squareup.moshi.Moshi.Builder().build()
                 .adapter(List::class.java).toJson(excludeAllergens)
-            weekplanConstraintsDao.upsert(
+            repository.upsertConstraints(
                 WeekplanConstraintsEntity(
                     id = "global",
                     maxMeatPerWeek = maxMeat,

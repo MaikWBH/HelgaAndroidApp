@@ -116,3 +116,10 @@ Abweichungen und Auffälligkeiten (Stufe B):
 - S14: `ExportWeekToShoppingListUseCase` umgesetzt, Aufrufer in `ShoppingListScreen.kt:362`.
 - Lint: ungenutzte Imports in den geänderten Dateien entfernt (Stichprobe mit Namensprüfung, Build grün).
 
+### Stand nach Entscheidungen Stufe B (STOPP bei S17, Ziel < 500 Zeilen nicht erreicht)
+- S16 umgesetzt: `WeekplanGenerator` (`data/weekplan/`) mit Generierung, Neuwürfeln, Vorwochen-Übernahme, Anwenden; Helfer (`WeekplanFilters.kt`, `WeekplanGenerateStatus.kt`, `WeekplanPlanning.kt`) in `data/weekplan/` verschoben (Vorbedingung laut Entscheidung). `discardProposal` bleibt in der VM (nur Zustand).
+- S17 DAO-Teil umgesetzt: `WeekplanViewModel` greift auf keinen DAO mehr zu (Repositories: `WeekplanRepository`, `RecipeRepository.observeFeedbackForDate/toggleFeedback`, `ShoppingRepository.observeLists`).
+- **STOPP:** `WeekplanViewModel.kt` hat **555 Zeilen** (Ziel < 500). Nicht weiter gekürzt, wie vorgegeben. S17 ist deshalb nicht abgehakt.
+- Nicht umgesetzt: S18, S19 (ArchitectureRulesTest mit SseClient-Ausnahme), S20.
+- Tests: 142, 0 Fehler, BUILD SUCCESSFUL (nach letztem Schritt).
+

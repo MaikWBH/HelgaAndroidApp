@@ -9,6 +9,8 @@ import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
 import com.helga.android.data.local.dao.WeekplanSettingsDao
+import com.helga.android.data.local.dao.WeekplanConstraintsDao
+import com.helga.android.data.local.entity.WeekplanConstraintsEntity
 import com.helga.android.data.model.DayNutrition
 import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
@@ -25,6 +27,7 @@ import javax.inject.Singleton
 class WeekplanRepository @Inject constructor(
     private val weekplanDao: WeekplanDao,
     private val weekplanSettingsDao: WeekplanSettingsDao,
+    private val weekplanConstraintsDao: WeekplanConstraintsDao,
     private val recipeDao: RecipeDao,
     private val recipeRepository: RecipeRepository,
     private val shoppingRepository: ShoppingRepository,
@@ -44,6 +47,14 @@ class WeekplanRepository @Inject constructor(
     }
 
     fun observeDays(): Flow<List<WeekplanDayEntity>> = weekplanDao.observeDays()
+    fun observeRecipeCount(dayId: String): Flow<Int> = weekplanDao.observeRecipeCount(dayId)
+    fun observeExtraCount(dayId: String): Flow<Int> = weekplanDao.observeExtraCount(dayId)
+    fun observeRecipesForDays(dayIds: List<String>): Flow<List<WeekplanRecipeEntity>> = weekplanDao.observeRecipesForDays(dayIds)
+    fun observeExtrasForDays(dayIds: List<String>): Flow<List<WeekplanExtraEntity>> = weekplanDao.observeExtrasForDays(dayIds)
+    suspend fun upsertDay(day: WeekplanDayEntity) = weekplanDao.upsertDay(day)
+    suspend fun setLocked(dayId: String, locked: Int, ts: Long) = weekplanDao.setLocked(dayId, locked, ts)
+    fun observeConstraints(): Flow<WeekplanConstraintsEntity?> = weekplanConstraintsDao.observe()
+    suspend fun upsertConstraints(constraints: WeekplanConstraintsEntity) = weekplanConstraintsDao.upsert(constraints)
     fun observeTodayRecipeId(date: String): Flow<String?> = weekplanDao.observeTodayRecipeId(date)
     suspend fun recipesForDay(dayId: String): List<WeekplanRecipeEntity> = weekplanDao.recipesForDay(dayId)
 
