@@ -5,13 +5,10 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -31,41 +28,21 @@ enum class ThemeMode {
 
 // Accent color presets — Pair(lightScheme, darkScheme)
 // Index 0 = Grün, 1 = Blau, 2 = Lila, 3 = Orange, 4 = Rot, 5 = Petrol
-private val accentSchemes: List<Pair<ColorScheme, ColorScheme>> = listOf(
-    Pair(
-        lightColorScheme(primary = Color(0xFF2E7D32), secondary = Color(0xFFFF8F00), tertiary = Color(0xFF8E24AA)),
-        darkColorScheme(primary = Color(0xFF81C784), secondary = Color(0xFFFFB74D), tertiary = Color(0xFFCE93D8)),
-    ),
-    Pair(
-        lightColorScheme(primary = Color(0xFF1565C0), secondary = Color(0xFF00838F), tertiary = Color(0xFF6A1B9A)),
-        darkColorScheme(primary = Color(0xFF90CAF9), secondary = Color(0xFF80DEEA), tertiary = Color(0xFFCE93D8)),
-    ),
-    Pair(
-        lightColorScheme(primary = Color(0xFF6A1B9A), secondary = Color(0xFF1565C0), tertiary = Color(0xFF00695C)),
-        darkColorScheme(primary = Color(0xFFCE93D8), secondary = Color(0xFF90CAF9), tertiary = Color(0xFF80CBC4)),
-    ),
-    Pair(
-        lightColorScheme(primary = Color(0xFFE65100), secondary = Color(0xFF2E7D32), tertiary = Color(0xFF1565C0)),
-        darkColorScheme(primary = Color(0xFFFFCC80), secondary = Color(0xFF81C784), tertiary = Color(0xFF90CAF9)),
-    ),
-    Pair(
-        lightColorScheme(primary = Color(0xFFB71C1C), secondary = Color(0xFFE65100), tertiary = Color(0xFF1565C0)),
-        darkColorScheme(primary = Color(0xFFEF9A9A), secondary = Color(0xFFFFCC80), tertiary = Color(0xFF90CAF9)),
-    ),
-    Pair(
-        lightColorScheme(primary = Color(0xFF00695C), secondary = Color(0xFF1565C0), tertiary = Color(0xFF6A1B9A)),
-        darkColorScheme(primary = Color(0xFF80CBC4), secondary = Color(0xFF90CAF9), tertiary = Color(0xFFCE93D8)),
-    ),
+private fun accent(
+    pl: AccentTones, sl: AccentTones, tl: AccentTones,
+    pd: AccentTones, sd: AccentTones, td: AccentTones,
+): Pair<ColorScheme, ColorScheme> = Pair(
+    helgaLightScheme(pl, sl, tl, inversePrimary = pd.main),
+    helgaDarkScheme(pd, sd, td, inversePrimary = pl.main),
 )
 
-// Exposed for the Settings color picker circles
-val accentPrimaryColors: List<Color> = listOf(
-    Color(0xFF2E7D32),
-    Color(0xFF1565C0),
-    Color(0xFF6A1B9A),
-    Color(0xFFE65100),
-    Color(0xFFB71C1C),
-    Color(0xFF00695C),
+private val accentSchemes: List<Pair<ColorScheme, ColorScheme>> = listOf(
+    accent(GreenLight, AmberLight, PurpleBrightLight, GreenDark, AmberDark, PurpleBrightDark),
+    accent(BlueLight, CyanLight, PurpleLight, BlueDark, CyanDark, PurpleDark),
+    accent(PurpleLight, BlueLight, TealLight, PurpleDark, BlueDark, TealDark),
+    accent(OrangeLight, GreenLight, BlueLight, OrangeDark, GreenDark, BlueDark),
+    accent(RedLight, OrangeLight, BlueLight, RedDark, OrangeDark, BlueDark),
+    accent(TealLight, BlueLight, PurpleLight, TealDark, BlueDark, PurpleDark),
 )
 
 @Composable

@@ -99,7 +99,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `grep -rn '@Preview\|@ThemePreviews' $U | wc -l` (0). Weicht eine Zahl ab: notieren, weitermachen.
 
 ### Block A — Theme (Befunde 1, 2, 5, 16, 21)
-- [ ] **S1 Vollständige Farbschemata** — Dateien: neu `$U/theme/Color.kt`, `$U/theme/Theme.kt`. In `Color.kt`:
+- [x] **S1 Vollständige Farbschemata** — Dateien: neu `$U/theme/Color.kt`, `$U/theme/Theme.kt`. In `Color.kt`:
   `internal data class AccentTones(val main: Color, val on: Color, val container: Color, val onContainer: Color)` und je
   Farbfamilie ein Hell- und ein Dunkel-Wert nach **Tabelle T1**; zwei Funktionen
   `internal fun helgaLightScheme(p: AccentTones, s: AccentTones, t: AccentTones): ColorScheme` und `helgaDarkScheme(…)`,
