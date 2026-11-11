@@ -1,5 +1,6 @@
 package com.helga.android.ui.shopping
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -133,15 +134,15 @@ fun ShoppingListScreen(
     val catalogProducts by viewModel.catalogProducts.collectAsStateWithLifecycle()
 
     val activeList = lists.find { it.id == activeListId }
-    var showListDropdown by remember { mutableStateOf(false) }
-    var showOverflow by remember { mutableStateOf(false) }
-    var showNewListDialog by remember { mutableStateOf(false) }
+    var showListDropdown by rememberSaveable { mutableStateOf(false) }
+    var showOverflow by rememberSaveable { mutableStateOf(false) }
+    var showNewListDialog by rememberSaveable { mutableStateOf(false) }
     var aislePickerItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
-    var showStaplesSheet by remember { mutableStateOf(false) }
+    var showStaplesSheet by rememberSaveable { mutableStateOf(false) }
     var editItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
-    var showStoreDropdown by remember { mutableStateOf(false) }
-    var showBarcodeScanner by remember { mutableStateOf(false) }
-    var showMyProductsSheet by remember { mutableStateOf(false) }
+    var showStoreDropdown by rememberSaveable { mutableStateOf(false) }
+    var showBarcodeScanner by rememberSaveable { mutableStateOf(false) }
+    var showMyProductsSheet by rememberSaveable { mutableStateOf(false) }
 
     if (showNewListDialog) {
         NewListDialog(
@@ -628,7 +629,7 @@ private fun SwipeableShoppingItem(
     val haptics = LocalHapticFeedback.current
     val offsetX = remember { Animatable(0f) }
     var rowWidthPx by remember { mutableFloatStateOf(0f) }
-    var dismissed by remember { mutableStateOf(false) }
+    var dismissed by rememberSaveable { mutableStateOf(false) }
 
     // Aktion löst erst ab 35 % der Zeilenbreite aus – versehentliches Antippen wird so vermieden
     val threshold = rowWidthPx * 0.35f
@@ -882,7 +883,7 @@ private fun EditItemDialog(
     var unit by remember(item.id) { mutableStateOf(item.unit) }
     var name by remember(item.id) { mutableStateOf(item.name) }
     var aisle by remember(item.id) { mutableStateOf(item.aisle) }
-    var showAislePicker by remember { mutableStateOf(false) }
+    var showAislePicker by rememberSaveable { mutableStateOf(false) }
 
     if (showAislePicker) {
         AislePickerDialog(
@@ -1021,7 +1022,7 @@ private fun StaplesSheet(
     onSuggest: suspend (String) -> List<String>,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    var newName by remember { mutableStateOf("") }
+    var newName by rememberSaveable { mutableStateOf("") }
     var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
 
     LaunchedEffect(newName) {
@@ -1162,7 +1163,7 @@ private fun QuickAddBar(
     onEmojiClick: (QuickEmojiEntity) -> Unit,
     onScanClick: () -> Unit = {},
 ) {
-    var text by remember { mutableStateOf("") }
+    var text by rememberSaveable { mutableStateOf("") }
     var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
 
     LaunchedEffect(text) {
@@ -1299,7 +1300,7 @@ private fun EmptyItemsState(modifier: Modifier = Modifier) {
 
 @Composable
 private fun NewListDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
-    var name by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.shopping_new_list)) },
@@ -1329,7 +1330,7 @@ private fun NewListDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
 
 @Composable
 private fun CostEstimateCard(estimate: com.helga.android.data.model.ListCostEstimate) {
-    var showDetails by remember { mutableStateOf(false) }
+    var showDetails by rememberSaveable { mutableStateOf(false) }
 
     Card(
         modifier = Modifier

@@ -1,5 +1,6 @@
 package com.helga.android.ui.stores
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -77,7 +78,7 @@ fun StoreListScreen(
     val stores by viewModel.stores.collectAsStateWithLifecycle()
     val selectedStoreAisles by viewModel.selectedStoreAisles.collectAsStateWithLifecycle()
 
-    var showNewStoreDialog by remember { mutableStateOf(false) }
+    var showNewStoreDialog by rememberSaveable { mutableStateOf(false) }
     var aisleSheetStore by remember { mutableStateOf<StoreEntity?>(null) }
 
     if (showNewStoreDialog) {
@@ -214,7 +215,7 @@ private fun AisleEditorSheet(
     onReorder: (orderedIds: List<String>) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var newAisleName by remember { mutableStateOf("") }
+    var newAisleName by rememberSaveable { mutableStateOf("") }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -292,7 +293,7 @@ private fun ReorderableAisleList(
     onDeleteAisle: (StoreAisleEntity) -> Unit,
 ) {
     var localOrder by remember { mutableStateOf(aisles) }
-    var draggedId by remember { mutableStateOf<String?>(null) }
+    var draggedId by rememberSaveable { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val itemHeights = remember { mutableStateMapOf<String, Int>() }
     val haptics = LocalHapticFeedback.current
@@ -401,7 +402,7 @@ private fun NewStoreDialog(
     onDismiss: () -> Unit,
     onCreate: (name: String, prefill: StorePrefill) -> Unit,
 ) {
-    var name by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     var prefill by remember { mutableStateOf<StorePrefill>(StorePrefill.DefaultTemplate) }
 
     AlertDialog(
