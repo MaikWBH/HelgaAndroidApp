@@ -50,7 +50,7 @@ Gemeinsame Fehlerabbildung: `HttpException` → Meldung aus `errorBody` (vorhand
 - [x] **S5 URL-Import in AiRepository** — `importFromUrl(url): ImportOutcome` ergänzen (Fehlerabbildung inkl. `extractErrorDetail` hierher verschieben). `UrlImportViewModel.import()` (≈ Z.55–75) und `classifyRecipeAsync` (≈ Z.140) nutzen es; `apiFactory` aus Konstruktor entfernen. Test: ja — `$T/AiRepositoryUrlImportTest.kt` (Erfolg, HttpException mit errorBody-Detail, IOException).
 - [x] **S6 Bulk-KI in AiRepository** — `SettingsViewModel.runBulkAi` (≈ Z.390–440) nutzt direkt `apiFactory.api()`; die API-Aufrufe (Klassifikation/Nährwerte pro Rezept) über `AiRepository`, Schleife und Fortschritts-State bleiben im VM. `apiFactory` aus `SettingsViewModel` entfernen. Test: nein (nur Umverdrahtung).
 - [x] **S7 Vorschläge und Barcode** — in `ShoppingRepository` ergänzen: `suspend fun suggestItems(query: String): List<String>` (mit `withTimeoutOrNull(1_500)`, bei Timeout/Fehler leere Liste — Verhalten wie `ShoppingListViewModel` ≈ Z.387) und `suspend fun lookupBarcode(...)` (Verhalten wie ≈ Z.399). `ShoppingListViewModel` und `WeekplanViewModel.suggestItems` (≈ Z.1011) nutzen sie; `apiFactory` aus beiden Konstruktoren entfernen. Test: ja — `$T/ShoppingSuggestionsTest.kt` (Timeout → leer, Fehler → leer, Erfolg → Liste).
-- [ ] **S8 Netzwerkgrenze prüfen** — `grep -rn "SyncApiFactory\|ApiProvider\|data.remote" $B/ui` darf nur noch DTO-Typen liefern, keine Factory/Provider. Fund-Liste in „Abschluss" notieren. Test: nein.
+- [x] **S8 Netzwerkgrenze prüfen** — `grep -rn "SyncApiFactory\|ApiProvider\|data.remote" $B/ui` darf nur noch DTO-Typen liefern, keine Factory/Provider. Fund-Liste in „Abschluss" notieren. Test: nein.
 
 ### Block B — DAOs raus aus ViewModels (Befund 3)
 Pro Schritt: DAO-Zugriffe des VM als Repository-Methoden mit gleichem Rückgabetyp (`Flow<…>`/`suspend`) anlegen, VM umstellen, DAO aus VM-Konstruktor entfernen.
@@ -86,3 +86,6 @@ Ziel: `WeekplanViewModel.kt` unter 500 Zeilen, Verhalten unverändert. `computeW
 - [ ] `./gradlew :app:testDebugUnitTest :app:compileDebugKotlin` grün nach S20 (Ausgabe festgehalten)
 - [ ] `ArchitectureRulesTest` grün (Beweis: kein DAO-/Retrofit-Import in ViewModels)
 - [ ] Bereichs-`plan.md` und Feature-Index aktualisiert (S20)
+
+### Notizen Stufe B (Block A–E)
+- S8 Fund-Liste (`grep -rn "SyncApiFactory\|ApiProvider\|data.remote" ui`, ohne dto): keine Factory/Provider mehr in `ui/`. Verbleibend: `ui/ai/AiGenerateViewModel.kt` und `ui/ai/AiRemixViewModel.kt` importieren `data.remote.SseClient` (SSE-Streaming, kein Factory/Provider; nicht in der S19-Verbotsliste, daher nicht Teil dieser Phase). `ConnectionResult`/`ServerConnectionChecker` in `OnboardingViewModel`/`SettingsViewModel` sind gewollte Ergebnis-/Service-Typen aus S3.
