@@ -333,7 +333,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   37)`; A: `purchaseDay == "2026-11-10"`, `pendingUpload == 1`, `parseStatus == "none"`; B und seine Position fehlen;
   C-Position hat `unit == ""`, `confidence == 1.0`. Akzeptanz: `V` grün; `app/schemas/**/37.json` existiert und wird
   mitcommittet.
-- [ ] **S17 Kategorien in der App** — Dateien: neu `$B/data/model/ProductCategory.kt`, `$R/values/strings.xml`, neu
+- [x] **S17 Kategorien in der App** — Dateien: neu `$B/data/model/ProductCategory.kt`, `$R/values/strings.xml`, neu
   `$U/receipts/CategoryLabels.kt`, neu `$T/ProductCategoryTest.kt`. `enum class ProductCategory(val key: String, val
   isAisle: Boolean)` mit den 17 Einträgen in Katalogreihenfolge (`OBST_GEMUESE("obst_gemuese", true)` … `SONSTIGES(…,
   false)`, `PFAND(…, false)`); `companion`: `fromKey(key: String?): ProductCategory?` (getrimmt, kleingeschrieben),

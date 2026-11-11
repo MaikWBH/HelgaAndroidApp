@@ -578,4 +578,23 @@
     <string name="common_collapse">Einklappen</string>
     <string name="common_expand">Ausklappen</string>
     <string name="settings_marker_color_n">Farbe %1$d</string>
+    <!-- Phase 3a: Kategorien-Katalog (Schlüssel wie server/app/categories.py) -->
+    <string name="category_none">Ohne Kategorie</string>
+    <string name="category_obst_gemuese">Obst &amp; Gemüse</string>
+    <string name="category_brot_backwaren">Brot &amp; Backwaren</string>
+    <string name="category_milch_eier">Milchprodukte &amp; Eier</string>
+    <string name="category_fleisch_wurst">Fleisch &amp; Wurst</string>
+    <string name="category_fisch">Fisch</string>
+    <string name="category_tiefkuehl">Tiefkühl</string>
+    <string name="category_trockenware">Konserven &amp; Trockenware</string>
+    <string name="category_wuerzen_backen">Backen, Gewürze &amp; Saucen</string>
+    <string name="category_fruehstueck">Frühstück, Kaffee &amp; Tee</string>
+    <string name="category_getraenke">Getränke</string>
+    <string name="category_alkohol">Bier, Wein &amp; Spirituosen</string>
+    <string name="category_suesses_snacks">Süßes &amp; Snacks</string>
+    <string name="category_feinkost">Feinkost &amp; Fertiggerichte</string>
+    <string name="category_drogerie">Drogerie &amp; Baby</string>
+    <string name="category_haushalt">Haushalt &amp; Tierbedarf</string>
+    <string name="category_sonstiges">Sonstiges</string>
+    <string name="category_pfand">Pfand</string>
 </resources>
