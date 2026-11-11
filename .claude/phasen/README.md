@@ -38,7 +38,7 @@ Modellwechsel: Nutzer per `/model` oder die Stufe läuft als Sub-Agent mit gewä
 
 | Phase | Skill | Bereich | Definition (groß) | Umsetzung (klein) | Status |
 |-------|-------|---------|-------------------|-------------------|--------|
-| 1 | android-clean-architecture | `data/`, `di/`, Repositories, Sync-Fluss | – | – | offen |
+| 1 | android-clean-architecture | `data/`, `di/`, Repositories, Sync-Fluss | Sonnet 5.5 | Haiku 5.5 | definiert (wartet auf Freigabe) → [phase-1](phase-1-android-clean-architecture.md) |
 | 2 | mobile-android-design | `ui/` (Compose, Material 3, Theming) | – | – | offen |
 | 3 | fastapi-templates | `server/app/` (Sync-Backend) | – | – | offen |
 | 4 | multi-stage-dockerfile | `server/Dockerfile`, Compose | – | – | offen |
