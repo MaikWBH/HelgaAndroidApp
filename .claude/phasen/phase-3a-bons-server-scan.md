@@ -381,7 +381,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   Akzeptanz: `V` grün (Room prüft die Queries beim Build).
 
 ### Block E — App: Bon-Abgleich, Cache, Fotos (Befunde 2, 13, 14, 16, 17)
-- [ ] **S21 Foto-Ablage** — Dateien: neu `$B/data/receipts/ReceiptImageStore.kt`, neu `$T/ReceiptImageStoreTest.kt`.
+- [x] **S21 Foto-Ablage** — Dateien: neu `$B/data/receipts/ReceiptImageStore.kt`, neu `$T/ReceiptImageStoreTest.kt`.
   `@Singleton class ReceiptImageStore(@ApplicationContext context)`: `suspend fun prepare(uri: Uri, receiptId:
   String): PreparedImage?` (`ReceiptImagePreprocessor.loadUprightBitmap(context, uri, maxDim = 2000)`, als JPEG
   Qualität 85 nach `filesDir/receipts/<receiptId>.jpg`; gibt `PreparedImage(file, bitmap)` zurück), `fun
