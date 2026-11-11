@@ -2,8 +2,6 @@ package com.helga.android.ui.shopping
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.local.dao.QuickEmojiDao
-import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
@@ -14,8 +12,11 @@ import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.preferences.AppPreferences
+import com.helga.android.data.repository.ReceiptRepository
+import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.StoreRepository
+import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncEngine
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -45,10 +45,11 @@ import javax.inject.Inject
 class ShoppingListViewModel @Inject constructor(
     private val repository: ShoppingRepository,
     private val storeRepository: StoreRepository,
-    private val quickEmojiDao: QuickEmojiDao,
+    private val weekplanRepository: WeekplanRepository,
+    private val recipeRepository: RecipeRepository,
+    private val receiptRepository: ReceiptRepository,
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
-    private val receiptDao: ReceiptDao,
     private val syncScheduler: SyncScheduler,
     private val syncEngine: SyncEngine,
     private val preferences: AppPreferences,
@@ -100,7 +101,7 @@ class ShoppingListViewModel @Inject constructor(
         .map { aisles -> aisles.associate { it.aisleName to it.sortOrder } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    val quickEmojis: StateFlow<List<QuickEmojiEntity>> = quickEmojiDao.observeEmojis()
+    val quickEmojis: StateFlow<List<QuickEmojiEntity>> = repository.observeQuickEmojis()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val staples: StateFlow<List<ShoppingListStapleEntity>> = activeListId
@@ -121,15 +122,9 @@ class ShoppingListViewModel @Inject constructor(
     private val sunday = monday.plusDays(6)
     private val fmt = DateTimeFormatter.ISO_LOCAL_DATE
 
-    val weekplanHasRecipes: StateFlow<Boolean> = weekplanDao.observeDaysBetween(
+    val weekplanHasRecipes: StateFlow<Boolean> = weekplanRepository.observeHasRecipesBetween(
         monday.format(fmt), sunday.format(fmt),
-    ).flatMapLatest { days ->
-        if (days.isEmpty()) flowOf(false)
-        else {
-            val countFlows = days.map { day -> weekplanDao.observeRecipeCount(day.id) }
-            combine(countFlows) { counts -> counts.any { it > 0 } }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val currentListEmpty: StateFlow<Boolean> = itemsByAisle
         .map { it.values.flatten().isEmpty() }
@@ -148,7 +143,7 @@ class ShoppingListViewModel @Inject constructor(
     private val receiptScannedTodayForList: StateFlow<Boolean> = activeListId
         .flatMapLatest { listId ->
             if (listId == null) flowOf(false)
-            else receiptDao.observeReceiptCountForListToday(listId, todayStartMs, todayEndMs)
+            else receiptRepository.observeReceiptCountForListToday(listId, todayStartMs, todayEndMs)
                 .map { it > 0 }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -375,7 +370,7 @@ class ShoppingListViewModel @Inject constructor(
     suspend fun suggestItems(query: String): List<String> {
         if (query.length < 2) return emptyList()
         val local = try {
-            repository.searchItemNames(query) + recipeDao.searchIngredientNames(query)
+            repository.searchItemNames(query) + recipeRepository.searchIngredientNames(query)
         } catch (e: Exception) {
             Timber.d(e, "Local suggestion lookup failed")
             emptyList()

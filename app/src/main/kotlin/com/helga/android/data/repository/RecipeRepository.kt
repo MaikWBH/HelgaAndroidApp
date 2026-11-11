@@ -38,6 +38,7 @@ class RecipeRepository @Inject constructor(
 
     suspend fun findById(id: String): RecipeEntity? = recipeDao.findById(id)
     suspend fun findRecipe(id: String): RecipeEntity? = recipeDao.findById(id)
+    suspend fun searchIngredientNames(query: String): List<String> = recipeDao.searchIngredientNames(query)
 
     /** Markiert ein Rezept am Datum als gekocht; legt den Verlaufseintrag an, falls keiner existiert. */
     suspend fun markCooked(recipeId: String, date: String, now: Long) {

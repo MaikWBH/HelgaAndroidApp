@@ -2,9 +2,7 @@ package com.helga.android.ui.recipes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.RecipeEntity
-import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.repository.AiRepository

@@ -11,9 +11,6 @@ import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
-import com.helga.android.data.local.entity.WeekplanRecipeEntity
-import com.helga.android.data.local.dao.RecipeDao
-import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.model.RecipeNutrition
 import com.helga.android.data.preferences.AppPreferences

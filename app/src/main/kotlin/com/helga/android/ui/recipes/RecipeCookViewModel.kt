@@ -5,13 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.cooking.ActiveCookingTimer
 import com.helga.android.data.cooking.CookingTimerManager
-import com.helga.android.data.local.dao.RecipeFeedbackDao
-import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
-import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,7 +24,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 import javax.inject.Inject
 
 data class RecipeCookUiState(

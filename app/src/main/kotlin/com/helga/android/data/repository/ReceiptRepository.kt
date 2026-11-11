@@ -103,6 +103,9 @@ class ReceiptRepository @Inject constructor(
         )
     }
 
+    fun observeReceiptCountForListToday(listId: String, startMs: Long, endMs: Long): Flow<Int> =
+        receiptDao.observeReceiptCountForListToday(listId, startMs, endMs)
+
     /** Summe und Anzahl der Kassenbons im Zeitraum (Epoch-Sekunden). */
     suspend fun totalCost(startEpochSec: Long, endEpochSec: Long): CostSummary =
         receiptDao.totalCostForRange(startEpochSec, endEpochSec)

@@ -12,7 +12,11 @@ import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.model.DayNutrition
 import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,6 +46,14 @@ class WeekplanRepository @Inject constructor(
     fun observeDays(): Flow<List<WeekplanDayEntity>> = weekplanDao.observeDays()
     fun observeTodayRecipeId(date: String): Flow<String?> = weekplanDao.observeTodayRecipeId(date)
     suspend fun recipesForDay(dayId: String): List<WeekplanRecipeEntity> = weekplanDao.recipesForDay(dayId)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    /** True, wenn mindestens ein Tag im Zeitraum mindestens ein Rezept hat. */
+    fun observeHasRecipesBetween(startDate: String, endDate: String): Flow<Boolean> =
+        weekplanDao.observeDaysBetween(startDate, endDate).flatMapLatest { days ->
+            if (days.isEmpty()) flowOf(false)
+            else combine(days.map { weekplanDao.observeRecipeCount(it.id) }) { counts -> counts.any { it > 0 } }
+        }
 
     fun observeDaysBetween(startDate: String, endDate: String): Flow<List<WeekplanDayEntity>> =
         weekplanDao.observeDaysBetween(startDate, endDate)
