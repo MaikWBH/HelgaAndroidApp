@@ -462,4 +462,25 @@
     <string name="receipt_reconcile_matches">✓ %1$d Treffer</string>
     <string name="receipt_reconcile_unexpected">Ungeplant gekauft:</string>
     <string name="receipt_reconcile_missing">Nicht gefunden (abgehakt, fehlt auf Bon):</string>
+    <string name="receipt_scan_title">Kassenzettel scannen</string>
+    <string name="receipt_scan_reading">Bon wird ausgelesen…</string>
+    <string name="receipt_scan_intro">Fotografiere deinen Kassenzettel oder wähle ein Bild aus der Galerie.</string>
+    <string name="receipt_scan_take_photo">Foto aufnehmen</string>
+    <string name="receipt_scan_gallery">Aus Galerie wählen</string>
+    <string name="receipt_scan_review_hint">Einige Angaben sind unsicher. Bitte die markierten Positionen und den Gesamtbetrag prüfen, bevor du speicherst.</string>
+    <string name="receipt_scan_source_ai">Gelesen per KI-Vision (Server)</string>
+    <string name="receipt_scan_source_ocr">Gelesen per On-Device-OCR (offline)</string>
+    <string name="receipt_scan_raw_hide">Roh-Text ausblenden</string>
+    <string name="receipt_scan_raw_show">Roh-Text anzeigen</string>
+    <string name="receipt_scan_store">Markt</string>
+    <string name="receipt_scan_total">Gesamtbetrag (€)</string>
+    <string name="receipt_scan_items">Artikel (%1$d)</string>
+    <string name="receipt_scan_edit_hint">Zum Korrigieren auf eine Position tippen.</string>
+    <string name="receipt_scan_check">Bitte prüfen</string>
+    <string name="receipt_scan_no_items">Keine Artikel erkannt. Du kannst den Bon trotzdem speichern.</string>
+    <string name="receipt_scan_rescan">Neu scannen</string>
+    <string name="receipt_scan_edit_item">Position bearbeiten</string>
+    <string name="receipt_scan_item_name">Bezeichnung</string>
+    <string name="receipt_scan_unit_price">Einzelpreis (€)</string>
+    <string name="receipt_scan_total_price">Gesamtpreis (€)</string>
 </resources>

@@ -298,7 +298,7 @@ Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
   (`ifBlank { "…" }`, Abschnittstitel) per Durchsicht der Datei. `"$itemCount Artikel"` bleibt bis S22. 6×
   `collectAsState()` umstellen. Akzeptanz: `G-S` für beide Dateien regelkonform (Ausnahme S22-Stelle);
   `grep -c 'collectAsState()' ` je Datei = 0.
-- [ ] **S17 `ReceiptScanScreen`** — Strings nach R-S (ca. 19 Stellen, Z.128–527; die führenden Leerzeichen in
+- [x] **S17 `ReceiptScanScreen`** — Strings nach R-S (ca. 19 Stellen, Z.128–527; die führenden Leerzeichen in
   `"  Foto aufnehmen"`/`"  Aus Galerie wählen"` gehören nicht in den String, sondern als `Spacer(Modifier.width(8.dp))`
   davor); 1× `collectAsState()`. Akzeptanz wie S16.
 - [ ] **S18 `CostOverviewScreen` + `ProductPriceListScreen` + `ProductPriceDetailScreen`** — Strings nach R-S (ca. 12

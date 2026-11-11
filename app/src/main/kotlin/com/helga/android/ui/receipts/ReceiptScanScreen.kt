@@ -1,5 +1,8 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.R
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.ui.common.formatEuro
 import android.Manifest
 import android.net.Uri
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -70,7 +74,7 @@ fun ReceiptScanScreen(
     viewModel: ReceiptScanViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(shoppingListId) {
         viewModel.setShoppingListId(shoppingListId)
@@ -125,10 +129,10 @@ fun ReceiptScanScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Kassenzettel scannen") },
+                title = { Text(stringResource(R.string.receipt_scan_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.recipe_detail_back))
                     }
                 },
             )
@@ -160,7 +164,7 @@ fun ReceiptScanScreen(
                     ) {
                         LoadingIndicator()
                         Spacer(Modifier.height(16.dp))
-                        Text("Bon wird ausgelesen…")
+                        Text(stringResource(R.string.receipt_scan_reading))
                     }
                 }
 
@@ -184,7 +188,7 @@ fun ReceiptScanScreen(
                     ) {
                         Text(state.message)
                         Spacer(Modifier.height(16.dp))
-                        Button(onClick = viewModel::reset) { Text("Erneut versuchen") }
+                        Button(onClick = viewModel::reset) { Text(stringResource(R.string.action_retry)) }
                     }
                 }
 
@@ -205,7 +209,7 @@ private fun CaptureButtons(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            "Fotografiere deinen Kassenzettel oder wähle ein Bild aus der Galerie.",
+            stringResource(R.string.receipt_scan_intro),
             modifier = Modifier.padding(bottom = 24.dp),
         )
         Button(
@@ -214,7 +218,8 @@ private fun CaptureButtons(
         ) {
             Icon(Icons.Filled.CameraAlt, contentDescription = null)
             Spacer(Modifier.height(0.dp))
-            Text("  Foto aufnehmen")
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.receipt_scan_take_photo))
         }
         Spacer(Modifier.height(12.dp))
         OutlinedButton(
@@ -222,7 +227,8 @@ private fun CaptureButtons(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
-            Text("  Aus Galerie wählen")
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.receipt_scan_gallery))
         }
     }
 }
@@ -244,8 +250,7 @@ private fun ReviewBanner() {
             modifier = Modifier.padding(end = 8.dp),
         )
         Text(
-            "Einige Angaben sind unsicher. Bitte die markierten Positionen und den " +
-                "Gesamtbetrag prüfen, bevor du speicherst.",
+            stringResource(R.string.receipt_scan_review_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onErrorContainer,
         )
@@ -261,8 +266,8 @@ private fun ReviewBanner() {
 private fun ScanSourceInfo(source: ScanSource, rawOcrText: String) {
     var showRaw by remember { mutableStateOf(false) }
     val label = when (source) {
-        ScanSource.AI -> "Gelesen per KI-Vision (Server)"
-        ScanSource.ON_DEVICE -> "Gelesen per On-Device-OCR (offline)"
+        ScanSource.AI -> stringResource(R.string.receipt_scan_source_ai)
+        ScanSource.ON_DEVICE -> stringResource(R.string.receipt_scan_source_ocr)
     }
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -275,7 +280,7 @@ private fun ScanSourceInfo(source: ScanSource, rawOcrText: String) {
                 onClick = { showRaw = !showRaw },
                 contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
             ) {
-                Text(if (showRaw) "Roh-Text ausblenden" else "Roh-Text anzeigen")
+                Text(if (showRaw) stringResource(R.string.receipt_scan_raw_hide) else stringResource(R.string.receipt_scan_raw_show))
             }
             if (showRaw) {
                 Text(
@@ -336,7 +341,7 @@ private fun PreviewContent(
                 OutlinedTextField(
                     value = state.storeName,
                     onValueChange = onStoreNameChange,
-                    label = { Text("Markt") },
+                    label = { Text(stringResource(R.string.receipt_scan_store)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -347,18 +352,18 @@ private fun PreviewContent(
                         totalText = it
                         it.replace(",", ".").toDoubleOrNull()?.let(onTotalChange)
                     },
-                    label = { Text("Gesamtbetrag (€)") },
+                    label = { Text(stringResource(R.string.receipt_scan_total)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Artikel (${state.items.size})",
+                    stringResource(R.string.receipt_scan_items, state.items.size),
                     style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    "Zum Korrigieren auf eine Position tippen.",
+                    stringResource(R.string.receipt_scan_edit_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -384,7 +389,7 @@ private fun PreviewContent(
                     if (uncertain) {
                         Icon(
                             Icons.Filled.Warning,
-                            contentDescription = "Bitte prüfen",
+                            contentDescription = stringResource(R.string.receipt_scan_check),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(end = 6.dp),
                         )
@@ -407,7 +412,7 @@ private fun PreviewContent(
                         modifier = Modifier.clickable { editingItem = item },
                     )
                     IconButton(onClick = { onRemoveItem(item) }) {
-                        Icon(Icons.Filled.Close, contentDescription = "Entfernen")
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.weekplan_remove_recipe))
                     }
                 }
             }
@@ -415,7 +420,7 @@ private fun PreviewContent(
             if (state.items.isEmpty()) {
                 item {
                     Text(
-                        "Keine Artikel erkannt. Du kannst den Bon trotzdem speichern.",
+                        stringResource(R.string.receipt_scan_no_items),
                         style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -431,11 +436,11 @@ private fun PreviewContent(
             OutlinedButton(
                 onClick = onRetry,
                 modifier = Modifier.weight(1f),
-            ) { Text("Neu scannen") }
+            ) { Text(stringResource(R.string.receipt_scan_rescan)) }
             Button(
                 onClick = onSave,
                 modifier = Modifier.weight(1f),
-            ) { Text("Speichern") }
+            ) { Text(stringResource(R.string.recipe_form_save)) }
         }
     }
 }
@@ -469,13 +474,13 @@ private fun EditItemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Position bearbeiten") },
+        title = { Text(stringResource(R.string.receipt_scan_edit_item)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Bezeichnung") },
+                    label = { Text(stringResource(R.string.receipt_scan_item_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -483,7 +488,7 @@ private fun EditItemDialog(
                 OutlinedTextField(
                     value = quantityText,
                     onValueChange = { quantityText = it; recomputeTotal() },
-                    label = { Text("Menge") },
+                    label = { Text(stringResource(R.string.recipe_form_quantity)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -492,7 +497,7 @@ private fun EditItemDialog(
                 OutlinedTextField(
                     value = unitPriceText,
                     onValueChange = { unitPriceText = it; recomputeTotal() },
-                    label = { Text("Einzelpreis (€)") },
+                    label = { Text(stringResource(R.string.receipt_scan_unit_price)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -501,7 +506,7 @@ private fun EditItemDialog(
                 OutlinedTextField(
                     value = totalText,
                     onValueChange = { totalText = it; autoTotal = false },
-                    label = { Text("Gesamtpreis (€)") },
+                    label = { Text(stringResource(R.string.receipt_scan_total_price)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -521,10 +526,10 @@ private fun EditItemDialog(
                         totalPrice = t,
                     )
                 )
-            }) { Text("Übernehmen") }
+            }) { Text(stringResource(R.string.weekplan_export_preview_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.recipe_delete_confirm_cancel)) }
         },
     )
 }
