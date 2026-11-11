@@ -10,7 +10,7 @@ SERVICE     = helga-sync
 DATA_PATH   = /home/maik/repo/homelab-data/helga
 # ─────────────────────────────────────────────────────────────────────────────
 
-.PHONY: deploy logs backup restore migrate status dev help
+.PHONY: deploy logs backup restore migrate status dev help testset
 
 help:
 	@echo "Verfügbare Befehle:"
@@ -21,6 +21,7 @@ help:
 	@echo "  make restore FILE=... – Backup einspielen"
 	@echo "  make migrate          – Helga-Daten importieren (einmalig)"
 	@echo "  make dev              – Lokal starten (kein SSH)"
+	@echo "  make testset DIR=...  – Bon-Modelle auf eigenen Fotos vergleichen (Fotos nie ins Repo)"
 
 deploy:
 	@echo "Deploy läuft über das Homelab-Repo:"
@@ -61,3 +62,9 @@ migrate:
 
 dev:
 	docker compose up --build
+
+testset:
+ifndef DIR
+	$(error DIR ist nicht gesetzt. Aufruf: make testset DIR=/pfad/zu/bon-fotos (Fotos liegen ausserhalb des Repos))
+endif
+	python3 scripts/receipt_testset.py --dir "$(DIR)"

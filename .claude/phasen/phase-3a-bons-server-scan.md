@@ -268,7 +268,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   vor 20 Minuten wird wieder aufgenommen, eines vor 1 Minute nicht; (4) Reparse eines bestätigten Bons setzt `review`
   und ersetzt die Positionen (alte `deleted = 1`); (5) Reparse ohne Foto → 409, unbekannt → 404; (6) Reparse-Misserfolg
   lässt Werte stehen, `parse_status == "queued"`. Akzeptanz: `VS` grün.
-- [ ] **S12 Testset-Skript** — Dateien: neu `$S/scripts/receipt_testset.py`, neu `$ST/test_receipt_testset.py`,
+- [x] **S12 Testset-Skript** — Dateien: neu `$S/scripts/receipt_testset.py`, neu `$ST/test_receipt_testset.py`,
   `$S/Makefile`. Aufruf: `python scripts/receipt_testset.py --dir <pfad> [--models a,b] [--out bericht.md]
   [--dry-run]`; `--dir` fällt auf `RECEIPT_TESTSET_DIR` zurück, fehlt beides → Fehlermeldung, Exit 2. Standard
   `--models`: `<_receipt_model()>,<AI_VISION_MODEL oder claude-sonnet-4-6>` (erstes = Kandidat, letztes = Referenz).
@@ -284,14 +284,14 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   Quoten, `--dry-run` auf einem `tmp_path` mit zwei leeren `.jpg` listet beide, fehlendes Verzeichnis → Exit 2.
   Akzeptanz: `VS` grün. Prüfliste (Nutzer, mit echtem Schlüssel): 10–20 Fotos außerhalb des Repos ablegen, Skript
   laufen lassen, Bericht ansehen; bei schwacher Quote `AI_RECEIPT_EFFORT=high` testen.
-- [ ] **S13 Skript für automatisch gelöschte Bons** — Dateien: neu `$S/scripts/restore_purged_receipts.py`, neu
+- [x] **S13 Skript für automatisch gelöschte Bons** — Dateien: neu `$S/scripts/restore_purged_receipts.py`, neu
   `$ST/test_restore_purged.py`. `--db <pfad>` (Pflicht), `--min-days 25`, `--apply`. Kandidaten: `deleted = 1 AND
   purchase_date > 0 AND updated_at - purchase_date >= min_days * 86400000`. Ohne `--apply` nur Liste (Datum, Markt,
   Summe, Tage). Mit `--apply`: `sync_state.seq + 1`, Bon und seine Positionen mit **gleichem** `updated_at` wie der
   Bon auf `deleted = 0`, `updated_at = now`, `server_seq = seq`. Test auf temporärer DB: auto-gelöschter Bon (40 Tage)
   wird gelistet und mit `--apply` wiederhergestellt samt Position; am Kauftag gelöschter Bon bleibt gelöscht; ohne
   `--apply` keine Änderung. Akzeptanz: `VS` grün.
-- [ ] **S14 Server-Doku** — Datei: `$S/CLAUDE.md`. Struktur-Abschnitt um die neuen Module; KI-Tabelle um die
+- [x] **S14 Server-Doku** — Datei: `$S/CLAUDE.md`. Struktur-Abschnitt um die neuen Module; KI-Tabelle um die
   Bon-Endpunkte (Verweis auf `$D/server-vertrag.md`); der Absatz „Hinweis Vision" wird ersetzt durch: Bon-Aufrufe
   nutzen `AI_RECEIPT_MODEL` (Standard `claude-haiku-5-5`), keine Sampling-Parameter, Qualität über
   `scripts/receipt_testset.py`; Abschnitt „Tests" mit dem `pip`-Befehl aus S0 und dem Hinweis auf `recipe-scrapers`.
@@ -626,3 +626,10 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 
 ### Notizen Umsetzung 3a
 - S8: `GET /api/receipts?to_day=…` lässt Bons ohne `purchase_day` durch (Vertrag: `purchase_day <= to_day` wörtlich, `'' <= '…'` ist wahr). Das gilt wie bei `from_day` bewusst; der Test hält es fest.
+
+### Prüflisten (Nutzer, nicht abgehakt)
+- **S12 Testset (mit echtem Schlüssel):** 10–20 Bon-Fotos außerhalb des Repos ablegen (optional je Foto `<name>.expected.json`),
+  `cd server && make testset DIR=/pfad/zu/fotos` laufen lassen, Bericht ansehen. Bei schwacher Quote `AI_RECEIPT_EFFORT=high` testen.
+  Voraussetzung: `AI_PROVIDER=anthropic`, `AI_API_KEY` gesetzt.
+- **S13 Wiederherstellung (vor der Umschaltung, auf dem Server):** `make backup`, dann
+  `python scripts/restore_purged_receipts.py --db data/recipes.db` (nur Liste), Ergebnis prüfen, erst dann `--apply`.
