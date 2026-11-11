@@ -40,7 +40,7 @@ Läuft Gradle in der Umgebung nicht, gilt der Schritt als **nicht verifiziert**:
 
 ### Block 0 — Basis
 - [x] **S0 Baseline** — `./gradlew :app:testDebugUnitTest` ausführen, Ergebnis (Anzahl Tests, grün/rot) oben im Abschnitt „Abschluss" notieren. Test: nein.
-- [ ] **S1 ApiProvider-Interface** — Dateien: `$B/data/remote/SyncApiFactory.kt`, `$B/di/NetworkModule.kt`. `interface ApiProvider { suspend fun api(): SyncApi; fun apiForOnboarding(serverUrl: String, apiKey: String): SyncApi }` anlegen (gleiche Datei wie die Factory), `SyncApiFactory` implementiert es, Hilt `@Binds` in `NetworkModule`. Nur Repositories/Services injizieren künftig `ApiProvider`. Akzeptanz: App kompiliert, bestehende Tests grün. Test: nein.
+- [x] **S1 ApiProvider-Interface** — Dateien: `$B/data/remote/SyncApiFactory.kt`, `$B/di/NetworkModule.kt`. `interface ApiProvider { suspend fun api(): SyncApi; fun apiForOnboarding(serverUrl: String, apiKey: String): SyncApi }` anlegen (gleiche Datei wie die Factory), `SyncApiFactory` implementiert es, Hilt `@Binds` in `NetworkModule`. Nur Repositories/Services injizieren künftig `ApiProvider`. Akzeptanz: App kompiliert, bestehende Tests grün. Test: nein.
 - [ ] **S2 UiState anlegen** — Datei neu: `$B/ui/common/UiState.kt`: `sealed class UiState<out T> { data object Loading; data class Success<T>(val data: T); data class Error(val message: String) }`. Akzeptanz: kompiliert, noch nirgends genutzt. Test: nein.
 
 ### Block A — Retrofit raus aus ViewModels (Befund 1, 2)

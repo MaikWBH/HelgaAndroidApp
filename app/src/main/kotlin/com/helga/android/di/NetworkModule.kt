@@ -1,6 +1,8 @@
 package com.helga.android.di
 
 import com.helga.android.BuildConfig
+import com.helga.android.data.remote.ApiProvider
+import com.helga.android.data.remote.SyncApiFactory
 import com.squareup.moshi.Moshi
 import dagger.Module
 import dagger.Provides
@@ -19,6 +21,11 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideMoshi(): Moshi = Moshi.Builder().build()
+
+    /** Bindet [ApiProvider] auf [SyncApiFactory] (ein `object` kann kein `@Binds`, daher `@Provides`). */
+    @Provides
+    @Singleton
+    fun provideApiProvider(factory: SyncApiFactory): ApiProvider = factory
 
     @Provides
     @Singleton
