@@ -483,4 +483,27 @@
     <string name="receipt_scan_item_name">Bezeichnung</string>
     <string name="receipt_scan_unit_price">Einzelpreis (€)</string>
     <string name="receipt_scan_total_price">Gesamtpreis (€)</string>
+
+    <!-- Phase 2: Kosten und Preise -->
+    <string name="cost_receipts_summary">%1$d Kassenbons</string>
+    <string name="cost_bon_one">%1$d Bon</string>
+    <string name="cost_bon_other">%1$d Bons</string>
+    <string name="cost_budget_title">Monatsbudget</string>
+    <string name="cost_budget_edit">Budget bearbeiten</string>
+    <string name="cost_budget_not_set">Noch kein Budget festgelegt. Tippe auf das Stift-Symbol, um ein gemeinsames Monatsbudget zu setzen.</string>
+    <string name="cost_budget_of">%1$s von %2$s</string>
+    <string name="cost_budget_over">⚠️ %1$s über dem Budget!</string>
+    <string name="cost_budget_warn">Achtung: nur noch %1$s übrig</string>
+    <string name="cost_budget_left">Noch %1$s übrig</string>
+    <string name="cost_budget_hint">Gemeinsames Budget pro Kalendermonat in Euro. Der Wert wird mit dem anderen Gerät synchronisiert. 0 oder leer = kein Budget.</string>
+    <string name="cost_budget_amount">Betrag (€)</string>
+    <string name="cost_budget_threshold">Warnschwelle: %1$d%% des Budgets</string>
+    <string name="price_buy_stores_one">%1$d× gekauft · %2$d Markt</string>
+    <string name="price_buy_stores_other">%1$d× gekauft · %2$d Märkte</string>
+    <string name="price_last">Zuletzt: %1$s</string>
+    <string name="price_cheapest">Günstigster: %1$s</string>
+    <string name="price_product_fallback">Produkt</string>
+    <string name="price_no_data">Keine Daten gefunden</string>
+    <string name="price_stat_min">Min</string>
+    <string name="price_stat_max">Max</string>
 </resources>

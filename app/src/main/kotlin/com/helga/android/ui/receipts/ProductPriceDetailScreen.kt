@@ -1,5 +1,8 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.R
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -46,16 +49,16 @@ fun ProductPriceDetailScreen(
     onBack: () -> Unit,
     viewModel: ProductPriceDetailViewModel = hiltViewModel(),
 ) {
-    val history = viewModel.history.collectAsState().value
-    val isLoading = viewModel.isLoading.collectAsState().value
+    val history = viewModel.history.collectAsStateWithLifecycle().value
+    val isLoading = viewModel.isLoading.collectAsStateWithLifecycle().value
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(history?.displayName ?: "Produkt") },
+                title = { Text(history?.displayName ?: stringResource(R.string.price_product_fallback)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.recipe_detail_back))
                     }
                 },
             )
@@ -70,7 +73,7 @@ fun ProductPriceDetailScreen(
             history == null -> Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
-            ) { Text("Keine Daten gefunden") }
+            ) { Text(stringResource(R.string.price_no_data)) }
 
             else -> ProductPriceContent(
                 history = history,
@@ -108,7 +111,7 @@ private fun ProductPriceContent(
         item {
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             Text(
-                "Kaufverlauf",
+                stringResource(R.string.product_prices_history_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -139,7 +142,7 @@ private fun PriceHeaderCard(
         Column {
             if (cheapestStore != null) {
                 Text(
-                    "Günstigster Markt",
+                    stringResource(R.string.product_prices_cheapest_store),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
@@ -156,8 +159,8 @@ private fun PriceHeaderCard(
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 PriceStat("Ø", formatCurrency(history.avgPrice))
-                PriceStat("Min", formatCurrency(history.minPrice))
-                PriceStat("Max", formatCurrency(history.maxPrice))
+                PriceStat(stringResource(R.string.price_stat_min), formatCurrency(history.minPrice))
+                PriceStat(stringResource(R.string.price_stat_max), formatCurrency(history.maxPrice))
             }
         }
     }
@@ -195,7 +198,7 @@ private fun PriceSparklineSection(
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            "Preisverlauf",
+            stringResource(R.string.product_prices_sparkline_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -258,7 +261,7 @@ private fun StoreComparisonSection(
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            "Marktvergleich",
+            stringResource(R.string.product_prices_store_comparison),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 12.dp),
@@ -321,7 +324,7 @@ private fun PricePointRow(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                "${point.storeName.ifBlank { "Unbekannter Markt" }} · ${formatQuantity(point.quantity)}× " +
+                "${point.storeName.ifBlank { stringResource(R.string.receipt_unknown_store) }} · ${formatQuantity(point.quantity)}× " +
                     "à ${formatCurrency(point.unitPrice)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

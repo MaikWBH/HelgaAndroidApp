@@ -301,7 +301,7 @@ Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
 - [x] **S17 `ReceiptScanScreen`** — Strings nach R-S (ca. 19 Stellen, Z.128–527; die führenden Leerzeichen in
   `"  Foto aufnehmen"`/`"  Aus Galerie wählen"` gehören nicht in den String, sondern als `Spacer(Modifier.width(8.dp))`
   davor); 1× `collectAsState()`. Akzeptanz wie S16.
-- [ ] **S18 `CostOverviewScreen` + `ProductPriceListScreen` + `ProductPriceDetailScreen`** — Strings nach R-S (ca. 12
+- [x] **S18 `CostOverviewScreen` + `ProductPriceListScreen` + `ProductPriceDetailScreen`** — Strings nach R-S (ca. 12
   Stellen), 13× `collectAsState()`. Akzeptanz wie S16; zusätzlich `grep -rn 'collectAsState()' $B` leer.
 
 ### Block E — Strings im Rest der App (Befunde 6, 7)

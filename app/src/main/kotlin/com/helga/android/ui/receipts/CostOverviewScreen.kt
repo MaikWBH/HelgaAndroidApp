@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,15 +58,15 @@ fun CostOverviewScreen(
     onBack: () -> Unit,
     viewModel: CostOverviewViewModel = hiltViewModel(),
 ) {
-    val period = viewModel.period.collectAsState().value
-    val costByStore = viewModel.costByStore.collectAsState().value
-    val costByDate = viewModel.costByDate.collectAsState().value
-    val totalCost = viewModel.totalCost.collectAsState().value
-    val receiptCount = viewModel.receiptCount.collectAsState().value
-    val isLoading = viewModel.isLoading.collectAsState().value
+    val period = viewModel.period.collectAsStateWithLifecycle().value
+    val costByStore = viewModel.costByStore.collectAsStateWithLifecycle().value
+    val costByDate = viewModel.costByDate.collectAsStateWithLifecycle().value
+    val totalCost = viewModel.totalCost.collectAsStateWithLifecycle().value
+    val receiptCount = viewModel.receiptCount.collectAsStateWithLifecycle().value
+    val isLoading = viewModel.isLoading.collectAsStateWithLifecycle().value
     val maxCost = viewModel.getMaxCost()
-    val budget = viewModel.budget.collectAsState().value
-    val monthSpending = viewModel.monthSpending.collectAsState().value
+    val budget = viewModel.budget.collectAsStateWithLifecycle().value
+    val monthSpending = viewModel.monthSpending.collectAsStateWithLifecycle().value
 
     var showBudgetDialog by remember { mutableStateOf(false) }
 
@@ -133,9 +134,9 @@ fun CostOverviewScreen(
                         text = {
                             Text(
                                 when (tab) {
-                                    TimePeriod.WEEK -> "Woche"
-                                    TimePeriod.MONTH -> "Monat"
-                                    TimePeriod.ALL -> "Alle"
+                                    TimePeriod.WEEK -> stringResource(R.string.stats_period_week)
+                                    TimePeriod.MONTH -> stringResource(R.string.stats_period_month)
+                                    TimePeriod.ALL -> stringResource(R.string.recipes_filter_all)
                                 }
                             )
                         }
@@ -157,7 +158,7 @@ fun CostOverviewScreen(
                 if (costByStore.isNotEmpty()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "Ausgaben pro Markt",
+                            stringResource(R.string.cost_overview_by_store),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 12.dp)
@@ -165,7 +166,7 @@ fun CostOverviewScreen(
 
                         costByStore.forEach { store ->
                             CostBarItem(
-                                label = store.storeName.ifBlank { store.storeId.ifBlank { "Unbekannter Markt" } },
+                                label = store.storeName.ifBlank { store.storeId.ifBlank { stringResource(R.string.receipt_unknown_store) } },
                                 amount = viewModel.formatCurrency(store.totalAmount),
                                 progress = store.totalAmount / maxCost,
                                 receiptCount = store.receiptCount,
@@ -179,7 +180,7 @@ fun CostOverviewScreen(
                 if (costByDate.isNotEmpty()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "Verlauf nach Datum",
+                            stringResource(R.string.cost_overview_by_date),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 12.dp)
@@ -205,7 +206,7 @@ fun CostOverviewScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text("Keine Kassenbons vorhanden")
+                        Text(stringResource(R.string.cost_overview_empty))
                     }
                 }
             }
@@ -230,7 +231,7 @@ private fun CostSummaryCard(
     ) {
         Column {
             Text(
-                "Gesamtausgaben",
+                stringResource(R.string.cost_overview_total),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -242,7 +243,7 @@ private fun CostSummaryCard(
                 modifier = Modifier.padding(top = 4.dp)
             )
             Text(
-                "$receiptCount Kassenbons",
+                stringResource(R.string.cost_receipts_summary, receiptCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.padding(top = 8.dp)
@@ -275,7 +276,7 @@ private fun CostBarItem(
                     maxLines = 1
                 )
                 Text(
-                    "$receiptCount Bon${if (receiptCount != 1) "s" else ""}",
+                    if (receiptCount != 1) stringResource(R.string.cost_bon_other, receiptCount) else stringResource(R.string.cost_bon_one, receiptCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -343,7 +344,7 @@ private fun BudgetCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Monatsbudget",
+                    stringResource(R.string.cost_budget_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = onContainer,
@@ -351,7 +352,7 @@ private fun BudgetCard(
                 IconButton(onClick = onEdit) {
                     Icon(
                         Icons.Filled.Edit,
-                        contentDescription = "Budget bearbeiten",
+                        contentDescription = stringResource(R.string.cost_budget_edit),
                         tint = onContainer,
                     )
                 }
@@ -359,7 +360,7 @@ private fun BudgetCard(
 
             if (notSet) {
                 Text(
-                    "Noch kein Budget festgelegt. Tippe auf das Stift-Symbol, um ein gemeinsames Monatsbudget zu setzen.",
+                    stringResource(R.string.cost_budget_not_set),
                     style = MaterialTheme.typography.bodyMedium,
                     color = onContainer,
                     modifier = Modifier.padding(top = 4.dp),
@@ -368,7 +369,7 @@ private fun BudgetCard(
             }
 
             Text(
-                "${formatCurrency(monthSpending)} von ${formatCurrency(budgetAmount)}",
+                stringResource(R.string.cost_budget_of, formatCurrency(monthSpending), formatCurrency(budgetAmount)),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = onContainer,
@@ -387,9 +388,9 @@ private fun BudgetCard(
 
             val remaining = budgetAmount - monthSpending
             val statusText = when {
-                isOver -> "⚠️ ${formatCurrency(-remaining)} über dem Budget!"
-                isWarn -> "Achtung: nur noch ${formatCurrency(remaining)} übrig"
-                else -> "Noch ${formatCurrency(remaining)} übrig"
+                isOver -> stringResource(R.string.cost_budget_over, formatCurrency(-remaining))
+                isWarn -> stringResource(R.string.cost_budget_warn, formatCurrency(remaining))
+                else -> stringResource(R.string.cost_budget_left, formatCurrency(remaining))
             }
             Text(
                 statusText,
@@ -422,11 +423,11 @@ private fun BudgetEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Monatsbudget") },
+        title = { Text(stringResource(R.string.cost_budget_title)) },
         text = {
             Column {
                 Text(
-                    "Gemeinsames Budget pro Kalendermonat in Euro. Der Wert wird mit dem anderen Gerät synchronisiert. 0 oder leer = kein Budget.",
+                    stringResource(R.string.cost_budget_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -434,7 +435,7 @@ private fun BudgetEditDialog(
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { Text("Betrag (€)") },
+                    label = { Text(stringResource(R.string.cost_budget_amount)) },
                     singleLine = true,
                     isError = !valid,
                     keyboardOptions = KeyboardOptions(
@@ -445,7 +446,7 @@ private fun BudgetEditDialog(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "Warnschwelle: ${(warnThreshold * 100).toInt()}% des Budgets",
+                    stringResource(R.string.cost_budget_threshold, (warnThreshold * 100).toInt()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -462,10 +463,10 @@ private fun BudgetEditDialog(
             TextButton(
                 onClick = { onConfirm(if (text.isBlank()) 0.0 else (parsed ?: 0.0), warnThreshold.toDouble()) },
                 enabled = valid,
-            ) { Text("Speichern") }
+            ) { Text(stringResource(R.string.recipe_form_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.recipe_delete_confirm_cancel)) }
         },
     )
 }
