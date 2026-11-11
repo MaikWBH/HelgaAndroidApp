@@ -554,4 +554,12 @@
     <string name="url_import_placeholder">https://www.chefkoch.de/rezepte/...</string>
     <string name="settings_emoji">Emoji</string>
     <string name="allergen_banner_title">⚠️ Allergene gefunden</string>
+    <plurals name="receipt_item_count">
+        <item quantity="one">%1$d Artikel</item>
+        <item quantity="other">%1$d Artikel</item>
+    </plurals>
+    <plurals name="recipes_unclassified_count">
+        <item quantity="one">%1$d Rezept ist noch nicht kategorisiert.</item>
+        <item quantity="other">%1$d Rezepte sind noch nicht kategorisiert.</item>
+    </plurals>
 </resources>

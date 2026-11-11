@@ -315,7 +315,7 @@ Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
   `$U/settings/SettingsScreen.kt:927` („Emoji"), `$U/components/AllergenWarningBanner.kt:37`,
   `$U/components/BarcodeScanner.kt:91` (→ vorhandenen Schließen-String suchen, sonst `common_close` „Schließen").
   Akzeptanz: `G-S` über `$U` (ohne `widget/`) zeigt nur noch erlaubte Literale und die zwei S22-Stellen.
-- [ ] **S22 Plurals** — Dateien: `strings.xml`, `ReceiptDetailScreen.kt` (≈ Z.202), `RecipeListScreen.kt` (≈ Z.557).
+- [x] **S22 Plurals** — Dateien: `strings.xml`, `ReceiptDetailScreen.kt` (≈ Z.202), `RecipeListScreen.kt` (≈ Z.557).
   `<plurals name="receipt_item_count">` one „%1$d Artikel" / other „%1$d Artikel";
   `<plurals name="recipes_unclassified_count">` one „%1$d Rezept ist noch nicht kategorisiert." / other
   „%1$d Rezepte sind noch nicht kategorisiert."; Aufruf über `pluralStringResource(id, count, count)`. Akzeptanz:

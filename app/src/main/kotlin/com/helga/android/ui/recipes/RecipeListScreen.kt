@@ -550,7 +550,7 @@ private fun BulkClassifyDialog(
         title = { Text(stringResource(R.string.recipes_classify_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text("${unclassifiedRecipes.size} Rezepte sind noch nicht kategorisiert.",
+                Text(androidx.compose.ui.res.pluralStringResource(R.plurals.recipes_unclassified_count, unclassifiedRecipes.size, unclassifiedRecipes.size),
                     style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(12.dp))
                 if (isRunning) {

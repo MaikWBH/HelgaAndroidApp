@@ -203,7 +203,7 @@ private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("$itemCount Artikel", style = MaterialTheme.typography.bodyLarge)
+            Text(androidx.compose.ui.res.pluralStringResource(R.plurals.receipt_item_count, itemCount, itemCount), style = MaterialTheme.typography.bodyLarge)
             Text(
                 stringResource(R.string.receipt_sum, formatEuro(receipt.totalAmount)),
                 style = MaterialTheme.typography.titleMedium,
