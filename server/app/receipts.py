@@ -1,10 +1,22 @@
 """Speicherschicht für Bons (Phase 3a). Reine DB-Logik: jede Funktion bekommt eine offene
 `db`-Verbindung (aiosqlite, row_factory=Row) und committet nicht selbst."""
+import base64
+import logging
+import re
 import uuid
+from pathlib import Path
 from typing import Optional
 
-from . import categories, receipt_text
+from fastapi import HTTPException, UploadFile
+
+from . import ai, categories, receipt_text, settings
 from .db import now_ms
+from .models import ReceiptIn, ReceiptItemIn
+
+logger = logging.getLogger(__name__)
+
+RECEIPT_ID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
+IMAGE_EXTS = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
 
 LEARNING_STATUSES = ("confirmed", "reconciled")
 
@@ -113,11 +125,10 @@ async def put_receipt(db, payload: dict) -> tuple[bool, dict]:
     # Positionen bereinigen
     clean_items = []
     for index, item in enumerate(items):
-        item = dict(item)
+        item = ReceiptItemIn(**{"position": index, **dict(item)}).model_dump()  # fehlende Felder → Standardwerte
         item["receipt_id"] = receipt_id
         item["category"] = categories.coerce(item.get("category"))
         item["updated_at"] = item.get("updated_at") or updated_at
-        item.setdefault("position", index)
         clean_items.append(item)
 
     deposit_total = round(sum(
@@ -313,3 +324,153 @@ async def delete_lexicon_entry(db, entry_id: str) -> None:
     await db.execute(
         "UPDATE receipt_lexicon SET deleted = 1, updated_at = ? WHERE id = ?", (now_ms(), entry_id)
     )
+
+
+# ── Foto, Scan, Auslesen (Vertrag Abschnitt 3.1) ───────────────────────────────────────
+
+async def save_receipt_image(receipt_id: str, upload: UploadFile) -> str:
+    """Speichert das Foto als `receipt_<id><ext>` in IMAGES_DIR und gibt den Dateinamen zurück."""
+    if not RECEIPT_ID_RE.match(receipt_id or ""):
+        raise HTTPException(status_code=400, detail="Ungültige Bon-ID")
+    ext = Path(upload.filename or "").suffix.lower()
+    if ext not in IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail=f"Dateityp nicht erlaubt: {ext}")
+    dest = settings.IMAGES_DIR / f"receipt_{receipt_id}{ext}"
+    total = 0
+    try:
+        with dest.open("wb") as out:
+            while True:
+                chunk = await upload.read(64 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > settings.MAX_RECEIPT_IMAGE_BYTES:
+                    raise HTTPException(status_code=413, detail="Bild zu groß")
+                out.write(chunk)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+    return dest.name
+
+
+def _has_content(parsed: dict) -> bool:
+    return bool(parsed.get("items")) or (parsed.get("total_amount") or 0) > 0
+
+
+def _item_payloads(parsed_items: list[dict]) -> list[dict]:
+    return [
+        {
+            "id": str(uuid.uuid4()),
+            "position": index,
+            "raw_text": it["raw_text"],
+            "name": it["name"],
+            "quantity": it["quantity"],
+            "unit": it["unit"],
+            "unit_price": it["unit_price"],
+            "total_price": it["total_price"],
+            "discount": it["discount"],
+            "is_deposit": it["is_deposit"],
+            "category": it["category"],
+            "off_barcode": "",
+            "confidence": it["confidence"],
+        }
+        for index, it in enumerate(parsed_items)
+    ]
+
+
+async def _set_parse_state(db, receipt_id: str, **columns) -> None:
+    names = ", ".join(f"{name} = ?" for name in columns)
+    await db.execute(f"UPDATE receipts SET {names} WHERE id = ?", [*columns.values(), receipt_id])
+
+
+async def _attempts(db, receipt_id: str) -> int:
+    async with db.execute("SELECT parse_attempts FROM receipts WHERE id = ?", (receipt_id,)) as cur:
+        row = await cur.fetchone()
+    return row[0] if row else 0
+
+
+async def apply_parse(db, receipt_id: str, parsed: dict, shopping_list_id: str,
+                      captured_at: int, image_name: str = "") -> dict:
+    """Schreibt ein erfolgreiches KI-Ergebnis (Status review, Positionen ersetzt, angereichert)."""
+    existing = await _receipt_row(db, receipt_id)
+    updated_at = max(now_ms(), (existing["updated_at"] if existing else 0) + 1)
+    items = _item_payloads(parsed["items"])
+    receipt = {
+        "id": receipt_id,
+        "store_id": existing["store_id"] if existing else "",
+        "store_name": parsed["store_name"],
+        "store_address": parsed["store_address"],
+        "shopping_list_id": shopping_list_id or (existing["shopping_list_id"] if existing else ""),
+        "purchase_date": parsed["purchase_date"] or captured_at or now_ms(),
+        "purchase_day": parsed["purchase_day"],
+        "purchase_time": parsed["purchase_time"],
+        "total_amount": parsed["total_amount"],
+        "discount_total": parsed["discount_total"],
+        "currency": "EUR",
+        "status": "review",
+        "source": "ai",
+        "updated_at": updated_at,
+        "deleted": 0,
+    }
+    await enrich(db, receipt, items)
+    receipt["items"] = items
+    await put_receipt(db, receipt)
+    await _set_parse_state(
+        db, receipt_id, confidence=parsed["confidence"], parse_status="done",
+        parse_attempts=await _attempts(db, receipt_id) + 1,
+        parse_model=parsed.get("model", ""), parse_claimed_at=0,
+        **({"image_path": image_name} if image_name else {}),
+    )
+    return await get_receipt(db, receipt_id, include_deleted=True)
+
+
+async def mark_failed_attempt(db, receipt_id: str, image_name: str, shopping_list_id: str,
+                              captured_at: int, preliminary: Optional[ReceiptIn]) -> dict:
+    """KI hat nicht geliefert: Bon vorläufig anlegen bzw. nur die Warteschlange vermerken."""
+    existing = await _receipt_row(db, receipt_id)
+    if existing is None:
+        now = now_ms()
+        if preliminary is not None:
+            payload = preliminary.model_dump()
+            payload.update({"id": receipt_id, "status": "provisional", "source": "on_device",
+                            "updated_at": now, "deleted": 0})
+            if shopping_list_id:
+                payload["shopping_list_id"] = shopping_list_id
+        else:
+            payload = {"id": receipt_id, "shopping_list_id": shopping_list_id,
+                       "purchase_date": captured_at or now, "status": "provisional",
+                       "source": "", "updated_at": now, "items": []}
+        await put_receipt(db, payload)
+    attempts = await _attempts(db, receipt_id)
+    await _set_parse_state(db, receipt_id, image_path=image_name, parse_status="queued",
+                           parse_attempts=attempts + 1, parse_claimed_at=0)
+    return await get_receipt(db, receipt_id, include_deleted=True)
+
+
+async def parse_and_store(db, receipt_id: str, image_name: str, shopping_list_id: str,
+                          captured_at: int, preliminary: Optional[ReceiptIn]) -> tuple[bool, dict]:
+    """Liest das gespeicherte Foto mit der KI aus (Scan Schritt 4–5)."""
+    try:
+        data = (settings.IMAGES_DIR / image_name).read_bytes()
+        parsed = await ai.parse_receipt(
+            base64.b64encode(data).decode("ascii"),
+            IMAGE_EXTS.get(Path(image_name).suffix.lower(), "image/jpeg"),
+        )
+    except Exception as exc:  # KI-/Netzfehler: Bon bleibt vorläufig in der Warteschlange
+        logger.warning("Bon-Auslesen fehlgeschlagen (%s): %s", receipt_id, exc)
+        parsed = None
+    if parsed is not None and _has_content(parsed):
+        return True, await apply_parse(db, receipt_id, parsed, shopping_list_id, captured_at,
+                                       image_name)
+    return False, await mark_failed_attempt(db, receipt_id, image_name, shopping_list_id,
+                                            captured_at, preliminary)
+
+
+async def set_image_path(db, receipt_id: str, image_name: str) -> bool:
+    """Setzt nur `image_path` (Bild-Endpunkt); bumpt `server_seq`, damit andere Geräte es sehen."""
+    if await _receipt_row(db, receipt_id) is None:
+        return False
+    seq = await next_seq(db)
+    await db.execute("UPDATE receipts SET image_path = ?, server_seq = ? WHERE id = ?",
+                     (image_name, seq, receipt_id))
+    return True

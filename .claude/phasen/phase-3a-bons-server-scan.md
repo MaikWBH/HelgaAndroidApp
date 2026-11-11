@@ -248,7 +248,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   "REWE Markt"` bei vorhandenem Markt `REWE` → `store_id` gesetzt; (8) Lexikon-Liste sortiert, Löschen blendet aus,
   erneutes Lernen reaktiviert (`deleted = 0`); (9) `GET /api/receipts/lexicon` wird nicht als `receipt_id` behandelt.
   Akzeptanz: `VS` grün.
-- [ ] **S10 Scan- und Bild-Endpunkt** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, neu
+- [x] **S10 Scan- und Bild-Endpunkt** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, neu
   `$ST/test_receipt_scan.py`. `write_parsed`, `save_receipt_image(receipt_id, upload) -> str`, Routen `POST /scan`
   und `POST /{receipt_id}/image` nach Vertrag 3.1 (Scan-Schritte 1–5, Bild). Die Datei wird in 64-KiB-Stücken
   gelesen und bei Überschreiten von `settings.MAX_RECEIPT_IMAGE_BYTES` mit 413 abgebrochen (Teil-Datei löschen). Test
