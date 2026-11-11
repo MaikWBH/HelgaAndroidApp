@@ -89,3 +89,25 @@ Ziel: `WeekplanViewModel.kt` unter 500 Zeilen, Verhalten unverändert. `computeW
 
 ### Notizen Stufe B (Block A–E)
 - S8 Fund-Liste (`grep -rn "SyncApiFactory\|ApiProvider\|data.remote" ui`, ohne dto): keine Factory/Provider mehr in `ui/`. Verbleibend: `ui/ai/AiGenerateViewModel.kt` und `ui/ai/AiRemixViewModel.kt` importieren `data.remote.SseClient` (SSE-Streaming, kein Factory/Provider; nicht in der S19-Verbotsliste, daher nicht Teil dieser Phase). `ConnectionResult`/`ServerConnectionChecker` in `OnboardingViewModel`/`SettingsViewModel` sind gewollte Ergebnis-/Service-Typen aus S3.
+
+### Abschluss Stufe B (Stand: Stopp bei S16)
+- Baseline S0: 115 Tests, 0 Fehler, BUILD SUCCESSFUL (vor Stufe B, bereits ausgeführt).
+- Verifikation nach jedem abgeschlossenen Schritt grün; zuletzt nach S15: 142 Tests, 0 Fehler, BUILD SUCCESSFUL (`./gradlew :app:testDebugUnitTest :app:compileDebugKotlin`).
+- Erledigt: S0–S15 (Block 0, A, B, C und S15 aus D). Gepusht nach Block 0, A, B, C (Branch `ccr-c53a7201-5hd57f`), S15 liegt committed, Stand zum Push siehe Git-Log.
+- **STOPP bei S16 (nicht umgesetzt):** `data/weekplan/WeekplanGenerator.kt` braucht `filterCandidateRecipes`, `WeekplanGenerateStatus` und `parseAllergenJson` (letztere in `ui/weekplan/WeekplanScreen.kt:1181`). Eine Datenschicht, die aus `ui/` importiert, widerspricht der Schichtung in CLAUDE.md. Der Plan legt nicht fest, wie das aufzulösen ist (Helfer verschieben oder Ergebnistyp neu definieren). Entscheidung nötig, bevor S16 weitergeht.
+- Nicht umgesetzt wegen des Stopps: S16, S17, S18, S19 (ArchitectureRulesTest), S20 (Guideline, Feature-Index, Bereichs-`plan.md`).
+- `WeekplanViewModel.kt` aktuell: 1019 Zeilen (Ziel < 500, noch nicht erreicht).
+
+Abweichungen und Auffälligkeiten (Stufe B):
+- S1: Plan verlangt `@Binds` in `NetworkModule`. `NetworkModule` ist ein `object`, und `@Binds` braucht ein abstraktes Modul. Umgesetzt als `@Provides fun provideApiProvider(factory: SyncApiFactory): ApiProvider = factory` in `di/NetworkModule.kt`.
+- S3: `HttpError(code, detail)` braucht `extractErrorDetail`; dafür neu `data/remote/ApiErrorMapping.kt` (Top-Level), in S5 von der privaten Kopie in `UrlImportViewModel` übernommen.
+- S4: Plan-Namen teils abweichend. `calcNutrition` heißt im Code `calculateNutritionWithAi`. `classifyRecipeAsync` steht in `UrlImportViewModel` (S5), nicht in `RecipeListViewModel`; dort heißt die Funktion `classifyBatch`.
+- S5: `ImportOutcome` (Success/Error) ist Plan-Name ohne Form; Form analog zum bestehenden `ImportStatus`. `classifyRecipeAsync` nutzt `AiRepository.classifyRecipe`.
+- S6: Verhaltensänderung: fehlende Server-Konfiguration wirft nicht mehr vor der Schleife, sondern zählt pro Rezept als fehlgeschlagen (vorher blieb `isRunning` bei dieser Ausnahme stehen).
+- S7: Verhaltensänderung: `WeekplanViewModel.suggestItems` bekommt den 1,5-s-Timeout aus `ShoppingRepository.suggestItems` (vorher ohne Timeout), weil der Plan beide Aufrufer auf dieselbe Methode legt.
+- S8 (Fund-Liste): `ui/ai/AiGenerateViewModel.kt` und `ui/ai/AiRemixViewModel.kt` importieren `data.remote.SseClient`. Nicht Teil der S19-Regel; zur Entscheidung offen.
+- S9: `RecipeRepository.findRecipe` ist ein Duplikat von `findById` (Plan-Name übernommen).
+- S13: Export-Abhängigkeiten (`weekplanDao`, `recipeDao`) blieben bis S14 in der VM, wie geplant.
+- S14: `ExportWeekToShoppingListUseCase` umgesetzt, Aufrufer in `ShoppingListScreen.kt:362`.
+- Lint: ungenutzte Imports in den geänderten Dateien entfernt (Stichprobe mit Namensprüfung, Build grün).
+
