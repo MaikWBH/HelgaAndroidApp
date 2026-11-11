@@ -10,6 +10,8 @@ import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.preferences.AppPreferences
+import com.helga.android.data.remote.ConnectionResult
+import com.helga.android.data.remote.ServerConnectionChecker
 import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.remote.dto.AiNutritionRequest
@@ -33,9 +35,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import retrofit2.HttpException
 import timber.log.Timber
-import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -43,6 +43,7 @@ class SettingsViewModel @Inject constructor(
     private val preferences: AppPreferences,
     private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
+    private val connectionChecker: ServerConnectionChecker,
     private val shoppingRepository: ShoppingRepository,
     private val recipeRepository: RecipeRepository,
     private val quickEmojiDao: QuickEmojiDao,
@@ -169,28 +170,13 @@ class SettingsViewModel @Inject constructor(
         }
         _state.update { it.copy(validation = SettingsValidation.Testing) }
         viewModelScope.launch {
-            try {
-                val api = apiFactory.apiForOnboarding(url, key)
-                api.health()
-                preferences.saveConnection(url, key)
-                syncScheduler.schedulePeriodic()
-                syncScheduler.triggerOneShot()
-                _state.update { it.copy(validation = SettingsValidation.Success) }
-            } catch (e: HttpException) {
-                Timber.w(e, "Settings-Healthcheck HTTP-Fehler")
-                _state.update {
-                    it.copy(
-                        validation = if (e.code() == 401 || e.code() == 403)
-                            SettingsValidation.Unauthorized else SettingsValidation.Unreachable
-                    )
-                }
-            } catch (e: IOException) {
-                Timber.w(e, "Settings-Healthcheck offline")
-                _state.update { it.copy(validation = SettingsValidation.Unreachable) }
-            } catch (e: Exception) {
-                Timber.e(e, "Settings-Healthcheck unbekannter Fehler")
-                _state.update { it.copy(validation = SettingsValidation.Unreachable) }
+            val mapped = when (val result = connectionChecker.test(url, key)) {
+                is ConnectionResult.Success -> SettingsValidation.Success
+                is ConnectionResult.HttpError -> if (result.code == 401 || result.code == 403)
+                    SettingsValidation.Unauthorized else SettingsValidation.Unreachable
+                is ConnectionResult.Unreachable, is ConnectionResult.Other -> SettingsValidation.Unreachable
             }
+            _state.update { it.copy(validation = mapped) }
         }
     }
 
