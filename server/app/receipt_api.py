@@ -7,7 +7,7 @@ from . import receipts
 from .auth import require_auth
 from .db import get_db
 from .models import (
-    ReceiptIn, ReceiptListResponse, ReceiptOut, ReceiptPutResponse,
+    LexiconListResponse, ReceiptIn, ReceiptListResponse, ReceiptOut, ReceiptPutResponse,
 )
 
 router = APIRouter(prefix="/api/receipts", dependencies=[Depends(require_auth)])
@@ -28,7 +28,22 @@ async def list_receipts(
 
 
 # ── feste Pfade (/scan, /lexicon, /aggregates) stehen VOR /{receipt_id} ─────────
-# (werden in den folgenden Schritten ergänzt)
+
+@router.get("/lexicon", response_model=LexiconListResponse)
+async def get_lexicon(store_key: Optional[str] = Query(default=None)):
+    async with get_db() as db:
+        entries = await receipts.list_lexicon(db, store_key)
+    return LexiconListResponse(entries=entries)
+
+
+@router.delete("/lexicon/{entry_id}")
+async def delete_lexicon_entry(entry_id: str):
+    async with get_db() as db:
+        await receipts.delete_lexicon_entry(db, entry_id)
+        await db.commit()
+    return {"ok": True}
+
+# (weitere feste Pfade folgen in den nächsten Schritten, jeweils vor /{receipt_id})
 
 
 @router.get("/{receipt_id}", response_model=ReceiptOut)

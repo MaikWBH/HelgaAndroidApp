@@ -1,9 +1,12 @@
 """Speicherschicht für Bons (Phase 3a). Reine DB-Logik: jede Funktion bekommt eine offene
 `db`-Verbindung (aiosqlite, row_factory=Row) und committet nicht selbst."""
+import uuid
 from typing import Optional
 
 from . import categories, receipt_text
 from .db import now_ms
+
+LEARNING_STATUSES = ("confirmed", "reconciled")
 
 RECEIPT_COLS = [
     "id", "store_id", "store_name", "store_address", "shopping_list_id", "purchase_date",
@@ -105,6 +108,7 @@ async def put_receipt(db, payload: dict) -> tuple[bool, dict]:
     seq = await next_seq(db)
     updated_at = payload["updated_at"]
     items = payload.get("items") or []
+    before_items = {it["id"]: it for it in await _items_for(db, receipt_id)} if existing else {}
 
     # Positionen bereinigen
     clean_items = []
@@ -184,6 +188,9 @@ async def put_receipt(db, payload: dict) -> tuple[bool, dict]:
             (updated_at, seq, item_id),
         )
 
+    if payload.get("status") in LEARNING_STATUSES and not payload.get("deleted"):
+        await learn(db, before_items, {**payload, **fields}, clean_items)
+
     return True, await get_receipt(db, receipt_id, include_deleted=True)
 
 
@@ -201,4 +208,108 @@ async def delete_receipt(db, receipt_id: str, updated_at: int) -> None:
     await db.execute(
         "UPDATE receipt_items SET deleted = 1, updated_at = ?, server_seq = ? WHERE receipt_id = ?",
         (stamp, seq, receipt_id),
+    )
+
+
+# ── Anreichern und Lernen (Vertrag Abschnitt 4) ────────────────────────────────────────
+
+async def enrich(db, receipt: dict, items: list[dict]) -> None:
+    """Reichert frisch ausgelesene Positionen an (Markt, Lexikon, Kategorie). Verändert die Argumente."""
+    if not receipt.get("store_id") and receipt.get("store_name"):
+        match = receipt_text.match_store(receipt["store_name"], await _known_stores(db))
+        if match:
+            receipt["store_id"] = match["id"]
+    key_store = receipt_text.store_key(receipt.get("store_id", ""), receipt.get("store_name", ""))
+
+    for item in items:
+        if item.get("is_deposit"):
+            item["category"] = "pfand"
+            continue
+        raw_key = receipt_text.normalize_item_key(item.get("raw_text"))
+        if key_store and raw_key:
+            async with db.execute(
+                "SELECT id, name, category, off_barcode FROM receipt_lexicon "
+                "WHERE store_key = ? AND raw_key = ? AND deleted = 0",
+                (key_store, raw_key),
+            ) as cur:
+                entry = await cur.fetchone()
+            if entry:
+                if entry[1]:
+                    item["name"] = entry[1]
+                if entry[2]:
+                    item["category"] = entry[2]
+                if entry[3]:
+                    item["off_barcode"] = entry[3]
+                await db.execute(
+                    "UPDATE receipt_lexicon SET hits = hits + 1 WHERE id = ?", (entry[0],)
+                )
+        if not item.get("category"):
+            product_key = receipt_text.normalize_item_key(item.get("name"))
+            if product_key:
+                async with db.execute(
+                    "SELECT category FROM product_categories WHERE product_key = ?",
+                    (product_key,),
+                ) as cur:
+                    row = await cur.fetchone()
+                if row and row[0]:
+                    item["category"] = row[0]
+
+
+async def learn(db, before_items: dict, receipt: dict, items: list[dict]) -> None:
+    """Lernt aus Korrekturen eines bestätigten Bons: Lexikon je Markt und Kategorie je Produkt."""
+    key_store = receipt_text.store_key(receipt.get("store_id", ""), receipt.get("store_name", ""))
+    now = now_ms()
+    for item in items:
+        before = before_items.get(item["id"])
+        if before is None or item.get("is_deposit") or item.get("deleted"):
+            continue
+        raw_text = (item.get("raw_text") or "").strip()
+        if not raw_text:
+            continue
+        changed = any(
+            (item.get(field) or "") != (before.get(field) or "")
+            for field in ("name", "category", "off_barcode")
+        )
+        if not changed:
+            continue
+        if key_store:
+            await db.execute(
+                "INSERT INTO receipt_lexicon (id, store_key, store_name, raw_key, raw_text, name, "
+                "category, off_barcode, hits, updated_at, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 0) "
+                "ON CONFLICT(store_key, raw_key) DO UPDATE SET store_name = excluded.store_name, "
+                "raw_text = excluded.raw_text, name = excluded.name, category = excluded.category, "
+                "off_barcode = excluded.off_barcode, hits = receipt_lexicon.hits + 1, "
+                "updated_at = excluded.updated_at, deleted = 0",
+                (str(uuid.uuid4()), key_store, receipt.get("store_name", ""),
+                 receipt_text.normalize_item_key(raw_text), raw_text, item.get("name", ""),
+                 item.get("category", ""), item.get("off_barcode", ""), now),
+            )
+        product_key = receipt_text.normalize_item_key(item.get("name"))
+        if item.get("category") and product_key:
+            await db.execute(
+                "INSERT INTO product_categories (product_key, product_name, category, source, updated_at) "
+                "VALUES (?, ?, ?, 'user', ?) ON CONFLICT(product_key) DO UPDATE SET "
+                "product_name = excluded.product_name, category = excluded.category, "
+                "source = 'user', updated_at = excluded.updated_at",
+                (product_key, item.get("name", ""), item["category"], now),
+            )
+
+
+async def list_lexicon(db, store_key: Optional[str] = None) -> list[dict]:
+    where = "deleted = 0"
+    params: list = []
+    if store_key:
+        where += " AND store_key = ?"
+        params.append(store_key)
+    cols = ["id", "store_key", "store_name", "raw_text", "name", "category", "off_barcode", "hits", "updated_at"]
+    async with db.execute(
+        f"SELECT {', '.join(cols)} FROM receipt_lexicon WHERE {where} ORDER BY store_name, raw_text",
+        params,
+    ) as cur:
+        return [dict(zip(cols, row)) for row in await cur.fetchall()]
+
+
+async def delete_lexicon_entry(db, entry_id: str) -> None:
+    await db.execute(
+        "UPDATE receipt_lexicon SET deleted = 1, updated_at = ? WHERE id = ?", (now_ms(), entry_id)
     )

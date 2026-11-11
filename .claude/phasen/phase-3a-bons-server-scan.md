@@ -236,7 +236,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `include_deleted`; `since_seq` liefert nur Änderungen und nach einer Positionsänderung den Bon erneut; `from_day`/
   `to_day` filtern inklusiv und lassen Bons ohne `purchase_day` bei `from_day` durch; DELETE unbekannter ID → 200;
   ungültige Kategorie wird `""`; `POST /api/receipts/reconcile` (Attrappe) antwortet weiter 200. Akzeptanz: `VS` grün.
-- [ ] **S9 Markt-Erkennung, Lexikon, Lernen** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, `$SA/models.py`,
+- [x] **S9 Markt-Erkennung, Lexikon, Lernen** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, `$SA/models.py`,
   neu `$ST/test_receipt_lexicon.py`. `enrich(db, receipt, items)` und `learn(db, before_items, receipt, items)` nach
   Vertrag 4; `put_receipt` ruft `match_store` (Vertrag 3.1) und nach dem Schreiben `learn`. Endpunkte `GET /lexicon`,
   `DELETE /lexicon/{entry_id}` — **vor** `/{receipt_id}` deklarieren. Test: (1) PUT `review` mit Position

@@ -500,3 +500,19 @@ class ReceiptPutResponse(BaseModel):
 class ReceiptScanResponse(BaseModel):
     parsed: bool
     receipt: ReceiptOut
+
+
+class LexiconEntryOut(BaseModel):
+    id: str
+    store_key: str = ""
+    store_name: str = ""
+    raw_text: str = ""
+    name: str = ""
+    category: str = ""
+    off_barcode: str = ""
+    hits: int = 0
+    updated_at: int = 0
+
+
+class LexiconListResponse(BaseModel):
+    entries: List[LexiconEntryOut] = []
