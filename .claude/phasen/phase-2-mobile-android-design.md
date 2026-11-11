@@ -235,7 +235,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
   leer; `grep -c '!!' $B/HelgaNavGraph.kt` = 0. Prüfliste (Gerät): konfigurierte App startet direkt in der Einkaufsliste;
   frische App zeigt Onboarding; Teilen einer URL öffnet den Import, Zurück führt zur Einkaufsliste; Drehen im Import
   öffnet ihn nicht erneut; Abmelden in den Einstellungen führt zum Onboarding.
-- [ ] **S9 Predictive Back** — Datei: `app/src/main/AndroidManifest.xml`. Am `<application>`-Element
+- [x] **S9 Predictive Back** — Datei: `app/src/main/AndroidManifest.xml`. Am `<application>`-Element
   `android:enableOnBackInvokedCallback="true"`. Vorher prüfen: `grep -rn 'onBackPressed\|OnBackPressedCallback' app/src/main`
   muss leer sein, sonst stoppen. Akzeptanz: Attribut vorhanden, Lint/Build grün. Prüfliste (Gerät, Android 14+ mit
   Gestennavigation): Zurück-Geste zeigt Vorschau und schließt Sheets/Dialoge vor dem Screen.
