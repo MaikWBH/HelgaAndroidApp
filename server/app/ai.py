@@ -20,8 +20,13 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "openai")
 AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_MODEL = os.getenv("AI_MODEL", "")
 AI_API_BASE = os.getenv("AI_API_BASE", "")
-# Eigenes (starkes) Vision-Modell für die Bon-Erkennung. Siehe _vision_model().
+# Referenzmodell (stärker, bild-fähig) – seit Phase 3a nur noch vom Testset-Skript
+# scripts/receipt_testset.py genutzt. Siehe _vision_model().
 AI_VISION_MODEL = os.getenv("AI_VISION_MODEL", "")
+# Modell für ALLE Bon-Aufrufe (Auslesen, Abgleich, Kategorisieren). Leer = DEFAULT_RECEIPT_MODEL.
+AI_RECEIPT_MODEL = os.getenv("AI_RECEIPT_MODEL", "")
+# output_config.effort für Modelle, die es kennen: low | medium | high
+AI_RECEIPT_EFFORT = os.getenv("AI_RECEIPT_EFFORT", "medium")
 
 OPENAI_BASE = AI_API_BASE or "https://api.openai.com/v1"
 ANTHROPIC_BASE = "https://api.anthropic.com/v1"
@@ -31,13 +36,27 @@ DEFAULT_MODEL = {
     "anthropic": "claude-haiku-4-5-20251001",
 }
 
-# Vision-Tasks (Kassenbon-Erkennung) brauchen ein deutlich stärkeres, bild-fähiges
-# Modell als die günstigen Text-Defaults: dichte deutsche Bons mit kleinem Druck
-# überfordern Mini-/Haiku-Modelle (Belege: Sonnet ~97 % vs. Mini deutlich darunter).
+# Referenzmodelle für das Testset-Skript (Vergleich gegen das Bon-Modell). Dichte deutsche
+# Bons haben früher kleine Modelle überfordert (Sonnet ~97 % vs. Mini deutlich darunter).
 DEFAULT_VISION_MODEL = {
     "openai": "gpt-4o",
     "anthropic": "claude-sonnet-4-6",
 }
+
+# Bon-Modell (Entscheidung Phase 3: günstigstes Modell, Qualität per Testset geprüft).
+DEFAULT_RECEIPT_MODEL = {
+    "openai": "gpt-4o-mini",
+    "anthropic": "claude-haiku-5-5",
+}
+
+# Modelle, die keine Sampling-Parameter (temperature/top_p/top_k) akzeptieren und
+# stattdessen output_config.effort verwenden.
+_EFFORT_MODEL_PREFIXES = (
+    "claude-haiku-5", "claude-sonnet-5", "claude-opus-5", "claude-opus-4-7",
+    "claude-opus-4-8", "claude-fable", "claude-mythos",
+)
+
+RECEIPT_MAX_TOKENS = 16000
 
 CLASSIFY_VALUES = {
     "protein_type": ["fleisch", "fisch", "vegetarisch", "vegan"],
@@ -100,6 +119,34 @@ def _vision_model() -> str:
        deutsche Bons sonst unzuverlässig erkannt werden.
     """
     return AI_VISION_MODEL or AI_MODEL or DEFAULT_VISION_MODEL.get(AI_PROVIDER, "gpt-4o")
+
+
+def _receipt_model() -> str:
+    """Modell für alle Bon-Aufrufe. AI_VISION_MODEL wirkt hier bewusst nicht mehr."""
+    return AI_RECEIPT_MODEL or DEFAULT_RECEIPT_MODEL.get(AI_PROVIDER, "gpt-4o-mini")
+
+
+def _uses_effort(model: str) -> bool:
+    return model.startswith(_EFFORT_MODEL_PREFIXES)
+
+
+def _receipt_payload(model: str, system: str, content: list) -> dict:
+    """Anthropic-Nutzlast für Bon-Aufrufe (nicht gestreamt).
+
+    Neue Modelle (z. B. Haiku 5.5) lehnen Sampling-Parameter mit HTTP 400 ab: dort
+    `output_config.effort` statt `temperature`, und kein `thinking`.
+    """
+    payload: dict = {
+        "model": model,
+        "system": system,
+        "max_tokens": RECEIPT_MAX_TOKENS,
+        "messages": [{"role": "user", "content": content}],
+    }
+    if _uses_effort(model):
+        payload["output_config"] = {"effort": AI_RECEIPT_EFFORT}
+    else:
+        payload["temperature"] = 0
+    return payload
 
 
 def _openai_headers() -> dict:
@@ -450,6 +497,55 @@ async def _vision_anthropic(system: str, user_text: str, image_b64: str, mime_ty
         resp.raise_for_status()
         obj = resp.json()
         return "".join(p.get("text", "") for p in obj.get("content", []) if p.get("type") == "text")
+
+
+async def _receipt_once(system: str, user_text: str, image_b64: str | None = None,
+                        mime_type: str = "image/jpeg", model: str | None = None) -> str:
+    """Einmaliger Bon-Aufruf mit dem Bon-Modell, mit oder ohne Bild."""
+    used_model = model or _receipt_model()
+    if AI_PROVIDER == "anthropic":
+        content: list = []
+        if image_b64:
+            content.append({"type": "image", "source": {
+                "type": "base64", "media_type": mime_type, "data": image_b64}})
+        content.append({"type": "text", "text": user_text})
+        headers = {
+            "x-api-key": AI_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+        payload = _receipt_payload(used_model, system, content)
+        async with httpx.AsyncClient(timeout=120) as client:
+            resp = await client.post(f"{ANTHROPIC_BASE}/messages", headers=headers, json=payload)
+            resp.raise_for_status()
+            obj = resp.json()
+            return "".join(
+                p.get("text", "") for p in obj.get("content", []) if p.get("type") == "text"
+            )
+
+    base = AI_API_BASE or "https://api.openai.com/v1"
+    headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
+    if image_b64:
+        user_content: object = [
+            {"type": "text", "text": user_text},
+            {"type": "image_url",
+             "image_url": {"url": f"data:{mime_type};base64,{image_b64}", "detail": "high"}},
+        ]
+    else:
+        user_content = user_text
+    payload = {
+        "model": used_model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_content},
+        ],
+        "temperature": 0,
+    }
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(f"{base}/chat/completions", headers=headers, json=payload)
+        resp.raise_for_status()
+        obj = resp.json()
+        return obj["choices"][0]["message"].get("content") or ""
 
 
 # ── Receipt Parsing (KI-Vision) ──────────────────────────────────────────────

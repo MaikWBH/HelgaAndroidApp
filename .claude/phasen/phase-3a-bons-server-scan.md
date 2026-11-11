@@ -184,7 +184,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   „Aldi" → `Aldi`; `day_to_ms("2026-11-10") == 1794268800000`, `day_to_ms("x") == 0`. Akzeptanz: `VS` grün.
 
 ### Block B — KI für Bons (Befunde 3–5)
-- [ ] **S5 Modell- und Nutzlastwahl** — Dateien: `$SA/ai.py`, `$S/.env.example`, neu `$ST/test_ai_receipt_config.py`.
+- [x] **S5 Modell- und Nutzlastwahl** — Dateien: `$SA/ai.py`, `$S/.env.example`, neu `$ST/test_ai_receipt_config.py`.
   Neu nach Vertrag 5.1: `AI_RECEIPT_MODEL`, `AI_RECEIPT_EFFORT`, `DEFAULT_RECEIPT_MODEL`, `_receipt_model()`,
   `_uses_effort(model)`, `_receipt_payload(model, system, content)`, `async _receipt_once(system, user_text,
   image_b64=None, mime_type="image/jpeg", model=None) -> str` (Anthropic: `POST {ANTHROPIC_BASE}/messages` mit
