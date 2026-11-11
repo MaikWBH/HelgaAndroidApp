@@ -121,7 +121,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `ACCENT_SYSTEM`. `SettingsUiState.accentColor` Default `ACCENT_SYSTEM`. Akzeptanz:
   `grep -n 'accentColorIndex == 0' $U/theme/Theme.kt` leer; `grep -c 'collectAsState(' $B/MainActivity.kt` = 0.
   Prüfliste (Gerät, Android 12+): Neuinstallation zeigt Wallpaper-Farben; nach Auswahl Grün ist die App grün.
-- [ ] **S3 Baustein `ColorSwatchPicker` und Akzent-Picker** — Dateien: neu `$U/components/Previews.kt`, neu
+- [x] **S3 Baustein `ColorSwatchPicker` und Akzent-Picker** — Dateien: neu `$U/components/Previews.kt`, neu
   `$U/components/ColorSwatchPicker.kt`, `$U/settings/SettingsScreen.kt`, `$R/values/strings.xml`. `Previews.kt`:
   Annotation `@ThemePreviews` = `@Preview(name = "Hell", showBackground = true)` +
   `@Preview(name = "Dunkel", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)` und

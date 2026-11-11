@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,6 +72,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.helga.android.ui.components.ColorSwatch
+import com.helga.android.ui.components.ColorSwatchPicker
+import com.helga.android.ui.theme.ACCENT_SYSTEM
 import com.helga.android.ui.theme.accentPrimaryColors
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -463,33 +467,35 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    itemsIndexed(accentPrimaryColors) { index, color ->
-                        val isSelected = state.accentColor == index
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
-                                    shape = CircleShape,
-                                )
-                                .padding(if (isSelected) 3.dp else 0.dp)
-                                .clip(CircleShape),
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .clickable { viewModel.setAccentColor(index) },
-                            )
-                        }
+                val accentNames = listOf(
+                    stringResource(R.string.settings_accent_green),
+                    stringResource(R.string.settings_accent_blue),
+                    stringResource(R.string.settings_accent_purple),
+                    stringResource(R.string.settings_accent_orange),
+                    stringResource(R.string.settings_accent_red),
+                    stringResource(R.string.settings_accent_teal),
+                )
+                val systemAccentLabel = stringResource(R.string.settings_accent_system)
+                val supportsSystemAccent = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                val accentSwatches = buildList {
+                    if (supportsSystemAccent) {
+                        add(ColorSwatch(ACCENT_SYSTEM.toString(), systemAccentLabel, null, Icons.Filled.Wallpaper))
+                    }
+                    accentPrimaryColors.forEachIndexed { index, color ->
+                        add(ColorSwatch(index.toString(), accentNames[index], color))
                     }
                 }
+                val selectedAccent = if (state.accentColor == ACCENT_SYSTEM && !supportsSystemAccent) 0 else state.accentColor
+                ColorSwatchPicker(
+                    swatches = accentSwatches,
+                    selectedKey = selectedAccent.toString(),
+                    onSelect = { viewModel.setAccentColor(it.toInt()) },
+                )
+                Text(
+                    text = accentSwatches.firstOrNull { it.key == selectedAccent.toString() }?.label.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider()

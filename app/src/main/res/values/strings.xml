@@ -344,6 +344,13 @@
     <string name="settings_theme_light">Hell</string>
     <string name="settings_theme_dark">Dunkel</string>
     <string name="settings_accent_color">Akzentfarbe</string>
+    <string name="settings_accent_system">System (Wallpaper)</string>
+    <string name="settings_accent_green">Grün</string>
+    <string name="settings_accent_blue">Blau</string>
+    <string name="settings_accent_purple">Lila</string>
+    <string name="settings_accent_orange">Orange</string>
+    <string name="settings_accent_red">Rot</string>
+    <string name="settings_accent_teal">Petrol</string>
     <string name="settings_notify_shopping">Einkaufstag-Erinnerung</string>
     <string name="settings_notify_cook">Koch-Erinnerung</string>
 
