@@ -215,7 +215,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
   Akzeptanz: `grep -rn 'bottomPadding' $B` leer. Prüfliste (Gerät, Gesten- und 3-Tasten-Navigation): auf allen vier Tabs
   liegt nichts hinter der NavigationBar (insb. FAB „Scannen" der Bon-Liste, QuickAdd-Leiste, letzter Listeneintrag);
   keine doppelte Lücke über der Leiste; Detail-Screens reichen bis an die Systemleiste.
-- [ ] **S7 `CostOverviewScreen` mit Scaffold** — Dateien: `$U/receipts/CostOverviewScreen.kt`, `$B/HelgaNavGraph.kt`,
+- [x] **S7 `CostOverviewScreen` mit Scaffold** — Dateien: `$U/receipts/CostOverviewScreen.kt`, `$B/HelgaNavGraph.kt`,
   `strings.xml`. Signatur `CostOverviewScreen(onBack: () -> Unit, viewModel: … = hiltViewModel())`; bisherigen Inhalt
   unverändert in `Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.cost_overview_title)) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } }) }) { padding -> … }`
   setzen, äußere `Column` bekommt `.padding(padding)` vor `verticalScroll`. String `cost_overview_title`

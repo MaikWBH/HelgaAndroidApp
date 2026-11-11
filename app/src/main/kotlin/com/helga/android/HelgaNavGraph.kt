@@ -245,7 +245,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                     )
                 }
                 composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
-                    CostOverviewScreen()
+                    CostOverviewScreen(onBack = { navController.popBackStack() })
                 }
                 composable(ROUTE_RECEIPTS_PRODUCTS) {
                     ProductPriceListScreen(

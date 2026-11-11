@@ -14,9 +14,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -36,17 +40,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.helga.android.R
 import com.helga.android.data.model.CostByDate
 import com.helga.android.data.model.CostByStore
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CostOverviewScreen(
+    onBack: () -> Unit,
     viewModel: CostOverviewViewModel = hiltViewModel(),
 ) {
     val period = viewModel.period.collectAsState().value
@@ -73,115 +81,132 @@ fun CostOverviewScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-    ) {
-        // Monatsbudget + Warnung
-        BudgetCard(
-            budgetAmount = budget?.amount ?: 0.0,
-            warnThreshold = budget?.warnThreshold ?: 0.8,
-            monthSpending = monthSpending,
-            formatCurrency = viewModel::formatCurrency,
-            onEdit = { showBudgetDialog = true },
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)
-        )
-
-        // Summary Card
-        CostSummaryCard(
-            totalCost = viewModel.formatCurrency(totalCost),
-            receiptCount = receiptCount,
-            modifier = Modifier.padding(16.dp)
-        )
-
-        // Period Selector
-        TabRow(
-            selectedTabIndex = period.ordinal,
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.cost_overview_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
         ) {
-            TimePeriod.values().forEach { tab ->
-                Tab(
-                    selected = period == tab,
-                    onClick = { viewModel.setPeriod(tab) },
-                    text = {
-                        Text(
-                            when (tab) {
-                                TimePeriod.WEEK -> "Woche"
-                                TimePeriod.MONTH -> "Monat"
-                                TimePeriod.ALL -> "Alle"
-                            }
-                        )
-                    }
-                )
-            }
-        }
+            // Monatsbudget + Warnung
+            BudgetCard(
+                budgetAmount = budget?.amount ?: 0.0,
+                warnThreshold = budget?.warnThreshold ?: 0.8,
+                monthSpending = monthSpending,
+                formatCurrency = viewModel::formatCurrency,
+                onEdit = { showBudgetDialog = true },
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)
+            )
 
-        if (isLoading) {
-            Box(
+            // Summary Card
+            CostSummaryCard(
+                totalCost = viewModel.formatCurrency(totalCost),
+                receiptCount = receiptCount,
+                modifier = Modifier.padding(16.dp)
+            )
+
+            // Period Selector
+            TabRow(
+                selectedTabIndex = period.ordinal,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
-                contentAlignment = Alignment.Center
+                    .padding(horizontal = 16.dp)
             ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            // Cost by Store
-            if (costByStore.isNotEmpty()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        "Ausgaben pro Markt",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                TimePeriod.values().forEach { tab ->
+                    Tab(
+                        selected = period == tab,
+                        onClick = { viewModel.setPeriod(tab) },
+                        text = {
+                            Text(
+                                when (tab) {
+                                    TimePeriod.WEEK -> "Woche"
+                                    TimePeriod.MONTH -> "Monat"
+                                    TimePeriod.ALL -> "Alle"
+                                }
+                            )
+                        }
                     )
-
-                    costByStore.forEach { store ->
-                        CostBarItem(
-                            label = store.storeName.ifBlank { store.storeId.ifBlank { "Unbekannter Markt" } },
-                            amount = viewModel.formatCurrency(store.totalAmount),
-                            progress = store.totalAmount / maxCost,
-                            receiptCount = store.receiptCount,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
                 }
             }
 
-            // Cost by Date
-            if (costByDate.isNotEmpty()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        "Verlauf nach Datum",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-
-                    costByDate.forEach { dateEntry ->
-                        CostBarItem(
-                            label = viewModel.formatDate(dateEntry.date),
-                            amount = viewModel.formatCurrency(dateEntry.totalAmount),
-                            progress = dateEntry.totalAmount / maxCost,
-                            receiptCount = dateEntry.receiptCount,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                }
-            }
-
-            if (costByStore.isEmpty() && costByDate.isEmpty()) {
-                Column(
+            if (isLoading) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text("Keine Kassenbons vorhanden")
+                    CircularProgressIndicator()
+                }
+            } else {
+                // Cost by Store
+                if (costByStore.isNotEmpty()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Ausgaben pro Markt",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        costByStore.forEach { store ->
+                            CostBarItem(
+                                label = store.storeName.ifBlank { store.storeId.ifBlank { "Unbekannter Markt" } },
+                                amount = viewModel.formatCurrency(store.totalAmount),
+                                progress = store.totalAmount / maxCost,
+                                receiptCount = store.receiptCount,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Cost by Date
+                if (costByDate.isNotEmpty()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Verlauf nach Datum",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        costByDate.forEach { dateEntry ->
+                            CostBarItem(
+                                label = viewModel.formatDate(dateEntry.date),
+                                amount = viewModel.formatCurrency(dateEntry.totalAmount),
+                                progress = dateEntry.totalAmount / maxCost,
+                                receiptCount = dateEntry.receiptCount,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (costByStore.isEmpty() && costByDate.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("Keine Kassenbons vorhanden")
+                    }
                 }
             }
         }
