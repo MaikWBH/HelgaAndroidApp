@@ -506,4 +506,36 @@
     <string name="price_no_data">Keine Daten gefunden</string>
     <string name="price_stat_min">Min</string>
     <string name="price_stat_max">Max</string>
+
+    <!-- Phase 2: Einkaufsliste -->
+    <string name="shopping_menu_receipt">Kassenzettel</string>
+    <string name="shopping_recipe_breakdown">Rezept-Aufschlüsselung</string>
+    <string name="shopping_estimate_accuracy">%1$d%% mit Preisen</string>
+    <string name="shopping_catalog_scan">Produkt scannen</string>
+    <string name="shopping_catalog_empty">Noch keine Produkte im Katalog. Scanne deine regelmäßig gekauften Artikel, um sie hier mit Nährwerten zu sammeln.</string>
+    <string name="shopping_catalog_add">Zur Liste hinzufügen</string>
+    <string name="shopping_catalog_remove">Aus Katalog entfernen</string>
+    <string name="shopping_nutrients_title">Nährwerte (pro 100 g)</string>
+    <string name="shopping_nutrient_energy">🔥 Energie</string>
+    <string name="shopping_nutrient_protein">🥚 Eiweiß</string>
+    <string name="shopping_nutrient_fat">🧈 Fett</string>
+    <string name="shopping_nutrient_carbs">🍞 Kohlenhydrate</string>
+    <string name="shopping_brand">Marke:</string>
+    <string name="shopping_vegan">🌱 Vegan</string>
+    <string name="shopping_vegetarian">🥬 Vegetarisch</string>
+    <string name="shopping_organic">🌿 Bio</string>
+    <string name="shopping_ecoscore">🌍 Eco-Score %1$s</string>
+    <string name="shopping_nova">🏭 NOVA %1$s</string>
+    <string name="shopping_additives">Zusatzstoffe:</string>
+    <string name="shopping_allergens_yours">⚠️ Enthält deine Allergene</string>
+    <string name="shopping_allergens_contained">⚠️ Allergene enthalten</string>
+    <string name="shopping_catalog_to_list">✅ Zur Liste</string>
+    <string name="shopping_source_recipes">%1$d Rezepte</string>
+    <string name="shopping_source_recipe">Rezept</string>
+    <string name="shopping_source_manual">Manuell</string>
+    <string name="shopping_macro_protein">Eiweiß %1$dg · </string>
+    <string name="shopping_macro_fat">Fett %1$dg · </string>
+    <string name="shopping_macro_carbs">KH %1$dg</string>
+    <string name="shopping_catalog_in">⭐ Im Katalog</string>
+    <string name="shopping_catalog_to">⭐ Zu meinen Produkten</string>
 </resources>

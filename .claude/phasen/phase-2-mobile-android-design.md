@@ -305,7 +305,7 @@ Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
   Stellen), 13× `collectAsState()`. Akzeptanz wie S16; zusätzlich `grep -rn 'collectAsState()' $B` leer.
 
 ### Block E — Strings im Rest der App (Befunde 6, 7)
-- [ ] **S19 Einkaufsliste** — Datei: `$U/shopping/ShoppingListScreen.kt` (26 Stellen, v. a. Z.297–305 und der
+- [x] **S19 Einkaufsliste** — Datei: `$U/shopping/ShoppingListScreen.kt` (26 Stellen, v. a. Z.297–305 und der
   Produktkatalog-/Produktdetail-Teil Z.1363–1724) nach R-S. Nährwert-Zeilen: Label als String (`"🔥 Energie"` usw.),
   Werte bleiben interpoliert. Akzeptanz: `G-S` regelkonform.
 - [ ] **S20 Wochenplan** — Datei: `$U/weekplan/WeekplanScreen.kt` (Z.163 „Wochenplan erstellt", Z.1306–1343:

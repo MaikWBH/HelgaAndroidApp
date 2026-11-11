@@ -292,7 +292,7 @@ fun ShoppingListScreen(
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("Meine Produkte") },
+                                text = { Text(stringResource(R.string.my_products_title)) },
                                 leadingIcon = { Icon(Icons.Filled.Inventory2, null) },
                                 onClick = {
                                     showOverflow = false
@@ -300,7 +300,7 @@ fun ShoppingListScreen(
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Kassenzettel") },
+                                text = { Text(stringResource(R.string.shopping_menu_receipt)) },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, null) },
                                 onClick = {
                                     showOverflow = false
@@ -781,7 +781,7 @@ private fun ShoppingItemRow(
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
                         imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                        contentDescription = "Rezept-Aufschlüsselung",
+                        contentDescription = stringResource(R.string.shopping_recipe_breakdown),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -809,12 +809,12 @@ private fun ShoppingItemRow(
 @Composable
 private fun SourceBadge(item: ShoppingItemEntity, recipes: List<String>) {
     val label = when {
-        recipes.size >= 2 -> "${recipes.size} Rezepte"
+        recipes.size >= 2 -> stringResource(R.string.shopping_source_recipes, recipes.size)
         recipes.size == 1 -> recipes.first()
-        item.source == "staple" -> "Vorrat"
-        item.source == "weekplan" -> "Wochenplan"
-        item.source == "recipe" -> "Rezept"
-        else -> "Manuell"
+        item.source == "staple" -> stringResource(R.string.pantry_title)
+        item.source == "weekplan" -> stringResource(R.string.weekplan_title)
+        item.source == "recipe" -> stringResource(R.string.shopping_source_recipe)
+        else -> stringResource(R.string.shopping_source_manual)
     }
     Text(
         text = label,
@@ -840,7 +840,7 @@ private fun OriginBreakdown(breakdown: List<ItemOrigin>, modifier: Modifier = Mo
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         breakdown.forEach { origin ->
-            val label = origin.recipe.ifBlank { "Manuell" }
+            val label = origin.recipe.ifBlank { stringResource(R.string.shopping_source_manual) }
             val qtyText = if (origin.unit.isBlank()) formatQty(origin.quantity)
                           else "${formatQty(origin.quantity)} ${origin.unit}"
             Row(
@@ -1353,7 +1353,7 @@ private fun CostEstimateCard(estimate: com.helga.android.data.model.ListCostEsti
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            text = "${(estimate.estimatedAccuracy * 100).toInt()}% mit Preisen",
+                            text = stringResource(R.string.shopping_estimate_accuracy, (estimate.estimatedAccuracy * 100).toInt()),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1419,7 +1419,7 @@ private fun MyProductsSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Meine Produkte",
+                    text = stringResource(R.string.my_products_title),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 TextButton(onClick = onScan) {
@@ -1429,7 +1429,7 @@ private fun MyProductsSheet(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.widthIn(min = 6.dp))
-                    Text("Produkt scannen")
+                    Text(stringResource(R.string.shopping_catalog_scan))
                 }
             }
             HorizontalDivider()
@@ -1441,8 +1441,7 @@ private fun MyProductsSheet(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Noch keine Produkte im Katalog. Scanne deine regelmäßig " +
-                            "gekauften Artikel, um sie hier mit Nährwerten zu sammeln.",
+                        text = stringResource(R.string.shopping_catalog_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1498,9 +1497,9 @@ private fun CatalogProductCard(
                 Text(
                     text = buildString {
                         if (product.kcalPerUnit > 0) append("${product.kcalPerUnit.toInt()} kcal · ")
-                        append("Eiweiß ${product.proteins.toInt()}g · ")
-                        append("Fett ${product.fats.toInt()}g · ")
-                        append("KH ${product.carbs.toInt()}g")
+                        append(stringResource(R.string.shopping_macro_protein, product.proteins.toInt()))
+                        append(stringResource(R.string.shopping_macro_fat, product.fats.toInt()))
+                        append(stringResource(R.string.shopping_macro_carbs, product.carbs.toInt()))
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1509,14 +1508,14 @@ private fun CatalogProductCard(
             IconButton(onClick = onAddToList) {
                 Icon(
                     imageVector = Icons.Filled.Add,
-                    contentDescription = "Zur Liste hinzufügen",
+                    contentDescription = stringResource(R.string.shopping_catalog_add),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
             IconButton(onClick = onRemove) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
-                    contentDescription = "Aus Katalog entfernen",
+                    contentDescription = stringResource(R.string.shopping_catalog_remove),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -1552,22 +1551,22 @@ fun ScannedProductDialog(
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
-                                text = "Nährwerte (pro 100 g)",
+                                text = stringResource(R.string.shopping_nutrients_title),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                             )
                             Spacer(Modifier.height(6.dp))
                             if (product.kcalPerUnit > 0) {
-                                NutrientRow(label = "🔥 Energie", value = "${product.kcalPerUnit.toInt()} kcal")
+                                NutrientRow(label = stringResource(R.string.shopping_nutrient_energy), value = "${product.kcalPerUnit.toInt()} kcal")
                             }
                             if (product.proteins > 0) {
-                                NutrientRow(label = "🥚 Eiweiß", value = "${product.proteins.toInt()} g")
+                                NutrientRow(label = stringResource(R.string.shopping_nutrient_protein), value = "${product.proteins.toInt()} g")
                             }
                             if (product.fats > 0) {
-                                NutrientRow(label = "🧈 Fett", value = "${product.fats.toInt()} g")
+                                NutrientRow(label = stringResource(R.string.shopping_nutrient_fat), value = "${product.fats.toInt()} g")
                             }
                             if (product.carbs > 0) {
-                                NutrientRow(label = "🍞 Kohlenhydrate", value = "${product.carbs.toInt()} g")
+                                NutrientRow(label = stringResource(R.string.shopping_nutrient_carbs), value = "${product.carbs.toInt()} g")
                             }
                         }
                     }
@@ -1582,7 +1581,7 @@ fun ScannedProductDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Marke:",
+                            text = stringResource(R.string.shopping_brand),
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -1604,31 +1603,31 @@ fun ScannedProductDialog(
                     if (product.vegan == 1) {
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("🌱 Vegan") },
+                            label = { Text(stringResource(R.string.shopping_vegan)) },
                         )
                     }
                     if (product.vegetarian == 1) {
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("🥬 Vegetarisch") },
+                            label = { Text(stringResource(R.string.shopping_vegetarian)) },
                         )
                     }
                     if (product.isOrganic == 1) {
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("🌿 Bio") },
+                            label = { Text(stringResource(R.string.shopping_organic)) },
                         )
                     }
                     if (product.ecoScore.isNotBlank()) {
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("🌍 Eco-Score ${product.ecoScore.uppercase()}") },
+                            label = { Text(stringResource(R.string.shopping_ecoscore, product.ecoScore.uppercase())) },
                         )
                     }
                     if (product.nova > 0) {
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("🏭 NOVA ${product.nova}") },
+                            label = { Text(stringResource(R.string.shopping_nova, product.nova)) },
                         )
                     }
                 }
@@ -1642,7 +1641,7 @@ fun ScannedProductDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Zusatzstoffe:",
+                            text = stringResource(R.string.shopping_additives),
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -1667,7 +1666,7 @@ fun ScannedProductDialog(
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
-                                text = "⚠️ Enthält deine Allergene",
+                                text = stringResource(R.string.shopping_allergens_yours),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -1692,7 +1691,7 @@ fun ScannedProductDialog(
                                 .padding(12.dp),
                         ) {
                             Text(
-                                text = "⚠️ Allergene enthalten",
+                                text = stringResource(R.string.shopping_allergens_contained),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.error,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -1709,12 +1708,12 @@ fun ScannedProductDialog(
         },
         confirmButton = {
             TextButton(onClick = onSaveToCatalog) {
-                Text(if (product.isFavorite == 1) "⭐ Im Katalog" else "⭐ Zu meinen Produkten")
+                Text(if (product.isFavorite == 1) stringResource(R.string.shopping_catalog_in) else stringResource(R.string.shopping_catalog_to))
             }
         },
         dismissButton = {
             TextButton(onClick = onAddToList) {
-                Text("✅ Zur Liste")
+                Text(stringResource(R.string.shopping_catalog_to_list))
             }
         },
         modifier = Modifier.widthIn(max = 400.dp),
