@@ -298,7 +298,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   Akzeptanz: `grep -c 'claude-haiku-5-5' $S/CLAUDE.md` ≥ 1; `VS` grün. Danach Block A–C pushen.
 
 ### Block D — App: Datenmodell und Protokoll (Befunde 13, 18–21)
-- [ ] **S15 Migrationstest-Gerüst** — Dateien: `gradle/libs.versions.toml`, `app/build.gradle.kts`, neu
+- [x] **S15 Migrationstest-Gerüst** — Dateien: `gradle/libs.versions.toml`, `app/build.gradle.kts`, neu
   `$T/RoomMigrationHarness.kt`, neu `$T/RoomMigrationHarnessTest.kt`. Katalog: `sqliteJdbc = "3.46.1.3"`,
   `sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqliteJdbc" }`;
   `testImplementation(libs.sqlite.jdbc)`. `RoomMigrationHarness` (nur Test): `open(): java.sql.Connection`

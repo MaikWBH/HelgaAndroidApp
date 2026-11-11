@@ -146,6 +146,8 @@ dependencies {
     // Echte JVM-Implementierung von org.json für Unit-Tests (z. B. RecipeJsonLdParserTest) —
     // das android.jar-Stub wirft zur Laufzeit "Method not mocked" statt zu parsen.
     testImplementation(libs.org.json)
+    // Echte SQLite-Implementierung auf der JVM für Room-Migrationstests ohne Emulator (RoomMigrationHarness).
+    testImplementation(libs.sqlite.jdbc)
 
     implementation(libs.androidx.profileinstaller)
 
