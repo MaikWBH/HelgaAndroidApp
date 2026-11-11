@@ -1,6 +1,8 @@
 package com.helga.android.data.repository
 
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.local.dao.RecipeHistoryDao
+import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -18,6 +20,7 @@ import javax.inject.Singleton
 class RecipeRepository @Inject constructor(
     private val recipeDao: RecipeDao,
     private val recipeFeedbackDao: RecipeFeedbackDao,
+    private val recipeHistoryDao: RecipeHistoryDao,
     private val shoppingRepository: ShoppingRepository,
 ) {
     fun observeAll(): Flow<List<RecipeEntity>> = recipeDao.observeAll()
@@ -32,6 +35,9 @@ class RecipeRepository @Inject constructor(
         recipeDao.observeRecipeIdsByTagOrIngredientSearch(query)
 
     suspend fun findById(id: String): RecipeEntity? = recipeDao.findById(id)
+    suspend fun findRecipe(id: String): RecipeEntity? = recipeDao.findById(id)
+    fun observeHistorySince(since: String): Flow<List<RecipeHistoryEntity>> = recipeHistoryDao.observeSince(since)
+    suspend fun recipeIdsBefore(before: String): List<String> = recipeHistoryDao.getRecipeIdsBefore(before)
     suspend fun allRecipes(): List<RecipeEntity> = recipeDao.allActive()
     suspend fun ingredientsForRecipe(id: String): List<IngredientEntity> = recipeDao.ingredientsByRecipeId(id)
     suspend fun instructionsForRecipe(id: String): List<InstructionEntity> = recipeDao.instructionsByRecipeId(id)

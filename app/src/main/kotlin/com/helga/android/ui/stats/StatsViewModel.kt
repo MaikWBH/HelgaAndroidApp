@@ -2,8 +2,7 @@ package com.helga.android.ui.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.local.dao.RecipeDao
-import com.helga.android.data.local.dao.RecipeHistoryDao
+import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.RecipeHistoryEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -80,8 +79,7 @@ fun aggregateMonthStats(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class StatsViewModel @Inject constructor(
-    private val historyDao: RecipeHistoryDao,
-    private val recipeDao: RecipeDao,
+    private val recipeRepository: RecipeRepository,
 ) : ViewModel() {
 
     private val _period = MutableStateFlow(StatsPeriod.MONTH)
@@ -103,12 +101,12 @@ class StatsViewModel @Inject constructor(
 
     val stats: StateFlow<MonthStats> = _period.flatMapLatest { period ->
         val sinceDate = sinceDateFor(period)
-        historyDao.observeSince(sinceDate).map { history ->
+        recipeRepository.observeHistorySince(sinceDate).map { history ->
             val recipes = mutableMapOf<String, RecipeEntity>()
             history.map { it.recipeId }.distinct().forEach { id ->
-                recipeDao.findById(id)?.let { recipes[id] = it }
+                recipeRepository.findRecipe(id)?.let { recipes[id] = it }
             }
-            val previousRecipeIds = historyDao.getRecipeIdsBefore(sinceDate).toSet()
+            val previousRecipeIds = recipeRepository.recipeIdsBefore(sinceDate).toSet()
             aggregateMonthStats(history, recipes, previousRecipeIds)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MonthStats())
