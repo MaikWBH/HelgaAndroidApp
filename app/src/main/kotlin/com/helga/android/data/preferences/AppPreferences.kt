@@ -72,6 +72,13 @@ class AppPreferences @Inject constructor(
         val raw = prefs[KEY_RECEIPT_RETENTION_MONTHS] ?: 3
         if (raw in setOf(0, 1, 3, 6, 12)) raw else 3
     }
+
+    /** Cursor (`server_seq`) des bon-weisen Abgleichs mit dem Server-Archiv (Phase 3a, ReceiptSyncer). */
+    val receiptSyncSeq: Flow<Long> = ds.data.map { it[KEY_RECEIPT_SYNC_SEQ] ?: 0L }
+
+    /** Untergrenze des zuletzt geladenen Zeitfensters (`YYYY-MM-DD`); leer = alles (bzw. noch nie synchronisiert). */
+    val receiptSyncFromDay: Flow<String> = ds.data.map { it[KEY_RECEIPT_SYNC_FROM_DAY].orEmpty() }
+
     val allergies: Flow<List<String>> = ds.data.map { prefs ->
         val json = prefs[KEY_ALLERGIES].orEmpty()
         if (json.isBlank()) emptyList()
@@ -160,6 +167,13 @@ class AppPreferences @Inject constructor(
         ds.edit { it[KEY_RECEIPT_RECONCILE] = enabled }
     }
 
+    suspend fun saveReceiptSyncState(seq: Long, fromDay: String) {
+        ds.edit {
+            it[KEY_RECEIPT_SYNC_SEQ] = seq
+            it[KEY_RECEIPT_SYNC_FROM_DAY] = fromDay
+        }
+    }
+
     suspend fun saveReceiptRetentionMonths(months: Int) {
         val valid = if (months in setOf(0, 1, 3, 6, 12)) months else 3
         ds.edit { it[KEY_RECEIPT_RETENTION_MONTHS] = valid }
@@ -182,6 +196,8 @@ class AppPreferences @Inject constructor(
             it.remove(KEY_SERVER_URL)
             it.remove(KEY_API_KEY)
             it.remove(KEY_LAST_SYNC_TS)
+            it.remove(KEY_RECEIPT_SYNC_SEQ)
+            it.remove(KEY_RECEIPT_SYNC_FROM_DAY)
             it.remove(KEY_DEFAULT_SHOPPING_LIST_ID)
         }
     }
@@ -206,5 +222,7 @@ class AppPreferences @Inject constructor(
         val KEY_SCAN_REMINDER_THRESHOLD = floatPreferencesKey("scan_reminder_threshold")
         val KEY_RECEIPT_RECONCILE = booleanPreferencesKey("receipt_reconciliation_enabled")
         val KEY_RECEIPT_RETENTION_MONTHS = intPreferencesKey("receipt_retention_months")
+        val KEY_RECEIPT_SYNC_SEQ = longPreferencesKey("receipt_sync_seq")
+        val KEY_RECEIPT_SYNC_FROM_DAY = stringPreferencesKey("receipt_sync_from_day")
     }
 }

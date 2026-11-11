@@ -389,7 +389,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   cleanupOrphans(referenced: Set<String>)`. Reine Top-Level-Funktion `orphanFiles(existing: List<String>, referenced:
   Set<String>): List<String>`. Test nur für `orphanFiles` (referenziert bleibt, fremd wird gelistet, leere Mengen).
   Akzeptanz: `V` grün.
-- [ ] **S22 `ReceiptSyncer`** — Dateien: neu `$B/data/receipts/ReceiptSyncer.kt`,
+- [x] **S22 `ReceiptSyncer`** — Dateien: neu `$B/data/receipts/ReceiptSyncer.kt`,
   `$B/data/preferences/AppPreferences.kt`, neu `$T/ReceiptSyncerTest.kt`. `AppPreferences`: `receiptSyncSeq: Long`
   (Key `receipt_sync_seq`, Standard 0) und `receiptSyncFromDay: String` (Key `receipt_sync_from_day`, Standard `""`)
   mit `saveReceiptSyncState(seq, fromDay)`. `@Singleton class ReceiptSyncer(receiptDao, apiProvider, preferences,
