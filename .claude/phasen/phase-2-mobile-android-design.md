@@ -393,7 +393,7 @@ Callback-Parameter. Je `XContent` eine `@ThemePreviews`-Funktion mit festen Beis
   vorhandene `…Content` in `$U/ai/AiRemixScreen.kt`. Akzeptanz wie S29.
 
 ### Block I — Absichern und dokumentieren
-- [ ] **S31 `UiConventionsTest`** — Datei neu: `$T/UiConventionsTest.kt` (Aufbau wie `ArchitectureRulesTest`, liest
+- [x] **S31 `UiConventionsTest`** — Datei neu: `$T/UiConventionsTest.kt` (Aufbau wie `ArchitectureRulesTest`, liest
   `src/main/kotlin/com/helga/android` zeilenweise; `ui/widget/` ausgenommen). Drei Tests: (1) keine Zeile enthält
   `collectAsState(`; (2) keine Zeile enthält `Icons.Filled.ArrowBack` oder `Icons.Default.ArrowBack`; (3) Wort-Literale:
   auf Zeilen, die zu `(Text\(\s*|(text|label|title|placeholder|contentDescription|message) = )"` passen, das erste
