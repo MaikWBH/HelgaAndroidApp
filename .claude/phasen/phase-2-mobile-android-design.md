@@ -143,7 +143,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `settings_accent_red` „Rot", `settings_accent_teal` „Petrol". Akzeptanz: `grep -n 'itemsIndexed(accentPrimaryColors' $U` leer;
   `grep -c '@ThemePreviews' $U/components/ColorSwatchPicker.kt` ≥ 2. Prüfliste (Gerät): TalkBack liest Farbnamen und
   „ausgewählt"; Option „System" fehlt unter Android 12.
-- [ ] **S4 Dark-Start und Systemleisten** — Dateien: neu `$R/values-night/themes.xml`, `$U/theme/Theme.kt`.
+- [x] **S4 Dark-Start und Systemleisten** — Dateien: neu `$R/values-night/themes.xml`, `$U/theme/Theme.kt`.
   `values-night/themes.xml`: gleicher Style `Theme.HelgaAndroid`, `parent="android:Theme.Material.NoActionBar"`,
   `android:statusBarColor` transparent, `android:windowLightStatusBar` = `false`. In `HelgaTheme` die Zeile
   `window.statusBarColor = …` und den dann unbenutzten Import `toArgb` entfernen; im `SideEffect` ergänzen:
