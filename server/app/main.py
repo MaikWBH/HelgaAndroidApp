@@ -1,5 +1,3 @@
-import hmac
-import os
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -7,8 +5,8 @@ from typing import AsyncIterator
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
-from dotenv import load_dotenv
 
+from .auth import require_auth
 from .db import init_db, get_db, now_ms
 from .models import (
     AiClassifyRequest, AiGenerateRequest, AiNutritionRequest, AiRemixRequest,
@@ -20,12 +18,7 @@ from .models import (
 )
 from .sync import pull_since, push_records
 from . import ai as ai_module
-
-load_dotenv()
-
-API_KEY = os.getenv("API_KEY", "")
-IMAGES_DIR = Path(os.getenv("IMAGES_DIR", "data/images"))
-IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+from . import settings
 
 ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
@@ -37,16 +30,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="HelgaSyncServer", version="1.0.0", lifespan=lifespan)
-
-
-# ── Auth ─────────────────────────────────────────────────────────────────────
-
-def require_auth(request: Request):
-    if not API_KEY:
-        return  # Kein Key konfiguriert → offen (nur für lokale Entwicklung)
-    key = request.headers.get("X-Api-Key", "")
-    if not hmac.compare_digest(key.encode(), API_KEY.encode()):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiger API-Key")
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -131,7 +114,7 @@ async def upload_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"Dateitype nicht erlaubt: {ext}")
 
     image_uuid = str(uuid.uuid4())
-    dest = IMAGES_DIR / f"{image_uuid}{ext}"
+    dest = settings.IMAGES_DIR / f"{image_uuid}{ext}"
     content = await file.read()
     dest.write_bytes(content)
 
@@ -142,7 +125,7 @@ async def upload_image(file: UploadFile = File(...)):
 async def get_image(filename: str):
     # Pfad-Traversal verhindern
     safe_name = Path(filename).name
-    path = IMAGES_DIR / safe_name
+    path = settings.IMAGES_DIR / safe_name
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail="Bild nicht gefunden")
     return FileResponse(path)

@@ -137,13 +137,13 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   gesammelt.
 
 ### Block 0 — Basis
-- [ ] **S0 Baseline** — Server: `pip install fastapi==0.115.5 aiosqlite==0.20.0 httpx==0.28.1 python-dotenv==1.0.1
+- [x] **S0 Baseline** — Server: `pip install fastapi==0.115.5 aiosqlite==0.20.0 httpx==0.28.1 python-dotenv==1.0.1
   python-multipart==0.0.20 pytest`, dann `VS` (erwartet 11 passed). App: `V` (erwartet 154 Tests, grün). Beide Ergebnisse
   und `grep -c 'version = 36' $B/data/local/AppDatabase.kt` (erwartet 1) unter „Abschluss" notieren. Weicht eine Zahl ab:
   notieren, weitermachen.
 
 ### Block A — Server-Grundlagen (abwärtskompatibel; Befunde 6–11)
-- [ ] **S1 Einstellungen, Auth, Test-Gerüst** — Dateien: neu `$SA/settings.py`, neu `$SA/auth.py`, `$SA/main.py`,
+- [x] **S1 Einstellungen, Auth, Test-Gerüst** — Dateien: neu `$SA/settings.py`, neu `$SA/auth.py`, `$SA/main.py`,
   neu `$S/requirements-dev.txt`, neu `$ST/conftest.py`, neu `$ST/test_health_auth.py`. `settings.py`: nach
   `load_dotenv()` die Modulvariablen `API_KEY`, `IMAGES_DIR` (`Path`, wird angelegt), `RECEIPT_QUEUE_INTERVAL_SEC`
   (`int`, Standard 600), `MAX_RECEIPT_IMAGE_BYTES = 8 * 1024 * 1024`. `auth.py`: `require_auth` unverändert aus
@@ -618,3 +618,8 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - [ ] Gemeldete Abweichungen und Ausnahmen (je Schritt eine Zeile)
 - [ ] Gesammelte „Prüfliste (Gerät)" aus S12, S23, S25, S29–S32 und der Ausroll-Hinweis aus S33 für den Nutzer
       (von Stufe B nicht abgehakt)
+
+## Abschluss
+
+### Baseline S0 (2026-11-11)
+- Server: `pytest` 11 passed · App: `V` 154 Tests, grün · `version = 36` in `AppDatabase.kt`: 1 Treffer.
