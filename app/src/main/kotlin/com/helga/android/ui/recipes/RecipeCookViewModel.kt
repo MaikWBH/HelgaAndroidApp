@@ -41,8 +41,6 @@ data class RecipeCookUiState(
 class RecipeCookViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: RecipeRepository,
-    private val recipeHistoryDao: RecipeHistoryDao,
-    private val recipeFeedbackDao: RecipeFeedbackDao,
     private val syncScheduler: SyncScheduler,
     private val timerManager: CookingTimerManager,
 ) : ViewModel() {
@@ -115,35 +113,8 @@ class RecipeCookViewModel @Inject constructor(
         viewModelScope.launch {
             val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
             val now = System.currentTimeMillis()
-            val updated = recipeHistoryDao.markCooked(recipeId, today, now)
-            if (updated == 0) {
-                recipeHistoryDao.upsertAll(
-                    listOf(
-                        RecipeHistoryEntity(
-                            id = UUID.randomUUID().toString(),
-                            recipeId = recipeId,
-                            plannedDate = today,
-                            cooked = 1,
-                            updatedAt = now,
-                            dirty = 1,
-                        )
-                    )
-                )
-            }
-            if (liked != 0) {
-                val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, today)
-                val entity = existing?.copy(liked = liked, updatedAt = now, dirty = 1)
-                    ?: RecipeFeedbackEntity(
-                        id = UUID.randomUUID().toString(),
-                        recipeId = recipeId,
-                        plannedDate = today,
-                        liked = liked,
-                        updatedAt = now,
-                        dirty = 1,
-                    )
-                recipeFeedbackDao.upsert(entity)
-                repository.recalculateRating(recipeId)
-            }
+            repository.markCooked(recipeId, today, now)
+            if (liked != 0) repository.saveFeedback(recipeId, today, liked, now)
             syncScheduler.triggerOneShot()
         }
     }

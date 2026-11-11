@@ -9,6 +9,7 @@ import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.repository.AiRepository
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
@@ -34,7 +35,7 @@ enum class SortOrder { NAME, RATING, UPDATED }
 @HiltViewModel
 class RecipeListViewModel @Inject constructor(
     private val repository: RecipeRepository,
-    private val weekplanDao: WeekplanDao,
+    private val weekplanRepository: WeekplanRepository,
     syncStatusHolder: SyncStatusHolder,
     private val syncScheduler: SyncScheduler,
     private val aiRepository: AiRepository,
@@ -92,7 +93,7 @@ class RecipeListViewModel @Inject constructor(
 
     data class TodayRecipe(val recipeId: String, val recipeName: String)
 
-    val todayRecipe: StateFlow<TodayRecipe?> = weekplanDao.observeTodayRecipeId(todayDate)
+    val todayRecipe: StateFlow<TodayRecipe?> = weekplanRepository.observeTodayRecipeId(todayDate)
         .flatMapLatest { recipeId ->
             if (recipeId == null) flowOf(null)
             else repository.observeAll().map { all ->

@@ -63,8 +63,6 @@ class RecipeDetailViewModel @Inject constructor(
     private val repository: RecipeRepository,
     private val shoppingRepository: ShoppingRepository,
     private val weekplanRepository: WeekplanRepository,
-    private val weekplanDao: WeekplanDao,
-    private val recipeDao: RecipeDao,
     private val aiRepository: AiRepository,
     private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
@@ -272,9 +270,9 @@ class RecipeDetailViewModel @Inject constructor(
                 monday.format(fmt), sunday.format(fmt)
             ).first()
             val result = days.map { day ->
-                val recipes = weekplanDao.recipesForDay(day.id)
+                val recipes = weekplanRepository.recipesForDay(day.id)
                 val names = recipes.map { wr ->
-                    recipeDao.findById(wr.recipeId)?.name ?: wr.recipeId
+                    repository.findById(wr.recipeId)?.name ?: wr.recipeId
                 }
                 WeekplanDayWithRecipes(day, names)
             }

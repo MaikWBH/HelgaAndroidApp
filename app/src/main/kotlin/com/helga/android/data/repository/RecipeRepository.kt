@@ -3,6 +3,8 @@ package com.helga.android.data.repository
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.entity.RecipeHistoryEntity
+import com.helga.android.data.local.entity.RecipeFeedbackEntity
+import java.util.UUID
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -36,6 +38,41 @@ class RecipeRepository @Inject constructor(
 
     suspend fun findById(id: String): RecipeEntity? = recipeDao.findById(id)
     suspend fun findRecipe(id: String): RecipeEntity? = recipeDao.findById(id)
+
+    /** Markiert ein Rezept am Datum als gekocht; legt den Verlaufseintrag an, falls keiner existiert. */
+    suspend fun markCooked(recipeId: String, date: String, now: Long) {
+        val updated = recipeHistoryDao.markCooked(recipeId, date, now)
+        if (updated == 0) {
+            recipeHistoryDao.upsertAll(
+                listOf(
+                    RecipeHistoryEntity(
+                        id = UUID.randomUUID().toString(),
+                        recipeId = recipeId,
+                        plannedDate = date,
+                        cooked = 1,
+                        updatedAt = now,
+                        dirty = 1,
+                    )
+                )
+            )
+        }
+    }
+
+    /** Speichert 👍/👎 zum Kochdatum und aktualisiert die abgeleitete Bewertung. */
+    suspend fun saveFeedback(recipeId: String, date: String, liked: Int, now: Long) {
+        val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, date)
+        val entity = existing?.copy(liked = liked, updatedAt = now, dirty = 1)
+            ?: RecipeFeedbackEntity(
+                id = UUID.randomUUID().toString(),
+                recipeId = recipeId,
+                plannedDate = date,
+                liked = liked,
+                updatedAt = now,
+                dirty = 1,
+            )
+        recipeFeedbackDao.upsert(entity)
+        recalculateRating(recipeId)
+    }
     fun observeHistorySince(since: String): Flow<List<RecipeHistoryEntity>> = recipeHistoryDao.observeSince(since)
     suspend fun recipeIdsBefore(before: String): List<String> = recipeHistoryDao.getRecipeIdsBefore(before)
     suspend fun allRecipes(): List<RecipeEntity> = recipeDao.allActive()
