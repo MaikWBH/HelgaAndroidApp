@@ -12,9 +12,9 @@ import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.ConnectionResult
 import com.helga.android.data.remote.ServerConnectionChecker
-import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.remote.dto.AiNutritionRequest
+import com.helga.android.data.repository.AiRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.WeekplanRepository
@@ -41,7 +41,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val preferences: AppPreferences,
-    private val apiFactory: SyncApiFactory,
+    private val aiRepository: AiRepository,
     private val syncScheduler: SyncScheduler,
     private val connectionChecker: ServerConnectionChecker,
     private val shoppingRepository: ShoppingRepository,
@@ -378,7 +378,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val recipes = recipeRepository.allRecipes()
             _bulkAiState.value = BulkAiState(mode = mode, isRunning = true, total = recipes.size)
-            val api = apiFactory.api()
             var updated = 0
             var failed = 0
             recipes.forEachIndexed { index, recipe ->
@@ -386,7 +385,7 @@ class SettingsViewModel @Inject constructor(
                     if (mode == BulkAiMode.CLASSIFY || mode == BulkAiMode.BOTH) {
                         val tags = recipeRepository.tagsByRecipeId(recipe.id).map { it.name }
                         val ingredientNames = recipeRepository.ingredientsForRecipe(recipe.id).map { it.food }
-                        val classifyResult = api.classifyRecipe(
+                        val classifyResult = aiRepository.classifyRecipe(
                             AiClassifyRequest(
                                 name = recipe.name,
                                 description = recipe.description,
@@ -418,7 +417,7 @@ class SettingsViewModel @Inject constructor(
                             }
                             listOf(qtyStr, ing.unit, ing.food).filter { it.isNotBlank() }.joinToString(" ")
                         }
-                        val nutritionResult = api.estimateNutrition(
+                        val nutritionResult = aiRepository.estimateNutrition(
                             AiNutritionRequest(
                                 name = recipe.name,
                                 description = recipe.description,
