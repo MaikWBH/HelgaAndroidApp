@@ -162,3 +162,7 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Server-Erreichbarkeit wird proaktiv angezeigt, nicht erst nach Fehlschlag | Ausdrücklicher Nutzerwunsch, aktuell keine Reachability-Mechanik im Code vorhanden |
 | 2026-08-30 | Modellwahl bleibt global | Kein Bedarf für Aufgaben-spezifische Modelle geäußert |
 | 2026-08-30 | Prompt-Verlauf und Feedback-Wirkung auf künftige Prompts werden nicht umgesetzt | Kein Bedarf, Feedback-Funktion war dem Nutzer nicht mal bekannt |
+
+## Phase 2 (mobile-android-design)
+
+- Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).

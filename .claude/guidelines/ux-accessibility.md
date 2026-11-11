@@ -303,3 +303,26 @@ Column(modifier = Modifier.fillMaxSize()) {
 
 Screens mit `LazyColumn` dürfen keine `Column(verticalScroll(...))` als Parent haben
 (Scroll-Konflikt / IllegalStateException).
+
+---
+
+## 13. Theme, Insets, Bausteine
+
+- **Farben nur über Rollen** (`MaterialTheme.colorScheme.*`), nie `Color(0x…)` in Screens. Die Akzent-Schemata
+  liegen vollständig in `ui/theme/Color.kt`; `ACCENT_SYSTEM` (`-1`) steht für Dynamic Color (ab Android 12),
+  Index 0 ist Grün. Formen über `MaterialTheme.shapes` (`theme/Shape.kt`), keine ad-hoc `RoundedCornerShape`.
+- **Insets:** Root-`Scaffold` mit `contentWindowInsets = WindowInsets(0)`; Padding und `imePadding()` liegen
+  nur am `NavHost`/an der Row in `HelgaNavGraph`. Kein `bottomPadding`-Durchreichen an Screens, kein weiteres
+  `imePadding` in Screens.
+- **Navigation:** `NavigationRail` statt `NavigationBar` ab mittlerer Breite (`WindowSizeClass`), Inhaltsbreite
+  ab Expanded auf 840 dp begrenzt.
+- **Bausteine verwenden statt neu bauen:** `LoadingIndicator` (mit Semantik) statt `CircularProgressIndicator`,
+  `ColorSwatchPicker` für Farbwahl, `@ThemePreviews` + `PreviewSurface` für Previews (hell/dunkel),
+  `UiText` für Meldungen aus ViewModels (`asString()` im Screen), `formatEuro` für Beträge.
+- **Rollen:** klickbare Zeilen mit `toggleable` (Checkbox), `selectable` (Radio) oder `clickable(role = Role.Button)`;
+  Auf-/Zuklappen mit `onClickLabel`.
+- **Zustand:** Dialog-/Sheet-Sichtbarkeit und Eingabetexte mit `rememberSaveable`.
+- **Screen/Content:** kleine Screens trennen `XScreen` (ViewModel) von zustandslosem `XContent` mit Preview.
+- **Absicherung:** `UiConventionsTest` prüft `collectAsState(`, nicht gespiegelte `ArrowBack`-Icons und
+  hartkodierte Wort-Literale in `Text`/`label`/`title`/`placeholder`/`contentDescription`/`message`.
+

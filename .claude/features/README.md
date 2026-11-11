@@ -83,11 +83,12 @@ Gilt für alle Pläne, hier einmal zentral festgehalten statt elfmal wiederholt:
 |--------|------|-----------|
 | Testabdeckung | 13 Testklassen / 115 Tests bei 131 Kotlin-Dateien (`app/src/main`); ein `androidTest`-Quellverzeichnis existiert nicht | – |
 | `!!`-Operator | 10 Stellen, verboten laut Guideline | [kotlin-quality](../guidelines/kotlin-quality.md) |
-| `items()` ohne `key` | 9 Stellen in Compose-Listen | [compose-performance](../guidelines/compose-performance.md) |
+| `items()` ohne `key` | 0 Stellen in Compose-Listen (Phase 2) | [compose-performance](../guidelines/compose-performance.md) |
 | `contentDescription = null` | Durchsicht abgeschlossen (plattform A2): 27 von 82 Stellen waren unbeschriftete Bedienelemente, jetzt beschriftet; verbleibende 55 bewusst dekorativ/redundant | [ux-accessibility](../guidelines/ux-accessibility.md) |
 | Nicht gesyncte Entities | 0 von 23 — behoben: `OffProductEntity` jetzt an `SyncEngine` angebunden (naehrwerte A2), `WeekplanTemplateEntity`/`WeekplanTemplateEntryEntity` per wochenplan A1 komplett entfernt statt angebunden | [sync-patterns](../guidelines/sync-patterns.md) |
 | Benachrichtigungen wirkungslos | `POST_NOTIFICATIONS` fehlt im Manifest und wird nie zur Laufzeit angefragt — bei `targetSdk 35` verwirft Android 13+ jede Zustellung. Betrifft die fertigen Einkaufstag- und Koch-Erinnerungen; Aufgabe in [plattform](plattform/plan.md) A4 | – |
 | Schichtung ViewModel → Repository | Phase 1 umgesetzt: keine DAO-/Retrofit-Importe mehr in ViewModels (Ausnahme `SseClient`); Test `ArchitectureRulesTest`; `WeekplanViewModel` 555 Zeilen (bewusst akzeptiert) | [architecture-layers](guidelines/architecture-layers.md) |
+| UI-Konventionen | Phase 2 umgesetzt: vollständige Farbschemata mit Dynamic-Color-Option, Insets am NavHost, NavigationRail, Strings/Plurals/`UiText`, Rollen und `rememberSaveable`; Test `UiConventionsTest` | [ux-accessibility](../guidelines/ux-accessibility.md) §13 |
 
 ## Bewusst offene Punkte
 

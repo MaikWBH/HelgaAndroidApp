@@ -188,6 +188,8 @@ val recipes by viewModel.recipes.collectAsState()
 
 Abhängigkeit: `androidx.lifecycle:lifecycle-runtime-compose` (bereits im Projekt vorhanden)
 
+Abgesichert per Test: `UiConventionsTest` schlägt bei `collectAsState(` fehl.
+
 ---
 
 ## 9. Keine backwards-writes

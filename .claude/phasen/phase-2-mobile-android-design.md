@@ -401,7 +401,7 @@ Callback-Parameter. Je `XContent` eine `@ThemePreviews`-Funktion mit festen Beis
   Buchstaben (`[A-Za-zÄÖÜäöüß]{2,}`), ist es ein Verstoß — Ausnahmen als Konstante im Test: `"sync-rotate"`, `"angle"`.
   Schlägt (3) auf einer nach R-S erlaubten Zeile fehl (z. B. verschachtelte Anführungszeichen), den Ausdruck im
   Produktivcode in eine lokale `val` ziehen statt die Regel aufzuweichen. Akzeptanz: Test grün.
-- [ ] **S32 Guideline, Index, Pläne** — Dateien: `.claude/guidelines/ux-accessibility.md` (neuer Abschnitt „13. Theme,
+- [x] **S32 Guideline, Index, Pläne** — Dateien: `.claude/guidelines/ux-accessibility.md` (neuer Abschnitt „13. Theme,
   Insets, Bausteine", max. 30 Zeilen: Farben nur über Rollen, Schemata in `theme/Color.kt`, `ACCENT_SYSTEM`; Root-Padding
   am NavHost, kein `bottomPadding`-Durchreichen, `imePadding` nur an der Wurzel; `LoadingIndicator`, `ColorSwatchPicker`,
   `@ThemePreviews`, `UiText`, `formatEuro` verwenden; Verweis auf `UiConventionsTest`),
@@ -426,8 +426,31 @@ Callback-Parameter. Je `XContent` eine `@ThemePreviews`-Funktion mit festen Beis
 - Room, Sync, DTOs, `server/`.
 
 ## Abschluss
-- [x] Baseline aus S0 (Testanzahl, Zählwerte): 143 Tests, 0 Fehler, V grün; `collectAsState()` 20, `CircularProgressIndicator(` 21, `rememberSaveable` 0, `@Preview` 0 (alle wie erwartet)
-- [ ] Bereichs-`plan.md` und Feature-Index aktualisiert (S32)
-- [ ] Verifikation grün (Befehl `V` + Ausgabe der letzten Ausführung festgehalten)
-- [ ] Gemeldete Ausnahmen (S5 Shapes außerhalb Composable, S23 Barcode-Dummy, weitere):
-- [ ] Gesammelte „Prüfliste (Gerät)" aus S1–S4, S6–S11, S24, S25, S28 für den Nutzer (von Stufe B nicht abgehakt):
+- [x] Baseline aus S0 (Testanzahl, Zählwerte): 143 Tests, 0 Fehler, V grün; `collectAsState()` 20, `CircularProgressIndicator(` 21, `rememberSaveable` 0, `@Preview` 0 (alle wie erwartet). Nachher: 154 Tests (+4 `CurrencyFormatTest`, +4 `UiTextTest`, +3 `UiConventionsTest`), `collectAsState()` 0, `CircularProgressIndicator(` 1 (nur in `LoadingIndicator.kt`), `rememberSaveable` 66 Zeilen (55 ohne Importzeilen), `@Preview`/`@ThemePreviews` 14 Zeilen, `bottomPadding` 0, `Color(0x` außerhalb `theme/` 0.
+- [x] Bereichs-`plan.md` und Feature-Index aktualisiert (S32)
+- [x] Verifikation grün (Befehl `V`): zuletzt `BUILD SUCCESSFUL`, 154 Tests, 0 Fehler/Ausfälle.
+- [x] Gemeldete Ausnahmen (S5 Shapes außerhalb Composable, S23 Barcode-Dummy, weitere):
+  - S5: keine Stelle außerhalb eines Composable-Kontexts (Build grün).
+  - S23: `ShoppingListViewModel.kt:402` (`name = "Barcode: … (nicht gefunden)"`, Entity-Feld) bleibt; ebenso `ReceiptScanViewModel` Z.79 (`IllegalStateException`-Text, nur geworfen).
+  - S10/S22: Die Zählkriterien `grep -rn 'imePadding' $B | wc -l = 1` bzw. `pluralStringResource … = 2` zählen Importzeilen mit: `imePadding` = 2 (Import + Aufruf); `pluralStringResource` per voll qualifiziertem Aufruf ohne Import = 2.
+  - S11: `NavigationRail(modifier = Modifier.fillMaxHeight()) {` statt `NavigationRail {`, damit das Kriterium `grep -c 'NavigationRail('` = 1 erfüllt ist (kein Verhaltensunterschied).
+  - S15: `ShoppingListScreen` formatiert Kosten als `String.format("%.2f €", …)` (nicht im Muster `€%`), bleibt unverändert.
+  - S18: Die Bon-Anzahl `"$n Bon${if (n != 1) "s" else ""}"` und `"… Markt/Märkte"` sind als je zwei Strings (`cost_bon_one/other`, `price_buy_stores_one/other`) umgesetzt, nicht als Plurals (S22 verlangt genau zwei `pluralStringResource`). `PriceStat("Min"/"Max")` ebenfalls als Strings.
+  - S19/S20/S24: zusätzlich zu den G-S-Treffern wurden weitere Wort-Literale in denselben Dateien ausgelagert (Quellen-Badge, Makro-Zeilen, „Manuell“, `actionLabel` „Zur Einkaufsliste“). Der Snackbar-Text im Wochenplan wird vor dem `LaunchedEffect` gelesen (kein Composable-Aufruf in der Coroutine).
+  - S24: Die Schritt-Zeilen der Kochansicht (Z.397/644) nutzen `toggleable` mit dem vorhandenen Bool `done`. Der Slot-Chip-`minimumInteractiveComponentSize` (S25) ist bereits in S24 mit dem `role`-Eintrag gesetzt worden.
+  - Nicht in G-S/Test erfasst und deshalb unverändert: `ProteinBar("🥩 Fleisch", …)` in `StatsScreen` (Positionsparameter) und `" ★"`-Literal in `ProductPriceDetailScreen`.
+  - S27/S28: Nicht umgestellt wurden Entities, Listen, Sets, Pairs und Sealed-Zustände (siehe Commit-Beschreibungen S26–S28). Mehrzeilige/keyed `remember(...)` blieben unberührt.
+- [x] Gesammelte „Prüfliste (Gerät)“ aus S1–S4, S6–S11, S24, S25, S28 für den Nutzer (von Stufe B nicht abgehakt):
+  - S1: Jede der 6 Akzentfarben hell und dunkel — FAB, NavigationBar-Indikator, FilterChips und Karten zeigen den Akzent bzw. neutrale Flächen, nirgends Lila außer beim Akzent Lila; Text auf Buttons lesbar.
+  - S2 (Android 12+): Neuinstallation zeigt Wallpaper-Farben; nach Auswahl Grün ist die App grün.
+  - S3: TalkBack liest Farbnamen und „ausgewählt“; Option „System“ fehlt unter Android 12.
+  - S4: Kaltstart im System-Dark-Mode ohne weißes Aufblitzen; App-Modus „Hell“ bei System dunkel zeigt dunkle Statusleisten-Icons und umgekehrt.
+  - S6 (Gesten- und 3-Tasten-Navigation): auf allen vier Tabs liegt nichts hinter der NavigationBar (insb. FAB „Scannen“ der Bon-Liste, QuickAdd-Leiste, letzter Listeneintrag); keine doppelte Lücke über der Leiste; Detail-Screens reichen bis an die Systemleiste.
+  - S7: Titel und Zurück der Kostenübersicht sichtbar, Inhalt beginnt unter der Leiste.
+  - S8: konfigurierte App startet direkt in der Einkaufsliste; frische App zeigt Onboarding; Teilen einer URL öffnet den Import, Zurück führt zur Einkaufsliste; Drehen im Import öffnet ihn nicht erneut; Abmelden in den Einstellungen führt zum Onboarding.
+  - S9 (Android 14+ mit Gestennavigation): Zurück-Geste zeigt Vorschau und schließt Sheets/Dialoge vor dem Screen.
+  - S10: QuickAdd-Feld der Einkaufsliste und unterste Felder in Rezeptformular, Einstellungen und Onboarding bleiben bei offener Tastatur sichtbar; keine Lücke zwischen Inhalt und Tastatur; Bottom-Sheets mit Textfeld unverändert.
+  - S11 (Tablet oder Querformat ≥ 600 dp): Rail links statt Leiste unten auf den vier Tabs; auf Detail-Screens keine Rail; Hochkant-Phone unverändert; auf ≥ 840 dp ist der Inhalt mittig auf 840 dp begrenzt.
+  - S24 (TalkBack): Zutaten-/Schritt-Zeilen der Kochansicht melden „Kontrollkästchen, aktiviert/nicht aktiviert“.
+  - S25: Slot-Chip lässt sich sicher treffen, Tageszeile wird nicht sichtbar höher als gewünscht (sonst melden); Marker-Chips in hell und dunkel lesbar (Befund 22).
+  - S28 (nach S26–S28): offener Dialog/Sheet und getippter Text überleben eine Drehung in Einkaufsliste, Wochenplan, Einstellungen, Rezeptdetail.

@@ -112,3 +112,7 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Zeitraumfilter wird ergänzt | Ohne Zeitbezug sind reine Gesamtzahlen wenig aussagekräftig |
 | 2026-08-30 | Kosten/Nährwerte bleiben getrennt von der Statistik | Unterschiedliche Themen, getrennte Ansichten gewünscht |
 | 2026-08-30 | Keine Vorschlagsfunktion „lange nicht gekocht" im Wochenplan | Reine Anzeige reicht aus |
+
+## Phase 2 (mobile-android-design)
+
+- Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).

@@ -457,3 +457,7 @@ _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 ---
 
 **Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).
+
+## Phase 2 (mobile-android-design)
+
+- Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).

@@ -133,3 +133,7 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Gang-Zuordnung bekommt eine robustere Matching-Logik statt reinem Exakt-Match | Häufiges Nachkorrigieren ist der größte Reibungspunkt im Bereich |
 | 2026-08-30 | Neue Märkte lassen sich per Standard-Gangsatz oder Kopie vorbefüllen | Beide Wege wurden gewünscht, lösen dasselbe Problem gemeinsam |
 | 2026-08-30 | Markt-Wechsel-UI und Markt-Metadaten bleiben unverändert | Kein Bedarf geäußert |
+
+## Phase 2 (mobile-android-design)
+
+- Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).

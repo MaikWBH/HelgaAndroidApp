@@ -39,7 +39,7 @@ Modellwechsel: Nutzer per `/model` oder die Stufe läuft als Sub-Agent mit gewä
 | Phase | Skill | Bereich | Definition (groß) | Umsetzung (klein) | Status |
 |-------|-------|---------|-------------------|-------------------|--------|
 | 1 | android-clean-architecture | `data/`, `di/`, Repositories, Sync-Fluss | Sonnet 5.5 | Haiku 5.5 | umgesetzt → [phase-1](phase-1-android-clean-architecture.md) |
-| 2 | mobile-android-design | `ui/` (Compose, Material 3, Theming) | Fable 5.2 | Sonnet 5.5 | definiert (wartet auf Freigabe) → [phase-2](phase-2-mobile-android-design.md) |
+| 2 | mobile-android-design | `ui/` (Compose, Material 3, Theming) | Fable 5.2 | Sonnet 5.5 | umgesetzt (Stufe B) → [phase-2](phase-2-mobile-android-design.md) |
 | 3 | android-clean-architecture + fastapi-templates + mobile-android-design | Bons, Kategorien, Ausgaben-Auswertung (App + Server) | – | – | Entscheidungen erfasst → [phase-3](phase-3-bons-kategorien-entscheidungen.md) |
 | 4 | fastapi-templates | `server/app/` (Sync-Backend, restliche Teile) | – | – | offen |
 | 5 | multi-stage-dockerfile | `server/Dockerfile`, Compose | – | – | offen |

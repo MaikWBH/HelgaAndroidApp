@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.helga.android.ui.theme.accentPrimaryColors
 
 data class ColorSwatch(
     val key: String,
@@ -97,9 +98,9 @@ fun ColorSwatchPicker(
 
 private val previewSwatches = listOf(
     ColorSwatch("-1", "System (Wallpaper)", null, Icons.Filled.Wallpaper),
-    ColorSwatch("0", "Grün", Color(0xFF2E7D32)),
-    ColorSwatch("1", "Blau", Color(0xFF1565C0)),
-    ColorSwatch("3", "Orange", Color(0xFFE65100)),
+    ColorSwatch("0", "Grün", accentPrimaryColors[0]),
+    ColorSwatch("1", "Blau", accentPrimaryColors[1]),
+    ColorSwatch("3", "Orange", accentPrimaryColors[3]),
 )
 
 @ThemePreviews
