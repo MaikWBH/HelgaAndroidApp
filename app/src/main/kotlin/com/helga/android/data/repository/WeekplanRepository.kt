@@ -55,6 +55,9 @@ class WeekplanRepository @Inject constructor(
             else combine(days.map { weekplanDao.observeRecipeCount(it.id) }) { counts -> counts.any { it > 0 } }
         }
 
+    suspend fun daysBetween(startDate: String, endDate: String): List<WeekplanDayEntity> =
+        weekplanDao.getDaysBetween(startDate, endDate)
+
     fun observeDaysBetween(startDate: String, endDate: String): Flow<List<WeekplanDayEntity>> =
         weekplanDao.observeDaysBetween(startDate, endDate)
 

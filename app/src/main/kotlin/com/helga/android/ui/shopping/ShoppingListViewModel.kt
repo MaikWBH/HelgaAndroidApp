@@ -2,8 +2,6 @@ package com.helga.android.ui.shopping
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.local.dao.RecipeDao
-import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
@@ -13,6 +11,7 @@ import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.repository.ReceiptRepository
+import com.helga.android.data.usecase.ExportWeekToShoppingListUseCase
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.StoreRepository
@@ -48,8 +47,7 @@ class ShoppingListViewModel @Inject constructor(
     private val weekplanRepository: WeekplanRepository,
     private val recipeRepository: RecipeRepository,
     private val receiptRepository: ReceiptRepository,
-    private val weekplanDao: WeekplanDao,
-    private val recipeDao: RecipeDao,
+    private val exportWeekUseCase: ExportWeekToShoppingListUseCase,
     private val syncScheduler: SyncScheduler,
     private val syncEngine: SyncEngine,
     private val preferences: AppPreferences,
@@ -218,23 +216,7 @@ class ShoppingListViewModel @Inject constructor(
 
     fun exportWeekToShoppingList(listId: String) {
         viewModelScope.launch {
-            val days = weekplanDao.getDaysBetween(monday.format(fmt), sunday.format(fmt))
-            days.forEach { day ->
-                weekplanDao.recipesForDay(day.id).forEach { entry ->
-                    val recipeName = recipeDao.findById(entry.recipeId)?.name ?: ""
-                    val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
-                    ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
-                        repository.addOrMergeItem(
-                            listId = listId,
-                            name = ingredient.food,
-                            quantity = ingredient.quantity,
-                            unit = ingredient.unit,
-                            source = "weekplan",
-                            recipeName = recipeName,
-                        )
-                    }
-                }
-            }
+            exportWeekUseCase(listId, monday.format(fmt), sunday.format(fmt))
             syncScheduler.triggerOneShot()
         }
     }
