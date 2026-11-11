@@ -1,5 +1,6 @@
 package com.helga.android.ui.components
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -43,7 +44,7 @@ fun CreateFab(
     onRemix: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier,

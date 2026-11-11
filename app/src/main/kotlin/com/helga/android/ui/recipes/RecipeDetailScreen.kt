@@ -1,5 +1,6 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
 import com.helga.android.ui.common.asString
 import androidx.compose.foundation.background
@@ -106,17 +107,17 @@ fun RecipeDetailScreen(
     val recipe = uiState.recipe
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var showOverflow by remember { mutableStateOf(false) }
-    var shoppingTargetDialog by remember { mutableStateOf(false) }
-    var showWeekplanPicker by remember { mutableStateOf(false) }
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var showOverflow by rememberSaveable { mutableStateOf(false) }
+    var shoppingTargetDialog by rememberSaveable { mutableStateOf(false) }
+    var showWeekplanPicker by rememberSaveable { mutableStateOf(false) }
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
     val weekplanDays by viewModel.weekplanDays.collectAsStateWithLifecycle()
     val servings by viewModel.servings.collectAsStateWithLifecycle()
     val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
     val nutrition by viewModel.nutrition.collectAsStateWithLifecycle()
-    var showNutritionDialog by remember { mutableStateOf(false) }
+    var showNutritionDialog by rememberSaveable { mutableStateOf(false) }
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
     val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
 
@@ -607,10 +608,10 @@ private fun NutritionEditDialog(
     onDismiss: () -> Unit,
     onSave: (kcal: Double, protein: Double, fat: Double, carbs: Double) -> Unit,
 ) {
-    var kcal by remember { mutableStateOf(nutrition?.totalKcal?.takeIf { it > 0 }?.toString() ?: "") }
-    var protein by remember { mutableStateOf(nutrition?.protein?.takeIf { it > 0 }?.toString() ?: "") }
-    var fat by remember { mutableStateOf(nutrition?.fat?.takeIf { it > 0 }?.toString() ?: "") }
-    var carbs by remember { mutableStateOf(nutrition?.carbs?.takeIf { it > 0 }?.toString() ?: "") }
+    var kcal by rememberSaveable { mutableStateOf(nutrition?.totalKcal?.takeIf { it > 0 }?.toString() ?: "") }
+    var protein by rememberSaveable { mutableStateOf(nutrition?.protein?.takeIf { it > 0 }?.toString() ?: "") }
+    var fat by rememberSaveable { mutableStateOf(nutrition?.fat?.takeIf { it > 0 }?.toString() ?: "") }
+    var carbs by rememberSaveable { mutableStateOf(nutrition?.carbs?.takeIf { it > 0 }?.toString() ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -698,7 +699,7 @@ private fun DescriptionSection(description: String) {
 
 @Composable
 private fun PersonalNotesSection(notes: String, onSave: (String) -> Unit) {
-    var editing by remember { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf(false) }
     var draft by remember(notes) { mutableStateOf(notes) }
 
     Column(

@@ -1,5 +1,6 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
@@ -101,9 +102,9 @@ fun RecipeListScreen(
     val unclassifiedCount by viewModel.unclassifiedCount.collectAsStateWithLifecycle()
     val unclassifiedRecipes by viewModel.unclassifiedRecipes.collectAsStateWithLifecycle()
 
-    var showTagFilter by remember { mutableStateOf(false) }
-    var showOverflowMenu by remember { mutableStateOf(false) }
-    var showBulkClassifyDialog by remember { mutableStateOf(false) }
+    var showTagFilter by rememberSaveable { mutableStateOf(false) }
+    var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
+    var showBulkClassifyDialog by rememberSaveable { mutableStateOf(false) }
     var classifyProgress by remember { mutableStateOf(0 to 0) }
 
     if (showTagFilter) {
@@ -333,7 +334,7 @@ private fun FilterBar(
 
 @Composable
 private fun SortButton(sortOrder: SortOrder, onSortSelect: (SortOrder) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(

@@ -1,5 +1,6 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import android.content.res.Configuration
@@ -159,11 +160,11 @@ fun RecipeCookScreen(
     val servings by viewModel.servings.collectAsStateWithLifecycle()
     val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
-    var ingredientsExpanded by remember { mutableStateOf(false) }
+    var ingredientsExpanded by rememberSaveable { mutableStateOf(false) }
     val activeTimers by viewModel.activeTimers.collectAsStateWithLifecycle()
-    var selectedTimerId by remember { mutableStateOf<String?>(null) }
-    var focusMode by remember { mutableStateOf(false) }
-    var showRatingPrompt by remember { mutableStateOf(false) }
+    var selectedTimerId by rememberSaveable { mutableStateOf<String?>(null) }
+    var focusMode by rememberSaveable { mutableStateOf(false) }
+    var showRatingPrompt by rememberSaveable { mutableStateOf(false) }
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val onStartTimer: (DetectedTimer) -> Unit = { timer -> viewModel.startTimer(timer.label, timer.totalSeconds) }
 

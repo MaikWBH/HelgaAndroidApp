@@ -1,5 +1,6 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -282,7 +283,7 @@ private fun MealSlotPicker(
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -356,7 +357,7 @@ private fun TagsEditor(
     onAddTag: (String) -> Unit,
     onRemoveTag: (String) -> Unit,
 ) {
-    var input by remember { mutableStateOf("") }
+    var input by rememberSaveable { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),

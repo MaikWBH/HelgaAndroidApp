@@ -378,7 +378,7 @@ Akzeptanz je Schritt: für die genannten Dateien listet
 Stichwort zur Begründung in die Commit-Beschreibung.
 - [x] **S26** — `$U/shopping/ShoppingListScreen.kt`, `$U/stores/StoreListScreen.kt`.
 - [x] **S27** — `$U/weekplan/WeekplanScreen.kt`, `$U/weekplan/WeekplanRecipePickerScreen.kt`, `$U/settings/SettingsScreen.kt`.
-- [ ] **S28** — `$U/recipes/*.kt`, `$U/ai/*.kt`, `$U/components/*.kt`. Danach `grep -rn 'rememberSaveable' $U | wc -l`
+- [x] **S28** — `$U/recipes/*.kt`, `$U/ai/*.kt`, `$U/components/*.kt`. Danach `grep -rn 'rememberSaveable' $U | wc -l`
   unter „Abschluss" notieren. Prüfliste (Gerät, nach S26–S28): offener Dialog/Sheet und getippter Text überleben eine
   Drehung in Einkaufsliste, Wochenplan, Einstellungen, Rezeptdetail.
 

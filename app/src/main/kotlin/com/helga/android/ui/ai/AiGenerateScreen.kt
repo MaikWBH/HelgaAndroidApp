@@ -1,5 +1,6 @@
 package com.helga.android.ui.ai
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.helga.android.ui.common.asString
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -290,7 +291,7 @@ private fun QuestionDropdown(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     ExposedDropdownMenuBox(
         expanded = expanded && enabled,
         onExpandedChange = { if (enabled) expanded = it },
