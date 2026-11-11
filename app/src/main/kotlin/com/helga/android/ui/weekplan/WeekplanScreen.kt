@@ -1,5 +1,9 @@
 package com.helga.android.ui.weekplan
 
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.shape.CircleShape
 import com.helga.android.data.weekplan.WeekplanGenerateStatus
 import com.helga.android.data.weekplan.parseAllergenJson
@@ -847,7 +851,9 @@ private fun MealSlotBadge(mealSlot: String, onMealSlotChange: ((String) -> Unit)
         Surface(
             color = color,
             shape = MaterialTheme.shapes.extraSmall,
-            modifier = if (onMealSlotChange != null) Modifier.clickable { expanded = true } else Modifier,
+            modifier = if (onMealSlotChange != null) Modifier
+                .minimumInteractiveComponentSize()
+                .clickable(role = Role.Button) { expanded = true } else Modifier,
         ) {
             Text(
                 text = label,
@@ -889,7 +895,7 @@ private fun RecipeItemRow(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onNavigate),
+            .clickable(role = Role.Button, onClick = onNavigate),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -973,7 +979,7 @@ private fun DayPreviewRecipeRow(
             .fillMaxWidth()
             .padding(vertical = 3.dp)
             .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onNavigate),
+            .clickable(role = Role.Button, onClick = onNavigate),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -1084,11 +1090,15 @@ private fun ShoppingListPickerDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { selectedListId = list.id }
+                                .selectable(
+                                    selected = list.id == selectedListId,
+                                    role = Role.RadioButton,
+                                    onClick = { selectedListId = list.id },
+                                )
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            RadioButton(selected = list.id == selectedListId, onClick = { selectedListId = list.id })
+                            RadioButton(selected = list.id == selectedListId, onClick = null)
                             Text(list.name, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
@@ -1131,11 +1141,15 @@ private fun ExportPreviewDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onToggle(item.key) }
+                                .toggleable(
+                                    value = checked,
+                                    role = Role.Checkbox,
+                                    onValueChange = { onToggle(item.key) },
+                                )
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Checkbox(checked = checked, onCheckedChange = { onToggle(item.key) })
+                            Checkbox(checked = checked, onCheckedChange = null)
                             Column {
                                 val label = buildString {
                                     if (item.quantity > 0) {
@@ -1197,7 +1211,11 @@ private fun ConstraintsPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onToggle)
+                .clickable(
+                    role = Role.Button,
+                    onClickLabel = stringResource(if (expanded) R.string.common_collapse else R.string.common_expand),
+                    onClick = onToggle,
+                )
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

@@ -1,5 +1,7 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -115,11 +117,15 @@ private fun IngredientCheckRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
+            .toggleable(
+                value = checked,
+                role = Role.Checkbox,
+                onValueChange = { onToggle() },
+            )
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = { onToggle() })
+        Checkbox(checked = checked, onCheckedChange = null)
         val label = buildString {
             if (ingredient.quantity > 0) {
                 val q = ingredient.quantity * scaleFactor
@@ -314,7 +320,10 @@ fun RecipeCookScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { ingredientsExpanded = !ingredientsExpanded }
+                            .clickable(
+                                role = Role.Button,
+                                onClickLabel = stringResource(if (ingredientsExpanded) R.string.common_collapse else R.string.common_expand),
+                            ) { ingredientsExpanded = !ingredientsExpanded }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -394,7 +403,11 @@ fun RecipeCookScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { viewModel.toggleStep(index) }
+                        .toggleable(
+                            value = done,
+                            role = Role.Checkbox,
+                            onValueChange = { viewModel.toggleStep(index) },
+                        )
                         .padding(vertical = 8.dp),
                 ) {
                     Row(
@@ -641,7 +654,11 @@ private fun CookFocusView(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable { onToggleStep(page) }
+                    .toggleable(
+                        value = done,
+                        role = Role.Checkbox,
+                        onValueChange = { onToggleStep(page) },
+                    )
                     .padding(24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,

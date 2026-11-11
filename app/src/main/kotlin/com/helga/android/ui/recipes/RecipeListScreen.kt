@@ -1,5 +1,8 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
@@ -502,13 +505,17 @@ private fun TagFilterDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onToggleTag(tag) }
+                                .toggleable(
+                                    value = tag in selectedTags,
+                                    role = Role.Checkbox,
+                                    onValueChange = { onToggleTag(tag) },
+                                )
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Checkbox(
                                 checked = tag in selectedTags,
-                                onCheckedChange = { onToggleTag(tag) },
+                                onCheckedChange = null,
                             )
                             Text(
                                 text = tag,

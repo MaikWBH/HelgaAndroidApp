@@ -1,5 +1,6 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.ui.semantics.Role
 import com.helga.android.ui.common.asString
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -736,7 +737,7 @@ private fun PersonalNotesSection(notes: String, onSave: (String) -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { editing = true }
+                        .clickable(role = Role.Button) { editing = true }
                         .padding(vertical = 8.dp),
                 )
             } else {

@@ -1,5 +1,6 @@
 package com.helga.android.ui.shopping
 
+import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -235,6 +236,7 @@ fun ShoppingListScreen(
                         modifier = Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
+                            role = Role.Button,
                             onClick = { showListDropdown = true },
                         ),
                     ) {
@@ -450,7 +452,7 @@ fun ShoppingListScreen(
                     Spacer(Modifier.widthIn(min = 6.dp))
                     Box {
                         Row(
-                            modifier = Modifier.clickable { showStoreDropdown = true },
+                            modifier = Modifier.clickable(role = Role.Button) { showStoreDropdown = true },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
@@ -750,7 +752,7 @@ private fun ShoppingItemRow(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable(onClick = onEdit)
+                    .clickable(role = Role.Button, onClick = onEdit)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -921,7 +923,7 @@ private fun EditItemDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = { showAislePicker = true }),
+                            .clickable(role = Role.Button, onClick = { showAislePicker = true }),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -1333,7 +1335,10 @@ private fun CostEstimateCard(estimate: com.helga.android.data.model.ListCostEsti
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clickable { showDetails = !showDetails },
+            .clickable(
+                role = Role.Button,
+                onClickLabel = stringResource(if (showDetails) R.string.common_collapse else R.string.common_expand),
+            ) { showDetails = !showDetails },
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(

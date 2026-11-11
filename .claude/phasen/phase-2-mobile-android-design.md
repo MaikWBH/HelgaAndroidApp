@@ -340,7 +340,7 @@ Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
   zeigt höchstens die Zeile Z.79 aus `ReceiptScanViewModel`.
 
 ### Block F — Semantik und Touch-Targets (Befund 11)
-- [ ] **S24 Rollen für klickbare Zeilen** — Dateien: Treffer von `grep -rn '\.clickable' $U | grep -v 'receipts/\|widget/'`.
+- [x] **S24 Rollen für klickbare Zeilen** — Dateien: Treffer von `grep -rn '\.clickable' $U | grep -v 'receipts/\|widget/'`.
   Zuordnung:
   - **Checkbox-Zeilen → `Modifier.toggleable(value = <checked>, role = Role.Checkbox, onValueChange = { <bisheriger onClick> })`**
     und die enthaltene `Checkbox` auf `onCheckedChange = null`: `RecipeListScreen.kt:509`, `WeekplanScreen.kt:1133`,

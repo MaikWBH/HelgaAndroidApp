@@ -1,5 +1,6 @@
 package com.helga.android.ui.settings
 
+import androidx.compose.ui.semantics.Role
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -420,7 +421,10 @@ fun SettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showAdvanced = !showAdvanced },
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(if (showAdvanced) R.string.common_collapse else R.string.common_expand),
+                    ) { showAdvanced = !showAdvanced },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -680,7 +684,7 @@ fun SettingsScreen(
                         text = stringResource(R.string.settings_ai_bulk_done, bulkAiState.updated, bulkAiState.failed),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.clickable { viewModel.dismissBulkAiResult() },
+                        modifier = Modifier.clickable(role = Role.Button) { viewModel.dismissBulkAiResult() },
                     )
                 }
 
