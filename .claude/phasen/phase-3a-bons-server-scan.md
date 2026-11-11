@@ -311,7 +311,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   table_info` sowie die Indexnamen aus `PRAGMA index_list` (ohne `sqlite_autoindex…`) mit der JSON-Datei. Test:
   `createFromSchema(conn, 36)` + `assertMatchesSchema(conn, 36)` grün; nach `ALTER TABLE stores ADD COLUMN x TEXT`
   schlägt `assertMatchesSchema` fehl (`assertThrows`). Akzeptanz: `V` grün.
-- [ ] **S16 Room v37** — Dateien: `$B/data/local/entity/ReceiptEntity.kt`, `ReceiptItemEntity.kt`, neu
+- [x] **S16 Room v37** — Dateien: `$B/data/local/entity/ReceiptEntity.kt`, `ReceiptItemEntity.kt`, neu
   `ReceiptLexiconEntity.kt`, `$B/data/local/AppDatabase.kt`, `app/schemas/…/37.json` (entsteht beim Build),
   `$T/SyncCompletenessTest.kt`, neu `$T/Migration36To37Test.kt`. `ReceiptEntity` neu: `storeAddress: String = ""`,
   `purchaseDay: String = ""`, `purchaseTime: String = ""`, `discountTotal: Double = 0.0`, `depositTotal: Double =

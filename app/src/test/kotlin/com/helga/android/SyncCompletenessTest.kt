@@ -16,7 +16,10 @@ class SyncCompletenessTest {
     // Entities, die absichtlich NICHT synchronisiert werden – mit Begründung als Kommentar.
     // Jede neue Entity muss entweder hier eingetragen sein oder ein toDto()/toEntity()-Mapper-
     // Paar in SyncEngine.kt haben, sonst schlägt der Test fehl.
-    private val intentionallyLocalOnly = emptySet<String>()
+    private val intentionallyLocalOnly = setOf(
+        // reiner Abzug des Server-Lexikons (Phase 3a), Quelle der Wahrheit ist /api/receipts/lexicon
+        "ReceiptLexicon",
+    )
 
     private fun projectRoot(): File {
         var dir = File("").absoluteFile

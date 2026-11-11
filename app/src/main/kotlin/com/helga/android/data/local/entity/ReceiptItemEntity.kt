@@ -32,6 +32,13 @@ data class ReceiptItemEntity(
     val quantity: Double = 1.0,
     val unitPrice: Double = 0.0,
     val totalPrice: Double = 0.0,
+    // Phase 3a: Einheit, Rabatt, Pfand, Kategorie, bestätigtes OFF-Produkt, KI-Sicherheit
+    val unit: String = "",
+    val discount: Double = 0.0,
+    val isDeposit: Int = 0,
+    val category: String = "",
+    val offBarcode: String = "",
+    val confidence: Double = 1.0,
     val matchedShoppingItemId: String = "",
     val matchStatus: String = "",
     val updatedAt: Long = 0L,
