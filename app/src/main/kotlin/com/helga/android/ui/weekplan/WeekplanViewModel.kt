@@ -15,6 +15,7 @@ import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.dao.ShoppingDao
@@ -166,7 +167,7 @@ class WeekplanViewModel @Inject constructor(
     private val weekplanConstraintsDao: WeekplanConstraintsDao,
     private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
-    private val apiFactory: com.helga.android.data.remote.SyncApiFactory,
+    private val shoppingRepository: ShoppingRepository,
 ) : ViewModel() {
 
     private val _selectedDayId = MutableStateFlow<String?>(null)
@@ -1010,10 +1011,6 @@ class WeekplanViewModel @Inject constructor(
 
     suspend fun suggestItems(query: String): List<String> {
         if (query.length < 2) return emptyList()
-        return try {
-            apiFactory.api().suggestItems(query).suggestions
-        } catch (_: Exception) {
-            emptyList()
-        }
+        return shoppingRepository.suggestItems(query)
     }
 }

@@ -14,7 +14,6 @@ import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.preferences.AppPreferences
-import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.StoreRepository
 import com.helga.android.data.sync.SyncEngine
@@ -34,7 +33,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import com.helga.android.data.local.entity.OffProductEntity
 import timber.log.Timber
 import java.time.DayOfWeek
@@ -51,7 +49,6 @@ class ShoppingListViewModel @Inject constructor(
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
     private val receiptDao: ReceiptDao,
-    private val apiFactory: SyncApiFactory,
     private val syncScheduler: SyncScheduler,
     private val syncEngine: SyncEngine,
     private val preferences: AppPreferences,
@@ -383,12 +380,7 @@ class ShoppingListViewModel @Inject constructor(
             Timber.d(e, "Local suggestion lookup failed")
             emptyList()
         }
-        val remote = try {
-            withTimeoutOrNull(1_500) { apiFactory.api().suggestItems(query).suggestions }.orEmpty()
-        } catch (e: Exception) {
-            Timber.d(e, "Failed to get server suggestions")
-            emptyList()
-        }
+        val remote = repository.suggestItems(query)
         return (local + remote).distinctBy { it.lowercase() }.take(20)
     }
 
@@ -396,7 +388,7 @@ class ShoppingListViewModel @Inject constructor(
         val listId = activeListId.value ?: return
         viewModelScope.launch {
             try {
-                val dto = apiFactory.api().lookupBarcode(
+                val dto = repository.lookupBarcode(
                     com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
                 )
                 val product = OffProductEntity(

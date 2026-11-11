@@ -4,6 +4,9 @@ import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.model.ItemCostEstimate
+import com.helga.android.data.remote.ApiProvider
+import com.helga.android.data.remote.dto.OffLookupBarcodeRequest
+import com.helga.android.data.remote.dto.OffLookupBarcodeResponse
 import com.helga.android.data.model.ItemOrigin
 import com.helga.android.data.model.ItemOrigins
 import com.helga.android.data.model.ListCostEstimate
@@ -11,6 +14,8 @@ import com.helga.android.data.model.StoreCost
 import com.helga.android.data.util.ReceiptItemNormalizer
 import com.helga.android.data.util.ShoppingUnitConverter
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withTimeoutOrNull
+import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,6 +25,7 @@ class ShoppingRepository @Inject constructor(
     private val shoppingDao: ShoppingDao,
     private val storeRepository: StoreRepository,
     private val receiptRepository: ReceiptRepository,
+    private val apiProvider: ApiProvider,
 ) {
 
     fun observeLists(): Flow<List<ShoppingListEntity>> = shoppingDao.observeLists()
@@ -234,4 +240,19 @@ class ShoppingRepository @Inject constructor(
             )
         }
     }
+
+    /** Serverseitige Artikelvorschläge; bei Timeout (1,5 s) oder Fehler eine leere Liste. */
+    suspend fun suggestItems(query: String): List<String> {
+        if (query.length < 2) return emptyList()
+        return try {
+            withTimeoutOrNull(1_500) { apiProvider.api().suggestItems(query).suggestions }.orEmpty()
+        } catch (e: Exception) {
+            Timber.d(e, "Failed to get server suggestions")
+            emptyList()
+        }
+    }
+
+    /** Barcode-Suche bei Open Food Facts über den Sync-Server. Fehler werden an den Aufrufer weitergereicht. */
+    suspend fun lookupBarcode(req: OffLookupBarcodeRequest): OffLookupBarcodeResponse =
+        apiProvider.api().lookupBarcode(req)
 }
