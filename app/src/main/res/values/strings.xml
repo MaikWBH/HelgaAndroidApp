@@ -577,4 +577,5 @@
     <!-- Phase 2: Semantik -->
     <string name="common_collapse">Einklappen</string>
     <string name="common_expand">Ausklappen</string>
+    <string name="settings_marker_color_n">Farbe %1$d</string>
 </resources>

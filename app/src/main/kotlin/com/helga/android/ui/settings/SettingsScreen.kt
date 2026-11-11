@@ -990,25 +990,13 @@ private fun DayMarkerDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    dayMarkerColors.forEach { hex ->
-                        val isSelected = color == hex
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                                    shape = CircleShape,
-                                )
-                                .padding(if (isSelected) 3.dp else 0.dp)
-                                .clip(CircleShape)
-                                .background(parseMarkerColor(hex))
-                                .clickable { color = hex },
-                        )
-                    }
-                }
+                ColorSwatchPicker(
+                    swatches = dayMarkerColors.mapIndexed { i, hex ->
+                        ColorSwatch(hex, stringResource(R.string.settings_marker_color_n, i + 1), parseMarkerColor(hex))
+                    },
+                    selectedKey = color,
+                    onSelect = { color = it },
+                )
             }
         },
         confirmButton = {

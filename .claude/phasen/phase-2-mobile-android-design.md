@@ -358,7 +358,7 @@ Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
   Akzeptanz: `grep -rn '\.clickable' $U | grep -v 'receipts/\|widget/\|role = \|import '` zeigt nur die zwei unveränderten
   Stellen (mehrzeilige `clickable(`-Aufrufe per Sichtprüfung der Folgezeilen werten). Prüfliste (Gerät, TalkBack):
   Zutaten-/Schritt-Zeilen der Kochansicht melden „Kontrollkästchen, aktiviert/nicht aktiviert".
-- [ ] **S25 Touch-Targets und Marker-Farbwahl** — Dateien: `$U/weekplan/WeekplanScreen.kt`, `$U/settings/SettingsScreen.kt`.
+- [x] **S25 Touch-Targets und Marker-Farbwahl** — Dateien: `$U/weekplan/WeekplanScreen.kt`, `$U/settings/SettingsScreen.kt`.
   Slot-Chip (≈ Z.849): vor `clickable` `Modifier.minimumInteractiveComponentSize()` einfügen (nur im klickbaren Zweig).
   Marker-Farbkreise (≈ Z.980–1000): durch `ColorSwatchPicker` ersetzen — `swatches = dayMarkerColors.mapIndexed { i, hex -> ColorSwatch(hex, stringResource(R.string.settings_marker_color_n, i + 1), parseMarkerColor(hex)) }`,
   `selectedKey = color`, `onSelect = { color = it }`; String `settings_marker_color_n` „Farbe %1$d".
