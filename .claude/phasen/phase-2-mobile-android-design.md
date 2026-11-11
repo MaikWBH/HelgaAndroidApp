@@ -308,7 +308,7 @@ Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
 - [x] **S19 Einkaufsliste** — Datei: `$U/shopping/ShoppingListScreen.kt` (26 Stellen, v. a. Z.297–305 und der
   Produktkatalog-/Produktdetail-Teil Z.1363–1724) nach R-S. Nährwert-Zeilen: Label als String (`"🔥 Energie"` usw.),
   Werte bleiben interpoliert. Akzeptanz: `G-S` regelkonform.
-- [ ] **S20 Wochenplan** — Datei: `$U/weekplan/WeekplanScreen.kt` (Z.163 „Wochenplan erstellt", Z.1306–1343:
+- [x] **S20 Wochenplan** — Datei: `$U/weekplan/WeekplanScreen.kt` (Z.163 „Wochenplan erstellt", Z.1306–1343:
   „🔥 Nährwert-Budgets", `"Max kcal/Portion: %1$d"`, „🌿 Bio bevorzugt", „🚫 Allergene ausschließen"). Akzeptanz: `G-S`.
 - [ ] **S21 Rezepte, Einstellungen, Components** — Dateien: `$U/recipes/RecipeListScreen.kt` (Z.155, 554; Z.557 bleibt
   bis S22), `RecipeDetailScreen.kt:556`, `UrlImportScreen.kt:84` (URL-Beispiel als String `url_import_placeholder`),

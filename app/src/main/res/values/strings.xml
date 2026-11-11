@@ -538,4 +538,12 @@
     <string name="shopping_macro_carbs">KH %1$dg</string>
     <string name="shopping_catalog_in">⭐ Im Katalog</string>
     <string name="shopping_catalog_to">⭐ Zu meinen Produkten</string>
+
+    <!-- Phase 2: Wochenplan -->
+    <string name="weekplan_export_created">Wochenplan erstellt</string>
+    <string name="weekplan_export_to_list">Zur Einkaufsliste</string>
+    <string name="weekplan_nutrition_budgets">🔥 Nährwert-Budgets</string>
+    <string name="weekplan_max_kcal">Max kcal/Portion: %1$d</string>
+    <string name="weekplan_prefer_organic">🌿 Bio bevorzugt</string>
+    <string name="weekplan_exclude_allergens">🚫 Allergene ausschließen</string>
 </resources>

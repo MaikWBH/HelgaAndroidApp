@@ -156,11 +156,13 @@ fun WeekplanScreen(
 
     LaunchedEffect(weekOffset) { viewModel.ensureWeek() }
 
+    val exportCreatedMessage = stringResource(R.string.weekplan_export_created)
+    val exportActionLabel = stringResource(R.string.weekplan_export_to_list)
     LaunchedEffect(Unit) {
         viewModel.exportEvent.collect {
             val result = snackbarHostState.showSnackbar(
-                message = "Wochenplan erstellt",
-                actionLabel = "Zur Einkaufsliste",
+                message = exportCreatedMessage,
+                actionLabel = exportActionLabel,
             )
             if (result == SnackbarResult.ActionPerformed) {
                 exportPicker = "all"
@@ -1302,14 +1304,14 @@ private fun ConstraintsEditorContent(
         HorizontalDivider()
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "🔥 Nährwert-Budgets",
+            text = stringResource(R.string.weekplan_nutrition_budgets),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
         )
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "Max kcal/Portion: ${maxKcal.toInt()}",
+            text = stringResource(R.string.weekplan_max_kcal, maxKcal.toInt()),
             style = MaterialTheme.typography.bodyMedium,
         )
         Slider(
@@ -1327,7 +1329,7 @@ private fun ConstraintsEditorContent(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "🌿 Bio bevorzugt",
+                text = stringResource(R.string.weekplan_prefer_organic),
                 style = MaterialTheme.typography.bodyMedium,
             )
             androidx.compose.material3.Switch(
@@ -1339,7 +1341,7 @@ private fun ConstraintsEditorContent(
         if (allergies.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "🚫 Allergene ausschließen",
+                text = stringResource(R.string.weekplan_exclude_allergens),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))
