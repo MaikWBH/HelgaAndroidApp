@@ -40,9 +40,10 @@ Modellwechsel: Nutzer per `/model` oder die Stufe läuft als Sub-Agent mit gewä
 |-------|-------|---------|-------------------|-------------------|--------|
 | 1 | android-clean-architecture | `data/`, `di/`, Repositories, Sync-Fluss | Sonnet 5.5 | Haiku 5.5 | umgesetzt → [phase-1](phase-1-android-clean-architecture.md) |
 | 2 | mobile-android-design | `ui/` (Compose, Material 3, Theming) | – | – | offen |
-| 3 | fastapi-templates | `server/app/` (Sync-Backend) | – | – | offen |
-| 4 | multi-stage-dockerfile | `server/Dockerfile`, Compose | – | – | offen |
-| 5 | code-review | Querschnitt über Phasen 1–4 | – | – | offen |
+| 3 | android-clean-architecture + fastapi-templates + mobile-android-design | Bons, Kategorien, Ausgaben-Auswertung (App + Server) | – | – | Entscheidungen erfasst → [phase-3](phase-3-bons-kategorien-entscheidungen.md) |
+| 4 | fastapi-templates | `server/app/` (Sync-Backend, restliche Teile) | – | – | offen |
+| 5 | multi-stage-dockerfile | `server/Dockerfile`, Compose | – | – | offen |
+| 6 | code-review | Querschnitt über Phasen 1–5 | – | – | offen |
 
 Hilfs-Skills ohne eigene Phase: `find-skills` (Skill-Suche), `grill-me`/`grilling` (Rückfragen in
 Stufe A und B). Die Zuordnung Skill → Bereich ist eine Ableitung aus den Skill-Beschreibungen und
