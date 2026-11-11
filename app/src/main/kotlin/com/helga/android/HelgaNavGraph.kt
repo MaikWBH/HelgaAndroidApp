@@ -1,5 +1,9 @@
 package com.helga.android
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -109,6 +113,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomNav) {
                 NavigationBar {
@@ -135,6 +140,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
         },
     ) { padding ->
         NavHost(
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding),
             navController = navController,
             startDestination = ROUTE_ONBOARDING,
         ) {
@@ -149,7 +155,6 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                 }
                 composable(ROUTE_SHOPPING) {
                     ShoppingListScreen(
-                        bottomPadding = padding.calculateBottomPadding(),
                         onNavigateToWeekplan = { navController.navigate(ROUTE_WEEKPLAN) },
                         onNavigateToReceiptScan = { listId ->
                             navController.navigate(receiptScanRoute(listId))
@@ -167,12 +172,10 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
                         onAiGenerateClick = { navController.navigate(ROUTE_AI_GENERATE) },
                         onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
                         onCookClick = { id -> navController.navigate(recipeCookRoute(id)) },
-                        bottomPadding = padding.calculateBottomPadding(),
                     )
                 }
                 composable(ROUTE_WEEKPLAN) {
                     WeekplanScreen(
-                        bottomPadding = padding.calculateBottomPadding(),
                         onAddRecipeForDay = { dayId ->
                             navController.navigate(weekplanPickRecipeRoute(dayId))
                         },

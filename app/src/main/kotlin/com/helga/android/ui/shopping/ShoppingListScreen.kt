@@ -105,7 +105,6 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShoppingListScreen(
-    bottomPadding: Dp = 0.dp,
     onNavigateToWeekplan: () -> Unit = {},
     onNavigateToReceiptScan: (String?) -> Unit = {},
     onNavigateToReceipts: () -> Unit = {},
@@ -609,7 +608,6 @@ fun ShoppingListScreen(
                 onSuggest = viewModel::suggestItems,
                 onEmojiClick = viewModel::addEmojiItem,
                 onScanClick = { showBarcodeScanner = true },
-                bottomPadding = bottomPadding,
             )
         }
     }
@@ -1161,7 +1159,6 @@ private fun QuickAddBar(
     onSuggest: suspend (String) -> List<String>,
     onEmojiClick: (QuickEmojiEntity) -> Unit,
     onScanClick: () -> Unit = {},
-    bottomPadding: Dp = 0.dp,
 ) {
     var text by remember { mutableStateOf("") }
     var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -1250,9 +1247,6 @@ private fun QuickAddBar(
                 }
             },
         )
-        if (bottomPadding > 0.dp) {
-            Spacer(Modifier.height(bottomPadding))
-        }
     }
 }
 

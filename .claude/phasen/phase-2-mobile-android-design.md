@@ -206,7 +206,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
 | 5 | Petrol | Petrol | Blau | Lila |
 
 ### Block B — Navigation und Insets (Befunde 3, 4, 13, 14, 15, 24)
-- [ ] **S6 Root-Padding am NavHost** — Dateien: `$B/HelgaNavGraph.kt`, `$U/shopping/ShoppingListScreen.kt`,
+- [x] **S6 Root-Padding am NavHost** — Dateien: `$B/HelgaNavGraph.kt`, `$U/shopping/ShoppingListScreen.kt`,
   `$U/recipes/RecipeListScreen.kt`, `$U/weekplan/WeekplanScreen.kt`. Root-`Scaffold`:
   `contentWindowInsets = WindowInsets(0, 0, 0, 0)`; `NavHost(modifier = Modifier.padding(padding).consumeWindowInsets(padding), …)`.
   Parameter `bottomPadding` aus den drei Screens samt aller Verwendungen entfernen (Shopping ≈ Z.109, 613, 1165, 1254–1255

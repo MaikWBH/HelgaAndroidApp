@@ -84,7 +84,6 @@ fun RecipeListScreen(
     onAiGenerateClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onCookClick: (recipeId: String) -> Unit,
-    bottomPadding: Dp = 0.dp,
     viewModel: RecipeListViewModel = hiltViewModel(),
 ) {
     val recipes by viewModel.recipes.collectAsStateWithLifecycle()
@@ -174,8 +173,6 @@ fun RecipeListScreen(
                 onNewRecipe = onCreateClick,
                 onAiGenerate = onAiGenerateClick,
                 onUrlImport = onImportClick,
-                // FAB über der Bottom-Navigation halten, sonst liegt er dahinter
-                modifier = Modifier.padding(bottom = bottomPadding),
             )
         },
     ) { padding ->
@@ -249,7 +246,7 @@ fun RecipeListScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + bottomPadding),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(recipes, key = { it.id }) { recipe ->

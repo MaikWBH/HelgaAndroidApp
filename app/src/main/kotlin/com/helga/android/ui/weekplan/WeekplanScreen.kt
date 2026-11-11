@@ -118,7 +118,6 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeekplanScreen(
-    bottomPadding: Dp = 0.dp,
     onAddRecipeForDay: (dayId: String) -> Unit,
     onNavigateToRecipe: (recipeId: String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
@@ -289,7 +288,7 @@ fun WeekplanScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp + bottomPadding),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item(key = "week_nav") {
