@@ -1,6 +1,6 @@
 # Phase 3 — Bons, Kategorien, Ausgaben-Auswertung (Entscheidungen aus grilling, 2026-11-11)
 
-Status: **Entscheidungen erfasst, Feinplan noch nicht geschrieben.** Dieses Dokument ist die Grundlage für Stufe A
+Status: **Feinplan geschrieben** in [phase-3a](phase-3a-bons-server-scan.md) und [phase-3b](phase-3b-auswertung-gang-kategorien.md). Dieses Dokument bleibt die Entscheidungsgrundlage.
 (Ausdefinieren). Skills: android-clean-architecture, fastapi-templates (Server), mobile-android-design (Diagramm-UI),
 code-review (Abschluss). Modelle werden bei Phasenstart (Gate 0) abgefragt.
 
