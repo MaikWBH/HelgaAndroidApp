@@ -17,6 +17,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
@@ -101,14 +106,23 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
     val currentRoute = navBackStack?.destination?.route
     val showBottomNav = currentRoute in ROOT_ROUTES
 
+    var startRoute by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
-        if (currentRoute != ROUTE_ONBOARDING) return@LaunchedEffect
-        val conn = preferences.connection.first()
-        if (conn.isConfigured) {
-            val dest = if (initialImportUrl != null) ROUTE_RECIPE_URL_IMPORT else ROUTE_SHOPPING
-            navController.navigate(dest) {
-                popUpTo(ROUTE_ONBOARDING) { inclusive = true }
-            }
+        if (startRoute == null) {
+            startRoute = if (preferences.connection.first().isConfigured) ROUTE_SHOPPING else ROUTE_ONBOARDING
+        }
+    }
+    val start = startRoute
+    if (start == null) {
+        Surface(Modifier.fillMaxSize()) {}
+        return
+    }
+
+    var importHandled by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(start) {
+        if (start == ROUTE_SHOPPING && initialImportUrl != null && !importHandled) {
+            importHandled = true
+            navController.navigate(ROUTE_RECIPE_URL_IMPORT)
         }
     }
 
@@ -142,7 +156,7 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
         NavHost(
             modifier = Modifier.padding(padding).consumeWindowInsets(padding),
             navController = navController,
-            startDestination = ROUTE_ONBOARDING,
+            startDestination = start,
         ) {
                 composable(ROUTE_ONBOARDING) {
                     OnboardingScreen(

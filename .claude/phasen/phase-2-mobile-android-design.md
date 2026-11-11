@@ -222,7 +222,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
   „Kostenübersicht". NavGraph: `CostOverviewScreen(onBack = { navController.popBackStack() })`. Sonst nichts ändern.
   Akzeptanz: `grep -c 'Scaffold(' $U/receipts/CostOverviewScreen.kt` = 1. Prüfliste (Gerät): Titel und Zurück sichtbar,
   Inhalt beginnt unter der Leiste.
-- [ ] **S8 Startziel ohne Aufblitzen** — Datei: `$B/HelgaNavGraph.kt`. Am Anfang von `HelgaNavGraph`:
+- [x] **S8 Startziel ohne Aufblitzen** — Datei: `$B/HelgaNavGraph.kt`. Am Anfang von `HelgaNavGraph`:
   `var startRoute by rememberSaveable { mutableStateOf<String?>(null) }`;
   `LaunchedEffect(Unit) { if (startRoute == null) startRoute = if (preferences.connection.first().isConfigured) ROUTE_SHOPPING else ROUTE_ONBOARDING }`;
   solange `startRoute == null`: `Surface(Modifier.fillMaxSize()) {}` und `return`. `NavHost(startDestination = startRoute!!…)`
