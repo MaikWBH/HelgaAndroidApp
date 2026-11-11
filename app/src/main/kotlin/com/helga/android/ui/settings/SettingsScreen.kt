@@ -1,5 +1,6 @@
 package com.helga.android.ui.settings
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
 import android.Manifest
 import android.content.Intent
@@ -108,14 +109,14 @@ fun SettingsScreen(
     val exportJson by viewModel.exportJson.collectAsStateWithLifecycle()
     val bulkAiState by viewModel.bulkAiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var showLogoutDialog by remember { mutableStateOf(false) }
-    var showResetDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
+    var showResetDialog by rememberSaveable { mutableStateOf(false) }
     var deleteList by remember { mutableStateOf<ShoppingListEntity?>(null) }
     var editEmoji by remember { mutableStateOf<QuickEmojiEntity?>(null) }
-    var showAddEmoji by remember { mutableStateOf(false) }
+    var showAddEmoji by rememberSaveable { mutableStateOf(false) }
     var editMarker by remember { mutableStateOf<WeekplanDayMarkerEntity?>(null) }
-    var showAddMarker by remember { mutableStateOf(false) }
-    var showAdvanced by remember { mutableStateOf(false) }
+    var showAddMarker by rememberSaveable { mutableStateOf(false) }
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -788,7 +789,7 @@ private fun formatTimestamp(ts: Long): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsPlanDaysDropdown(value: Int, onSelected: (Int) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         OutlinedTextField(
             value = stringResource(R.string.settings_plan_days_value, value),
@@ -823,7 +824,7 @@ private fun SettingsReceiptRetentionDropdown(value: Int, onSelected: (Int) -> Un
         12 -> stringResource(R.string.settings_receipt_retention_12)
         else -> stringResource(R.string.settings_receipt_retention_months, months)
     }
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         OutlinedTextField(
             value = label(value),
@@ -858,7 +859,7 @@ private fun SettingsShoppingDayDropdown(value: Int, onSelected: (Int) -> Unit) {
                 .replaceFirstChar { it.uppercase() }
         }
     }
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         OutlinedTextField(
             value = dayNames[value.coerceIn(0, 6)],
@@ -889,7 +890,7 @@ private fun SettingsDefaultListDropdown(
     selectedId: String,
     onSelected: (String) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     val selected = lists.firstOrNull { it.id == selectedId }?.name.orEmpty()
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         OutlinedTextField(

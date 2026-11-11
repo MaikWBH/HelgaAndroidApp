@@ -1,5 +1,6 @@
 package com.helga.android.ui.weekplan
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -204,7 +205,7 @@ private fun PickerFilterBar(
 
 @Composable
 private fun PickerSortButton(sortOrder: SortOrder, onSortSelect: (SortOrder) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(

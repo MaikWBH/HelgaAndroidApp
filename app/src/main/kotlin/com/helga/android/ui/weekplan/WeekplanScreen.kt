@@ -1,5 +1,6 @@
 package com.helga.android.ui.weekplan
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
@@ -150,9 +151,9 @@ fun WeekplanScreen(
     val weekNutrition by viewModel.weekNutrition.collectAsStateWithLifecycle()
     val userAllergies by viewModel.userAllergies.collectAsStateWithLifecycle()
     val canExtendWeek by viewModel.canExtendWeek.collectAsStateWithLifecycle()
-    var exportPicker by remember { mutableStateOf<String?>(null) }
-    var constraintsExpanded by remember { mutableStateOf(false) }
-    var showOverflowMenu by remember { mutableStateOf(false) }
+    var exportPicker by rememberSaveable { mutableStateOf<String?>(null) }
+    var constraintsExpanded by rememberSaveable { mutableStateOf(false) }
+    var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
     var skipConfirmDay by remember { mutableStateOf<WeekplanDayEntity?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -660,7 +661,7 @@ private fun DayCard(
                     onDispose { onNoteChange(noteText) }
                 }
 
-                var extraInput by remember { mutableStateOf("") }
+                var extraInput by rememberSaveable { mutableStateOf("") }
                 var extraSuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
 
                 LaunchedEffect(extraInput) {
@@ -837,7 +838,7 @@ private fun DayCard(
  */
 @Composable
 private fun MealSlotBadge(mealSlot: String, onMealSlotChange: ((String) -> Unit)?) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     val color = when (mealSlot) {
         MealSlots.BREAKFAST -> MaterialTheme.colorScheme.tertiaryContainer
         MealSlots.LUNCH -> MaterialTheme.colorScheme.primaryContainer
@@ -1059,7 +1060,7 @@ private fun ShoppingListPickerDialog(
     onDismiss: () -> Unit,
 ) {
     var servings by remember { mutableIntStateOf(2) }
-    var selectedListId by remember { mutableStateOf(defaultListId.ifBlank { lists.firstOrNull()?.id.orEmpty() }) }
+    var selectedListId by rememberSaveable { mutableStateOf(defaultListId.ifBlank { lists.firstOrNull()?.id.orEmpty() }) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
