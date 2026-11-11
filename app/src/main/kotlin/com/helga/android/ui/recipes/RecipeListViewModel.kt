@@ -6,8 +6,8 @@ import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.preferences.AppPreferences
-import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
+import com.helga.android.data.repository.AiRepository
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
@@ -37,7 +37,7 @@ class RecipeListViewModel @Inject constructor(
     private val weekplanDao: WeekplanDao,
     syncStatusHolder: SyncStatusHolder,
     private val syncScheduler: SyncScheduler,
-    private val apiFactory: SyncApiFactory,
+    private val aiRepository: AiRepository,
     preferences: AppPreferences,
 ) : ViewModel() {
 
@@ -139,7 +139,7 @@ class RecipeListViewModel @Inject constructor(
                     val ingredients = repository.ingredientsForRecipe(recipeId).map { it.food }
                     val tags = repository.tagsByRecipeId(recipeId).map { it.name }
 
-                    val result = apiFactory.api().classifyRecipe(
+                    val result = aiRepository.classifyRecipe(
                         AiClassifyRequest(
                             name = recipe.name,
                             description = recipe.description,

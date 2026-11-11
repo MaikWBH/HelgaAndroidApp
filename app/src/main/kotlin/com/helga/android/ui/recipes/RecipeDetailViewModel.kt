@@ -17,9 +17,9 @@ import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.model.RecipeNutrition
 import com.helga.android.data.preferences.AppPreferences
-import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.remote.dto.AiNutritionRequest
+import com.helga.android.data.repository.AiRepository
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.WeekplanRepository
@@ -65,7 +65,7 @@ class RecipeDetailViewModel @Inject constructor(
     private val weekplanRepository: WeekplanRepository,
     private val weekplanDao: WeekplanDao,
     private val recipeDao: RecipeDao,
-    private val apiFactory: SyncApiFactory,
+    private val aiRepository: AiRepository,
     private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
     private val serverReachability: ServerReachabilityMonitor,
@@ -175,14 +175,13 @@ class RecipeDetailViewModel @Inject constructor(
         _classifyState.update { true to null }
         viewModelScope.launch {
             try {
-                val api = apiFactory.api()
                 val req = AiClassifyRequest(
                     name = recipe.name,
                     description = recipe.description,
                     tags = state.tags.map { it.name },
                     ingredients = state.ingredients.map { it.food },
                 )
-                val result = api.classifyRecipe(req)
+                val result = aiRepository.classifyRecipe(req)
                 repository.upsertLocal(
                     recipe.copy(
                         proteinType = result.proteinType.ifBlank { recipe.proteinType },
@@ -341,7 +340,6 @@ class RecipeDetailViewModel @Inject constructor(
         _nutritionCalcState.update { true to null }
         viewModelScope.launch {
             try {
-                val api = apiFactory.api()
                 val baseServings = _baseServings.value.takeIf { it > 0 } ?: NUTRITION_BASELINE_PORTIONS
                 val scale = NUTRITION_BASELINE_PORTIONS.toDouble() / baseServings.toDouble()
                 val ingredientLines = state.ingredients.filter { it.deleted == 0 }.map { ing ->
@@ -359,7 +357,7 @@ class RecipeDetailViewModel @Inject constructor(
                     ingredients = ingredientLines,
                     portions = NUTRITION_BASELINE_PORTIONS,
                 )
-                val result = api.estimateNutrition(req)
+                val result = aiRepository.estimateNutrition(req)
                 repository.saveNutrition(
                     recipeId = recipeId,
                     kcal = result.kcal,
