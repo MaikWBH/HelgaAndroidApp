@@ -367,7 +367,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `null`, sonst `today.minusMonths(months)` als `YYYY-MM-DD`). Tests: Hin- und Rückabbildung aller Felder,
   Erhalt der lokalen Felder, `dayToEpochMs("2026-11-10") == 1794268800000L`, ungültige Eingaben, `cutoffDay` für 0/3.
   Akzeptanz: `V` grün.
-- [ ] **S20 DAO für Cache und Warteschlange** — Dateien: `$B/data/local/dao/ReceiptDao.kt`, neu
+- [x] **S20 DAO für Cache und Warteschlange** — Dateien: `$B/data/local/dao/ReceiptDao.kt`, neu
   `$B/data/local/dao/ReceiptLexiconDao.kt`, `$B/data/local/AppDatabase.kt`, `$B/di/DatabaseModule.kt`. `ReceiptDao`
   neu: `pendingUploads()` (`pendingUpload = 1 AND deleted = 0`), `dirtyReceiptsForPush()` (`dirty = 1 AND
   pendingUpload = 0`), `allItemsForReceipt(receiptId)` (inkl. gelöschter), `@Query("DELETE FROM receipts WHERE id =
@@ -633,3 +633,4 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   Voraussetzung: `AI_PROVIDER=anthropic`, `AI_API_KEY` gesetzt.
 - **S13 Wiederherstellung (vor der Umschaltung, auf dem Server):** `make backup`, dann
   `python scripts/restore_purged_receipts.py --db data/recipes.db` (nur Liste), Ergebnis prüfen, erst dann `--apply`.
+- S20: `ReceiptDao.clearPendingUpload(id, imagePath)` hat bewusst **keinen** `updatedAt`-Parameter (Plan nannte ihn): ein lokal neuerer Zeitstempel ohne `dirty` würde spätere Server-Änderungen im LWW-Vergleich unterdrücken. Aufrufer in S22/S25 entsprechend.
