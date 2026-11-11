@@ -356,7 +356,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   (`POST api/off/search`). `parseReceipt` bleibt vorerst. `NetworkModule`: `readTimeout`/`writeTimeout` 120 s
   (Annahme 12). Alle Test-Attrappen von `SyncApi` in `$T` um die neuen Methoden ergänzen (`TODO()`-Rümpfe mit
   `error("nicht genutzt")`). Akzeptanz: `V` grün.
-- [ ] **S19 Abbildung und Datumshilfen** — Dateien: neu `$B/data/receipts/ReceiptMapping.kt`, neu
+- [x] **S19 Abbildung und Datumshilfen** — Dateien: neu `$B/data/receipts/ReceiptMapping.kt`, neu
   `$B/data/receipts/ReceiptDates.kt`, neu `$T/ReceiptMappingTest.kt`, neu `$T/ReceiptDatesTest.kt`.
   `ReceiptRemoteDto.toEntity(local: ReceiptEntity?): ReceiptEntity` (übernimmt alle Server-Felder, `dirty = 0`,
   behält `localImageUri`, `pendingUpload`, `cachedUntil` von `local`; `source` vom Server, leer → `local?.source ?:
