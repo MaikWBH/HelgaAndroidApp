@@ -18,7 +18,7 @@ from .models import (
 )
 from .sync import pull_since, push_records
 from . import ai as ai_module
-from . import settings
+from . import receipt_api, settings
 
 ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="HelgaSyncServer", version="1.0.0", lifespan=lifespan)
+app.include_router(receipt_api.router)
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

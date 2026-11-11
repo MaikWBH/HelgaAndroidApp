@@ -221,7 +221,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   nicht mehr als Aufrufer.
 
 ### Block C — Server: Bon-Endpunkte (Befunde 1, 10)
-- [ ] **S8 Speicherschicht und Lesen/Schreiben** — Dateien: neu `$SA/receipts.py`, neu `$SA/receipt_api.py`,
+- [x] **S8 Speicherschicht und Lesen/Schreiben** — Dateien: neu `$SA/receipts.py`, neu `$SA/receipt_api.py`,
   `$SA/models.py`, `$SA/main.py`, neu `$ST/test_receipts_crud.py`. `models.py`: `ReceiptItemIn/Out`, `ReceiptIn`,
   `ReceiptOut`, `ReceiptListResponse`, `ReceiptPutResponse`, `ReceiptScanResponse` nach Vertrag 2/3. `receipts.py`
   (nur DB-Logik, jede Funktion bekommt eine offene `db`-Verbindung): `next_seq(db)`, `get_receipt(db, id,
@@ -623,3 +623,6 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 
 ### Baseline S0 (2026-11-11)
 - Server: `pytest` 11 passed · App: `V` 154 Tests, grün · `version = 36` in `AppDatabase.kt`: 1 Treffer.
+
+### Notizen Umsetzung 3a
+- S8: `GET /api/receipts?to_day=…` lässt Bons ohne `purchase_day` durch (Vertrag: `purchase_day <= to_day` wörtlich, `'' <= '…'` ist wahr). Das gilt wie bei `from_day` bewusst; der Test hält es fest.

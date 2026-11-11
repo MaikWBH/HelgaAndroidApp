@@ -414,3 +414,89 @@ class ReceiptParseResponse(BaseModel):
     discount_total: float = 0.0
     confidence: float = 1.0  # 0.0–1.0, Gesamt-Sicherheit
     items: List[ReceiptParseItem] = []
+
+
+# ── Bon-Archiv (Phase 3a): eigenes bon-weises Protokoll, siehe server-vertrag.md ─────────
+
+class ReceiptItemIn(BaseModel):
+    id: str
+    receipt_id: str = ""
+    position: int = 0
+    raw_text: str = ""
+    name: str = ""
+    quantity: float = 1.0
+    unit: str = ""
+    unit_price: float = 0.0
+    total_price: float = 0.0
+    discount: float = 0.0
+    is_deposit: int = 0
+    category: str = ""
+    off_barcode: str = ""
+    confidence: float = 1.0
+    matched_shopping_item_id: str = ""
+    match_status: str = ""
+    updated_at: int = 0
+    deleted: int = 0
+
+
+class ReceiptItemOut(ReceiptItemIn):
+    pass
+
+
+class ReceiptIn(BaseModel):
+    id: str
+    store_id: str = ""
+    store_name: str = ""
+    store_address: str = ""
+    shopping_list_id: str = ""
+    purchase_date: int = 0
+    purchase_day: str = ""
+    purchase_time: str = ""
+    total_amount: float = 0.0
+    discount_total: float = 0.0
+    deposit_total: float = 0.0
+    currency: str = "EUR"
+    status: str = "scanned"
+    source: str = ""
+    updated_at: int
+    deleted: int = 0
+    items: List[ReceiptItemIn] = []  # immer die vollständige Positionsliste
+
+
+class ReceiptOut(BaseModel):
+    id: str
+    store_id: str = ""
+    store_name: str = ""
+    store_address: str = ""
+    shopping_list_id: str = ""
+    purchase_date: int = 0
+    purchase_day: str = ""
+    purchase_time: str = ""
+    total_amount: float = 0.0
+    discount_total: float = 0.0
+    deposit_total: float = 0.0
+    currency: str = "EUR"
+    image_path: str = ""
+    status: str = "scanned"
+    source: str = ""
+    confidence: float = 1.0
+    parse_status: str = "none"
+    updated_at: int = 0
+    deleted: int = 0
+    server_seq: int = 0
+    items: List[ReceiptItemOut] = []
+
+
+class ReceiptListResponse(BaseModel):
+    server_seq: int = 0
+    receipts: List[ReceiptOut] = []
+
+
+class ReceiptPutResponse(BaseModel):
+    applied: bool
+    receipt: ReceiptOut
+
+
+class ReceiptScanResponse(BaseModel):
+    parsed: bool
+    receipt: ReceiptOut
