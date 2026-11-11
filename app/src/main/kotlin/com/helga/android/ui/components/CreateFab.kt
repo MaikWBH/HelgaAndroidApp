@@ -1,5 +1,6 @@
 package com.helga.android.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -117,6 +118,16 @@ private fun FabMenuItem(
         }
         SmallFloatingActionButton(onClick = onClick) {
             Icon(icon, contentDescription = label)
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun CreateFabPreview() {
+    PreviewSurface {
+        Box(modifier = Modifier.padding(16.dp)) {
+            CreateFab(onNewRecipe = {}, onAiGenerate = {}, onUrlImport = {})
         }
     }
 }

@@ -47,3 +47,9 @@ fun AllergenWarningBanner(allergens: List<String>) {
         }
     }
 }
+
+@ThemePreviews
+@Composable
+private fun AllergenWarningBannerPreview() {
+    PreviewSurface { AllergenWarningBanner(allergens = listOf("Gluten", "Erdnüsse", "Milch")) }
+}

@@ -263,7 +263,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
   Hochkant-Phone unverändert; auf ≥ 840 dp ist der Inhalt mittig auf 840 dp begrenzt.
 
 ### Block C — Bausteine und Previews (Befunde 10, 12, 17, 19)
-- [ ] **S12 Previews für vorhandene Components** — Dateien: `$U/components/AllergenWarningBanner.kt`, `DayMarker.kt`,
+- [x] **S12 Previews für vorhandene Components** — Dateien: `$U/components/AllergenWarningBanner.kt`, `DayMarker.kt`,
   `SyncStatusIcon.kt`, `CreateFab.kt`. Je Datei mindestens eine private `@ThemePreviews`-Funktion in `PreviewSurface`
   mit festen Beispieldaten (für `SyncStatusIcon` je ein Aufruf pro `SyncStatus`-Variante in einer `Row`).
   `BarcodeScanner.kt` (Kamera) und `MealSlot.kt` (kein UI) bekommen keine. Signaturen nicht ändern. Akzeptanz:
