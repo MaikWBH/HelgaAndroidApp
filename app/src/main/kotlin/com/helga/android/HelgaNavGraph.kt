@@ -1,6 +1,15 @@
 package com.helga.android
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -101,7 +110,11 @@ private val bottomNavItems = listOf(
 )
 
 @Composable
-fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null) {
+fun HelgaNavGraph(
+    preferences: AppPreferences,
+    initialImportUrl: String? = null,
+    widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
+) {
     val navController: NavHostController = rememberNavController()
     val navBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStack?.destination?.route
@@ -127,23 +140,27 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
         }
     }
 
+    fun navigateToRoot(route: String) {
+        navController.navigate(route) {
+            popUpTo(ROUTE_SHOPPING) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    val useRail = showBottomNav && widthSizeClass != WindowWidthSizeClass.Compact
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (showBottomNav) {
+            if (showBottomNav && !useRail) {
                 NavigationBar {
                     bottomNavItems.forEach { item ->
                         NavigationBarItem(
                             selected = currentRoute == item.route,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(ROUTE_SHOPPING) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            onClick = { navigateToRoot(item.route) },
                             icon = {
                                 Icon(imageVector = item.icon, contentDescription = stringResource(item.labelRes))
                             },
@@ -154,184 +171,208 @@ fun HelgaNavGraph(preferences: AppPreferences, initialImportUrl: String? = null)
             }
         },
     ) { padding ->
-        NavHost(
-            modifier = Modifier.padding(padding).consumeWindowInsets(padding).imePadding(),
-            navController = navController,
-            startDestination = start,
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding(),
         ) {
-                composable(ROUTE_ONBOARDING) {
-                    OnboardingScreen(
-                        onContinue = {
-                            navController.navigate(ROUTE_SHOPPING) {
-                                popUpTo(ROUTE_ONBOARDING) { inclusive = true }
-                            }
-                        },
-                    )
+            if (useRail) {
+                NavigationRail(modifier = Modifier.fillMaxHeight()) {
+                    bottomNavItems.forEach { item ->
+                        NavigationRailItem(
+                            selected = currentRoute == item.route,
+                            onClick = { navigateToRoot(item.route) },
+                            icon = {
+                                Icon(imageVector = item.icon, contentDescription = stringResource(item.labelRes))
+                            },
+                            label = { Text(stringResource(item.labelRes)) },
+                        )
+                    }
                 }
-                composable(ROUTE_SHOPPING) {
-                    ShoppingListScreen(
-                        onNavigateToWeekplan = { navController.navigate(ROUTE_WEEKPLAN) },
-                        onNavigateToReceiptScan = { listId ->
-                            navController.navigate(receiptScanRoute(listId))
-                        },
-                        onNavigateToReceipts = { navController.navigate(ROUTE_RECEIPTS) },
-                        onNavigateToStores = { navController.navigate(ROUTE_STORES) },
-                        onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
-                    )
-                }
-                composable(ROUTE_RECIPES) {
-                    RecipeListScreen(
-                        onRecipeClick = { id -> navController.navigate(recipeDetailRoute(id)) },
-                        onCreateClick = { navController.navigate(ROUTE_RECIPE_CREATE) },
-                        onImportClick = { navController.navigate(ROUTE_RECIPE_URL_IMPORT) },
-                        onAiGenerateClick = { navController.navigate(ROUTE_AI_GENERATE) },
-                        onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
-                        onCookClick = { id -> navController.navigate(recipeCookRoute(id)) },
-                    )
-                }
-                composable(ROUTE_WEEKPLAN) {
-                    WeekplanScreen(
-                        onAddRecipeForDay = { dayId ->
-                            navController.navigate(weekplanPickRecipeRoute(dayId))
-                        },
-                        onNavigateToRecipe = { id -> navController.navigate(recipeDetailRoute(id)) },
-                        onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
-                    )
-                }
-                composable(
-                    route = ROUTE_WEEKPLAN_PICK_RECIPE,
-                    arguments = listOf(navArgument("dayId") { type = NavType.StringType }),
+            }
+            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
+                NavHost(
+                    modifier = if (widthSizeClass == WindowWidthSizeClass.Expanded) Modifier.widthIn(max = 840.dp) else Modifier,
+                    navController = navController,
+                    startDestination = start,
                 ) {
-                    WeekplanRecipePickerScreen(
-                        onBack = { navController.popBackStack() },
-                        onRecipePicked = { navController.popBackStack() },
-                        onRecipeClick = { id -> navController.navigate(recipeDetailRoute(id)) },
-                    )
+                    composable(ROUTE_ONBOARDING) {
+                        OnboardingScreen(
+                            onContinue = {
+                                navController.navigate(ROUTE_SHOPPING) {
+                                    popUpTo(ROUTE_ONBOARDING) { inclusive = true }
+                                }
+                            },
+                        )
+                    }
+                    composable(ROUTE_SHOPPING) {
+                        ShoppingListScreen(
+                            onNavigateToWeekplan = { navController.navigate(ROUTE_WEEKPLAN) },
+                            onNavigateToReceiptScan = { listId ->
+                                navController.navigate(receiptScanRoute(listId))
+                            },
+                            onNavigateToReceipts = { navController.navigate(ROUTE_RECEIPTS) },
+                            onNavigateToStores = { navController.navigate(ROUTE_STORES) },
+                            onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
+                        )
+                    }
+                    composable(ROUTE_RECIPES) {
+                        RecipeListScreen(
+                            onRecipeClick = { id -> navController.navigate(recipeDetailRoute(id)) },
+                            onCreateClick = { navController.navigate(ROUTE_RECIPE_CREATE) },
+                            onImportClick = { navController.navigate(ROUTE_RECIPE_URL_IMPORT) },
+                            onAiGenerateClick = { navController.navigate(ROUTE_AI_GENERATE) },
+                            onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
+                            onCookClick = { id -> navController.navigate(recipeCookRoute(id)) },
+                        )
+                    }
+                    composable(ROUTE_WEEKPLAN) {
+                        WeekplanScreen(
+                            onAddRecipeForDay = { dayId ->
+                                navController.navigate(weekplanPickRecipeRoute(dayId))
+                            },
+                            onNavigateToRecipe = { id -> navController.navigate(recipeDetailRoute(id)) },
+                            onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
+                        )
+                    }
+                    composable(
+                        route = ROUTE_WEEKPLAN_PICK_RECIPE,
+                        arguments = listOf(navArgument("dayId") { type = NavType.StringType }),
+                    ) {
+                        WeekplanRecipePickerScreen(
+                            onBack = { navController.popBackStack() },
+                            onRecipePicked = { navController.popBackStack() },
+                            onRecipeClick = { id -> navController.navigate(recipeDetailRoute(id)) },
+                        )
+                    }
+                    composable(ROUTE_RECIPE_URL_IMPORT) {
+                        UrlImportScreen(
+                            onBack = { navController.popBackStack() },
+                            initialUrl = initialImportUrl,
+                        )
+                    }
+                    composable(ROUTE_AI_GENERATE) {
+                        AiGenerateScreen(
+                            onBack = { navController.popBackStack() },
+                            onSaved = { id ->
+                                navController.navigate(recipeDetailRoute(id)) {
+                                    popUpTo(ROUTE_RECIPES)
+                                }
+                            },
+                        )
+                    }
+                    composable(ROUTE_SETTINGS) {
+                        SettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onLoggedOut = {
+                                navController.navigate(ROUTE_ONBOARDING) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            },
+                            onStoresClick = { navController.navigate(ROUTE_STORES) },
+                        )
+                    }
+                    composable(ROUTE_STORES) {
+                        StoreListScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(ROUTE_RECEIPTS) {
+                        ReceiptListScreen(
+                            onReceiptClick = { id -> navController.navigate(receiptDetailRoute(id)) },
+                            onScanClick = { navController.navigate(receiptScanRoute(null)) },
+                            onCostOverviewClick = { navController.navigate(ROUTE_RECEIPTS_COST_OVERVIEW) },
+                            onProductsClick = { navController.navigate(ROUTE_RECEIPTS_PRODUCTS) },
+                            onStatsClick = { navController.navigate(ROUTE_STATS) },
+                        )
+                    }
+                    composable(ROUTE_STATS) {
+                        StatsScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        route = ROUTE_RECEIPT_DETAIL,
+                        arguments = listOf(navArgument("receiptId") { type = NavType.StringType }),
+                    ) {
+                        ReceiptDetailScreen(
+                            onBack = { navController.popBackStack() },
+                            onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
+                        )
+                    }
+                    composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
+                        CostOverviewScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(ROUTE_RECEIPTS_PRODUCTS) {
+                        ProductPriceListScreen(
+                            onBack = { navController.popBackStack() },
+                            onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
+                        )
+                    }
+                    composable(
+                        route = ROUTE_PRODUCT_PRICE_DETAIL,
+                        arguments = listOf(navArgument("productKey") { type = NavType.StringType }),
+                    ) {
+                        ProductPriceDetailScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        route = ROUTE_RECEIPT_SCAN,
+                        arguments = listOf(
+                            navArgument("listId") {
+                                type = NavType.StringType
+                                defaultValue = ""
+                            },
+                        ),
+                    ) { backStackEntry ->
+                        val listId = backStackEntry.arguments?.getString("listId").orEmpty()
+                        ReceiptScanScreen(
+                            shoppingListId = listId.ifBlank { null },
+                            onBack = { navController.popBackStack() },
+                            onSaved = { navController.popBackStack() },
+                        )
+                    }
+                    composable(
+                        route = ROUTE_RECIPE_DETAIL,
+                        arguments = listOf(navArgument("recipeId") { type = NavType.StringType }),
+                    ) {
+                        RecipeDetailScreen(
+                            onBack = { navController.popBackStack() },
+                            onEdit = { id -> navController.navigate(recipeEditRoute(id)) },
+                            onCook = { id -> navController.navigate(recipeCookRoute(id)) },
+                            onNewRecipe = { navController.navigate(ROUTE_RECIPE_CREATE) },
+                            onAiGenerate = { navController.navigate(ROUTE_AI_GENERATE) },
+                            onImport = { navController.navigate(ROUTE_RECIPE_URL_IMPORT) },
+                            onRemix = { id -> navController.navigate(recipeRemixRoute(id)) },
+                        )
+                    }
+                    composable(
+                        route = ROUTE_RECIPE_COOK,
+                        arguments = listOf(navArgument("recipeId") { type = NavType.StringType }),
+                    ) {
+                        RecipeCookScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        route = ROUTE_RECIPE_REMIX,
+                        arguments = listOf(navArgument("recipeId") { type = NavType.StringType }),
+                    ) {
+                        AiRemixScreen(
+                            onBack = { navController.popBackStack() },
+                            onSaved = { id ->
+                                navController.navigate(recipeDetailRoute(id)) {
+                                    popUpTo(ROUTE_RECIPES)
+                                }
+                            },
+                        )
+                    }
+                    composable(ROUTE_RECIPE_CREATE) {
+                        RecipeFormScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(
+                        route = ROUTE_RECIPE_EDIT,
+                        arguments = listOf(navArgument("recipeId") { type = NavType.StringType }),
+                    ) {
+                        RecipeFormScreen(onBack = { navController.popBackStack() })
+                    }
                 }
-                composable(ROUTE_RECIPE_URL_IMPORT) {
-                    UrlImportScreen(
-                        onBack = { navController.popBackStack() },
-                        initialUrl = initialImportUrl,
-                    )
-                }
-                composable(ROUTE_AI_GENERATE) {
-                    AiGenerateScreen(
-                        onBack = { navController.popBackStack() },
-                        onSaved = { id ->
-                            navController.navigate(recipeDetailRoute(id)) {
-                                popUpTo(ROUTE_RECIPES)
-                            }
-                        },
-                    )
-                }
-                composable(ROUTE_SETTINGS) {
-                    SettingsScreen(
-                        onBack = { navController.popBackStack() },
-                        onLoggedOut = {
-                            navController.navigate(ROUTE_ONBOARDING) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        },
-                        onStoresClick = { navController.navigate(ROUTE_STORES) },
-                    )
-                }
-                composable(ROUTE_STORES) {
-                    StoreListScreen(onBack = { navController.popBackStack() })
-                }
-                composable(ROUTE_RECEIPTS) {
-                    ReceiptListScreen(
-                        onReceiptClick = { id -> navController.navigate(receiptDetailRoute(id)) },
-                        onScanClick = { navController.navigate(receiptScanRoute(null)) },
-                        onCostOverviewClick = { navController.navigate(ROUTE_RECEIPTS_COST_OVERVIEW) },
-                        onProductsClick = { navController.navigate(ROUTE_RECEIPTS_PRODUCTS) },
-                        onStatsClick = { navController.navigate(ROUTE_STATS) },
-                    )
-                }
-                composable(ROUTE_STATS) {
-                    StatsScreen(onBack = { navController.popBackStack() })
-                }
-                composable(
-                    route = ROUTE_RECEIPT_DETAIL,
-                    arguments = listOf(navArgument("receiptId") { type = NavType.StringType }),
-                ) {
-                    ReceiptDetailScreen(
-                        onBack = { navController.popBackStack() },
-                        onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
-                    )
-                }
-                composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
-                    CostOverviewScreen(onBack = { navController.popBackStack() })
-                }
-                composable(ROUTE_RECEIPTS_PRODUCTS) {
-                    ProductPriceListScreen(
-                        onBack = { navController.popBackStack() },
-                        onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
-                    )
-                }
-                composable(
-                    route = ROUTE_PRODUCT_PRICE_DETAIL,
-                    arguments = listOf(navArgument("productKey") { type = NavType.StringType }),
-                ) {
-                    ProductPriceDetailScreen(onBack = { navController.popBackStack() })
-                }
-                composable(
-                    route = ROUTE_RECEIPT_SCAN,
-                    arguments = listOf(
-                        navArgument("listId") {
-                            type = NavType.StringType
-                            defaultValue = ""
-                        },
-                    ),
-                ) { backStackEntry ->
-                    val listId = backStackEntry.arguments?.getString("listId").orEmpty()
-                    ReceiptScanScreen(
-                        shoppingListId = listId.ifBlank { null },
-                        onBack = { navController.popBackStack() },
-                        onSaved = { navController.popBackStack() },
-                    )
-                }
-                composable(
-                    route = ROUTE_RECIPE_DETAIL,
-                    arguments = listOf(navArgument("recipeId") { type = NavType.StringType }),
-                ) {
-                    RecipeDetailScreen(
-                        onBack = { navController.popBackStack() },
-                        onEdit = { id -> navController.navigate(recipeEditRoute(id)) },
-                        onCook = { id -> navController.navigate(recipeCookRoute(id)) },
-                        onNewRecipe = { navController.navigate(ROUTE_RECIPE_CREATE) },
-                        onAiGenerate = { navController.navigate(ROUTE_AI_GENERATE) },
-                        onImport = { navController.navigate(ROUTE_RECIPE_URL_IMPORT) },
-                        onRemix = { id -> navController.navigate(recipeRemixRoute(id)) },
-                    )
-                }
-                composable(
-                    route = ROUTE_RECIPE_COOK,
-                    arguments = listOf(navArgument("recipeId") { type = NavType.StringType }),
-                ) {
-                    RecipeCookScreen(onBack = { navController.popBackStack() })
-                }
-                composable(
-                    route = ROUTE_RECIPE_REMIX,
-                    arguments = listOf(navArgument("recipeId") { type = NavType.StringType }),
-                ) {
-                    AiRemixScreen(
-                        onBack = { navController.popBackStack() },
-                        onSaved = { id ->
-                            navController.navigate(recipeDetailRoute(id)) {
-                                popUpTo(ROUTE_RECIPES)
-                            }
-                        },
-                    )
-                }
-                composable(ROUTE_RECIPE_CREATE) {
-                    RecipeFormScreen(onBack = { navController.popBackStack() })
-                }
-                composable(
-                    route = ROUTE_RECIPE_EDIT,
-                    arguments = listOf(navArgument("recipeId") { type = NavType.StringType }),
-                ) {
-                    RecipeFormScreen(onBack = { navController.popBackStack() })
-                }
+            }
         }
     }
 }

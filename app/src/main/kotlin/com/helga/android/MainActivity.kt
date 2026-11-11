@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.getValue
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.ui.theme.ACCENT_SYSTEM
@@ -14,6 +16,7 @@ import com.helga.android.ui.theme.ThemeMode
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -24,13 +27,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val sharedUrl = resolveSharedUrl(intent)
         setContent {
+            val widthClass = calculateWindowSizeClass(this).widthSizeClass
             val themeModeStr by preferences.themeMode.collectAsStateWithLifecycle(initialValue = "system")
             val accentColor by preferences.accentColor.collectAsStateWithLifecycle(initialValue = ACCENT_SYSTEM)
             HelgaTheme(
                 themeMode = ThemeMode.fromString(themeModeStr),
                 accentColorIndex = accentColor,
             ) {
-                HelgaNavGraph(preferences = preferences, initialImportUrl = sharedUrl)
+                HelgaNavGraph(
+                    preferences = preferences,
+                    initialImportUrl = sharedUrl,
+                    widthSizeClass = widthClass,
+                )
             }
         }
     }

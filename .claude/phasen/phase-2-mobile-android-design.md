@@ -245,7 +245,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
   `grep -rn 'imePadding' $B | wc -l` = 1. Prüfliste (Gerät): QuickAdd-Feld der Einkaufsliste und unterste Felder in
   Rezeptformular, Einstellungen und Onboarding bleiben bei offener Tastatur sichtbar; keine Lücke zwischen Inhalt und
   Tastatur; Bottom-Sheets mit Textfeld unverändert.
-- [ ] **S11 NavigationRail und Inhaltsbreite** — Dateien: `gradle/libs.versions.toml`, `app/build.gradle.kts`,
+- [x] **S11 NavigationRail und Inhaltsbreite** — Dateien: `gradle/libs.versions.toml`, `app/build.gradle.kts`,
   `$B/MainActivity.kt`, `$B/HelgaNavGraph.kt`. Neue Bibliothek
   `androidx-compose-material3-window-size = { group = "androidx.compose.material3", name = "material3-window-size-class" }`
   (Version über die BOM), `implementation(libs.androidx.compose.material3.window.size)`. `MainActivity`:
