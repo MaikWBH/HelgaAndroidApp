@@ -1,5 +1,6 @@
 package com.helga.android
 
+import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.remote.ApiProvider
 import com.helga.android.data.remote.SyncApi
@@ -26,6 +27,7 @@ class ShoppingSuggestionsTest {
         shoppingDao = mockk<ShoppingDao>(relaxed = true),
         storeRepository = mockk<StoreRepository>(relaxed = true),
         receiptRepository = mockk<ReceiptRepository>(relaxed = true),
+        quickEmojiDao = mockk<QuickEmojiDao>(relaxed = true),
         apiProvider = provider,
     )
 

@@ -7,6 +7,8 @@ import com.helga.android.data.local.entity.WeekplanDayMarkerAssignmentEntity
 import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
+import com.helga.android.data.local.entity.WeekplanSettingsEntity
+import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.model.DayNutrition
 import com.helga.android.data.model.WeekplanExportItem
 import com.helga.android.data.model.WeekplanNutrition
@@ -18,10 +20,24 @@ import javax.inject.Singleton
 @Singleton
 class WeekplanRepository @Inject constructor(
     private val weekplanDao: WeekplanDao,
+    private val weekplanSettingsDao: WeekplanSettingsDao,
     private val recipeDao: RecipeDao,
     private val recipeRepository: RecipeRepository,
     private val shoppingRepository: ShoppingRepository,
 ) {
+
+    /** Speichert die Wochenplan-Einstellungen lokal (dirty = 1). */
+    suspend fun saveSettings(planDays: Int, shoppingDay: Int) {
+        weekplanSettingsDao.upsert(
+            WeekplanSettingsEntity(
+                id = "global",
+                planDays = planDays,
+                shoppingDay = shoppingDay,
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
+        )
+    }
 
     fun observeDays(): Flow<List<WeekplanDayEntity>> = weekplanDao.observeDays()
     fun observeTodayRecipeId(date: String): Flow<String?> = weekplanDao.observeTodayRecipeId(date)

@@ -3,8 +3,6 @@ package com.helga.android.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.AppDatabase
-import com.helga.android.data.local.dao.QuickEmojiDao
-import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
@@ -46,8 +44,6 @@ class SettingsViewModel @Inject constructor(
     private val connectionChecker: ServerConnectionChecker,
     private val shoppingRepository: ShoppingRepository,
     private val recipeRepository: RecipeRepository,
-    private val quickEmojiDao: QuickEmojiDao,
-    private val weekplanSettingsDao: WeekplanSettingsDao,
     private val weekplanRepository: WeekplanRepository,
     private val syncStatusHolder: SyncStatusHolder,
     private val database: AppDatabase,
@@ -66,7 +62,7 @@ class SettingsViewModel @Inject constructor(
     val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingRepository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val quickEmojis: StateFlow<List<QuickEmojiEntity>> = quickEmojiDao.observeEmojis()
+    val quickEmojis: StateFlow<List<QuickEmojiEntity>> = shoppingRepository.observeQuickEmojis()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val dayMarkers: StateFlow<List<WeekplanDayMarkerEntity>> = weekplanRepository.observeMarkers()
@@ -187,19 +183,10 @@ class SettingsViewModel @Inject constructor(
     fun saveFeatureSettings() {
         val state = _state.value
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
             preferences.saveWeekplanDays(state.weekplanDays)
             preferences.saveShoppingDay(state.shoppingDay)
             preferences.saveDefaultShoppingListId(state.defaultShoppingListId)
-            weekplanSettingsDao.upsert(
-                com.helga.android.data.local.entity.WeekplanSettingsEntity(
-                    id = "global",
-                    planDays = state.weekplanDays,
-                    shoppingDay = state.shoppingDay,
-                    updatedAt = now,
-                    dirty = 1,
-                )
-            )
+            weekplanRepository.saveSettings(state.weekplanDays, state.shoppingDay)
             if (state.defaultShoppingListId.isNotBlank()) {
                 shoppingRepository.setDefaultList(state.defaultShoppingListId)
             }
@@ -221,7 +208,7 @@ class SettingsViewModel @Inject constructor(
     fun addQuickEmoji(emoji: String, food: String, quantity: Double, unit: String) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
-            quickEmojiDao.upsertEmoji(
+            shoppingRepository.upsertQuickEmoji(
                 QuickEmojiEntity(
                     id = java.util.UUID.randomUUID().toString(),
                     emoji = emoji,
@@ -239,7 +226,7 @@ class SettingsViewModel @Inject constructor(
 
     fun updateQuickEmoji(item: QuickEmojiEntity, emoji: String, food: String, quantity: Double, unit: String) {
         viewModelScope.launch {
-            quickEmojiDao.upsertEmoji(
+            shoppingRepository.upsertQuickEmoji(
                 item.copy(
                     emoji = emoji,
                     food = food.trim(),
@@ -255,7 +242,7 @@ class SettingsViewModel @Inject constructor(
 
     fun deleteQuickEmoji(item: QuickEmojiEntity) {
         viewModelScope.launch {
-            quickEmojiDao.upsertEmoji(
+            shoppingRepository.upsertQuickEmoji(
                 item.copy(
                     deleted = 1,
                     updatedAt = System.currentTimeMillis(),

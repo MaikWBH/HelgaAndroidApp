@@ -1,6 +1,8 @@
 package com.helga.android.data.repository
 
+import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.ShoppingDao
+import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.model.ItemCostEstimate
@@ -26,7 +28,12 @@ class ShoppingRepository @Inject constructor(
     private val storeRepository: StoreRepository,
     private val receiptRepository: ReceiptRepository,
     private val apiProvider: ApiProvider,
+    private val quickEmojiDao: QuickEmojiDao,
 ) {
+
+    fun observeQuickEmojis(): Flow<List<QuickEmojiEntity>> = quickEmojiDao.observeEmojis()
+
+    suspend fun upsertQuickEmoji(emoji: QuickEmojiEntity) = quickEmojiDao.upsertEmoji(emoji)
 
     fun observeLists(): Flow<List<ShoppingListEntity>> = shoppingDao.observeLists()
 
