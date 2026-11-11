@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -18,7 +19,7 @@ from .models import (
 )
 from .sync import pull_since, push_records
 from . import ai as ai_module
-from . import receipt_api, settings
+from . import receipt_api, receipts, settings
 
 ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
@@ -26,7 +27,14 @@ ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    yield
+    queue_task = None
+    if settings.RECEIPT_QUEUE_INTERVAL_SEC > 0:
+        queue_task = asyncio.create_task(receipts.queue_loop(settings.RECEIPT_QUEUE_INTERVAL_SEC))
+    try:
+        yield
+    finally:
+        if queue_task is not None:
+            queue_task.cancel()
 
 
 app = FastAPI(title="HelgaSyncServer", version="1.0.0", lifespan=lifespan)

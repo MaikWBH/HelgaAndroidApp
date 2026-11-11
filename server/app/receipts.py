@@ -401,7 +401,8 @@ async def apply_parse(db, receipt_id: str, parsed: dict, shopping_list_id: str,
         "store_name": parsed["store_name"],
         "store_address": parsed["store_address"],
         "shopping_list_id": shopping_list_id or (existing["shopping_list_id"] if existing else ""),
-        "purchase_date": parsed["purchase_date"] or captured_at or now_ms(),
+        "purchase_date": (parsed["purchase_date"] or captured_at
+                          or (existing["purchase_date"] if existing else 0) or now_ms()),
         "purchase_day": parsed["purchase_day"],
         "purchase_time": parsed["purchase_time"],
         "total_amount": parsed["total_amount"],
@@ -447,19 +448,25 @@ async def mark_failed_attempt(db, receipt_id: str, image_name: str, shopping_lis
     return await get_receipt(db, receipt_id, include_deleted=True)
 
 
-async def parse_and_store(db, receipt_id: str, image_name: str, shopping_list_id: str,
-                          captured_at: int, preliminary: Optional[ReceiptIn]) -> tuple[bool, dict]:
-    """Liest das gespeicherte Foto mit der KI aus (Scan Schritt 4–5)."""
+async def _ai_parse(image_name: str, receipt_id: str) -> Optional[dict]:
+    """Ruft die KI auf dem gespeicherten Foto auf; None bei Fehler oder leerem Ergebnis."""
     try:
         data = (settings.IMAGES_DIR / image_name).read_bytes()
         parsed = await ai.parse_receipt(
             base64.b64encode(data).decode("ascii"),
             IMAGE_EXTS.get(Path(image_name).suffix.lower(), "image/jpeg"),
         )
-    except Exception as exc:  # KI-/Netzfehler: Bon bleibt vorläufig in der Warteschlange
+    except Exception as exc:  # KI-/Netz-/Dateifehler: Bon bleibt in der Warteschlange
         logger.warning("Bon-Auslesen fehlgeschlagen (%s): %s", receipt_id, exc)
-        parsed = None
-    if parsed is not None and _has_content(parsed):
+        return None
+    return parsed if _has_content(parsed) else None
+
+
+async def parse_and_store(db, receipt_id: str, image_name: str, shopping_list_id: str,
+                          captured_at: int, preliminary: Optional[ReceiptIn]) -> tuple[bool, dict]:
+    """Liest das gespeicherte Foto mit der KI aus (Scan Schritt 4–5)."""
+    parsed = await _ai_parse(image_name, receipt_id)
+    if parsed is not None:
         return True, await apply_parse(db, receipt_id, parsed, shopping_list_id, captured_at,
                                        image_name)
     return False, await mark_failed_attempt(db, receipt_id, image_name, shopping_list_id,
@@ -474,3 +481,97 @@ async def set_image_path(db, receipt_id: str, image_name: str) -> bool:
     await db.execute("UPDATE receipts SET image_path = ?, server_seq = ? WHERE id = ?",
                      (image_name, seq, receipt_id))
     return True
+
+
+# ── Re-Parse und Warteschlange ───────────────────────────────────────────────────────────
+
+MAX_PARSE_ATTEMPTS = 5
+STALE_RUNNING_MS = 15 * 60 * 1000
+
+
+def _photo_exists(image_path: str) -> bool:
+    return bool(image_path) and (settings.IMAGES_DIR / Path(image_path).name).is_file()
+
+
+async def reparse(db_factory, receipt_id: str) -> tuple[bool, dict]:
+    """Liest den Bon aus dem gespeicherten Foto neu aus. 404 unbekannt, 409 ohne Foto.
+
+    Bei Misserfolg bleiben die bisherigen Werte stehen, nur `parse_status = 'queued'`.
+    """
+    async with db_factory() as db:
+        row = await _receipt_row(db, receipt_id)
+        if row is None or row["deleted"]:
+            raise HTTPException(status_code=404, detail="Bon nicht gefunden")
+        if not _photo_exists(row["image_path"]):
+            raise HTTPException(status_code=409, detail="Kein Foto vorhanden")
+        image_name = Path(row["image_path"]).name
+        parsed = await _ai_parse(image_name, receipt_id)
+        if parsed is not None:
+            receipt = await apply_parse(db, receipt_id, parsed, "", 0, image_name)
+            await db.commit()
+            return True, receipt
+        await _set_parse_state(db, receipt_id, parse_status="queued", parse_claimed_at=0,
+                               parse_attempts=await _attempts(db, receipt_id) + 1)
+        receipt = await get_receipt(db, receipt_id, include_deleted=True)
+        await db.commit()
+        return False, receipt
+
+
+async def process_parse_queue(limit: int = 5, db_factory=None) -> int:
+    """Arbeitet wartende Bons ab. Gibt die Anzahl erfolgreich ausgelesener Bons zurück."""
+    from .db import get_db
+
+    factory = db_factory or get_db
+    async with factory() as db:
+        await db.execute(
+            "UPDATE receipts SET parse_status = 'queued' "
+            "WHERE parse_status = 'running' AND parse_claimed_at < ?",
+            (now_ms() - STALE_RUNNING_MS,),
+        )
+        await db.commit()
+        async with db.execute(
+            "SELECT id FROM receipts WHERE parse_status = 'queued' AND parse_attempts < ? "
+            "AND deleted = 0 ORDER BY updated_at ASC LIMIT ?",
+            (MAX_PARSE_ATTEMPTS, limit),
+        ) as cur:
+            candidate_ids = [row[0] for row in await cur.fetchall()]
+
+    done = 0
+    for receipt_id in candidate_ids:
+        async with factory() as db:
+            cursor = await db.execute(
+                "UPDATE receipts SET parse_status = 'running', parse_claimed_at = ? "
+                "WHERE id = ? AND parse_status = 'queued'",
+                (now_ms(), receipt_id),
+            )
+            await db.commit()
+            if cursor.rowcount != 1:
+                continue  # von einem anderen Worker übernommen
+            row = await _receipt_row(db, receipt_id)
+            image_name = Path(row["image_path"]).name if row and row["image_path"] else ""
+            parsed = await _ai_parse(image_name, receipt_id) if image_name else None
+            if parsed is not None:
+                await apply_parse(db, receipt_id, parsed, "", 0, image_name)
+                done += 1
+            else:
+                attempts = await _attempts(db, receipt_id) + 1
+                await _set_parse_state(
+                    db, receipt_id, parse_attempts=attempts, parse_claimed_at=0,
+                    parse_status="failed" if attempts >= MAX_PARSE_ATTEMPTS else "queued",
+                )
+            await db.commit()
+    return done
+
+
+async def queue_loop(interval_sec: int) -> None:
+    """Hintergrund-Task: arbeitet die Warteschlange alle `interval_sec` Sekunden ab."""
+    import asyncio
+
+    while True:
+        await asyncio.sleep(interval_sec)
+        try:
+            await process_parse_queue()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Bon-Warteschlange fehlgeschlagen")

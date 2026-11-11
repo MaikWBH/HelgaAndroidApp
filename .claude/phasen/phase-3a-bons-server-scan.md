@@ -259,7 +259,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   captured_at`; (4) Wiederholung nach Erfolg ruft die KI nicht erneut (Zähler in der Attrappe); (5) `receipt_id
   "../x"` → 400, Endung `.gif`/`.exe` → 400, 9 MB → 413; (6) Bild-Endpunkt setzt nur `image_path`, unbekannter Bon →
   404; (7) leeres KI-Ergebnis zählt als Misserfolg. Akzeptanz: `VS` grün.
-- [ ] **S11 Re-Parse und Warteschlange** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, `$SA/main.py`, neu
+- [x] **S11 Re-Parse und Warteschlange** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, `$SA/main.py`, neu
   `$ST/test_receipt_queue.py`. `reparse(db_factory, receipt_id)`, `process_parse_queue(limit=5) -> int`, Route `POST
   /{receipt_id}/reparse`, `lifespan` startet/stoppt den Task nach Vertrag 3.1 „Warteschlange" (nur wenn
   `settings.RECEIPT_QUEUE_INTERVAL_SEC > 0`; beim Herunterfahren `task.cancel()`). Test: (1) nach fehlgeschlagenem Scan

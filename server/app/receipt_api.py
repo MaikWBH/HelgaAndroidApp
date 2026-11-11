@@ -117,3 +117,9 @@ async def upload_receipt_image(receipt_id: str, file: UploadFile = File(...)):
         await receipts.set_image_path(db, receipt_id, image_name)
         await db.commit()
     return {"image_path": image_name}
+
+
+@router.post("/{receipt_id}/reparse", response_model=ReceiptScanResponse)
+async def reparse_receipt(receipt_id: str):
+    parsed, receipt = await receipts.reparse(get_db, receipt_id)
+    return ReceiptScanResponse(parsed=parsed, receipt=receipt)
