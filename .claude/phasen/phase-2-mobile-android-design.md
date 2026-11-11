@@ -389,7 +389,7 @@ ViewModel. Der gesamte bisherige UI-Baum wandert unverändert nach `XContent`, `
 Callback-Parameter. Je `XContent` eine `@ThemePreviews`-Funktion mit festen Beispieldaten in `PreviewSurface`.
 - [x] **S29** — `$U/onboarding/OnboardingScreen.kt`, `$U/recipes/UrlImportScreen.kt`. Akzeptanz je Datei:
   `grep -c 'viewModel' ` nur innerhalb der `XScreen`-Funktion; `grep -c '@ThemePreviews'` ≥ 1.
-- [ ] **S30** — `$U/stats/StatsScreen.kt`, `$U/weekplan/WeekplanRecipePickerScreen.kt`; zusätzlich Preview für das
+- [x] **S30** — `$U/stats/StatsScreen.kt`, `$U/weekplan/WeekplanRecipePickerScreen.kt`; zusätzlich Preview für das
   vorhandene `…Content` in `$U/ai/AiRemixScreen.kt`. Akzeptanz wie S29.
 
 ### Block I — Absichern und dokumentieren

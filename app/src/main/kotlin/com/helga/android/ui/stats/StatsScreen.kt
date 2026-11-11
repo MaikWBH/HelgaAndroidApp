@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
+import com.helga.android.ui.components.PreviewSurface
+import com.helga.android.ui.components.ThemePreviews
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +45,25 @@ fun StatsScreen(
     val stats by viewModel.stats.collectAsStateWithLifecycle()
     val period by viewModel.period.collectAsStateWithLifecycle()
 
+    StatsContent(
+        stats = stats,
+        period = period,
+        onBack = onBack,
+        onPeriodChange = viewModel::setPeriod,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun StatsContent(
+    stats: MonthStats,
+    period: StatsPeriod,
+    onBack: () -> Unit,
+    onPeriodChange: (StatsPeriod) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.stats_title)) },
@@ -67,7 +87,7 @@ fun StatsScreen(
                 StatsPeriod.values().forEach { tab ->
                     Tab(
                         selected = period == tab,
-                        onClick = { viewModel.setPeriod(tab) },
+                        onClick = { onPeriodChange(tab) },
                         text = {
                             Text(
                                 when (tab) {
@@ -176,6 +196,27 @@ private fun ProteinBar(label: String, count: Int, total: Float) {
             text = " $count",
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.weight(0.15f),
+        )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun StatsContentPreview() {
+    PreviewSurface {
+        StatsContent(
+            stats = MonthStats(
+                totalCooked = 12,
+                meatCount = 4,
+                fishCount = 2,
+                vegCount = 5,
+                otherCount = 1,
+                topRecipes = listOf("Gemüsesuppe" to 3, "Spaghetti Bolognese" to 2),
+                firstTimers = listOf("Linsencurry"),
+            ),
+            period = StatsPeriod.MONTH,
+            onBack = {},
+            onPeriodChange = {},
         )
     }
 }

@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
+import com.helga.android.ui.components.PreviewSurface
+import com.helga.android.ui.components.ThemePreviews
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -263,5 +265,26 @@ private fun AiPreviewContent(
             }
         }
         item { Spacer(Modifier.height(32.dp)) }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun AiPreviewContentPreview() {
+    PreviewSurface {
+        AiPreviewContent(
+            recipe = ParsedAiRecipe(
+                name = "Linsencurry",
+                description = "Cremiges Curry mit roten Linsen.",
+                totalTime = "30 Min.",
+                ingredients = listOf("200 g rote Linsen", "1 Dose Kokosmilch"),
+                instructions = listOf("Linsen waschen.", "Alles zusammen köcheln."),
+                tags = listOf("Vegan"),
+            ),
+            isSaving = false,
+            onSave = {},
+            onNewPrompt = {},
+            onDiscard = {},
+        )
     }
 }
