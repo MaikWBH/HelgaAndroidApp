@@ -175,7 +175,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `purchase_day` = `2026-11-10` bzw. `''`, `source = 'legacy'`, `parse_status = 'none'`, Position hat `unit = ''`,
   `discount = 0`; (3) zweiter `init_db()`-Lauf ändert nichts und wirft nicht. Akzeptanz: `VS` grün;
   `grep -c 'product_prices' $SA/db.py` = 0.
-- [ ] **S4 Schlüssel-Funktionen** — Dateien: neu `$SA/receipt_text.py`, neu `$ST/test_receipt_text.py`.
+- [x] **S4 Schlüssel-Funktionen** — Dateien: neu `$SA/receipt_text.py`, neu `$ST/test_receipt_text.py`.
   `normalize_item_key`, `store_key`, `match_store`, `day_to_ms(day: str) -> int` (Mitternacht UTC per
   `calendar.timegm`, ungültig → 0) nach Vertrag 1.1/1.3. Test: alle Fälle aus `$T/ReceiptItemNormalizerTest.kt`
   übernommen (gleiche Eingaben, gleiche Erwartungen); `store_key("s1", "REWE") == "s1"`,
