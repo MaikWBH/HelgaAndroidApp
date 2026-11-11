@@ -6,7 +6,12 @@ import com.helga.android.data.local.ReceiptScanner
 import com.helga.android.data.local.ReceiptScanResult
 import com.helga.android.data.local.ScanSource
 import com.helga.android.data.local.toDbValue
+import com.helga.android.data.local.dao.CostByDate
+import com.helga.android.data.local.dao.CostByStore
+import com.helga.android.data.local.dao.CostSummary
+import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.ReceiptDao
+import com.helga.android.data.local.entity.MonthlyBudgetEntity
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
@@ -72,11 +77,45 @@ data class ReconcileOutcome(
 class ReceiptRepository @Inject constructor(
     private val receiptDao: ReceiptDao,
     private val receiptScanner: ReceiptScanner,
+    private val monthlyBudgetDao: MonthlyBudgetDao,
     private val shoppingDao: ShoppingDao,
     private val apiFactory: SyncApiFactory,
 ) {
 
     fun observeReceipts(): Flow<List<ReceiptEntity>> = receiptDao.observeReceipts()
+
+    /** Gemeinsames Monatsbudget (null = noch nicht geladen). */
+    fun observeBudget(): Flow<MonthlyBudgetEntity?> = monthlyBudgetDao.observe()
+
+    /**
+     * Speichert das Monatsbudget lokal mit dirty = 1. [amount] wird auf >= 0 begrenzt,
+     * [warnThreshold] auf 0.5–1.0.
+     */
+    suspend fun saveBudget(amount: Double, warnThreshold: Double) {
+        monthlyBudgetDao.upsert(
+            MonthlyBudgetEntity(
+                id = "global",
+                amount = amount.coerceAtLeast(0.0),
+                warnThreshold = warnThreshold.coerceIn(0.5, 1.0),
+                updatedAt = System.currentTimeMillis(),
+                dirty = 1,
+            )
+        )
+    }
+
+    /** Summe und Anzahl der Kassenbons im Zeitraum (Epoch-Sekunden). */
+    suspend fun totalCost(startEpochSec: Long, endEpochSec: Long): CostSummary =
+        receiptDao.totalCostForRange(startEpochSec, endEpochSec)
+
+    /** Ausgaben pro Markt; ohne Zeitraum über alle Bons. */
+    suspend fun costByStore(startEpochSec: Long? = null, endEpochSec: Long? = null): List<CostByStore> =
+        if (startEpochSec == null || endEpochSec == null) receiptDao.costByStore()
+        else receiptDao.costByStoreRange(startEpochSec, endEpochSec)
+
+    /** Ausgaben pro Datum; ohne Zeitraum über alle Bons. */
+    suspend fun costByDate(startEpochSec: Long? = null, endEpochSec: Long? = null): List<CostByDate> =
+        if (startEpochSec == null || endEpochSec == null) receiptDao.costByDate()
+        else receiptDao.costByDateRange(startEpochSec, endEpochSec)
 
     fun observeReceiptDetail(id: String): Flow<ReceiptEntity?> = receiptDao.observeById(id)
 

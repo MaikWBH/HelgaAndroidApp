@@ -4,9 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.dao.CostByDate
 import com.helga.android.data.local.dao.CostByStore
-import com.helga.android.data.local.dao.MonthlyBudgetDao
-import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
+import com.helga.android.data.repository.ReceiptRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,8 +24,7 @@ enum class TimePeriod {
 
 @HiltViewModel
 class CostOverviewViewModel @Inject constructor(
-    private val receiptDao: ReceiptDao,
-    private val monthlyBudgetDao: MonthlyBudgetDao,
+    private val receiptRepository: ReceiptRepository,
     private val syncScheduler: SyncScheduler,
 ) : ViewModel() {
 
@@ -34,7 +32,7 @@ class CostOverviewViewModel @Inject constructor(
     val period: StateFlow<TimePeriod> = _period
 
     /** Gemeinsames Monatsbudget (zentral via Sync). null = noch nicht geladen. */
-    val budget: StateFlow<MonthlyBudgetEntity?> = monthlyBudgetDao.observe()
+    val budget: StateFlow<MonthlyBudgetEntity?> = receiptRepository.observeBudget()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** Ausgaben im laufenden Kalendermonat – Basis für die Budget-Warnung. */
@@ -73,7 +71,7 @@ class CostOverviewViewModel @Inject constructor(
             val firstOfMonth = LocalDate.now().withDayOfMonth(1)
             val startEpoch = firstOfMonth.atStartOfDay(zone).toEpochSecond()
             val endEpoch = firstOfMonth.plusMonths(1).atStartOfDay(zone).toEpochSecond()
-            _monthSpending.value = receiptDao.totalCostForRange(startEpoch, endEpoch).totalAmount
+            _monthSpending.value = receiptRepository.totalCost(startEpoch, endEpoch).totalAmount
         }
     }
 
@@ -84,15 +82,7 @@ class CostOverviewViewModel @Inject constructor(
      */
     fun saveBudget(amount: Double, warnThreshold: Double) {
         viewModelScope.launch {
-            monthlyBudgetDao.upsert(
-                MonthlyBudgetEntity(
-                    id = "global",
-                    amount = amount.coerceAtLeast(0.0),
-                    warnThreshold = warnThreshold.coerceIn(0.5, 1.0),
-                    updatedAt = System.currentTimeMillis(),
-                    dirty = 1,
-                )
-            )
+            receiptRepository.saveBudget(amount, warnThreshold)
             syncScheduler.triggerOneShot()
         }
     }
@@ -106,20 +96,20 @@ class CostOverviewViewModel @Inject constructor(
 
                 // Ausgaben pro Markt – konsistent zum gewählten Zeitraum
                 _costByStore.value = if (isAll) {
-                    receiptDao.costByStore()
+                    receiptRepository.costByStore()
                 } else {
-                    receiptDao.costByStoreRange(startEpoch, endEpoch)
+                    receiptRepository.costByStore(startEpoch, endEpoch)
                 }
 
                 // Verlauf nach Datum – ebenfalls zeitraum-gefiltert
                 _costByDate.value = if (isAll) {
-                    receiptDao.costByDate()
+                    receiptRepository.costByDate()
                 } else {
-                    receiptDao.costByDateRange(startEpoch, endEpoch)
+                    receiptRepository.costByDate(startEpoch, endEpoch)
                 }
 
                 // Load summary
-                val summary = receiptDao.totalCostForRange(startEpoch, endEpoch)
+                val summary = receiptRepository.totalCost(startEpoch, endEpoch)
                 _totalCost.value = summary.totalAmount
                 _receiptCount.value = summary.receiptCount
             } finally {
