@@ -19,6 +19,7 @@ import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
+import com.helga.android.ui.theme.ACCENT_SYSTEM
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -456,7 +457,7 @@ data class SettingsState(
     val shoppingDay: Int = 0,
     val defaultShoppingListId: String = "",
     val themeMode: String = "system",
-    val accentColor: Int = 0,
+    val accentColor: Int = ACCENT_SYSTEM,
     val checkMode: String = "keep",
     val scanReminderThreshold: Float = 0.6f,
     val receiptReconciliationEnabled: Boolean = true,

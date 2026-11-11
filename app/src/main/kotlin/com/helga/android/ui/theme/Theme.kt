@@ -48,7 +48,7 @@ private val accentSchemes: List<Pair<ColorScheme, ColorScheme>> = listOf(
 @Composable
 fun HelgaTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
-    accentColorIndex: Int = 0,
+    accentColorIndex: Int = ACCENT_SYSTEM,
     content: @Composable () -> Unit,
 ) {
     val darkTheme = when (themeMode) {
@@ -58,7 +58,7 @@ fun HelgaTheme(
     }
 
     val colorScheme = when {
-        accentColorIndex == 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        accentColorIndex == ACCENT_SYSTEM && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val ctx = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
         }

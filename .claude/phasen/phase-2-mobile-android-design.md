@@ -111,7 +111,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   jeder Hex-Wert aus T1/T2 vor; `grep -rn 'Color(0x' $U | grep -v theme/` leer. Prüfliste (Gerät): jede der 6 Akzentfarben
   hell und dunkel — FAB, NavigationBar-Indikator, FilterChips und Karten zeigen den Akzent bzw. neutrale Flächen, nirgends
   Lila außer beim Akzent Lila; Text auf Buttons lesbar.
-- [ ] **S2 Option „System (Wallpaper)" — Logik** — Dateien: `$B/data/preferences/AppPreferences.kt`, `$U/theme/Theme.kt`,
+- [x] **S2 Option „System (Wallpaper)" — Logik** — Dateien: `$B/data/preferences/AppPreferences.kt`, `$U/theme/Theme.kt`,
   `$B/MainActivity.kt`, `$U/settings/SettingsViewModel.kt`. In `Color.kt`/`Theme.kt` `const val ACCENT_SYSTEM = -1`.
   `AppPreferences.accentColor`: `it[KEY_ACCENT_COLOR] ?: -1` (Literal mit Kommentar-Verweis auf `ACCENT_SYSTEM`, kein
   Import aus `ui/` in die Datenschicht); `saveAccentColor`: `coerceIn(-1, 5)`. `HelgaTheme`: Parameter-Default

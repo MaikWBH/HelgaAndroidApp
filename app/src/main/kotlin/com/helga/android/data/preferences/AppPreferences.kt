@@ -52,7 +52,7 @@ class AppPreferences @Inject constructor(
     }
     val defaultShoppingListId: Flow<String> = ds.data.map { it[KEY_DEFAULT_SHOPPING_LIST_ID].orEmpty() }
     val themeMode: Flow<String> = ds.data.map { it[KEY_THEME_MODE] ?: "system" }
-    val accentColor: Flow<Int> = ds.data.map { it[KEY_ACCENT_COLOR] ?: 0 }
+    val accentColor: Flow<Int> = ds.data.map { it[KEY_ACCENT_COLOR] ?: -1 } // -1 = ACCENT_SYSTEM (ui/theme/Color.kt)
     val checkMode: Flow<String> = ds.data.map { it[KEY_CHECK_MODE] ?: "keep" }
     val notifyShoppingDay: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_SHOPPING] ?: false }
     val notifyCookReminder: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_COOK] ?: false }
@@ -137,7 +137,7 @@ class AppPreferences @Inject constructor(
     }
 
     suspend fun saveAccentColor(index: Int) {
-        ds.edit { it[KEY_ACCENT_COLOR] = index.coerceIn(0, 5) }
+        ds.edit { it[KEY_ACCENT_COLOR] = index.coerceIn(-1, 5) }
     }
 
     suspend fun saveCheckMode(mode: String) {
