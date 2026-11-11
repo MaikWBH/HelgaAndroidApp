@@ -72,7 +72,7 @@ Ziel: `WeekplanViewModel.kt` unter 500 Zeilen, Verhalten unverändert. `computeW
 ### Block E — UiState und Regeln absichern
 - [x] **S18 UiState anwenden** — in `UrlImportViewModel` `ImportStatus` durch `UiState<ImportedRecipeDto>` ersetzen (und Screen `UrlImportScreen.kt` anpassen); in `RecipeDetailViewModel` die Zustände `_classifyState`/`_nutritionCalcState` bleiben unverändert. Nur dieses eine VM, da nur angefasste Screens umgestellt werden. Test: nein.
 - [x] **S19 Architekturregel als Test** — neu: `$T/ArchitectureRulesTest.kt`: liest alle `*ViewModel.kt` unter `src/main/kotlin/com/helga/android/ui` (Arbeitsverzeichnis der Unit-Tests ist `app/`) und schlägt fehl, wenn eine Datei `data.local.dao`-Import oder `SyncApi`/`SyncApiFactory`/`ApiProvider`/`OkHttp`/`Retrofit` enthält. Test: ja (er ist der Test).
-- [ ] **S20 Guideline und Index** — neu: `.claude/guidelines/architecture-layers.md` (max. 40 Zeilen: erlaubte Abhängigkeiten UI → Repository/UseCase → DAO/API; Hilt-Regel; Verweis auf `ArchitectureRulesTest`); in `.claude/features/README.md` unter „Bereichsübergreifende Befunde" eine Zeile ergänzen; in den betroffenen Bereichs-`plan.md` (rezepte, wochenplan, einkaufsliste, bons-kosten, einstellungen) je einen Vermerk „Phase 1 umgesetzt". Test: nein.
+- [x] **S20 Guideline und Index** — neu: `.claude/guidelines/architecture-layers.md` (max. 40 Zeilen: erlaubte Abhängigkeiten UI → Repository/UseCase → DAO/API; Hilt-Regel; Verweis auf `ArchitectureRulesTest`); in `.claude/features/README.md` unter „Bereichsübergreifende Befunde" eine Zeile ergänzen; in den betroffenen Bereichs-`plan.md` (rezepte, wochenplan, einkaufsliste, bons-kosten, einstellungen) je einen Vermerk „Phase 1 umgesetzt". Test: nein.
 
 ## Entscheidungen Stufe B (2026-11-11, nach Stopp bei S16)
 - **S16 Vorbedingung (neu, vor dem Auslagern):** `filterCandidateRecipes`, `computeWeekBalance` (nur falls vom Generator gebraucht), `WeekplanGenerateStatus` und `parseAllergenJson` werden **unverändert** (gleiche Signaturen/Semantik) in die Datenschicht verschoben, z. B. nach `$B/data/weekplan/WeekplanFilters.kt` bzw. `$B/data/weekplan/WeekplanGenerateStatus.kt`. `ui/weekplan/` (ViewModel, Screen, Tests) importiert von dort. Danach `WeekplanGenerator` in `$B/data/weekplan/` wie in S16 beschrieben. Eine Datenschicht darf nie aus `ui/` importieren.
@@ -87,10 +87,16 @@ Ziel: `WeekplanViewModel.kt` unter 500 Zeilen, Verhalten unverändert. `computeW
 - Kein Refactoring von `SyncEngine` und `SyncWorker`.
 
 ## Abschluss
-- [ ] Baseline S0 notiert: `<Anzahl Tests / Ergebnis>`
-- [ ] `./gradlew :app:testDebugUnitTest :app:compileDebugKotlin` grün nach S20 (Ausgabe festgehalten)
-- [ ] `ArchitectureRulesTest` grün (Beweis: kein DAO-/Retrofit-Import in ViewModels)
-- [ ] Bereichs-`plan.md` und Feature-Index aktualisiert (S20)
+- [x] Baseline S0 notiert: 115 Tests, 0 Fehler, BUILD SUCCESSFUL
+- [x] `./gradlew :app:testDebugUnitTest :app:compileDebugKotlin` grün nach S20 (143 Tests, 0 Fehler, BUILD SUCCESSFUL; Lauf am Ende dieser Stufe)
+- [x] `ArchitectureRulesTest` grün (kein DAO-/Retrofit-/API-Factory-Import in ViewModels; SseClient als Ausnahme)
+- [x] Bereichs-`plan.md` (rezepte, wochenplan, einkaufsliste, bons-kosten, einstellungen) und Feature-Index aktualisiert (S20)
+- [ ] Abweichung: `WeekplanViewModel.kt` hat 555 Zeilen statt < 500. Vom Nutzer bewusst akzeptiert (Richtgröße, Schichtgrenze erreicht).
+
+Zusätzliche Abweichungen in Stufe B nach S16/S17:
+- S19: `CostByStore`, `CostByDate`, `CostSummary` von `data/local/dao/ReceiptDao.kt` nach `data/model/ReceiptCosts.kt` verschoben, weil `CostOverviewViewModel` sonst `data.local.dao` importieren müsste. Keine Schema- oder Query-Änderung.
+- S18: `UiState` hat kein `Idle`; der Import-Status ist `UiState<ImportedRecipeDto>?`, `null` = Idle.
+- S19: Ausnahme `data.remote.SseClient` in `AiGenerateViewModel`/`AiRemixViewModel` (Entscheidung).
 
 ### Notizen Stufe B (Block A–E)
 - S8 Fund-Liste (`grep -rn "SyncApiFactory\|ApiProvider\|data.remote" ui`, ohne dto): keine Factory/Provider mehr in `ui/`. Verbleibend: `ui/ai/AiGenerateViewModel.kt` und `ui/ai/AiRemixViewModel.kt` importieren `data.remote.SseClient` (SSE-Streaming, kein Factory/Provider; nicht in der S19-Verbotsliste, daher nicht Teil dieser Phase). `ConnectionResult`/`ServerConnectionChecker` in `OnboardingViewModel`/`SettingsViewModel` sind gewollte Ergebnis-/Service-Typen aus S3.

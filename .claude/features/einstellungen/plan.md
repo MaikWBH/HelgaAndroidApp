@@ -134,3 +134,7 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Einstellungen werden nach Nutzungshäufigkeit umstrukturiert | Die meisten Einstellungen werden nur einmal gesetzt, Einkaufsliste-Einstellungen öfter |
 | 2026-08-30 | Einstellungs-Sync, API-Key-Speicherung, Datenexport und Onboarding bleiben unverändert | Kein Bedarf geäußert, Server-Backup deckt Absicherung bereits ab |
 | 2026-08-30 | Reset-Funktion wird als Nice-to-have vorgemerkt, nicht priorisiert | Kein aktiver Bedarf |
+
+---
+
+**Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).

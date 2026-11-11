@@ -208,3 +208,7 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 | 2026-08-22 | Offline-Pflicht für die Einkaufsliste bestätigt; Sync-Effizienz (Geschwindigkeit, Datenvolumen) als Priorität festgehalten | Interview: nicht verhandelbare Anforderung |
 | 2026-08-22 | A4 umgesetzt: `LaunchedEffect(Unit)` in `HelgaNavGraph.kt` prüft jetzt zuerst `currentRoute == ROUTE_ONBOARDING`, bevor navigiert wird | Kleinster Eingriff, der die Zwangsnavigation auf den echten Erststart begrenzt, ohne Backstack-Restaurierung anzufassen |
 | 2026-08-22 | A5 umgesetzt: neue `searchItemNames`/`searchIngredientNames`-Queries in `ShoppingDao`/`RecipeDao`, `suggestItems()` kombiniert lokale Treffer mit einem auf 1,5 s begrenzten Server-Aufruf (`withTimeoutOrNull`) | Globaler OkHttp-Timeout (15 s, `NetworkModule.kt`) bewusst nicht angetastet, da er Sync/KI/Bild-Upload mitbeträfe; lokale lösung deckt den Offline-Fall vollständig ab |
+
+---
+
+**Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).

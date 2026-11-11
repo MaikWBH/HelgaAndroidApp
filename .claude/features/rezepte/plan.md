@@ -301,3 +301,7 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 | 2026-08-22 | Bewertung wird auf „nur beim Kochen bewerten" vereinheitlicht, Sterne am Rezept werden aus den Kochbewertungen abgeleitet | Interview: doppelte Bewertung war verwirrend; ein Eingabeort, Wert bleibt automatisch aktuell |
 | 2026-08-22 | Portionsskalierung wird je Rezept gemerkt, keine globale Haushaltsgröße | Interview: Skalierung ist rezeptspezifisch, nicht haushaltsweit |
 | 2026-08-22 | Timer bekommen Hintergrundlauf und Benachrichtigung statt nur Screen-Bindung | Interview: beim Kochen laufen mehrere Dinge parallel |
+
+---
+
+**Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).

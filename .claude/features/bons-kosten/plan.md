@@ -141,3 +141,7 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Bestehende Einstiege (Menüpunkt, Erinnerungs-Banner) bleiben zusätzlich bestehen | Kein Grund zum Entfernen, der neue Tab ergänzt statt ersetzt |
 | 2026-08-30 | Automatische Bon-Löschung wird einstellbar, nicht fest | Nutzer will Kontrolle über die Aufbewahrungsdauer, Startwert 3 Monate |
 | 2026-08-30 | Preiswarnung, Budget-Granularität, Offline-Scan bleiben unverändert | Im Interview kein Bedarf geäußert |
+
+---
+
+**Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).

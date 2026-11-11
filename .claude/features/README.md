@@ -87,6 +87,7 @@ Gilt für alle Pläne, hier einmal zentral festgehalten statt elfmal wiederholt:
 | `contentDescription = null` | Durchsicht abgeschlossen (plattform A2): 27 von 82 Stellen waren unbeschriftete Bedienelemente, jetzt beschriftet; verbleibende 55 bewusst dekorativ/redundant | [ux-accessibility](../guidelines/ux-accessibility.md) |
 | Nicht gesyncte Entities | 0 von 23 — behoben: `OffProductEntity` jetzt an `SyncEngine` angebunden (naehrwerte A2), `WeekplanTemplateEntity`/`WeekplanTemplateEntryEntity` per wochenplan A1 komplett entfernt statt angebunden | [sync-patterns](../guidelines/sync-patterns.md) |
 | Benachrichtigungen wirkungslos | `POST_NOTIFICATIONS` fehlt im Manifest und wird nie zur Laufzeit angefragt — bei `targetSdk 35` verwirft Android 13+ jede Zustellung. Betrifft die fertigen Einkaufstag- und Koch-Erinnerungen; Aufgabe in [plattform](plattform/plan.md) A4 | – |
+| Schichtung ViewModel → Repository | Phase 1 umgesetzt: keine DAO-/Retrofit-Importe mehr in ViewModels (Ausnahme `SseClient`); Test `ArchitectureRulesTest`; `WeekplanViewModel` 555 Zeilen (bewusst akzeptiert) | [architecture-layers](guidelines/architecture-layers.md) |
 
 ## Bewusst offene Punkte
 

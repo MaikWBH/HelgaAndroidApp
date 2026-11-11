@@ -453,3 +453,7 @@ _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 | 2026-08-22 | Export-Listenauswahl bleibt bestehen, aber mit Standardliste vorbelegt statt neutral | Interview: erst „nur Standardliste", nach Rückfrage präzisiert auf „Rückfrage behalten, nur vorbelegt" |
 | 2026-08-22 | Woche einmalig anpassen nutzt denselben Mechanismus wie der A11-Basisfall (ein `isSkipped`-Feld statt zwei getrennter Features) | Nutzerentscheidung: „Dasselbe – ein Mechanismus" |
 | 2026-08-22 | Entfernte Tage bleiben in der Wochenansicht sichtbar (nur markiert), keine Navigationslücken; bei bereits geplantem Rezept erst Warnung, dann Löschen | Nutzerentscheidung: „Warnen vor Verlust" |
+
+---
+
+**Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).
