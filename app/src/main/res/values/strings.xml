@@ -442,4 +442,24 @@
     <string name="settings_ai_bulk_both">Beides für alle Rezepte ausführen</string>
     <string name="settings_ai_bulk_progress">%1$d / %2$d verarbeitet</string>
     <string name="settings_ai_bulk_done">Fertig: %1$d aktualisiert, %2$d fehlgeschlagen</string>
+
+    <!-- Phase 2: Kassenbons -->
+    <string name="receipt_list_title">Einkäufe</string>
+    <string name="receipt_stats">Statistik</string>
+    <string name="receipt_scan">Scannen</string>
+    <string name="receipt_list_empty">Noch keine Kassenbons gescannt</string>
+    <string name="receipt_unknown_store">Unbekannter Markt</string>
+    <string name="receipt_delete_title">Kassenbon löschen?</string>
+    <string name="receipt_delete_message">Der Bon wird lokal gelöscht und beim nächsten Sync entfernt.</string>
+    <string name="receipt_fallback_title">Kassenbon</string>
+    <string name="receipt_not_found">Bon nicht gefunden</string>
+    <string name="receipt_photo">Kassenbon-Foto</string>
+    <string name="receipt_source_ai">Gelesen per KI-Vision</string>
+    <string name="receipt_source_ocr">Gelesen per On-Device-OCR</string>
+    <string name="receipt_sum">Summe: %1$s</string>
+    <string name="receipt_reconcile_again">Erneut mit Einkaufsliste abgleichen</string>
+    <string name="receipt_reconcile">Mit Einkaufsliste abgleichen</string>
+    <string name="receipt_reconcile_matches">✓ %1$d Treffer</string>
+    <string name="receipt_reconcile_unexpected">Ungeplant gekauft:</string>
+    <string name="receipt_reconcile_missing">Nicht gefunden (abgehakt, fehlt auf Bon):</string>
 </resources>

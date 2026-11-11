@@ -1,5 +1,8 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.R
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.ui.common.formatEuro
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,21 +59,21 @@ fun ReceiptListScreen(
     onStatsClick: () -> Unit = {},
     viewModel: ReceiptListViewModel = hiltViewModel(),
 ) {
-    val receipts = viewModel.receipts.collectAsState().value
+    val receipts = viewModel.receipts.collectAsStateWithLifecycle().value
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Einkäufe") },
+                title = { Text(stringResource(R.string.receipt_list_title)) },
                 actions = {
                     IconButton(onClick = onProductsClick) {
-                        Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = "Preise")
+                        Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = stringResource(R.string.product_prices_title))
                     }
                     IconButton(onClick = onCostOverviewClick) {
-                        Icon(Icons.Filled.BarChart, contentDescription = "Kostenübersicht")
+                        Icon(Icons.Filled.BarChart, contentDescription = stringResource(R.string.cost_overview_title))
                     }
                     IconButton(onClick = onStatsClick) {
-                        Icon(Icons.Filled.Insights, contentDescription = "Statistik")
+                        Icon(Icons.Filled.Insights, contentDescription = stringResource(R.string.receipt_stats))
                     }
                 },
             )
@@ -79,7 +82,7 @@ fun ReceiptListScreen(
             ExtendedFloatingActionButton(
                 onClick = onScanClick,
                 icon = { Icon(Icons.Filled.CameraAlt, contentDescription = null) },
-                text = { Text("Scannen") },
+                text = { Text(stringResource(R.string.receipt_scan)) },
             )
         },
     ) { padding ->
@@ -90,7 +93,7 @@ fun ReceiptListScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("Noch keine Kassenbons gescannt")
+                Text(stringResource(R.string.receipt_list_empty))
             }
         } else {
             LazyColumn(
@@ -124,7 +127,7 @@ private fun ReceiptRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    receipt.storeName.ifBlank { "Unbekannter Markt" },
+                    receipt.storeName.ifBlank { stringResource(R.string.receipt_unknown_store) },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,

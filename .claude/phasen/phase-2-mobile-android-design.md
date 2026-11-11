@@ -292,7 +292,7 @@ Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
   `formatCurrency` in `CostOverviewViewModel`, `ProductPriceListViewModel`, `ProductPriceDetailViewModel` bleiben als
   Methode bestehen und delegieren an `formatEuro`. Andere `format`-Aufrufe (Mengen, Prozente, Datum) nicht anfassen.
   Akzeptanz: `grep -rn '€%' $U | grep -v widget/` leer; neuer Test grün.
-- [ ] **S16 `ReceiptListScreen` + `ReceiptDetailScreen`** — Strings nach R-S (u. a. „Einkäufe", „Preise",
+- [x] **S16 `ReceiptListScreen` + `ReceiptDetailScreen`** — Strings nach R-S (u. a. „Einkäufe", „Preise",
   „Kostenübersicht" → `cost_overview_title`, „Statistik", „Scannen", „Noch keine Kassenbons gescannt",
   „Unbekannter Markt", Löschdialog, „Bon nicht gefunden", „Kassenbon-Foto"); auch Literale außerhalb des Prüf-greps
   (`ifBlank { "…" }`, Abschnittstitel) per Durchsicht der Datei. `"$itemCount Artikel"` bleibt bis S22. 6×

@@ -1,5 +1,8 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.R
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.ui.common.formatEuro
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -58,26 +61,26 @@ fun ReceiptDetailScreen(
     onProductClick: (String) -> Unit = {},
     viewModel: ReceiptDetailViewModel = hiltViewModel(),
 ) {
-    val receipt = viewModel.receipt.collectAsState().value
-    val items = viewModel.items.collectAsState().value
-    val serverUrl = viewModel.serverUrl.collectAsState().value
-    val reconcileEnabled = viewModel.reconcileEnabled.collectAsState().value
-    val reconcileState = viewModel.reconcileState.collectAsState().value
+    val receipt = viewModel.receipt.collectAsStateWithLifecycle().value
+    val items = viewModel.items.collectAsStateWithLifecycle().value
+    val serverUrl = viewModel.serverUrl.collectAsStateWithLifecycle().value
+    val reconcileEnabled = viewModel.reconcileEnabled.collectAsStateWithLifecycle().value
+    val reconcileState = viewModel.reconcileState.collectAsStateWithLifecycle().value
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Kassenbon löschen?") },
-            text = { Text("Der Bon wird lokal gelöscht und beim nächsten Sync entfernt.") },
+            title = { Text(stringResource(R.string.receipt_delete_title)) },
+            text = { Text(stringResource(R.string.receipt_delete_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
                     viewModel.delete(onDone = onBack)
-                }) { Text("Löschen") }
+                }) { Text(stringResource(R.string.recipe_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Abbrechen") }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.recipe_delete_confirm_cancel)) }
             },
         )
     }
@@ -85,15 +88,15 @@ fun ReceiptDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(receipt?.storeName?.ifBlank { "Kassenbon" } ?: "Kassenbon") },
+                title = { Text(receipt?.storeName?.ifBlank { stringResource(R.string.receipt_fallback_title) } ?: stringResource(R.string.receipt_fallback_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.recipe_detail_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Löschen")
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
                     }
                 },
             )
@@ -104,7 +107,7 @@ fun ReceiptDetailScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("Bon nicht gefunden")
+                Text(stringResource(R.string.receipt_not_found))
             }
         } else {
             LazyColumn(
@@ -159,7 +162,7 @@ private fun ReceiptPhoto(receipt: ReceiptEntity, serverUrl: String) {
                     .data(imageModel)
                     .crossfade(true)
                     .build(),
-                contentDescription = "Kassenbon-Foto",
+                contentDescription = stringResource(R.string.receipt_photo),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
             )
@@ -178,7 +181,7 @@ private fun ReceiptPhoto(receipt: ReceiptEntity, serverUrl: String) {
 private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Text(
-            receipt.storeName.ifBlank { "Unbekannter Markt" },
+            receipt.storeName.ifBlank { stringResource(R.string.receipt_unknown_store) },
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
@@ -189,8 +192,8 @@ private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
         )
         Text(
             when (receipt.source.toScanSource()) {
-                ScanSource.AI -> "Gelesen per KI-Vision"
-                ScanSource.ON_DEVICE -> "Gelesen per On-Device-OCR"
+                ScanSource.AI -> stringResource(R.string.receipt_source_ai)
+                ScanSource.ON_DEVICE -> stringResource(R.string.receipt_source_ocr)
             },
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -202,7 +205,7 @@ private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
         ) {
             Text("$itemCount Artikel", style = MaterialTheme.typography.bodyLarge)
             Text(
-                "Summe: ${formatEuro(receipt.totalAmount)}",
+                stringResource(R.string.receipt_sum, formatEuro(receipt.totalAmount)),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -229,7 +232,7 @@ private fun ReconcileSection(
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
-                Text(if (alreadyReconciled) "Erneut mit Einkaufsliste abgleichen" else "Mit Einkaufsliste abgleichen")
+                Text(if (alreadyReconciled) stringResource(R.string.receipt_reconcile_again) else stringResource(R.string.receipt_reconcile))
             }
         }
         when (state) {
@@ -249,13 +252,13 @@ private fun ReconcileSection(
 private fun ReconcileResult(outcome: com.helga.android.data.repository.ReconcileOutcome) {
     Column(modifier = Modifier.padding(top = 12.dp)) {
         Text(
-            "✓ ${outcome.matchedCount} Treffer",
+            stringResource(R.string.receipt_reconcile_matches, outcome.matchedCount),
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold,
         )
         if (outcome.unexpectedNames.isNotEmpty()) {
             Text(
-                "Ungeplant gekauft:",
+                stringResource(R.string.receipt_reconcile_unexpected),
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(top = 8.dp),
             )
@@ -263,7 +266,7 @@ private fun ReconcileResult(outcome: com.helga.android.data.repository.Reconcile
         }
         if (outcome.missingNames.isNotEmpty()) {
             Text(
-                "Nicht gefunden (abgehakt, fehlt auf Bon):",
+                stringResource(R.string.receipt_reconcile_missing),
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(top = 8.dp),
             )
