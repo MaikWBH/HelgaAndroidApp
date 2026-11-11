@@ -23,7 +23,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -146,7 +146,7 @@ fun AiGenerateScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                CircularProgressIndicator()
+                                LoadingIndicator()
                                 Text(
                                     text = stringResource(R.string.ai_generating),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -511,7 +511,7 @@ private fun AiPreviewContent(
                 enabled = recipe.name.isNotBlank() && !isSaving,
             ) {
                 if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    LoadingIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
                     Text(stringResource(R.string.ai_generate_save))
                 }

@@ -151,6 +151,7 @@
     <!-- Allgemein -->
     <string name="action_retry">Erneut versuchen</string>
     <string name="action_back">Zurück</string>
+    <string name="common_loading">Lädt…</string>
     <string name="action_settings">Einstellungen</string>
     <string name="action_more">Mehr</string>
     <string name="action_clear_search">Suche leeren</string>

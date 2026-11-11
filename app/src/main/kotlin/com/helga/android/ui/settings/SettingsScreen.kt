@@ -38,7 +38,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -577,7 +577,7 @@ fun SettingsScreen(
                         state.serverUrl.isNotBlank() && state.apiKey.isNotBlank(),
                 ) {
                     if (state.validation == SettingsValidation.Testing) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.height(20.dp),
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.onPrimary,
@@ -660,7 +660,7 @@ fun SettingsScreen(
                     enabled = !bulkAiState.isRunning,
                 ) {
                     if (bulkAiState.isRunning && bulkAiState.mode == BulkAiMode.BOTH) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.height(20.dp),
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.onPrimary,

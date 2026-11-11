@@ -268,7 +268,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
   mit festen Beispieldaten (für `SyncStatusIcon` je ein Aufruf pro `SyncStatus`-Variante in einer `Row`).
   `BarcodeScanner.kt` (Kamera) und `MealSlot.kt` (kein UI) bekommen keine. Signaturen nicht ändern. Akzeptanz:
   `grep -c '@ThemePreviews' ` je Datei ≥ 1.
-- [ ] **S13 `LoadingIndicator` mit Semantik** — Dateien: neu `$U/components/LoadingIndicator.kt`, alle Dateien mit
+- [x] **S13 `LoadingIndicator` mit Semantik** — Dateien: neu `$U/components/LoadingIndicator.kt`, alle Dateien mit
   `CircularProgressIndicator(` (21 Stellen in 15 Dateien, auch `receipts/`), `strings.xml`.
   `@Composable fun LoadingIndicator(modifier: Modifier = Modifier, strokeWidth: Dp = ProgressIndicatorDefaults.CircularStrokeWidth, color: Color = ProgressIndicatorDefaults.circularColor, label: String = stringResource(R.string.common_loading))`
   = `CircularProgressIndicator(modifier = modifier.semantics { contentDescription = label }, color = color, strokeWidth = strokeWidth)`;

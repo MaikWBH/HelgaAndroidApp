@@ -36,7 +36,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -284,7 +284,7 @@ fun RecipeDetailScreen(
                                 DropdownMenuItem(
                                     text = {
                                         if (uiState.isClassifying) {
-                                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                            LoadingIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                                         } else if (serverReachable == false) {
                                             Text(stringResource(R.string.recipe_classify_unreachable))
                                         } else {
@@ -342,7 +342,7 @@ fun RecipeDetailScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
         } else {
             LazyColumn(
@@ -587,7 +587,7 @@ private fun NutritionSection(
         ) {
             Button(onClick = onCalculateWithAi, enabled = !isCalculating) {
                 if (isCalculating) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    LoadingIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {
                     Text(stringResource(R.string.recipe_nutrition_calculate_ai))
                 }
