@@ -342,7 +342,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   nach `$D/kategorien.md` „String-Ressourcen". Test: Schlüsselliste exakt und in Reihenfolge (im Test ausgeschrieben,
   identisch zu `test_categories.py`), `fromKey(" Milch_Eier ")`, `fromKey("x") == null`, 15 Gang-Kategorien, jede Zeile
   der Ausweichkette. Akzeptanz: `V` grün.
-- [ ] **S18 DTOs und API** — Dateien: `$B/data/remote/dto/SyncDto.kt` (oder neu `$B/data/remote/dto/ReceiptDto.kt`
+- [x] **S18 DTOs und API** — Dateien: `$B/data/remote/dto/SyncDto.kt` (oder neu `$B/data/remote/dto/ReceiptDto.kt`
   für die neuen Klassen), `$B/data/remote/SyncApi.kt`, `$B/di/NetworkModule.kt`. Neue DTOs (`@JsonClass`, alle Felder
   mit Standardwerten, `@Json(name = "snake_case")`): `ReceiptRemoteItemDto`, `ReceiptRemoteDto` (Felder `ReceiptOut`),
   `ReceiptUpsertDto` (`ReceiptIn`), `ReceiptListResponse`, `ReceiptPutResponse`, `ReceiptScanResponse`,

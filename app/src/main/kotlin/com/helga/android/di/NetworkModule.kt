@@ -33,8 +33,9 @@ object NetworkModule {
         val builder = OkHttpClient.Builder()
             .connectionPool(ConnectionPool(maxIdleConnections = 5, keepAliveDuration = 5, TimeUnit.MINUTES))
             .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
+            // 120 s: der Bon-Scan wartet synchron auf die KI-Auswertung (Phase 3a, Annahme 12)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .writeTimeout(120, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
 
         if (BuildConfig.DEBUG) {
