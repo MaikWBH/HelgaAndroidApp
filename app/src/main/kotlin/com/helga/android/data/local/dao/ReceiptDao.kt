@@ -1,5 +1,9 @@
 package com.helga.android.data.local.dao
 
+import com.helga.android.data.model.CostByDate
+import com.helga.android.data.model.CostByStore
+import com.helga.android.data.model.CostSummary
+
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -200,24 +204,6 @@ interface ReceiptDao {
 }
 
 // ── Data classes for DAO queries ──────────────────────────────────────────────
-
-data class CostByStore(
-    val storeId: String,
-    val storeName: String,
-    val totalAmount: Double,
-    val receiptCount: Int,
-)
-
-data class CostByDate(
-    val date: String, // "2026-06-15 HH:MM:SS"
-    val totalAmount: Double,
-    val receiptCount: Int,
-)
-
-data class CostSummary(
-    val totalAmount: Double,
-    val receiptCount: Int,
-)
 
 data class PricePoint(
     val name: String,

@@ -42,8 +42,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.helga.android.data.local.dao.CostByDate
-import com.helga.android.data.local.dao.CostByStore
+import com.helga.android.data.model.CostByDate
+import com.helga.android.data.model.CostByStore
 
 @Composable
 fun CostOverviewScreen(

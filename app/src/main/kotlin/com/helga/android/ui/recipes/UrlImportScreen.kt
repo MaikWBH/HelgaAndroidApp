@@ -1,5 +1,6 @@
 package com.helga.android.ui.recipes
 
+import com.helga.android.ui.common.UiState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -94,9 +95,9 @@ fun UrlImportScreen(
             Button(
                 onClick = { viewModel.import() },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = state.url.isNotBlank() && state.status !is ImportStatus.Loading,
+                enabled = state.url.isNotBlank() && state.status !is UiState.Loading,
             ) {
-                if (state.status is ImportStatus.Loading) {
+                if (state.status is UiState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
@@ -108,7 +109,7 @@ fun UrlImportScreen(
             }
 
             when (val status = state.status) {
-                is ImportStatus.Error -> {
+                is UiState.Error -> {
                     Text(
                         text = status.message,
                         color = MaterialTheme.colorScheme.error,
@@ -116,11 +117,11 @@ fun UrlImportScreen(
                     )
                 }
 
-                is ImportStatus.Success -> {
+                is UiState.Success -> {
                     ImportPreview(
-                        recipe = status.recipe,
+                        recipe = status.data,
                         isSaving = state.isSaving,
-                        onSave = { viewModel.save(status.recipe, onBack) },
+                        onSave = { viewModel.save(status.data, onBack) },
                     )
                 }
 

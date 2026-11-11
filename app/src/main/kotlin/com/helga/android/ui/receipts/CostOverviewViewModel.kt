@@ -2,8 +2,8 @@ package com.helga.android.ui.receipts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.local.dao.CostByDate
-import com.helga.android.data.local.dao.CostByStore
+import com.helga.android.data.model.CostByDate
+import com.helga.android.data.model.CostByStore
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
 import com.helga.android.data.repository.ReceiptRepository
 import com.helga.android.data.sync.SyncScheduler

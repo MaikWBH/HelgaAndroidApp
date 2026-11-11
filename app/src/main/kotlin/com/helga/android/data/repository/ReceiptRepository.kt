@@ -6,9 +6,9 @@ import com.helga.android.data.local.ReceiptScanner
 import com.helga.android.data.local.ReceiptScanResult
 import com.helga.android.data.local.ScanSource
 import com.helga.android.data.local.toDbValue
-import com.helga.android.data.local.dao.CostByDate
-import com.helga.android.data.local.dao.CostByStore
-import com.helga.android.data.local.dao.CostSummary
+import com.helga.android.data.model.CostByDate
+import com.helga.android.data.model.CostByStore
+import com.helga.android.data.model.CostSummary
 import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.entity.MonthlyBudgetEntity

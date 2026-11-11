@@ -10,6 +10,7 @@ import com.helga.android.data.remote.dto.ImportedRecipeDto
 import com.helga.android.data.repository.AiRepository
 import com.helga.android.data.repository.ImportOutcome
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.ui.common.UiState
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,16 +21,10 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
-sealed interface ImportStatus {
-    data object Idle : ImportStatus
-    data object Loading : ImportStatus
-    data class Success(val recipe: ImportedRecipeDto) : ImportStatus
-    data class Error(val message: String) : ImportStatus
-}
-
 data class UrlImportState(
     val url: String = "",
-    val status: ImportStatus = ImportStatus.Idle,
+    /** null = noch kein Import gestartet (Idle). */
+    val status: UiState<ImportedRecipeDto>? = null,
     val isSaving: Boolean = false,
 )
 
@@ -43,7 +38,7 @@ class UrlImportViewModel @Inject constructor(
     private val _state = MutableStateFlow(UrlImportState())
     val state: StateFlow<UrlImportState> = _state.asStateFlow()
 
-    fun setUrl(url: String) = _state.update { it.copy(url = url, status = ImportStatus.Idle) }
+    fun setUrl(url: String) = _state.update { it.copy(url = url, status = null) }
 
     fun prefillUrl(url: String) {
         if (_state.value.url.isBlank()) _state.update { it.copy(url = url) }
@@ -52,11 +47,11 @@ class UrlImportViewModel @Inject constructor(
     fun import() {
         val url = _state.value.url.trim()
         if (url.isBlank()) return
-        _state.update { it.copy(status = ImportStatus.Loading) }
+        _state.update { it.copy(status = UiState.Loading) }
         viewModelScope.launch {
             val status = when (val outcome = aiRepository.importFromUrl(url)) {
-                is ImportOutcome.Success -> ImportStatus.Success(outcome.recipe)
-                is ImportOutcome.Error -> ImportStatus.Error(outcome.message)
+                is ImportOutcome.Success -> UiState.Success(outcome.recipe)
+                is ImportOutcome.Error -> UiState.Error(outcome.message)
             }
             _state.update { it.copy(status = status) }
         }
