@@ -93,7 +93,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - Unklarheit, unerwarteter Code oder ein Kriterium, das sich nicht erfüllen lässt: stoppen und per `grilling` fragen.
 
 ### Block 0 — Basis
-- [ ] **S0 Baseline** — `V` ausführen; Testanzahl und Ergebnis unter „Abschluss" notieren. Zusätzlich die Zähl-Baseline
+- [x] **S0 Baseline** — `V` ausführen; Testanzahl und Ergebnis unter „Abschluss" notieren. Zusätzlich die Zähl-Baseline
   festhalten: `grep -rn 'collectAsState()' $B | wc -l` (erwartet 20; plus 2× `collectAsState(initial` in `MainActivity`),
   `grep -rn 'CircularProgressIndicator(' $U | wc -l` (21), `grep -rn 'rememberSaveable' $U | wc -l` (0),
   `grep -rn '@Preview\|@ThemePreviews' $U | wc -l` (0). Weicht eine Zahl ab: notieren, weitermachen.
@@ -426,7 +426,7 @@ Callback-Parameter. Je `XContent` eine `@ThemePreviews`-Funktion mit festen Beis
 - Room, Sync, DTOs, `server/`.
 
 ## Abschluss
-- [ ] Baseline aus S0 (Testanzahl, Zählwerte):
+- [x] Baseline aus S0 (Testanzahl, Zählwerte): 143 Tests, 0 Fehler, V grün; `collectAsState()` 20, `CircularProgressIndicator(` 21, `rememberSaveable` 0, `@Preview` 0 (alle wie erwartet)
 - [ ] Bereichs-`plan.md` und Feature-Index aktualisiert (S32)
 - [ ] Verifikation grün (Befehl `V` + Ausgabe der letzten Ausführung festgehalten)
 - [ ] Gemeldete Ausnahmen (S5 Shapes außerhalb Composable, S23 Barcode-Dummy, weitere):
