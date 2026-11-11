@@ -562,4 +562,15 @@
         <item quantity="one">%1$d Rezept ist noch nicht kategorisiert.</item>
         <item quantity="other">%1$d Rezepte sind noch nicht kategorisiert.</item>
     </plurals>
+
+    <!-- Phase 2: Meldungen -->
+    <string name="recipe_classify_failed">Klassifikation fehlgeschlagen</string>
+    <string name="recipe_nutrition_calc_failed">Nährwertberechnung fehlgeschlagen</string>
+    <string name="recipe_added_to_list">Zur „%1$s” hinzugefügt</string>
+    <string name="recipe_added_to_weekplan">Zum Wochenplan hinzugefügt</string>
+    <string name="ai_error_no_recipe">Rezept konnte nicht aus der KI-Antwort extrahiert werden</string>
+    <string name="ai_error_unknown">Unbekannter Fehler</string>
+    <string name="receipt_reconcile_failed">Abgleich fehlgeschlagen (Server erreichbar?)</string>
+    <string name="receipt_scan_read_failed">Kassenzettel konnte nicht gelesen werden</string>
+    <string name="receipt_scan_save_failed">Speichern fehlgeschlagen</string>
 </resources>

@@ -1,5 +1,8 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.ui.res.stringResource
+import com.helga.android.R
+import com.helga.android.ui.common.UiText
 import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.SavedStateHandle
@@ -49,9 +52,9 @@ data class RecipeDetailUiState(
     val instructions: List<InstructionEntity> = emptyList(),
     val tags: List<TagEntity> = emptyList(),
     val isClassifying: Boolean = false,
-    val classifyError: String? = null,
+    val classifyError: UiText? = null,
     val isCalculatingNutrition: Boolean = false,
-    val nutritionError: String? = null,
+    val nutritionError: UiText? = null,
 )
 
 @HiltViewModel
@@ -75,8 +78,8 @@ class RecipeDetailViewModel @Inject constructor(
         serverReachability.checkAsync()
     }
 
-    private val _classifyState = MutableStateFlow(false to (null as String?))
-    private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    private val _classifyState = MutableStateFlow(false to (null as UiText?))
+    private val _snackbarMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
     val snackbarMessage = _snackbarMessage.asSharedFlow()
 
     private val _baseServings = MutableStateFlow(0)
@@ -87,7 +90,7 @@ class RecipeDetailViewModel @Inject constructor(
         if (base > 0 && s > 0) s.toFloat() / base.toFloat() else 1f
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1f)
 
-    private val _nutritionCalcState = MutableStateFlow(false to (null as String?))
+    private val _nutritionCalcState = MutableStateFlow(false to (null as UiText?))
 
     val uiState: StateFlow<RecipeDetailUiState> = combine(
         combine(
@@ -189,7 +192,7 @@ class RecipeDetailViewModel @Inject constructor(
                 syncScheduler.triggerOneShot()
                 _classifyState.update { false to null }
             } catch (e: Exception) {
-                _classifyState.update { false to (e.message ?: "Klassifikation fehlgeschlagen") }
+                _classifyState.update { false to (e.message?.let(UiText::Raw) ?: UiText.Res(R.string.recipe_classify_failed)) }
             }
         }
     }
@@ -206,7 +209,7 @@ class RecipeDetailViewModel @Inject constructor(
             val listId = resolveDefaultListId() ?: return@launch
             repository.exportToShoppingList(recipeId, listId)
             syncScheduler.triggerOneShot()
-            _snackbarMessage.tryEmit("Zur „$listName” hinzugefügt")
+            _snackbarMessage.tryEmit(UiText.Res(R.string.recipe_added_to_list, listOf(listName)))
         }
     }
 
@@ -282,7 +285,7 @@ class RecipeDetailViewModel @Inject constructor(
             weekplanRepository.addRecipe(dayId, recipeId)
             syncScheduler.triggerOneShot()
             val recipe = uiState.value.recipe
-            _snackbarMessage.tryEmit("Zum Wochenplan hinzugefügt")
+            _snackbarMessage.tryEmit(UiText.Res(R.string.recipe_added_to_weekplan))
         }
     }
 
@@ -365,7 +368,7 @@ class RecipeDetailViewModel @Inject constructor(
                 syncScheduler.triggerOneShot()
                 _nutritionCalcState.update { false to null }
             } catch (e: Exception) {
-                _nutritionCalcState.update { false to (e.message ?: "Nährwertberechnung fehlgeschlagen") }
+                _nutritionCalcState.update { false to (e.message?.let(UiText::Raw) ?: UiText.Res(R.string.recipe_nutrition_calc_failed)) }
             }
         }
     }

@@ -1,5 +1,8 @@
 package com.helga.android.ui.receipts
 
+import androidx.compose.ui.res.stringResource
+import com.helga.android.R
+import com.helga.android.ui.common.UiText
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -40,7 +43,7 @@ sealed interface ReceiptScanUiState {
         val source: ScanSource = ScanSource.ON_DEVICE,
     ) : ReceiptScanUiState
     data object Saved : ReceiptScanUiState
-    data class Error(val message: String) : ReceiptScanUiState
+    data class Error(val message: UiText) : ReceiptScanUiState
 }
 
 @HiltViewModel
@@ -93,7 +96,7 @@ class ReceiptScanViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 Timber.e(e, "Receipt scan failed")
-                _uiState.value = ReceiptScanUiState.Error("Kassenzettel konnte nicht gelesen werden")
+                _uiState.value = ReceiptScanUiState.Error(UiText.Res(R.string.receipt_scan_read_failed))
             }
         }
     }
@@ -174,7 +177,7 @@ class ReceiptScanViewModel @Inject constructor(
                 _uiState.value = ReceiptScanUiState.Saved
             } catch (e: Exception) {
                 Timber.e(e, "Receipt save failed")
-                _uiState.value = ReceiptScanUiState.Error("Speichern fehlgeschlagen")
+                _uiState.value = ReceiptScanUiState.Error(UiText.Res(R.string.receipt_scan_save_failed))
             }
         }
     }

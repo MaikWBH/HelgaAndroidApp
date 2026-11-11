@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.ui.common.asString
 import com.helga.android.R
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -186,7 +187,7 @@ fun ReceiptScanScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(state.message)
+                        Text(state.message.asString())
                         Spacer(Modifier.height(16.dp))
                         Button(onClick = viewModel::reset) { Text(stringResource(R.string.action_retry)) }
                     }

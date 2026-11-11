@@ -320,7 +320,7 @@ Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
   `<plurals name="recipes_unclassified_count">` one „%1$d Rezept ist noch nicht kategorisiert." / other
   „%1$d Rezepte sind noch nicht kategorisiert."; Aufruf über `pluralStringResource(id, count, count)`. Akzeptanz:
   `grep -rn 'pluralStringResource' $U | wc -l` = 2.
-- [ ] **S23 `UiText` für ViewModel-Meldungen** — Dateien: neu `$U/common/UiText.kt`, neu `$T/UiTextTest.kt`, die 6
+- [x] **S23 `UiText` für ViewModel-Meldungen** — Dateien: neu `$U/common/UiText.kt`, neu `$T/UiTextTest.kt`, die 6
   ViewModels und ihre Screens, `strings.xml`. `sealed interface UiText { data class Res(@StringRes val id: Int, val args: List<Any> = emptyList()) : UiText; data class Raw(val value: String) : UiText }`
   plus `@Composable fun UiText.asString(): String` und `fun UiText.asString(context: Context): String`. Umstellen
   (Feldtyp `String` → `UiText`, Screen ruft `.asString()` bzw. vor `showSnackbar` `.asString(context)` auf):

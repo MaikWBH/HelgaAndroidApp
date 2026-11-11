@@ -1,5 +1,8 @@
 package com.helga.android.ui.receipts
 
+import androidx.compose.ui.res.stringResource
+import com.helga.android.R
+import com.helga.android.ui.common.UiText
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,7 +26,7 @@ sealed interface ReconcileState {
     data object Idle : ReconcileState
     data object Running : ReconcileState
     data class Done(val outcome: ReconcileOutcome) : ReconcileState
-    data class Error(val message: String) : ReconcileState
+    data class Error(val message: UiText) : ReconcileState
 }
 
 @HiltViewModel
@@ -62,7 +65,7 @@ class ReceiptDetailViewModel @Inject constructor(
                 _reconcileState.value = ReconcileState.Done(outcome)
             } catch (e: Exception) {
                 Timber.e(e, "Receipt reconcile failed")
-                _reconcileState.value = ReconcileState.Error("Abgleich fehlgeschlagen (Server erreichbar?)")
+                _reconcileState.value = ReconcileState.Error(UiText.Res(R.string.receipt_reconcile_failed))
             }
         }
     }

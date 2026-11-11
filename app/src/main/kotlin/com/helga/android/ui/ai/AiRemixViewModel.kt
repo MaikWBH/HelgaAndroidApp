@@ -1,5 +1,8 @@
 package com.helga.android.ui.ai
 
+import androidx.compose.ui.res.stringResource
+import com.helga.android.R
+import com.helga.android.ui.common.UiText
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,11 +31,14 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+/** Interner Marker: KI-Antwort enthielt kein Rezept (wird auf eine Ressource abgebildet). */
+private class NoRecipeInAiRemixResponseException : Exception()
+
 sealed interface AiRemixStatus {
     data object Idle : AiRemixStatus
     data object Generating : AiRemixStatus
     data class Preview(val recipe: ParsedAiRecipe) : AiRemixStatus
-    data class Error(val message: String) : AiRemixStatus
+    data class Error(val message: UiText) : AiRemixStatus
 }
 
 data class AiRemixState(
@@ -109,10 +115,15 @@ class AiRemixViewModel @Inject constructor(
                 val bodyJson = remixAdapter.toJson(req)
                 val html = sseClient.collect("api/ai/remix", bodyJson)
                 val parsed = RecipeJsonLdParser.parse(html)
-                    ?: throw Exception("Rezept konnte nicht aus der KI-Antwort extrahiert werden")
+                    ?: throw NoRecipeInAiRemixResponseException()
                 _state.update { it.copy(status = AiRemixStatus.Preview(parsed)) }
             } catch (e: Exception) {
-                _state.update { it.copy(status = AiRemixStatus.Error(e.message ?: "Unbekannter Fehler")) }
+                _state.update { it.copy(status = AiRemixStatus.Error(
+                    when {
+                        e is NoRecipeInAiRemixResponseException -> UiText.Res(R.string.ai_error_no_recipe)
+                        else -> e.message?.let(UiText::Raw) ?: UiText.Res(R.string.ai_error_unknown)
+                    }
+                )) }
             }
         }
     }

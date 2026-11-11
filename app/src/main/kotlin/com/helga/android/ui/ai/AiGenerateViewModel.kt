@@ -1,5 +1,8 @@
 package com.helga.android.ui.ai
 
+import androidx.compose.ui.res.stringResource
+import com.helga.android.R
+import com.helga.android.ui.common.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.IngredientEntity
@@ -24,11 +27,14 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+/** Interner Marker: KI-Antwort enthielt kein Rezept (wird auf eine Ressource abgebildet). */
+private class NoRecipeInAiResponseException : Exception()
+
 sealed interface AiGenerateStatus {
     data object Idle : AiGenerateStatus
     data object Generating : AiGenerateStatus
     data class Preview(val recipe: ParsedAiRecipe) : AiGenerateStatus
-    data class Error(val message: String) : AiGenerateStatus
+    data class Error(val message: UiText) : AiGenerateStatus
 }
 
 data class AiGenerateState(
@@ -98,10 +104,15 @@ class AiGenerateViewModel @Inject constructor(
                 )
                 val html = sseClient.collect("api/ai/generate", bodyJson)
                 val parsed = RecipeJsonLdParser.parse(html)
-                    ?: throw Exception("Rezept konnte nicht aus der KI-Antwort extrahiert werden")
+                    ?: throw NoRecipeInAiResponseException()
                 _state.update { it.copy(status = AiGenerateStatus.Preview(parsed), feedback = "") }
             } catch (e: Exception) {
-                _state.update { it.copy(status = AiGenerateStatus.Error(e.message ?: "Unbekannter Fehler")) }
+                _state.update { it.copy(status = AiGenerateStatus.Error(
+                    when {
+                        e is NoRecipeInAiResponseException -> UiText.Res(R.string.ai_error_no_recipe)
+                        else -> e.message?.let(UiText::Raw) ?: UiText.Res(R.string.ai_error_unknown)
+                    }
+                )) }
             }
         }
     }

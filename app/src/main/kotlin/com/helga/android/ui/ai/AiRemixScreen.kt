@@ -1,5 +1,6 @@
 package com.helga.android.ui.ai
 
+import com.helga.android.ui.common.asString
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -130,7 +131,7 @@ fun AiRemixScreen(
 
                 if (status is AiRemixStatus.Error) {
                     Text(
-                        text = status.message,
+                        text = status.message.asString(),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )

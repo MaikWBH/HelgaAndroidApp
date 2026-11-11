@@ -1,5 +1,7 @@
 package com.helga.android.ui.receipts
 
+import androidx.compose.ui.res.pluralStringResource
+import com.helga.android.ui.common.asString
 import com.helga.android.R
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -237,7 +239,7 @@ private fun ReconcileSection(
         }
         when (state) {
             is ReconcileState.Error -> Text(
-                state.message,
+                state.message.asString(),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp),

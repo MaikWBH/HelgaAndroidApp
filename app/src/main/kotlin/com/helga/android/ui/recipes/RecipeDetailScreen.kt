@@ -1,5 +1,6 @@
 package com.helga.android.ui.recipes
 
+import com.helga.android.ui.common.asString
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -103,6 +104,7 @@ fun RecipeDetailScreen(
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val recipe = uiState.recipe
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showOverflow by remember { mutableStateOf(false) }
     var shoppingTargetDialog by remember { mutableStateOf(false) }
@@ -118,13 +120,13 @@ fun RecipeDetailScreen(
     val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.classifyError) {
-        uiState.classifyError?.let { snackbarHostState.showSnackbar(it) }
+        uiState.classifyError?.let { snackbarHostState.showSnackbar(it.asString(context)) }
     }
     LaunchedEffect(uiState.nutritionError) {
-        uiState.nutritionError?.let { snackbarHostState.showSnackbar(it) }
+        uiState.nutritionError?.let { snackbarHostState.showSnackbar(it.asString(context)) }
     }
     LaunchedEffect(Unit) {
-        viewModel.snackbarMessage.collect { snackbarHostState.showSnackbar(it) }
+        viewModel.snackbarMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
     }
 
     if (showDeleteDialog) {
@@ -186,7 +188,6 @@ fun RecipeDetailScreen(
         )
     }
 
-    val context = LocalContext.current
 
     Scaffold(
         topBar = {
