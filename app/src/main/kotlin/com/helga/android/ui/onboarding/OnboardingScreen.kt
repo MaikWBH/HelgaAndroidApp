@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
+import com.helga.android.ui.components.PreviewSurface
+import com.helga.android.ui.components.ThemePreviews
 
 @Composable
 fun OnboardingScreen(
@@ -33,7 +35,23 @@ fun OnboardingScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    Scaffold { padding ->
+    OnboardingContent(
+        state = state,
+        onServerUrlChange = viewModel::setServerUrl,
+        onApiKeyChange = viewModel::setApiKey,
+        onTestConnection = { viewModel.testConnection(onSuccess = onContinue) },
+    )
+}
+
+@Composable
+internal fun OnboardingContent(
+    state: OnboardingState,
+    onServerUrlChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onTestConnection: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(modifier = modifier) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -56,7 +74,7 @@ fun OnboardingScreen(
 
             OutlinedTextField(
                 value = state.serverUrl,
-                onValueChange = viewModel::setServerUrl,
+                onValueChange = onServerUrlChange,
                 label = { Text(stringResource(R.string.onboarding_server_url)) },
                 placeholder = { Text(stringResource(R.string.onboarding_server_url_hint)) },
                 singleLine = true,
@@ -66,7 +84,7 @@ fun OnboardingScreen(
 
             OutlinedTextField(
                 value = state.apiKey,
-                onValueChange = viewModel::setApiKey,
+                onValueChange = onApiKeyChange,
                 label = { Text(stringResource(R.string.onboarding_api_key)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -78,7 +96,7 @@ fun OnboardingScreen(
             ValidationFeedback(state.validation)
 
             Button(
-                onClick = { viewModel.testConnection(onSuccess = onContinue) },
+                onClick = onTestConnection,
                 enabled = state.validation != Validation.Testing &&
                     state.serverUrl.isNotBlank() && state.apiKey.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
@@ -113,4 +131,21 @@ private fun ValidationFeedback(validation: Validation) {
             MaterialTheme.colorScheme.error
     }
     Text(text = text, color = color, style = MaterialTheme.typography.bodyMedium)
+}
+
+@ThemePreviews
+@Composable
+private fun OnboardingContentPreview() {
+    PreviewSurface {
+        OnboardingContent(
+            state = OnboardingState(
+                serverUrl = "http://192.168.1.10:8000",
+                apiKey = "geheim",
+                validation = Validation.Success,
+            ),
+            onServerUrlChange = {},
+            onApiKeyChange = {},
+            onTestConnection = {},
+        )
+    }
 }

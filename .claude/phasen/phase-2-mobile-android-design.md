@@ -387,7 +387,7 @@ Muster: `XScreen(…, viewModel = hiltViewModel())` sammelt State und reicht ihn
 `@Composable internal fun XContent(state…, <Callbacks>, modifier: Modifier = Modifier)` weiter; `XContent` kennt kein
 ViewModel. Der gesamte bisherige UI-Baum wandert unverändert nach `XContent`, `viewModel::foo` wird zu einem
 Callback-Parameter. Je `XContent` eine `@ThemePreviews`-Funktion mit festen Beispieldaten in `PreviewSurface`.
-- [ ] **S29** — `$U/onboarding/OnboardingScreen.kt`, `$U/recipes/UrlImportScreen.kt`. Akzeptanz je Datei:
+- [x] **S29** — `$U/onboarding/OnboardingScreen.kt`, `$U/recipes/UrlImportScreen.kt`. Akzeptanz je Datei:
   `grep -c 'viewModel' ` nur innerhalb der `XScreen`-Funktion; `grep -c '@ThemePreviews'` ≥ 1.
 - [ ] **S30** — `$U/stats/StatsScreen.kt`, `$U/weekplan/WeekplanRecipePickerScreen.kt`; zusätzlich Preview für das
   vorhandene `…Content` in `$U/ai/AiRemixScreen.kt`. Akzeptanz wie S29.
