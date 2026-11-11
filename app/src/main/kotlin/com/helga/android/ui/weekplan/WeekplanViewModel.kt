@@ -634,28 +634,21 @@ class WeekplanViewModel @Inject constructor(
 
                 // --- Anker-Rezepte: gesperrte Tage mit vorhandenem Rezept bleiben unangetastet,
                 // alle anderen (auch bereits befüllte) werden neu generiert (wochenplan A10) ---
-                val anchorDays = mutableMapOf<String, List<WeekplanRecipeEntity>>()
-                currentDays.filter { it.isLocked == 1 }.forEach { day ->
-                    val existing = weekplanDao.recipesForDay(day.id)
-                    if (existing.isNotEmpty()) anchorDays[day.id] = existing
-                }
+                val lockedExisting = currentDays.filter { it.isLocked == 1 }
+                    .associate { it.id to weekplanDao.recipesForDay(it.id) }
+                val anchorDays = selectAnchorDays(currentDays, lockedExisting)
 
                 // Kürzlich geplante Rezepte ausschließen (Wiederholungssperre)
-                val since = LocalDate.now().minusDays(c.maxRepeatDays.toLong())
-                    .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                val since = repeatCutoffDate(LocalDate.now(), c.maxRepeatDays)
                 val recentIds = recipeHistoryDao.getRecentRecipeIds(since).toSet()
 
                 // Feedback-Scores laden (positiv = bevorzugt, negativ = vermeiden)
-                val allFeedback = recipeFeedbackDao.getAll()
-                val feedbackScores = allFeedback
-                    .groupBy { it.recipeId }
-                    .mapValues { (_, entries) -> entries.sumOf { it.liked } }
+                val feedbackScores = sumFeedbackScores(recipeFeedbackDao.getAll())
 
                 // Alle verfügbaren Rezepte
                 val allRecipesList = allRecipes.value.values.toList()
                     .filter { it.deleted == 0 }
-                val candidates = allRecipesList.filter { it.id !in recentIds }
-                    .ifEmpty { allRecipesList } // Fallback wenn alle kürzlich geplant
+                val candidates = candidatePool(allRecipesList, recentIds) // Fallback wenn alle kürzlich geplant
 
                 if (candidates.isEmpty()) {
                     _generateStatus.value = WeekplanGenerateStatus.Error("Keine Rezepte verfügbar")
