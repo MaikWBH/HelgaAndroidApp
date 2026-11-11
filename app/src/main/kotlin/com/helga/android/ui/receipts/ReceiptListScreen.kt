@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.ui.common.formatEuro
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -135,7 +136,7 @@ private fun ReceiptRow(
                 )
             }
             Text(
-                String.format("€%.2f", receipt.totalAmount),
+                formatEuro(receipt.totalAmount),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )

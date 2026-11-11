@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.ui.common.formatEuro
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -201,7 +202,7 @@ private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
         ) {
             Text("$itemCount Artikel", style = MaterialTheme.typography.bodyLarge)
             Text(
-                String.format("Summe: €%.2f", receipt.totalAmount),
+                "Summe: ${formatEuro(receipt.totalAmount)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -299,13 +300,13 @@ private fun ReceiptItemRow(
                 color = accent,
             )
             Text(
-                "${formatQuantity(item.quantity)} × ${String.format("€%.2f", item.unitPrice)}",
+                "${formatQuantity(item.quantity)} × ${formatEuro(item.unitPrice)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
-            String.format("€%.2f", item.totalPrice),
+            formatEuro(item.totalPrice),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
         )

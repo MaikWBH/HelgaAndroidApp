@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.ui.common.formatEuro
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.model.CostByDate
@@ -149,6 +150,6 @@ class CostOverviewViewModel @Inject constructor(
     }
 
     fun formatCurrency(amount: Double): String {
-        return String.format("€%.2f", amount)
+        return formatEuro(amount)
     }
 }

@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.ui.common.formatEuro
 import android.Manifest
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -395,13 +396,13 @@ private fun PreviewContent(
                     ) {
                         Text(item.name.ifEmpty { item.rawText })
                         Text(
-                            "${formatQuantity(item.quantity)} × ${String.format("€%.2f", item.unitPrice)}",
+                            "${formatQuantity(item.quantity)} × ${formatEuro(item.unitPrice)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Text(
-                        String.format("€%.2f", item.totalPrice),
+                        formatEuro(item.totalPrice),
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.clickable { editingItem = item },
                     )

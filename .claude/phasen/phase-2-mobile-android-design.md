@@ -284,7 +284,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
 ### Block D — Receipts mechanisch angleichen (Befunde 6, 9, 20; Abgrenzung Phase 3 beachten)
 In diesem Block nur: Strings (R-S), `collectAsState()` → `collectAsStateWithLifecycle()`, Währungsformat. Keine
 Layout-, Struktur- oder Verhaltensänderung, keine neuen Composables.
-- [ ] **S15 Zentraler Währungsformatter** — Dateien: neu `$U/common/CurrencyFormat.kt`, neu `$T/CurrencyFormatTest.kt`,
+- [x] **S15 Zentraler Währungsformatter** — Dateien: neu `$U/common/CurrencyFormat.kt`, neu `$T/CurrencyFormatTest.kt`,
   alle Fundstellen von `grep -rn '"€%.2f"\|€%' $U | grep -v widget/`. `fun formatEuro(amount: Double): String =
   NumberFormat.getCurrencyInstance(Locale.GERMANY).format(amount)` (Ergebnis z. B. `12,34 €` mit geschütztem Leerzeichen).
   Test: `0.0`, `12.3`, `1234.5`, `-5.0` — Vergleich nach `replace(' ', ' ')` gegen `"0,00 €"`, `"12,30 €"`,
