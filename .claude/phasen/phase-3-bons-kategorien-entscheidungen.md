@@ -56,3 +56,9 @@ Server**, damit das Handy nicht zugemüllt wird; Scan ohne Server wird angezeigt
 - Gänge: `StoreRepository` (10 Standardgänge, `AisleProductEntity`, `AisleProductKey.normalize`); Zuordnung nur gelernt, keine Tests;
   Server-Endpunkt `/api/suggestions/aisles` wird von der App nicht aufgerufen und vergleicht ohne Normalisierung.
 - Offene Lücke im Plan: `bons-kosten/plan.md` sagt „Server-Pflicht akzeptabel", der Code hat aber bereits den ML-Kit-Fallback.
+
+## Bestätigte Annahmen aus dem Feinplan (Nutzer, 2026-11-11)
+- **3a Annahme 7:** Nicht gesyncte lokale Bon-Löschungen werden bei der Room-Migration verworfen (Archivschutz).
+- **3a Annahme 8:** „Bons aufbewahren" gilt nur noch für die Offline-Dauer auf dem Handy; der Server löscht nie automatisch.
+- **3a Annahme 11:** Auf dem Server ist `AI_PROVIDER=anthropic` aktiv; Bon-KI läuft mit Haiku 5.5.
+- Umsetzungsmodell für Stufe B wählt der Nutzer manuell per `/model` vor dem Start.
