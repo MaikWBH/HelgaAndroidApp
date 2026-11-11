@@ -276,7 +276,7 @@ container/onContainer rechnerisch ≥ 4,5:1, Ausnahme Orange hell (`E65100`/`FFF
   indeterminierte Stelle 1:1 ersetzen und `modifier`/`strokeWidth`/`color` durchreichen; Stellen mit `progress = …`
   (determiniert) bleiben `CircularProgressIndicator`. Preview hell/dunkel. Akzeptanz:
   `grep -rn 'CircularProgressIndicator(' $U | grep -v 'components/LoadingIndicator.kt'` zeigt nur Stellen mit `progress`.
-- [ ] **S14 Gespiegelte Icons** — Dateien: Treffer von
+- [x] **S14 Gespiegelte Icons** — Dateien: Treffer von
   `grep -rnE 'Icons\.(Filled|Default)\.(ArrowBack|ReceiptLong|Sort|TrendingUp|MenuBook|FormatListBulleted)\b' $B`
   (12 Stellen, inkl. `HelgaNavGraph.kt` und `receipts/`). Ersetzen durch `Icons.AutoMirrored.Filled.<Name>` und die
   Imports auf `androidx.compose.material.icons.automirrored.filled.<Name>` umstellen. Akzeptanz: obiger grep leer.

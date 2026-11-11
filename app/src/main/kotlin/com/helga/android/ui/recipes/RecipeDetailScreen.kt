@@ -30,7 +30,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
@@ -218,7 +218,7 @@ fun RecipeDetailScreen(
                         }
                         if (uiState.instructions.isNotEmpty()) {
                             IconButton(onClick = { onCook(it.id) }) {
-                                Icon(Icons.Filled.MenuBook, contentDescription = stringResource(R.string.recipe_cook))
+                                Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = stringResource(R.string.recipe_cook))
                             }
                         }
                         Box {

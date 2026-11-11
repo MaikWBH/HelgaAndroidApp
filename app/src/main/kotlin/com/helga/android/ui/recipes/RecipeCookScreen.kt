@@ -29,7 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.ViewCarousel
@@ -204,7 +204,7 @@ fun RecipeCookScreen(
                     if (instructions.isNotEmpty() && !isLandscape) {
                         IconButton(onClick = { focusMode = !focusMode }) {
                             Icon(
-                                imageVector = if (focusMode) Icons.Filled.FormatListBulleted else Icons.Filled.ViewCarousel,
+                                imageVector = if (focusMode) Icons.AutoMirrored.Filled.FormatListBulleted else Icons.Filled.ViewCarousel,
                                 contentDescription = stringResource(
                                     if (focusMode) R.string.cook_focus_mode_off else R.string.cook_focus_mode_on
                                 ),

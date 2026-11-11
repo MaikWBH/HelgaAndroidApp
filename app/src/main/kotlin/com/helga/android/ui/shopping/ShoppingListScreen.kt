@@ -38,7 +38,7 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
@@ -301,7 +301,7 @@ fun ShoppingListScreen(
                             )
                             DropdownMenuItem(
                                 text = { Text("Kassenzettel") },
-                                leadingIcon = { Icon(Icons.Filled.ReceiptLong, null) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, null) },
                                 onClick = {
                                     showOverflow = false
                                     onNavigateToReceipts()

@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
@@ -106,7 +106,7 @@ private val bottomNavItems = listOf(
     BottomNavItem(ROUTE_SHOPPING, Icons.Filled.ShoppingCart, R.string.nav_shopping),
     BottomNavItem(ROUTE_RECIPES, Icons.Filled.Restaurant, R.string.nav_recipes),
     BottomNavItem(ROUTE_WEEKPLAN, Icons.Filled.CalendarMonth, R.string.nav_weekplan),
-    BottomNavItem(ROUTE_RECEIPTS, Icons.Filled.ReceiptLong, R.string.nav_receipts),
+    BottomNavItem(ROUTE_RECEIPTS, Icons.AutoMirrored.Filled.ReceiptLong, R.string.nav_receipts),
 )
 
 @Composable

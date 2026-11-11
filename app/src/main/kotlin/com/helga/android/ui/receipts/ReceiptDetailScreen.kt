@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import com.helga.android.ui.components.LoadingIndicator
@@ -87,7 +87,7 @@ fun ReceiptDetailScreen(
                 title = { Text(receipt?.storeName?.ifBlank { "Kassenbon" } ?: "Kassenbon") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
                     }
                 },
                 actions = {
@@ -164,7 +164,7 @@ private fun ReceiptPhoto(receipt: ReceiptEntity, serverUrl: String) {
             )
         } else {
             Icon(
-                imageVector = Icons.Filled.ReceiptLong,
+                imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
                 contentDescription = null,
                 modifier = Modifier.height(64.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
