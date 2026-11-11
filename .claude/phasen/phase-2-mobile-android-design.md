@@ -151,7 +151,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `grep -n 'statusBarColor' $U/theme/Theme.kt` leer; Datei `values-night/themes.xml` existiert. Prüfliste (Gerät): Kaltstart
   im System-Dark-Mode ohne weißes Aufblitzen; App-Modus „Hell" bei System dunkel zeigt dunkle Statusleisten-Icons und
   umgekehrt.
-- [ ] **S5 Shapes** — Dateien: neu `$U/theme/Shape.kt`, `$U/theme/Theme.kt`, alle Dateien mit `RoundedCornerShape(`.
+- [x] **S5 Shapes** — Dateien: neu `$U/theme/Shape.kt`, `$U/theme/Theme.kt`, alle Dateien mit `RoundedCornerShape(`.
   `val HelgaShapes = Shapes(extraSmall = RoundedCornerShape(4.dp), small = RoundedCornerShape(8.dp), medium = RoundedCornerShape(12.dp), large = RoundedCornerShape(16.dp), extraLarge = RoundedCornerShape(28.dp))`;
   `MaterialTheme(colorScheme, shapes = HelgaShapes, content)`. Typografie bleibt M3-Standard (keine `Type.kt`). Ersetzen in
   `$U` (ohne `theme/`): `RoundedCornerShape(4.dp)` → `MaterialTheme.shapes.extraSmall`, `6.dp` und `8.dp` →

@@ -1,5 +1,6 @@
 package com.helga.android.ui.weekplan
 
+import androidx.compose.foundation.shape.CircleShape
 import com.helga.android.data.weekplan.WeekplanGenerateStatus
 import com.helga.android.data.weekplan.parseAllergenJson
 
@@ -24,7 +25,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -754,7 +754,7 @@ private fun DayCard(
                                     Box(
                                         modifier = Modifier
                                             .size(10.dp)
-                                            .clip(RoundedCornerShape(50))
+                                            .clip(CircleShape)
                                             .background(parseMarkerColor(marker.color)),
                                     )
                                 },
@@ -845,7 +845,7 @@ private fun MealSlotBadge(mealSlot: String, onMealSlotChange: ((String) -> Unit)
     Box {
         Surface(
             color = color,
-            shape = RoundedCornerShape(4.dp),
+            shape = MaterialTheme.shapes.extraSmall,
             modifier = if (onMealSlotChange != null) Modifier.clickable { expanded = true } else Modifier,
         ) {
             Text(
@@ -887,7 +887,7 @@ private fun RecipeItemRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onNavigate),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -895,7 +895,7 @@ private fun RecipeItemRow(
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .clip(RoundedCornerShape(8.dp)),
+                .clip(MaterialTheme.shapes.small),
         ) {
             if (imageUrl != null) {
                 AsyncImage(
@@ -971,7 +971,7 @@ private fun DayPreviewRecipeRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp)
-            .clip(RoundedCornerShape(6.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onNavigate),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -979,7 +979,7 @@ private fun DayPreviewRecipeRow(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(6.dp)),
+                .clip(MaterialTheme.shapes.small),
         ) {
             if (imageUrl != null) {
                 AsyncImage(
@@ -1449,7 +1449,7 @@ private fun ProposalSheet(
                             contentDescription = null,
                             modifier = Modifier
                                 .size(48.dp)
-                                .clip(RoundedCornerShape(6.dp)),
+                                .clip(MaterialTheme.shapes.small),
                             contentScale = ContentScale.Crop,
                         )
                         Spacer(Modifier.width(8.dp))

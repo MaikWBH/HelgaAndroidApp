@@ -2,7 +2,6 @@ package com.helga.android.ui.components
 
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,7 +28,7 @@ fun parseMarkerColor(hex: String): Color = runCatching {
 fun DayMarkerChip(name: String, color: String, modifier: Modifier = Modifier) {
     Surface(
         color = parseMarkerColor(color).copy(alpha = 0.25f),
-        shape = RoundedCornerShape(4.dp),
+        shape = MaterialTheme.shapes.extraSmall,
         modifier = modifier,
     ) {
         Text(

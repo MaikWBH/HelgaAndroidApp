@@ -77,5 +77,5 @@ fun HelgaTheme(
         }
     }
 
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    MaterialTheme(colorScheme = colorScheme, shapes = HelgaShapes, content = content)
 }

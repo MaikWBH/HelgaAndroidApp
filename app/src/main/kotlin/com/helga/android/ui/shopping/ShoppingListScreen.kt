@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -829,7 +828,7 @@ private fun SourceBadge(item: ShoppingItemEntity, recipes: List<String>) {
             .widthIn(max = 140.dp)
             .background(
                 MaterialTheme.colorScheme.secondaryContainer,
-                RoundedCornerShape(4.dp),
+                MaterialTheme.shapes.extraSmall,
             )
             .padding(horizontal = 6.dp, vertical = 2.dp),
     )
@@ -1141,7 +1140,7 @@ private fun StaplesSheet(
 private fun EmojiQuickButton(emoji: QuickEmojiEntity, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.widthIn(min = 48.dp),
     ) {

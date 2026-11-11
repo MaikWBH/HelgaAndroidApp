@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -297,7 +296,7 @@ private fun RecipePickerThumbnail(imageUrl: String?) {
     Box(
         modifier = Modifier
             .size(64.dp)
-            .clip(RoundedCornerShape(8.dp)),
+            .clip(MaterialTheme.shapes.small),
     ) {
         if (imageUrl != null) {
             AsyncImage(

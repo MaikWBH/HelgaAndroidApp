@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
@@ -232,7 +231,7 @@ private fun ReviewBanner() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.errorContainer)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -284,7 +283,7 @@ private fun ScanSourceInfo(source: ScanSource, rawOcrText: String) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .padding(8.dp),
                 )
@@ -373,7 +372,7 @@ private fun PreviewContent(
                         .padding(vertical = 4.dp)
                         .then(
                             if (uncertain) Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(MaterialTheme.shapes.small)
                                 .background(MaterialTheme.colorScheme.errorContainer)
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                             else Modifier

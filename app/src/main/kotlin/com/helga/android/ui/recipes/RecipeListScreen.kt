@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -437,7 +436,7 @@ private fun RecipeThumbnail(
     Box(
         modifier = Modifier
             .size(72.dp)
-            .clip(RoundedCornerShape(8.dp)),
+            .clip(MaterialTheme.shapes.small),
     ) {
         if (imageUrl != null) {
             AsyncImage(

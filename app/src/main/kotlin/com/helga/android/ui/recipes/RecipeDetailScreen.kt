@@ -562,7 +562,7 @@ private fun NutritionSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small)
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
             ) {
