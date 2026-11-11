@@ -553,7 +553,7 @@ private fun NutritionSection(
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Text(
-            text = "📊 Nährwerte",
+            text = stringResource(R.string.recipe_nutrition_heading),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 8.dp),

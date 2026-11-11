@@ -150,7 +150,7 @@ fun RecipeListScreen(
                             }
                             DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("⚡ Alle klassifizieren ($unclassifiedCount)") },
+                                    text = { Text(stringResource(R.string.recipes_classify_all, unclassifiedCount)) },
                                     onClick = {
                                         showBulkClassifyDialog = true
                                         showOverflowMenu = false
@@ -547,7 +547,7 @@ private fun BulkClassifyDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rezepte klassifizieren") },
+        title = { Text(stringResource(R.string.recipes_classify_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text("${unclassifiedRecipes.size} Rezepte sind noch nicht kategorisiert.",

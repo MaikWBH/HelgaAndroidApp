@@ -930,7 +930,7 @@ private fun QuickEmojiDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = emoji, onValueChange = { emoji = it }, label = { Text("Emoji") }, singleLine = true)
+                OutlinedTextField(value = emoji, onValueChange = { emoji = it }, label = { Text(stringResource(R.string.settings_emoji)) }, singleLine = true)
                 OutlinedTextField(value = food, onValueChange = { food = it }, label = { Text(stringResource(R.string.recipe_form_food)) }, singleLine = true)
                 OutlinedTextField(
                     value = quantityText,

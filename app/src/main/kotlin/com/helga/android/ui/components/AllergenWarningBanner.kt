@@ -1,5 +1,7 @@
 package com.helga.android.ui.components
 
+import com.helga.android.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,7 +36,7 @@ fun AllergenWarningBanner(allergens: List<String>) {
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "⚠️ Allergene gefunden",
+                text = stringResource(R.string.allergen_banner_title),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.error,
             )

@@ -81,7 +81,7 @@ fun UrlImportScreen(
                 value = state.url,
                 onValueChange = viewModel::setUrl,
                 label = { Text(stringResource(R.string.import_url_label)) },
-                placeholder = { Text("https://www.chefkoch.de/rezepte/...") },
+                placeholder = { Text(stringResource(R.string.url_import_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(

@@ -546,4 +546,12 @@
     <string name="weekplan_max_kcal">Max kcal/Portion: %1$d</string>
     <string name="weekplan_prefer_organic">🌿 Bio bevorzugt</string>
     <string name="weekplan_exclude_allergens">🚫 Allergene ausschließen</string>
+
+    <!-- Phase 2: Rest -->
+    <string name="recipes_classify_all">⚡ Alle klassifizieren (%1$d)</string>
+    <string name="recipes_classify_title">Rezepte klassifizieren</string>
+    <string name="recipe_nutrition_heading">📊 Nährwerte</string>
+    <string name="url_import_placeholder">https://www.chefkoch.de/rezepte/...</string>
+    <string name="settings_emoji">Emoji</string>
+    <string name="allergen_banner_title">⚠️ Allergene gefunden</string>
 </resources>
