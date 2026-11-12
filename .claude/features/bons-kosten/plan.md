@@ -173,3 +173,7 @@ _Weitere Aufgaben nach dem Interview._
 - Kostenübersicht: Ausgaben je Monat/Woche mit Budgetlinie und Durchschnitt, Zeitraum-Chips, Märkte als Ring, Kategorien und Top-Artikel als Querbalken; Hinweis auf vorläufige Bons, die noch fehlen. Preisentwicklung eines Artikels über alle Monate, Einzelkäufe nur für den lokalen Zeitraum.
 - Alte Kostenabfragen (`costByStore`, `costByDate`, `totalCostForRange` u. a.) entfernt.
 - Details und Geräte-Prüfliste: [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).
+
+## Phase 6 (Code-Review Phasen 1–5)
+
+- Review-Bericht mit Befunden je Block: [review-bericht](../../phasen/phase-6-daten/review-bericht.md). Behoben: V1 (`!!` in `SpendingBarChart`/`AisleKeywordMatcher`, per `KotlinQualityRulesTest` gesperrt) und V2 (Bon und Positionen nur noch atomar über `@Transaction`-Methoden im `ReceiptDao`). Offen für Ihre Entscheidung: u. a. V3 (Foto-Race), der Verdacht auf Löschen der Positionen durch `REPLACE` mit `CASCADE`, Lexikon-Löschen ohne Bestätigung.

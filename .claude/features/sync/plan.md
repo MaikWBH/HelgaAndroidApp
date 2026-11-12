@@ -190,3 +190,7 @@ _Weitere Aufgaben nach dem Interview._
 - Phase 5 umgesetzt (Stufe B, 2026-11-12): `server/Dockerfile` ist mehrstufig (`builder`, `test`, `runtime`), `server/.dockerignore` begrenzt den Build-Kontext, `recipe-scrapers==15.13.0` ist gepinnt, `make docker-test` führt die Tests im Container aus. Der Prod-Compose ist gehärtet (`read_only`, `tmpfs /tmp`, `cap_drop: ALL`, `no-new-privileges`); der Healthcheck steht nur noch im Dockerfile. UID 1000 bleibt. Image 200 MB → 194 MB (Prototyp-Erwartung bestätigt).
 - Korrektur zum Startverhalten ohne `API_KEY` (siehe oben, Phase 4): Mit mehreren Uvicorn-Workern beendet sich der Container nicht. Die Worker brechen mit `API_KEY fehlt …` ab und werden neu gestartet; der Container wird `unhealthy`. Das war schon vor Phase 5 so.
 - Siehe [phase-5](../../phasen/phase-5-multi-stage-dockerfile.md).
+
+## Phase 6 (Code-Review Phasen 1–5)
+
+- Review-Bericht mit Befunden je Block: [review-bericht](../../phasen/phase-6-daten/review-bericht.md). Behoben: V11 (Bon-Foto-I/O im Event-Loop über `asyncio.to_thread`) und V4 (SSRF-Schutz sperrt alles nicht global Routbare, u. a. 100.64.0.0/10). Offene Entscheidungen zum Bon-Protokoll (z. B. `server_seq` bei Parse-Status, Eingabe-Limits der Bon-Modelle) stehen im Bericht.

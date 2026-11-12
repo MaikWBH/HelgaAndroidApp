@@ -249,7 +249,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
   unter der Überschrift „### Abschluss Stufe B (Stand: Stopp bei S16)" und unter „### Stand nach Entscheidungen
   Stufe B (STOPP bei S17 …)" je eine Zeile einfügen: „> Überholt (Phase 6): S17 mit 555 Zeilen vom Nutzer akzeptiert;
   S18–S20 umgesetzt (Commits `58126ab`, `40f4d67`)." Sonst nichts ändern. Akzeptanz: `grep -c 'Überholt (Phase 6)'` = 2.
-- [ ] **S26 Index und Pläne** — Dateien: `.claude/features/README.md` (Zeile „`!!`-Operator": Zahl → „0 (Phase 6,
+- [x] **S26 Index und Pläne** — Dateien: `.claude/features/README.md` (Zeile „`!!`-Operator": Zahl → „0 (Phase 6,
   abgesichert durch `KotlinQualityRulesTest`)"; neue Zeile unter „Bereichsübergreifende Befunde":
   „Code-Review Phasen 1–5 | Bericht: `.claude/phasen/phase-6-daten/review-bericht.md` (Entscheidungen offen: siehe
   ‚An den Nutzer zur Entscheidung') | alle Guidelines"), `.claude/phasen/README.md` (Phase-6-Zeile Status →
@@ -270,7 +270,15 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
 - [x] Baseline S0: App `TC` 282 (erwartet 282), Server 177 passed (erwartet 177), `!!` 5 (erwartet 5)
 - [x] Nach Block A: App `TC` 287 (erwartet 287 = 282 + 1 S1 + 1 S2 + 1 S4 + 2 S8), Server 180 passed (erwartet 180 = 177 + 2 S5 + 1 S6), `!!` 0
 - [x] Review-Bereich `2c148ab..451819d`, `git diff --stat`: 256 Dateien, +24903/−3251 (erwartet etwa 255)
-- [ ] Je Block: Sub-Agent-Modell und Anzahl Befunde je Achse (aus der Zusammenfassung des Berichts)
-- [ ] Endstand `V`/`VS` grün nach S26 (Zahlen)
-- [ ] Bericht committet; „An den Nutzer zur Entscheidung" und Abhakliste G01–G29 offen für den Nutzer
-- [ ] Gemeldete Abweichungen von diesem Plan (je Schritt eine Zeile)
+- [x] Je Block: Sub-Agent-Modell `sonnet` (Modell-Parameter des Agent-Werkzeugs gesetzt), Anzahl Befunde je Achse siehe Tabelle „Zusammenfassung“ im Bericht (Summe Standards 0/0/23/84, Spec 0/0/9/37 als Blocker/Hoch/Mittel/Niedrig)
+- [x] Endstand `V` grün: App 287 Tests (`TC` = 287, wie erwartet), `VS` grün: Server 180 passed, `!!` in `$B`: 0
+- [x] Bericht committet (`.claude/phasen/phase-6-daten/review-bericht.md`); „An den Nutzer zur Entscheidung“ (44 Einträge) und Abhakliste G01–G29 (Spalte „Gerät“) sind offen für den Nutzer
+- [x] Gemeldete Abweichungen von diesem Plan (je Schritt eine Zeile):
+  - S0–S9: keine Abweichung. S7 hat wie geplant keinen Unit-Test; S8 lässt `SyncWorker.doWork` (Altbestand) unverändert.
+  - S10: `git diff --stat` zeigt 256 statt „etwa 255“ Dateien.
+  - S11–S21: Der Auftragstext der Sub-Agenten wurde per Skript aus `prompts.md`/`blocks.md` erzeugt (Platzhalter ersetzt, sonst kein Wort geändert) und als Datei im Scratchpad abgelegt; der Sub-Agent las ihn per Read statt dass er im Prompt stand (Inhalt identisch, spart Kontext).
+  - S11–S21: Standards- und Spec-Antwort je Block liegen in zwei Commits („Standards-Achse (Spec folgt)“ und „Spec-Achse“) statt in einem, weil der Stop-Hook einen offenen Zwischenstand meldete. Die Antworten wurden wörtlich eingefügt; Zeilen wurden nicht entfernt (keine fiel unter „Nicht melden“).
+  - S16: Der Standards-Reviewer für B5 wurde vom 5-Stunden-Limit unterbrochen und mit seinem gespeicherten Stand fortgesetzt.
+  - S13: Zusätzlich zur Sub-Agent-Antwort steht dort eine gekennzeichnete „Anmerkung Stufe B“ zum Beifang (REPLACE + CASCADE); nur die Fakten wurden nachgeprüft (Schema, DAO, Python-`sqlite3`-Versuch), nicht das Verhalten in Room/Gerät. Der Verdacht steht als Eintrag `B1-Anm` in der Nutzerliste.
+  - S22: Die Spalte „Statisch“ enthält bei G11, G13, G18, G23, G25 und G29 zusätzliche Hinweise auf Befunde („Hinweis B…“), ohne dass daraus „Abweichung“ wurde; G17, G19, G20 und G27 sind „Abweichung“ (V3, B8-P2, B8-P5, V6).
+  - S23: Die Nutzerliste enthält zusätzlich zu den Vorgaben alle „ändert Verhalten“-Befunde aus Block B und die Stufe-B-Anmerkung `B1-Anm`.
