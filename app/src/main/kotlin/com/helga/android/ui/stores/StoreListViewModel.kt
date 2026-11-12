@@ -70,6 +70,21 @@ class StoreListViewModel @Inject constructor(
         }
     }
 
+    fun setAisleCategory(aisle: StoreAisleEntity, categoryKey: String) {
+        viewModelScope.launch {
+            repository.setAisleCategory(aisle, categoryKey)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
+    fun addMissingDefaultAisles() {
+        val storeId = _selectedStoreId.value ?: return
+        viewModelScope.launch {
+            repository.addMissingDefaultAisles(storeId)
+            syncScheduler.triggerOneShot()
+        }
+    }
+
     fun deleteAisle(aisle: StoreAisleEntity) {
         viewModelScope.launch {
             repository.deleteAisle(aisle)

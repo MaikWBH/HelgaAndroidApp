@@ -297,7 +297,7 @@ Zusätzlich:
   `addAisle("Kasse")` setzt nichts; `addMissingDefaultAisles` bei den 10 alten Standardgängen ergänzt genau
   die fünf Gänge mit den Schlüsseln `wuerzen_backen`, `fruehstueck`, `alkohol`, `feinkost`, `haushalt` und beim
   zweiten Aufruf keinen mehr; jede Mutation setzt `dirty = 1`. Akzeptanz: `V` grün.
-- [ ] **S18 Gang-Editor** — Dateien: `$U/stores/StoreListScreen.kt`, `$U/stores/StoreListViewModel.kt`,
+- [x] **S18 Gang-Editor** — Dateien: `$U/stores/StoreListScreen.kt`, `$U/stores/StoreListViewModel.kt`,
   `$R/values/strings.xml`. ViewModel: `setAisleCategory(aisle, key)`, `addMissingDefaultAisles()` (beide mit
   `triggerOneShot`). `AisleRow` (≈ Z.358): `supportingContent` = Kategorie-Name bzw. „Ohne Kategorie"
   (`onSurfaceVariant`); neuer `IconButton` (Icon `Icons.Filled.Category`, `contentDescription` „Kategorie wählen")

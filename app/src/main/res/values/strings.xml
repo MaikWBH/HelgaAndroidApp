@@ -692,4 +692,8 @@
     <string name="price_single_purchases_title">Einzelkäufe der letzten Monate</string>
     <string name="price_single_purchases_missing">Einzelne Käufe liegen nur für die letzten Monate auf dem Handy.</string>
     <string name="product_prices_subtitle">Aus den Bons der letzten Monate</string>
+    <!-- Phase 3b: Gang-Kategorien -->
+    <string name="stores_aisle_choose_category">Kategorie wählen</string>
+    <string name="stores_aisle_category_hint">Die Kategorie bestimmt, welche Artikel automatisch in diesen Gang sortiert werden.</string>
+    <string name="stores_add_missing_aisles">Fehlende Standardgänge ergänzen</string>
 </resources>
