@@ -229,7 +229,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
   und jeder Befund aus Block B mit Markierung „ändert Verhalten" oder Grad Blocker/Hoch (Vorschlag: der Satz aus dem
   Befund, sonst „Vorschlag offen"). Akzeptanz: `grep -c '<' $D/review-bericht.md` liefert nur noch Treffer aus
   Tabelleninhalten (keine `<S2…`-Platzhalter); Commit.
-- [ ] **S24 Guidelines anpassen (V7, V8; kein Code)** — Dateien: `.claude/guidelines/architecture-layers.md`,
+- [x] **S24 Guidelines anpassen (V7, V8; kein Code)** — Dateien: `.claude/guidelines/architecture-layers.md`,
   `.claude/guidelines/kotlin-quality.md`, `.claude/guidelines/sync-patterns.md`.
   `architecture-layers.md`: (a) im Diagramm unter `data/receipts/` eine Zeile
   `data/shopping/   (Dienst der Gang-Zuordnung: AisleAssigner)`; (b) den Satz „`data/receipts/` … ViewModels nicht

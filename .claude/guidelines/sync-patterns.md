@@ -120,6 +120,7 @@ Bons (`Receipt`, `ReceiptItem`) liegen vollständig auf dem Server; das Handy h�
   für nie hochgeladene Bons). Der Server löscht Bons nie automatisch. Geprüft durch `ReceiptProtocolRulesTest`.
 - `pendingUpload = 1` markiert Bons, deren Foto noch auf den Upload wartet (`ReceiptUploader`); sie werden beim
   Pull nicht überschrieben und nicht verdrängt.
+- Bon und Positionen werden nur gemeinsam und atomar geschrieben bzw. gelöscht (`@Transaction`-Methoden im `ReceiptDao`).
 - Schnittstelle, Felder und Regeln: `.claude/phasen/phase-3-daten/server-vertrag.md`.
 
 ---

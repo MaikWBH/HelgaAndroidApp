@@ -9,6 +9,8 @@ Ergänzt die Kotlin Style Guide – fokussiert auf Muster die in diesem Projekt 
 
 **Regel:** Not-null assertion (`!!`) ist verboten. Immer explizites Null-Handling.
 
+Abgesichert per Test: `KotlinQualityRulesTest` schlägt bei `!!` in `src/main` fehl.
+
 ```kotlin
 // ✅ RICHTIG – requireNotNull mit aussagekräftiger Nachricht
 val recipeId: String = requireNotNull(savedStateHandle["recipeId"]) {
@@ -50,6 +52,8 @@ sealed class AiGenerateStatus {
 ```
 
 `data object` statt `object` für Singleton-States (korrekte `toString()`, `equals()`, `hashCode()`).
+
+**Ausnahme:** `ui/common/UiState.kt` bleibt `sealed class UiState<out T>`, weil CLAUDE.md und Phase 1 (S2) es so festlegen (Entscheidung Phase 6). Neue Status-Typen: `sealed interface`.
 
 ---
 
@@ -120,6 +124,8 @@ suspend fun saveRecipe(recipe: RecipeEntity, ...) {
     }
 }
 ```
+
+Bons: Bon und Positionen nur über `ReceiptDao.upsertReceiptWithItems`, `replaceWithServerState`, `hardDeleteReceiptWithItems` (geprüft durch `ReceiptProtocolRulesTest`).
 
 ---
 
