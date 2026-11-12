@@ -393,7 +393,19 @@ _Sub-Agent-Modell: sonnet_
 **Beifang (Altbestand, ohne Grad):** `ReceiptListScreen.kt:71` `formatQuantity` nutzt `String.format("%.2f")` ohne Locale; der neue `EditItemDialog` rundet damit 0,512 beim Bestätigen auf 0,51.
 **Ergebnis:** 0 Blocker, 0 Hoch, 3 Mittel, 7 Niedrig; schwerster Befund: S1 (S2 und S3 gleich schwer). Checkliste (1) keine `remember { mutableStateOf`-Treffer, (2) alle drei `clickable` mit `role`, (3) alle `items(` mit `key`, (5) alle Mutable-Flows privat, Bestätigungsdialoge für Löschen und Neu-auslesen sowie die Snackbars (Nachladen, Lexikon) vorhanden, Liste-Leerzustand mit Text und Button: ohne Befund.
 
-<Spec-Antwort>
+### Spec — B8 — Bon-UI
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|-------------|---------------|--------|----------------------------|------|------------|
+| P1 | ui/receipts/ReceiptReviewComponents.kt:302-317, 329-330 | c | `HeaderEditDialog` prüft nur Datum und Uhrzeit. Bei Gesamtbetrag und Bon-Rabatt gibt es weder Fehlertext noch Sperre. Ungültige Eingabe wird per `parseDecimal(..) ?: 0.0` stumm zu 0,00 (löscht den Betrag). | phase-3a, S29: „Fehlertext unter dem Feld bei ungültiger Eingabe, „Speichern" nur bei gültigen Werten" | Mittel | [ändert Verhalten] |
+| P2 | ui/receipts/ReceiptListScreen.kt:205-228 | a | Im Leerzustand fehlt „Ältere Bons laden". Liegen nur ältere Bons auf dem Server, steht dort „Noch keine Bons" und es gibt keinen Weg ins Archiv. | phase-3a, S30: „Am Listenende `TextButton` „Ältere Bons laden"" und Leerzustand „Noch keine Bons…" | Mittel | [ändert Verhalten] [Ermessensfrage] |
+| P3 | ui/receipts/ReceiptScanScreen.kt:358, 384-387 | c | „Positionen %1$s" zeigt `expectedTotal` (Σ minus Bon-Rabatt), nicht `itemsSum`. Mit Bon-Rabatt passt der Wert nicht zum Label. Vermutung: gewollt, damit er zur `sumMismatch`-Prüfung passt. | phase-3a, S29: „Summenzeile „Positionen %1$s · Bon %2$s" mit Warnfarbe `error` bei `sumMismatch`" | Niedrig | [ändert Verhalten] [Ermessensfrage] |
+| P4 | ui/receipts/ReceiptDetailScreen.kt:242-245 | c | Im Fehlerzustand von „Neu auslesen" trägt der Button „Erneut versuchen" (`action_retry`), schließt aber nur die Meldung (`dismissReparseError`) und liest nicht neu aus. | phase-3a, S31: „`reparseState` (`Idle/Running/Error(UiText)`), `fun reparse()`" | Niedrig | [ändert Verhalten] [Ermessensfrage] |
+| P5 | ui/receipts/ReceiptDetailScreen.kt:140-145 | c | „Neu auslesen" erscheint bei jedem Bon mit `imagePath`, auch bei vorläufigen. Vermutung: Ein vorläufiger Bon mit Server-Foto lässt sich so ersetzen, obwohl er nur ansehbar und löschbar sein soll. | phase-3a, Annahme 9: „schreibgeschützt (nur Ansehen und Löschen)"; S31: „nur wenn `imagePath` gesetzt" | Niedrig | [Ermessensfrage] |
+| P6 | ui/receipts/ReceiptScanViewModel.kt:147-160; ReceiptDetailViewModel.kt:3 | b | `updateStoreName`/`updateTotal` werden nicht mehr aufgerufen (toter Code). Neuer, ungenutzter Compose-Import `stringResource` im ViewModel. | phase-3a, S28: Liste der ViewModel-Funktionen nennt beides nicht | Niedrig | [Ermessensfrage] |
+
+Geprüft und spec-konform: Texte S29–S32 wörtlich, Chip-Farben, `rememberSaveable`, `Role.Button`, Icon-Zuordnung `CloudOff`/`HourglassTop`, „Bearbeiten" bei `provisional` ausgeblendet, S27-Tests.
+
+**Ergebnis:** 0 Blocker, 0 Hoch, 2 Mittel, 4 Niedrig; schwerster Befund: P1
 
 ## B9 — Architektur aus Phase 1 (Checkliste)
 <Standards-Antwort> · <Spec-Antwort>
