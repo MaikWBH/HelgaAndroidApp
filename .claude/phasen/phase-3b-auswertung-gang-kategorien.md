@@ -152,7 +152,7 @@ Zusätzlich:
   `count()`, `@Transaction replaceAll(rows)` (alles löschen, einfügen). `ReceiptSyncer.refreshAggregates(): Boolean`
   (API → `replaceAll`; Fehler → `false`, Abzug bleibt). `SyncWorker` ruft es nach `pull()` im selben `try/catch`.
   Test: Erfolg ersetzt, `IOException` lässt den Abzug unverändert. Akzeptanz: `V` grün.
-- [ ] **S8 Auswertungslogik** — Dateien: neu `$B/data/model/ReceiptStatsModels.kt`, neu
+- [x] **S8 Auswertungslogik** — Dateien: neu `$B/data/model/ReceiptStatsModels.kt`, neu
   `$B/data/receipts/ReceiptStats.kt`, neu `$B/data/repository/ReceiptStatsRepository.kt`, neu
   `$T/ReceiptStatsTest.kt`. Modelle: `enum class StatsRange { THIS_MONTH, THREE_MONTHS, TWELVE_MONTHS, ALL }`,
   `data class PeriodAmount(period: String, amount: Double, count: Int)`, `data class KeyAmount(key: String, label:
