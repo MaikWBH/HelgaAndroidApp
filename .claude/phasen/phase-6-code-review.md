@@ -69,7 +69,7 @@ Abschnitt „Tests").
 - In Block B wird **nichts** am Code geändert, auch wenn ein Befund trivial erscheint.
 
 ### Block 0 — Basis
-- [ ] **S0 Baseline** — `V` und `TC` (erwartet 282), `VS` (erwartet `177 passed`); dazu
+- [x] **S0 Baseline** — `V` und `TC` (erwartet 282), `VS` (erwartet `177 passed`); dazu
   `grep -rn '!!' $B | wc -l` (erwartet 5). Werte unter „Abschluss" notieren. Weicht eine Zahl ab: notieren,
   weitermachen.
 
@@ -267,7 +267,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
 - Erneute Meldung der in Phase 1–5 akzeptierten Abweichungen.
 
 ## Abschluss
-- [ ] Baseline S0: App `TC` <…> (erwartet 282), Server <…> (erwartet 177), `!!` <…> (erwartet 5)
+- [x] Baseline S0: App `TC` 282 (erwartet 282), Server 177 passed (erwartet 177), `!!` 5 (erwartet 5)
 - [ ] Nach Block A: App `TC` <…> (erwartet 287 = 282 + 1 S1 + 1 S2 + 1 S4 + 2 S8), Server <…> (erwartet 180 = 177 + 2 S5 + 1 S6), `!!` 0
 - [ ] Review-Bereich `2c148ab..<$H>`, `git diff --stat` <…>
 - [ ] Je Block: Sub-Agent-Modell und Anzahl Befunde je Achse (aus der Zusammenfassung des Berichts)
