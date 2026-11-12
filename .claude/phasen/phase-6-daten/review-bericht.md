@@ -408,7 +408,29 @@ Geprüft und spec-konform: Texte S29–S32 wörtlich, Chip-Farben, `rememberSave
 **Ergebnis:** 0 Blocker, 0 Hoch, 2 Mittel, 4 Niedrig; schwerster Befund: P1
 
 ## B9 — Architektur aus Phase 1 (Checkliste)
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B9 — Architektur aus Phase 1
+Checkliste (1) und (2) leer (grep ohne Treffer). (4) alle Mutationen mit `triggerOneShot()`. (3) `markCooked`/`saveFeedback`/`toggleFeedback`/`saveSettings`/`setLocked` setzen `updatedAt` und `dirty = 1`.
+
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | WeekplanGenerator.kt:198-207, 339-342 | `applyProposal`/`regenerateDay` schreiben `weekplan_recipes` (Soft-Delete + Insert) und `recipe_history` einzeln ohne `withTransaction` (keine DB injiziert) | K-KQ §5; blocks.md B9 (6) | Mittel | – |
+| S2 | RecipeRepository.kt:66-95 | `toggleFeedback`/`saveFeedback` schreiben `recipe_feedback` und über `recalculateRating` `recipes` ohne Transaktion | K-KQ §5 | Mittel | – |
+| S3 | WeekplanRepository.kt:59; WeekplanViewModel.kt:192 | Neue `suspend recipesForDay` (Snapshot) in `combine(days, allRecipes)`; Vermutung: `weekBalance` veraltet nach add/removeRecipe. Flow `observeRecipesForDays` existiert. `daysBetween`, `recipeIdsBefore`, `searchIngredientNames` sind Einmal-Lesen, vertretbar | K-KQ §4 | Mittel | ändert Verhalten |
+| S4 | WeekplanRepository.kt:54,57 | `upsertDay`/`upsertConstraints` reichen nur durch, `updatedAt`/`dirty` setzen die Aufrufer (WeekplanViewModel:289-306, 478-493); ebenso `ShoppingRepository.upsertQuickEmoji` aus SettingsViewModel. Kein Datenfehler | architecture-layers § Schreiben | Mittel | – |
+| S5 | WeekplanRepository.kt:40 | Literal `"global"` statt `const val` (weitere Fundstelle zu S5 im Bericht) | K-KQ §10 | Niedrig | – |
+| S6 | ServerConnectionChecker.kt:41; AiRepository.kt:40; WeekplanGenerator.kt:192,386; AiGenerate-/AiRemixViewModel:109/120; RecipeDetailViewModel:194,370 | `catch (e: Exception)` ohne `CancellationException`-Rethrow | K-KQ §6 (blocks.md) | Niedrig | ändert Verhalten |
+| S7 | AiGenerateViewModel.kt:3; AiRemixViewModel.kt:3; RecipeDetailViewModel.kt:3 | Unbenutzter Import `androidx.compose.ui.res.stringResource` im ViewModel | Stil | Niedrig | – |
+| S8 | RecipeRepository.kt:62; WeekplanRepository.kt:61; WeekplanFilters.kt:5-19 | KDoc von `saveFeedback` hängt an `observeFeedbackForDate`; `@OptIn` vor KDoc; KDoc verweist auf nicht mehr vorhandenes `WeekplanViewModel.applyRecipeFilters` | Doku | Niedrig | – |
+| S9 | AiRepository.kt:37-41; ServerConnectionChecker.kt:43; WeekplanGenerator.kt:45,65,361; WeekplanFilters.kt:29,43 | Deutsche Nutzertexte als Literale in der Datenschicht, obwohl im Diff `UiText` eingeführt wird | CLAUDE.md Konventionen | Niedrig | Ermessensfrage |
+| S10 | WeekplanGenerator.kt:36-190, 214-345 | Long Method `generate` (~155 Z.), Protein-/Aufwand-Listen mehrfach dupliziert, Constraint-Auswahl in `pickProposalReplacement`/`regenerateDay` nahezu identisch; `toggleFeedback`/`saveFeedback` doppelt; zwei gleiche Marker-Exceptions (AiGenerate/AiRemix) | Smell | Niedrig | Ermessensfrage |
+| S11 | RecipeRepositoryCookTest.kt | `toggleFeedback`, `saveFeedback`, `saveSettings` ohne Test (nur `markCooked`) | – | Niedrig | Ermessensfrage |
+
+**Beifang (Altbestand, ohne Grad):** WeekplanViewModel.kt:202 öffentliches `MutableSharedFlow` `exportEvent` (weitere Fundstelle zu V16, K-KQ §3); WeekplanViewModel.kt:44 `@OptIn` an `DaySummary`; WeekplanViewModel.kt:483 Literal `"global"`; SettingsViewModel.kt:50,296 injiziert `AppDatabase` (`clearAllTables`), architecture-layers verlangt nur Repositories/UseCases.
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 4, Niedrig 7; schwerster Befund: S1 (gleichrangig S2, S3, S4)
+
+<Spec-Antwort>
 
 ## B10 — UI-Querschnitt aus Phase 2 (Checkliste)
 <Standards-Antwort> · <Spec-Antwort>
