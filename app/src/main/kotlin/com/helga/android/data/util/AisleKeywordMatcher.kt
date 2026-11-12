@@ -51,7 +51,8 @@ object AisleKeywordMatcher {
                 }
                 if (tokenIndex < 0) null else Candidate(word.length, tokenIndex, 0, index)
             }
-            if (candidate != null && (best == null || candidateOrder.compare(candidate, best!!) > 0)) {
+            val current = best
+            if (candidate != null && (current == null || candidateOrder.compare(candidate, current) > 0)) {
                 best = candidate
                 bestCategory = entry.category
             }
@@ -66,7 +67,8 @@ object AisleKeywordMatcher {
                 val position = token.indexOf(word)
                 if (position < 0) return@forEachIndexed
                 val candidate = Candidate(word.length, tokenIndex, position, index)
-                if (best == null || candidateOrder.compare(candidate, best!!) > 0) {
+                val current = best
+                if (current == null || candidateOrder.compare(candidate, current) > 0) {
                     best = candidate
                     bestCategory = entry.category
                 }

@@ -45,8 +45,8 @@ fun SpendingBarChart(
     modifier: Modifier = Modifier,
 ) {
     if (bars.isEmpty()) return
-    val showBudget = budget != null && budget > 0.0
-    val maxValue = ChartMath.niceMax(maxOf(bars.maxOf { it.value }, if (showBudget) budget!! else 0.0))
+    val budgetLine: Double? = budget?.takeIf { it > 0.0 }
+    val maxValue = ChartMath.niceMax(maxOf(bars.maxOf { it.value }, budgetLine ?: 0.0))
     val barColor = MaterialTheme.colorScheme.primary
     val dimmedColor = barColor.copy(alpha = 0.45f)
     val baseline = MaterialTheme.colorScheme.outlineVariant
@@ -83,8 +83,8 @@ fun SpendingBarChart(
                 }
             }
             drawLine(baseline, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth = 1.dp.toPx())
-            if (showBudget) {
-                val y = size.height * (1f - ChartMath.fraction(budget!!, maxValue))
+            budgetLine?.let { line ->
+                val y = size.height * (1f - ChartMath.fraction(line, maxValue))
                 drawLine(
                     budgetColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 2.dp.toPx(),
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f)),
@@ -104,14 +104,14 @@ fun SpendingBarChart(
                 )
             }
         }
-        if (showBudget) {
+        if (budgetLine != null) {
             Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Canvas(modifier = Modifier.width(16.dp).height(2.dp)) {
                     drawLine(budgetColor, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), strokeWidth = size.height)
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    stringResource(R.string.cost_chart_budget_legend, formatEuro(budget!!)),
+                    stringResource(R.string.cost_chart_budget_legend, formatEuro(budgetLine)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

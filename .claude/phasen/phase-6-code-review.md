@@ -74,7 +74,7 @@ Abschnitt „Tests").
   weitermachen.
 
 ### Block A — Vorab festgelegte Fixes (V1, V2, V4, V9, V11, V12, V13)
-- [ ] **S1 `!!` entfernen und absichern (V1)** — Dateien: `$B/ui/receipts/charts/SpendingBarChart.kt`,
+- [x] **S1 `!!` entfernen und absichern (V1)** — Dateien: `$B/ui/receipts/charts/SpendingBarChart.kt`,
   `$B/data/util/AisleKeywordMatcher.kt`, neu `$T/KotlinQualityRulesTest.kt`.
   `SpendingBarChart`: die Zeile `val showBudget = budget != null && budget > 0.0` ersetzen durch
   `val budgetLine: Double? = budget?.takeIf { it > 0.0 }`; in `maxValue` `if (showBudget) budget!! else 0.0` →
