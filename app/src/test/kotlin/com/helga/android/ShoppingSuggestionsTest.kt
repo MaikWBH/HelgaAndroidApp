@@ -29,6 +29,7 @@ class ShoppingSuggestionsTest {
         receiptRepository = mockk<ReceiptRepository>(relaxed = true),
         quickEmojiDao = mockk<QuickEmojiDao>(relaxed = true),
         apiProvider = provider,
+        aisleAssigner = mockk(relaxed = true),
     )
 
     init {

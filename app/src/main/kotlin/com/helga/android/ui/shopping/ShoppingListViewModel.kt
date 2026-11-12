@@ -245,11 +245,7 @@ class ShoppingListViewModel @Inject constructor(
         viewModelScope.launch {
             val trimmed = name.trim()
             if (trimmed.isBlank()) return@launch
-            val storeId = activeStore.value?.id
-            val aisle = if (storeId != null)
-                storeRepository.findAisleForProduct(trimmed, storeId) ?: ""
-            else ""
-            repository.addItem(listId = listId, name = trimmed, aisle = aisle)
+            repository.addItem(listId = listId, name = trimmed)
             syncScheduler.triggerOneShot()
         }
     }
@@ -257,16 +253,11 @@ class ShoppingListViewModel @Inject constructor(
     fun addEmojiItem(emoji: QuickEmojiEntity) {
         val listId = activeListId.value ?: return
         viewModelScope.launch {
-            val storeId = activeStore.value?.id
-            val aisle = if (storeId != null)
-                storeRepository.findAisleForProduct(emoji.food, storeId) ?: ""
-            else ""
             repository.addItem(
                 listId = listId,
                 name = emoji.food,
                 quantity = emoji.quantity,
                 unit = emoji.unit,
-                aisle = aisle,
             )
             syncScheduler.triggerOneShot()
         }
@@ -288,16 +279,11 @@ class ShoppingListViewModel @Inject constructor(
         viewModelScope.launch {
             val stapleList = storeRepository.staplesForList(listId)
             if (stapleList.isEmpty()) return@launch
-            val storeId = activeStore.value?.id
             stapleList.forEach { staple ->
-                val aisle = if (storeId != null)
-                    storeRepository.findAisleForProduct(staple.name, storeId) ?: ""
-                else ""
                 repository.addItem(
                     listId = listId,
                     name = staple.name,
                     quantity = staple.quantity,
-                    aisle = aisle,
                     source = "staple",
                 )
             }
@@ -410,16 +396,11 @@ class ShoppingListViewModel @Inject constructor(
         val itemProduct = product ?: scannedProduct.value ?: return
         viewModelScope.launch {
             try {
-                val storeId = activeStore.value?.id
-                val aisle = if (storeId != null)
-                    storeRepository.findAisleForProduct(itemProduct.name, storeId) ?: ""
-                else ""
                 repository.addItem(
                     listId = listId,
                     name = itemProduct.name,
                     quantity = quantity,
                     unit = unit,
-                    aisle = aisle,
                 )
                 syncScheduler.triggerOneShot()
                 _scannedProduct.value = null
@@ -439,14 +420,9 @@ class ShoppingListViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val name = product.name.ifBlank { product.barcode }
-                val storeId = activeStore.value?.id
-                val aisle = if (storeId != null)
-                    storeRepository.findAisleForProduct(name, storeId) ?: ""
-                else ""
                 repository.addItem(
                     listId = listId,
                     name = name,
-                    aisle = aisle,
                 )
                 syncScheduler.triggerOneShot()
             } catch (e: Exception) {

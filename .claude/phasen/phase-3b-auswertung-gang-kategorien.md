@@ -335,7 +335,7 @@ Zusätzlich:
   `aisleForCategory(storeId, AisleKeywordMatcher.categoryFor(productName))`). Test: Fälle 1–9 der **Liste C** aus
   `$D/aisle-testfaelle.md` mit `mockk`-DAOs; für Fall 9 zusätzlich `coVerify(exactly = 0)` auf jeden API-Aufruf;
   zwei Gänge mit gleichem Schlüssel → kleinere `sortOrder` gewinnt. Akzeptanz: `V` grün.
-- [ ] **S22 Einbau in die Einkaufsliste** — Dateien: `$B/data/repository/ShoppingRepository.kt`,
+- [x] **S22 Einbau in die Einkaufsliste** — Dateien: `$B/data/repository/ShoppingRepository.kt`,
   `$U/shopping/ShoppingListViewModel.kt`, betroffene Tests in `$T` (alle, die `ShoppingRepository` konstruieren),
   neu `$T/ShoppingAisleAssignmentTest.kt`. `ShoppingRepository` injiziert `AisleAssigner`; `addItem`: ist `aisle`
   leer, `aisleAssigner.resolveLocal(name, storeRepository.findActiveStoreId())` verwenden; `addOrMergeItem`

@@ -13,6 +13,7 @@ import com.helga.android.data.model.ItemOrigin
 import com.helga.android.data.model.ItemOrigins
 import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.model.StoreCost
+import com.helga.android.data.shopping.AisleAssigner
 import com.helga.android.data.util.ReceiptItemNormalizer
 import com.helga.android.data.util.ShoppingUnitConverter
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,7 @@ class ShoppingRepository @Inject constructor(
     private val receiptRepository: ReceiptRepository,
     private val apiProvider: ApiProvider,
     private val quickEmojiDao: QuickEmojiDao,
+    private val aisleAssigner: AisleAssigner,
 ) {
 
     fun observeQuickEmojis(): Flow<List<QuickEmojiEntity>> = quickEmojiDao.observeEmojis()
@@ -84,6 +86,8 @@ class ShoppingRepository @Inject constructor(
         val id = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
         val origins = listOf(ItemOrigin(recipe = recipeName, quantity = quantity, unit = unit))
+        // Ohne ausdrücklich übergebenen Gang: gelernt → Stichwort (nur mit aktivem Markt)
+        val resolvedAisle = aisle.ifEmpty { aisleAssigner.resolveLocal(name, storeRepository.findActiveStoreId()) }
         shoppingDao.upsertItem(
             ShoppingItemEntity(
                 id = id,
@@ -91,7 +95,7 @@ class ShoppingRepository @Inject constructor(
                 name = name,
                 quantity = quantity,
                 unit = unit,
-                aisle = aisle,
+                aisle = resolvedAisle,
                 source = source,
                 origins = ItemOrigins.encode(origins),
                 updatedAt = now,
@@ -228,9 +232,7 @@ class ShoppingRepository @Inject constructor(
                 )
             )
         } else {
-            val aisle = storeRepository.findActiveStoreId()
-                ?.let { storeId -> storeRepository.findAisleForProduct(norm, storeId) }
-                ?: ""
+            val aisle = aisleAssigner.resolveLocal(norm, storeRepository.findActiveStoreId())
             shoppingDao.upsertItem(
                 ShoppingItemEntity(
                     id = UUID.randomUUID().toString(),
