@@ -98,6 +98,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLoggedOut: () -> Unit,
     onStoresClick: () -> Unit = {},
+    onReceiptLexiconClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -635,6 +636,17 @@ fun SettingsScreen(
                     value = state.receiptRetentionMonths,
                     onSelected = viewModel::setReceiptRetentionMonths,
                 )
+                Text(
+                    text = stringResource(R.string.settings_receipt_retention_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = onReceiptLexiconClick,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.settings_receipt_lexicon))
+                }
 
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider()

@@ -50,6 +50,7 @@ import com.helga.android.ui.receipts.ProductPriceDetailScreen
 import com.helga.android.ui.receipts.ProductPriceListScreen
 import com.helga.android.ui.receipts.ReceiptDetailScreen
 import com.helga.android.ui.receipts.ReceiptListScreen
+import com.helga.android.ui.receipts.ReceiptLexiconScreen
 import com.helga.android.ui.receipts.ReceiptScanScreen
 import com.helga.android.ui.recipes.RecipeCookScreen
 import com.helga.android.ui.recipes.RecipeDetailScreen
@@ -69,6 +70,7 @@ internal const val ROUTE_ONBOARDING = "onboarding"
 internal const val ROUTE_RECIPES = "recipes"
 internal const val ROUTE_SHOPPING = "shopping"
 internal const val ROUTE_STORES = "stores"
+internal const val ROUTE_RECEIPT_LEXICON = "receipts/lexicon"
 internal const val ROUTE_WEEKPLAN = "weekplan"
 internal const val ROUTE_RECEIPTS = "receipts"
 internal const val ROUTE_RECEIPTS_COST_OVERVIEW = "receipts/cost-overview"
@@ -272,7 +274,11 @@ fun HelgaNavGraph(
                                 }
                             },
                             onStoresClick = { navController.navigate(ROUTE_STORES) },
+                            onReceiptLexiconClick = { navController.navigate(ROUTE_RECEIPT_LEXICON) },
                         )
+                    }
+                    composable(ROUTE_RECEIPT_LEXICON) {
+                        ReceiptLexiconScreen(onBack = { navController.popBackStack() })
                     }
                     composable(ROUTE_STORES) {
                         StoreListScreen(onBack = { navController.popBackStack() })

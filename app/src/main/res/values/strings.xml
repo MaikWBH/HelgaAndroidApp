@@ -129,8 +129,8 @@
     <string name="settings_server_section">Server</string>
     <string name="settings_sync_section">Synchronisation</string>
     <string name="settings_receipts_section">Bons</string>
-    <string name="settings_receipt_retention">Bon-Aufbewahrung</string>
-    <string name="settings_receipt_retention_never">Nie löschen</string>
+    <string name="settings_receipt_retention">Bons offline behalten</string>
+    <string name="settings_receipt_retention_never">Alle (unbegrenzt)</string>
     <string name="settings_receipt_retention_1">1 Monat</string>
     <string name="settings_receipt_retention_months">%1$d Monate</string>
     <string name="settings_receipt_retention_12">1 Jahr</string>
@@ -646,4 +646,14 @@
     <string name="receipt_detail_reparse_message">Die bisherigen Werte werden durch die neue Auswertung ersetzt.</string>
     <string name="receipt_detail_reparse_failed">Neu auslesen fehlgeschlagen. Server erreichbar?</string>
     <string name="receipt_detail_deposit_sum">Pfand %1$s</string>
+    <!-- Phase 3a: Aufbewahrung und Lexikon -->
+    <string name="settings_receipt_retention_hint">Ältere Bons bleiben auf dem Server und werden bei Bedarf geladen.</string>
+    <string name="settings_receipt_lexicon">Gelerntes Bon-Lexikon</string>
+    <string name="receipt_lexicon_title">Bon-Lexikon</string>
+    <string name="receipt_lexicon_empty">Noch nichts gelernt. Das Lexikon füllt sich, wenn du Bons im Review korrigierst.</string>
+    <string name="receipt_lexicon_no_store">Ohne Markt</string>
+    <string name="receipt_lexicon_mapping">%1$s → %2$s</string>
+    <string name="receipt_lexicon_detail">%1$s · %2$d× verwendet</string>
+    <string name="receipt_lexicon_delete">Eintrag löschen</string>
+    <string name="receipt_lexicon_unreachable">Server nicht erreichbar</string>
 </resources>

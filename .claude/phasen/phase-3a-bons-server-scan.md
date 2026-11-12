@@ -550,7 +550,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   Abschnitt nur bei Status `confirmed`/`scanned`/`reconciled`. `.clickable` Z.293 mit `role`; `showDeleteDialog` →
   `rememberSaveable`. Akzeptanz: `V` grün; `G-S` regelkonform. Prüfliste (Gerät): vorläufiger Bon zeigt das lokale
   Foto und lässt sich nicht bearbeiten; „Neu auslesen" ersetzt die Werte; Foto eines alten Bons lädt vom Server.
-- [ ] **S32 Einstellungen: Aufbewahrung und Lexikon** — Dateien: `$U/settings/SettingsScreen.kt`,
+- [x] **S32 Einstellungen: Aufbewahrung und Lexikon** — Dateien: `$U/settings/SettingsScreen.kt`,
   `$U/settings/SettingsViewModel.kt`, neu `$U/receipts/ReceiptLexiconScreen.kt`, neu
   `$U/receipts/ReceiptLexiconViewModel.kt`, `$B/HelgaNavGraph.kt`, `$R/values/strings.xml`. Strings ändern (Namen
   bleiben): `settings_receipt_retention` → „Bons offline behalten", `settings_receipt_retention_never` → „Alle
@@ -642,3 +642,4 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - **S29 Review (Gerät):** Bon mit Rabatt und Pfand scannen → Uhrzeit, Adresse, Rabatt je Position, Pfand-Chip und Kategorien stehen im Review; Kategorie ändern, speichern, denselben Artikel im selben Markt erneut scannen → Korrektur ist übernommen; „Produkt zuordnen" zeigt Treffer; Drehen im geöffneten Dialog behält Eingaben; TalkBack liest Chips und Buttons.
 - **S30 Bon-Liste (Gerät):** Status-Chips sichtbar; „Ältere Bons laden" holt den Vormonat, offline erscheint die Meldung; leere Liste zeigt den Leerzustand.
 - **S31 Bon-Detail (Gerät):** vorläufiger Bon zeigt das lokale Foto und lässt sich nicht bearbeiten; „Neu auslesen" ersetzt die Werte; Foto eines alten Bons lädt vom Server.
+- **S32 Lexikon (Gerät):** Eintrag erscheint nach einer Review-Korrektur, Löschen entfernt ihn und die Korrektur greift beim nächsten Scan nicht mehr.
