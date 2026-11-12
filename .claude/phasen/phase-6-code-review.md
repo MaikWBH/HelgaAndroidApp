@@ -187,7 +187,7 @@ Abschnitt „Tests").
   → `assertThrows(CancellationException::class.java) { runBlocking { repo.suggestOffProducts("Milch") } }`;
   (2) `throws IOException("offline")` → `runTest { assertEquals(emptyList<OffProductDto>(), repo.suggestOffProducts("Milch")) }`.
   Akzeptanz: `V` grün; `TC` = S4 + 2.
-- [ ] **S9 Leeren Companion entfernen (V13)** — Datei: `$B/data/repository/ReceiptRepository.kt`. Die zwei Zeilen
+- [x] **S9 Leeren Companion entfernen (V13)** — Datei: `$B/data/repository/ReceiptRepository.kt`. Die zwei Zeilen
   `private companion object {` / `}` am Dateiende löschen. Akzeptanz: `grep -n 'companion object' $B/data/repository/ReceiptRepository.kt`
   leer; `V` grün. Danach Block A pushen.
 
@@ -268,7 +268,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
 
 ## Abschluss
 - [x] Baseline S0: App `TC` 282 (erwartet 282), Server 177 passed (erwartet 177), `!!` 5 (erwartet 5)
-- [ ] Nach Block A: App `TC` <…> (erwartet 287 = 282 + 1 S1 + 1 S2 + 1 S4 + 2 S8), Server <…> (erwartet 180 = 177 + 2 S5 + 1 S6), `!!` 0
+- [x] Nach Block A: App `TC` 287 (erwartet 287 = 282 + 1 S1 + 1 S2 + 1 S4 + 2 S8), Server 180 passed (erwartet 180 = 177 + 2 S5 + 1 S6), `!!` 0
 - [ ] Review-Bereich `2c148ab..<$H>`, `git diff --stat` <…>
 - [ ] Je Block: Sub-Agent-Modell und Anzahl Befunde je Achse (aus der Zusammenfassung des Berichts)
 - [ ] Endstand `V`/`VS` grün nach S26 (Zahlen)

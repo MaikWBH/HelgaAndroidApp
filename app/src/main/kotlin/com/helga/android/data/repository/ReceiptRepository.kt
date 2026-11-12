@@ -443,7 +443,4 @@ class ReceiptRepository @Inject constructor(
             missingNames = missingNames,
         )
     }
-
-    private companion object {
-    }
 }
