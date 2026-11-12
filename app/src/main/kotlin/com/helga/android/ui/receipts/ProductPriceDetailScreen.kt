@@ -3,7 +3,6 @@ package com.helga.android.ui.receipts
 import com.helga.android.R
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,14 +27,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import com.helga.android.ui.receipts.charts.ChartPoint
+import com.helga.android.ui.receipts.charts.TrendLineChart
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -96,7 +95,7 @@ private fun ProductPriceContent(
         }
         if (history.points.size >= 2) {
             item {
-                PriceSparklineSection(points = history.points, formatCurrency = formatCurrency)
+                PriceTrendSection(history = history, formatCurrency = formatCurrency)
             }
         }
         if (history.storeComparison.isNotEmpty()) {
@@ -184,18 +183,19 @@ private fun PriceStat(label: String, value: String) {
 }
 
 @Composable
-private fun PriceSparklineSection(
-    points: List<ProductPricePoint>,
+private fun PriceTrendSection(
+    history: ProductPriceHistory,
     formatCurrency: (Double) -> String,
 ) {
-    // Oldest first for left→right time direction
-    val prices = points.reversed().map { it.unitPrice.toFloat() }
-    val minPrice = prices.min()
-    val maxPrice = prices.max()
-    val range = (maxPrice - minPrice).takeIf { it > 0f } ?: 1f
-
-    val lineColor = MaterialTheme.colorScheme.primary
-
+    val zone = ZoneId.systemDefault()
+    val labelFormat = DateTimeFormatter.ofPattern("dd.MM.")
+    // history.points ist neueste zuerst; das Diagramm läuft von links (alt) nach rechts (neu).
+    val chartPoints = history.points.reversed().map {
+        ChartPoint(
+            label = Instant.ofEpochMilli(it.purchaseDate).atZone(zone).format(labelFormat),
+            value = it.unitPrice,
+        )
+    }
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
             stringResource(R.string.product_prices_sparkline_title),
@@ -203,53 +203,16 @@ private fun PriceSparklineSection(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp),
         )
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp),
-        ) {
-            val w = size.width
-            val h = size.height
-            val step = if (prices.size > 1) w / (prices.size - 1) else w
-
-            val path = Path()
-            prices.forEachIndexed { i, price ->
-                val x = i * step
-                val y = h - ((price - minPrice) / range * h)
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            }
-            drawPath(
-                path = path,
-                color = lineColor,
-                style = Stroke(
-                    width = 3.dp.toPx(),
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round,
-                ),
-            )
-            prices.forEachIndexed { i, price ->
-                val x = i * step
-                val y = h - ((price - minPrice) / range * h)
-                drawCircle(color = lineColor, radius = 4.dp.toPx(), center = Offset(x, y))
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                formatCurrency(minPrice.toDouble()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                formatCurrency(maxPrice.toDouble()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        TrendLineChart(
+            points = chartPoints,
+            description = stringResource(
+                R.string.product_prices_chart_description,
+                history.displayName,
+                formatCurrency(history.points.firstOrNull()?.unitPrice ?: 0.0),
+                formatCurrency(history.minPrice),
+                formatCurrency(history.maxPrice),
+            ),
+        )
     }
 }
 

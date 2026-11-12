@@ -182,7 +182,7 @@ Zusätzlich:
   `2026-W46` → `46`). Test: Tabellen für jede Funktion (u. a. `niceMax(0) == 1.0`, `niceMax(137.4) == 200.0`,
   `niceMax(250.0) == 250.0`, sieben Märkte → 5 + „Sonstige", Winkelsumme 360 ± 0,01, leere Liste → leer).
   Akzeptanz: `V` grün.
-- [ ] **S10 Balkendiagramm** — Dateien: neu `$U/theme/ChartColors.kt`, neu `$U/receipts/charts/SpendingBarChart.kt`,
+- [x] **S10 Balkendiagramm** — Dateien: neu `$U/theme/ChartColors.kt`, neu `$U/receipts/charts/SpendingBarChart.kt`,
   `$R/values/strings.xml`. `ChartColors.kt`: `@Composable fun chartSeriesColors(): List<Color>` =
   `colorScheme.primary, tertiary, secondary, error, inversePrimary`; `@Composable fun chartOtherColor() =
   colorScheme.outline`. `data class ChartBar(val label: String, val value: Double, val highlighted: Boolean = false)`.
@@ -197,7 +197,7 @@ Zusätzlich:
   Budgetlinie an, darunter eine Legendenzeile: 16 dp breiter Strich in `error` + Text „Budget %1$s". Leere `bars` →
   nichts zeichnen. Zwei `@ThemePreviews` (12 Monate mit Budget; 12 Wochen ohne). Akzeptanz: `V` grün;
   `grep -rn 'Color(0x' $U | grep -v theme/` leer.
-- [ ] **S11 Ringdiagramm** — Datei: neu `$U/receipts/charts/ShareDonutChart.kt`. `@Composable fun
+- [x] **S11 Ringdiagramm** — Datei: neu `$U/receipts/charts/ShareDonutChart.kt`. `@Composable fun
   ShareDonutChart(slices: List<ShareSlice>, centerText: String, description: String, modifier: Modifier = Modifier)`:
   `Canvas` 160 dp quadratisch mit `semantics`; je Scheibe `drawArc(useCenter = false, style = Stroke(width = 28.dp,
   cap = StrokeCap.Butt))`, 1,5° Lücke zwischen Scheiben (bei nur einer Scheibe keine); Farben
@@ -205,7 +205,7 @@ Zusätzlich:
   darüber (`Box`). Legende darunter als `Column`: je Zeile Farbpunkt 12 dp (`CircleShape`), Label (`weight(1f)`,
   eine Zeile, Ellipsis), Betrag (`formatEuro`), Anteil (`%1$d %%`). Leere `slices` → nur der Leertext des Aufrufers.
   `@ThemePreviews` mit 6 Scheiben. Akzeptanz: `V` grün.
-- [ ] **S12 Querbalken** — Datei: neu `$U/receipts/charts/HorizontalBarChart.kt`. `data class ChartRow(val key:
+- [x] **S12 Querbalken** — Datei: neu `$U/receipts/charts/HorizontalBarChart.kt`. `data class ChartRow(val key:
   String, val label: String, val value: Double, val detail: String = "")`. `@Composable fun HorizontalBarChart(rows:
   List<ChartRow>, description: String, modifier: Modifier = Modifier, onRowClick: ((String) -> Unit)? = null)`:
   `Column(semantics { contentDescription = description })`; je Zeile: `Row` mit Label (bodyMedium, `weight(1f)`,
@@ -213,7 +213,7 @@ Zusätzlich:
   Spur `surfaceVariant`, Füllung `primary` bis `fraction(value, größter Wert)`, beide mit Eckenradius 5 dp. Mit
   `onRowClick` ist die Zeile `clickable(role = Role.Button)` und mindestens 48 dp hoch. `@ThemePreviews`.
   Akzeptanz: `V` grün.
-- [ ] **S13 Liniendiagramm** — Dateien: neu `$U/receipts/charts/TrendLineChart.kt`,
+- [x] **S13 Liniendiagramm** — Dateien: neu `$U/receipts/charts/TrendLineChart.kt`,
   `$U/receipts/ProductPriceDetailScreen.kt`. `data class ChartPoint(val label: String, val value: Double)`.
   `@Composable fun TrendLineChart(points: List<ChartPoint>, description: String, modifier: Modifier = Modifier)`:
   `Canvas` Höhe 160 dp mit `semantics`; Innenabstand 12 dp; Linie `primary` 2 dp (`Path` über `linePositions`),

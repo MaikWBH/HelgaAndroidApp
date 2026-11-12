@@ -656,4 +656,9 @@
     <string name="receipt_lexicon_detail">%1$s · %2$d× verwendet</string>
     <string name="receipt_lexicon_delete">Eintrag löschen</string>
     <string name="receipt_lexicon_unreachable">Server nicht erreichbar</string>
+    <!-- Phase 3b: Diagramme -->
+    <string name="cost_chart_budget_legend">Budget %1$s</string>
+    <string name="cost_chart_percent">%1$d %%</string>
+    <string name="chart_trend_too_few">Noch zu wenige Käufe für einen Verlauf.</string>
+    <string name="product_prices_chart_description">Preisverlauf von %1$s: zuletzt %2$s, niedrigster Preis %3$s, höchster Preis %4$s</string>
 </resources>
