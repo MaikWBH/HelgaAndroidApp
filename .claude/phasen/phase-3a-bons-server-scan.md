@@ -469,7 +469,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   vier Zweige plus Retry bei `IOException`. Akzeptanz: `V` grün. Prüfliste (Gerät): Flugmodus → Bon scannen →
   „vorläufig" erscheint sofort; Flugmodus aus → innerhalb weniger Minuten ersetzt die KI-Auswertung die Werte, Status
   „Bitte prüfen"; unter `Android/data/…/files/receipts/` liegt danach keine Datei mehr.
-- [ ] **S26 Repository-Schnitt für die UI** — Dateien: `$B/data/repository/ReceiptRepository.kt`, neu
+- [x] **S26 Repository-Schnitt für die UI** — Dateien: `$B/data/repository/ReceiptRepository.kt`, neu
   `$B/data/repository/ReceiptLexiconRepository.kt`, neu `$T/ReceiptRepositoryConfirmTest.kt`. `ReceiptRepository`
   neu/geändert: `confirmReceipt(receipt, items)` (schreibt Kopf und **vollständige** Positionsliste, fehlende lokale
   Positionen `deleted = 1`, alles `status = "confirmed"`, `dirty = 1`, `updatedAt = now`; `purchaseDate` aus

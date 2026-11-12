@@ -114,6 +114,11 @@ class ReceiptSyncer @Inject constructor(
         return loaded
     }
 
+    /** Übernimmt eine einzelne Server-Antwort (z. B. nach Re-Parse) in Room und erhält gerätelokale Felder. */
+    suspend fun store(remote: ReceiptRemoteDto) {
+        writeServerReceipt(remote, receiptDao.findById(remote.id))
+    }
+
     private suspend fun writeServerReceipt(remote: ReceiptRemoteDto, local: ReceiptEntity?, cachedUntil: Long? = null) {
         val entity = remote.toEntity(local).let { if (cachedUntil != null) it.copy(cachedUntil = cachedUntil) else it }
         receiptDao.upsertReceipt(entity)

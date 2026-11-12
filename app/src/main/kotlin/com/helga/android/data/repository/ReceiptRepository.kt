@@ -13,8 +13,17 @@ import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.receipts.ReceiptImageStore
+import com.helga.android.data.receipts.ReceiptDates
 import com.helga.android.data.receipts.ReceiptScanFlow
 import com.helga.android.data.receipts.ReceiptScanOutcome
+import com.helga.android.data.receipts.ReceiptSyncer
+import com.helga.android.data.remote.dto.OffProductDto
+import com.helga.android.data.remote.dto.OffSearchRequest
+import kotlinx.coroutines.withTimeoutOrNull
+import retrofit2.HttpException
+import java.io.IOException
+import java.time.LocalDate
+import java.time.YearMonth
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.util.ReceiptItemNormalizer
 import okhttp3.MediaType.Companion.toMediaType
@@ -85,6 +94,7 @@ class ReceiptRepository @Inject constructor(
     private val apiProvider: ApiProvider,
     private val imageStore: ReceiptImageStore,
     private val syncScheduler: SyncScheduler,
+    private val receiptSyncer: ReceiptSyncer,
 ) {
 
     fun observeReceipts(): Flow<List<ReceiptEntity>> = receiptDao.observeReceipts()
@@ -209,16 +219,102 @@ class ReceiptRepository @Inject constructor(
         )
     }
 
+    /**
+     * Löscht einen Bon. Wartet er noch auf den Upload oder wurde ein vorläufiger Bon nie zum Server übertragen,
+     * gibt es nichts zu melden: dann hart samt lokalem Foto. Sonst weich (`deleted = 1`, `dirty = 1`) — der
+     * ReceiptSyncer meldet die Löschung dem Server und entfernt die Zeilen danach.
+     */
     suspend fun deleteReceipt(receiptId: String) {
-        val now = System.currentTimeMillis()
-        // Soft delete receipt
         val receipt = receiptDao.findById(receiptId) ?: return
+        val neverOnServer = receipt.pendingUpload == 1 ||
+            (receipt.imagePath.isBlank() && receipt.status == "provisional")
+        if (neverOnServer) {
+            if (receipt.localImageUri.isNotBlank()) imageStore.delete(receipt.localImageUri)
+            receiptDao.hardDeleteItemsOf(receiptId)
+            receiptDao.hardDeleteReceipt(receiptId)
+            return
+        }
+        val now = System.currentTimeMillis()
         receiptDao.upsertReceipt(receipt.copy(deleted = 1, updatedAt = now, dirty = 1))
-
-        // Soft delete all items
-        val items = receiptDao.itemsForReceipt(receiptId)
-        items.forEach { item ->
+        receiptDao.itemsForReceipt(receiptId).forEach { item ->
             receiptDao.upsertItem(item.copy(deleted = 1, updatedAt = now, dirty = 1))
+        }
+    }
+
+    /**
+     * Bestätigt einen Bon nach dem Prüfen: schreibt Kopf und die **vollständige** Positionsliste (fehlende
+     * lokale Positionen werden `deleted = 1`), Status `confirmed`, `dirty = 1`. `purchaseDate` folgt dem
+     * gedruckten Tag, `depositTotal` den Pfand-Positionen.
+     */
+    suspend fun confirmReceipt(receipt: ReceiptEntity, items: List<ReceiptItemEntity>) {
+        val now = System.currentTimeMillis()
+        val keptIds = items.map { it.id }.toSet()
+        val removed = receiptDao.allItemsForReceipt(receipt.id)
+            .filter { it.id !in keptIds && it.deleted == 0 }
+            .map { it.copy(deleted = 1, updatedAt = now, dirty = 1) }
+        val confirmedItems = items.mapIndexed { index, item ->
+            item.copy(receiptId = receipt.id, position = index, deleted = 0, updatedAt = now, dirty = 1)
+        }
+        val dayMs = ReceiptDates.dayToEpochMs(receipt.purchaseDay)
+        receiptDao.upsertReceipt(
+            receipt.copy(
+                status = "confirmed",
+                purchaseDate = if (dayMs > 0) dayMs else receipt.purchaseDate,
+                depositTotal = confirmedItems.filter { it.isDeposit == 1 }.sumOf { it.totalPrice },
+                deleted = 0,
+                updatedAt = now,
+                dirty = 1,
+            )
+        )
+        receiptDao.upsertItems(confirmedItems + removed)
+    }
+
+    /** Liest einen Bon aus dem gespeicherten Server-Foto neu aus; die Antwort landet in Room. */
+    suspend fun reparse(receiptId: String): Boolean {
+        val response = apiProvider.api().reparseReceipt(receiptId)
+        receiptSyncer.store(response.receipt)
+        return response.parsed
+    }
+
+    private var olderMonthCursor: YearMonth? = null
+
+    /**
+     * Lädt den nächsten älteren Monat vom Server in den Cache (24 h gehalten). Gibt `false` bei einem Fehler
+     * (offline, Server nicht erreichbar) zurück.
+     */
+    suspend fun loadOlderMonth(today: LocalDate = LocalDate.now()): Boolean {
+        val oldest = receiptDao.oldestPurchaseDay()?.let { runCatching { YearMonth.from(LocalDate.parse(it)) }.getOrNull() }
+        val known = listOfNotNull(oldest, olderMonthCursor, YearMonth.from(today)).min()
+        val target = known.minusMonths(1)
+        return try {
+            receiptSyncer.loadRange(
+                target.atDay(1).toString(), target.atEndOfMonth().toString(),
+                System.currentTimeMillis() + 24 * 60 * 60 * 1000L,
+            )
+            olderMonthCursor = target
+            true
+        } catch (e: IOException) {
+            Timber.w(e, "Ältere Bons laden fehlgeschlagen")
+            false
+        } catch (e: HttpException) {
+            Timber.w(e, "Ältere Bons laden fehlgeschlagen")
+            false
+        } catch (e: IllegalArgumentException) {
+            Timber.w(e, "Ältere Bons laden: Server nicht konfiguriert")
+            false
+        }
+    }
+
+    fun observeProvisionalCount(): Flow<Int> = receiptDao.observeProvisionalCount()
+
+    /** Open-Food-Facts-Vorschläge für die Produktzuordnung im Review; bei Timeout (8 s) oder Fehler leer. */
+    suspend fun suggestOffProducts(query: String): List<OffProductDto> {
+        if (query.isBlank()) return emptyList()
+        return try {
+            withTimeoutOrNull(8_000) { apiProvider.api().searchOff(OffSearchRequest(query.trim())).products }.orEmpty()
+        } catch (e: Exception) {
+            Timber.d(e, "OFF-Vorschläge nicht verfügbar")
+            emptyList()
         }
     }
 
