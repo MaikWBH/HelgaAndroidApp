@@ -177,7 +177,7 @@ Abschnitt „Tests").
   `var menuOpen by remember { mutableStateOf(false) }` → `var menuOpen by rememberSaveable { mutableStateOf(false) }`
   (Import vorhanden). Kein Unit-Test (UI-Zustand, ohne Emulator nicht prüfbar; Wirkung über G13). Akzeptanz:
   `grep -n 'menuOpen by remember {' $B/ui/stores/StoreListScreen.kt` leer; `V` grün.
-- [ ] **S8 `CancellationException` weiterwerfen (V12)** — Dateien: `$B/data/repository/ReceiptRepository.kt`,
+- [x] **S8 `CancellationException` weiterwerfen (V12)** — Dateien: `$B/data/repository/ReceiptRepository.kt`,
   `$B/data/sync/SyncWorker.kt`, neu `$T/ReceiptRepositoryOffSuggestionsTest.kt`. Vor jedem der drei
   `catch (e: Exception)` (`suggestOffProducts`, `SyncWorker.evictOldReceipts`, `SyncWorker.syncReceipts`) einfügen:
   `catch (e: CancellationException) { throw e }` mit `import kotlinx.coroutines.CancellationException` (wie in

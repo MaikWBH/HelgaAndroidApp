@@ -31,6 +31,7 @@ import com.helga.android.data.remote.ApiProvider
 import com.helga.android.data.remote.dto.ReceiptReconcileRequest
 import com.helga.android.data.remote.dto.ReconcileReceiptItemDto
 import com.helga.android.data.remote.dto.ReconcileShoppingItemDto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -289,6 +290,8 @@ class ReceiptRepository @Inject constructor(
         if (query.isBlank()) return emptyList()
         return try {
             withTimeoutOrNull(8_000) { apiProvider.api().searchOff(OffSearchRequest(query.trim())).products }.orEmpty()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.d(e, "OFF-Vorschläge nicht verfügbar")
             emptyList()

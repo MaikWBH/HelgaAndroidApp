@@ -9,6 +9,7 @@ import com.helga.android.data.receipts.ReceiptSyncer
 import com.helga.android.data.receipts.ReceiptUploader
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 import java.io.IOException
 
@@ -60,6 +61,8 @@ class SyncWorker @AssistedInject constructor(
             val evicted = receiptSyncer.evict()
             if (evicted > 0) Timber.i("Bon-Cache: $evicted Bon(s) außerhalb des Zeitfensters verdrängt")
             receiptSyncer.cleanupImages()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.w(e, "Bon-Cache-Bereinigung fehlgeschlagen")
         }
@@ -73,6 +76,8 @@ class SyncWorker @AssistedInject constructor(
             receiptSyncer.pushDirty()
             receiptSyncer.pull()
             receiptSyncer.refreshAggregates()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.w(e, "Bon-Abgleich fehlgeschlagen")
         }
