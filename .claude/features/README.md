@@ -3,8 +3,8 @@
 Routing-Einstieg für die Feature-für-Feature-Verbesserung. Diese Datei ist die **einzige
 Stelle mit Gesamtstatus**; der inhaltliche Stand liegt jeweils im `plan.md` des Bereichs.
 
-**Stand:** 2026-11-12 · **Basis:** DB v37, 167 Kotlin-Dateien (app-Modul; seit plattform A3 dazu
-ein eigenständiges `:wear`-Gradle-Modul, 4 Kotlin-Dateien), 26 Room-Entities — alle elf
+**Stand:** 2026-11-12 · **Basis:** DB v38, 181 Kotlin-Dateien (app-Modul; seit plattform A3 dazu
+ein eigenständiges `:wear`-Gradle-Modul, 4 Kotlin-Dateien), 27 Room-Entities — alle elf
 Bereiche interviewt
 
 ➡️ **Womit anfangen?** [ROADMAP.md](ROADMAP.md) sortiert alle 58 offenen Punkte nach
@@ -64,7 +64,7 @@ Basis aller UI-Pfade: `app/src/main/kotlin/com/helga/android/`
 | Einkaufsliste | `ui/shopping/` | ShoppingList, ShoppingItem, ShoppingListStaple, QuickEmoji | ShoppingRepository | `/api/suggestions/*` |
 | Rezepte | `ui/recipes/` | Recipe, Ingredient, Instruction, Tag, Category, RecipeHistory, RecipeFeedback | RecipeRepository | `/api/ai/import-url` |
 | Wochenplan | `ui/weekplan/` | WeekplanDay, WeekplanRecipe, WeekplanExtra, WeekplanSettings, WeekplanConstraints | WeekplanRepository | – |
-| Bons & Kosten | `ui/receipts/` | Receipt, ReceiptItem, MonthlyBudget | ReceiptRepository | `/api/ai/parse-receipt`, `/api/receipts/reconcile` |
+| Bons & Kosten | `ui/receipts/` | Receipt, ReceiptItem, MonthlyBudget, ReceiptLexicon, ReceiptAggregate | ReceiptRepository | `/api/ai/parse-receipt`, `/api/receipts/reconcile` |
 | KI | `ui/ai/` | – | – | `/api/ai/generate`, `/api/ai/remix`, `/api/ai/classify` |
 | Nährwerte | `ui/components/AllergenWarningBanner.kt`, `ui/components/BarcodeScanner.kt` | OffProduct | – | `/api/ai/nutrition`, `/api/off/*` |
 | Märkte | `ui/stores/` | Store, StoreAisle, AisleProduct | StoreRepository | – |

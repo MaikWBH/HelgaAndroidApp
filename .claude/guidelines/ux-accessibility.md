@@ -323,6 +323,10 @@ Screens mit `LazyColumn` dürfen keine `Column(verticalScroll(...))` als Parent 
   Auf-/Zuklappen mit `onClickLabel`.
 - **Zustand:** Dialog-/Sheet-Sichtbarkeit und Eingabetexte mit `rememberSaveable`.
 - **Screen/Content:** kleine Screens trennen `XScreen` (ViewModel) von zustandslosem `XContent` mit Preview.
+- **Diagramme** (Phase 3b): liegen in `ui/receipts/charts/` (Canvas-Eigenbau, keine Chart-Bibliothek). Farben nur über
+  `chartSeriesColors()`/`chartOtherColor()` (`ui/theme/ChartColors.kt`, aus `MaterialTheme.colorScheme` abgeleitet),
+  nie `Color(0x…)`. Jedes Diagramm bekommt eine `description` mit den wichtigsten Werten als Text (Semantik für
+  TalkBack), Werte stehen zusätzlich als Beschriftung im Diagramm; Zahlenlogik liegt testbar in `ChartMath`.
 - **Absicherung:** `UiConventionsTest` prüft `collectAsState(`, nicht gespiegelte `ArrowBack`-Icons und
   hartkodierte Wort-Literale in `Text`/`label`/`title`/`placeholder`/`contentDescription`/`message`.
 

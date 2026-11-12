@@ -40,7 +40,7 @@ Modellwechsel: Nutzer per `/model` oder die Stufe läuft als Sub-Agent mit gewä
 |-------|-------|---------|-------------------|-------------------|--------|
 | 1 | android-clean-architecture | `data/`, `di/`, Repositories, Sync-Fluss | Sonnet 5.5 | Haiku 5.5 | umgesetzt → [phase-1](phase-1-android-clean-architecture.md) |
 | 2 | mobile-android-design | `ui/` (Compose, Material 3, Theming) | Fable 5.2 | Sonnet 5.5 | umgesetzt (Stufe B) → [phase-2](phase-2-mobile-android-design.md) |
-| 3 | android-clean-architecture + fastapi-templates + mobile-android-design | Bons, Kategorien, Ausgaben-Auswertung (App + Server) | Fable 5.2 | 3a: Sonnet 5.5 · 3b: offen | 3a umgesetzt (Geräte-Prüfliste offen), 3b offen → [3a](phase-3a-bons-server-scan.md) · [3b](phase-3b-auswertung-gang-kategorien.md) · [Entscheidungen](phase-3-bons-kategorien-entscheidungen.md) · [Daten](phase-3-daten/) |
+| 3 | android-clean-architecture + fastapi-templates + mobile-android-design | Bons, Kategorien, Ausgaben-Auswertung (App + Server) | Fable 5.2 | 3a: Sonnet 5.5 · 3b: Sonnet 5.5 | umgesetzt (Stufe B; Geräte-Prüflisten offen) → [3a](phase-3a-bons-server-scan.md) · [3b](phase-3b-auswertung-gang-kategorien.md) · [Entscheidungen](phase-3-bons-kategorien-entscheidungen.md) · [Daten](phase-3-daten/) |
 | 4 | fastapi-templates | `server/app/` (Sync-Backend, restliche Teile) | – | – | offen |
 | 5 | multi-stage-dockerfile | `server/Dockerfile`, Compose | – | – | offen |
 | 6 | code-review | Querschnitt über Phasen 1–5 | – | – | offen |

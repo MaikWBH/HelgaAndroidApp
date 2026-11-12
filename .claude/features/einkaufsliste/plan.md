@@ -216,3 +216,11 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 ## Phase 2 (mobile-android-design)
 
 - Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).
+
+## Phase 3b (automatische Gang-Zuordnung)
+
+- Neue Artikel bekommen ihren Gang automatisch (`AisleAssigner`): 1. gelernte Zuordnung des aktiven Markts (Handkorrektur gewinnt immer), 2. lokale Stichwortliste (605 Wörter, `AisleKeywords`/`AisleKeywordMatcher`) über die Gang-Kategorien mit einstufiger Ausweichkette, 3. Server-KI im Hintergrund (`AisleCategorizeWorker`, nur mit Netz, Ergebnis wird gelernt). Ohne aktiven Markt bleibt der Gang leer.
+- Gemessene Trefferquote der Stichwortliste ohne Server: Pflichtliste 150/150, unabhängige Stichprobe 55/60 (≈ 92 %).
+- Bekannte Grenzen (bewusst nicht behoben): zusammengesetzte Wörter mit irreführendem Kopf (`Apfelmus`, `Gemüsemais`), nachgestellte Sorten (`Joghurt Erdbeere`), seltene Wörter (`Spülmaschinentabs`, `Leinsamen`) — diese lösen das gelernte Lexikon oder die Server-KI.
+- Die fünf Gang-Abfragen im `ShoppingListViewModel` entfallen; Zuordnung liegt im Repository.
+- Details und Geräte-Prüfliste: [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).

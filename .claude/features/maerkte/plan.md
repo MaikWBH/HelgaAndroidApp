@@ -137,3 +137,10 @@ _Weitere Aufgaben nach dem Interview._
 ## Phase 2 (mobile-android-design)
 
 - Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).
+
+## Phase 3b (Gang-Kategorien)
+
+- Jeder Gang hat einen Kategorie-Schlüssel (`StoreAisle.categoryKey`, Room v38, Server-Spalte `category_key`, bei alten App-Versionen per `PRESERVE_IF_UNSET` geschützt). Neue Märkte bekommen 15 Standardgänge aus dem gemeinsamen Katalog (`ProductCategory`); Kopieren übernimmt die Schlüssel.
+- Gang-Editor: Kategorie je Gang wählbar („Ohne Kategorie" möglich), „Fehlende Standardgänge ergänzen" hängt fehlende Kategorien an. Die bisherigen zehn Standardgänge wurden in der Migration automatisch zugeordnet; eigene Gänge bleiben ohne Kategorie, bis sie zugeordnet werden.
+- Gleiche Kategorienliste für Bon-KI, Auswertung und Gänge (Quelle: `.claude/phasen/phase-3-daten/kategorien.md`).
+- Details: [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).

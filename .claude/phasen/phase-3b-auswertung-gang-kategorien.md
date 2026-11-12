@@ -367,7 +367,7 @@ Zusätzlich:
   Danach Block D pushen.
 
 ### Block E — Dokumentation und Abschluss
-- [ ] **S24 Guidelines, Pläne, Index** — Dateien: `.claude/guidelines/ux-accessibility.md` (Abschnitt 13 um drei
+- [x] **S24 Guidelines, Pläne, Index** — Dateien: `.claude/guidelines/ux-accessibility.md` (Abschnitt 13 um drei
   Zeilen: Diagramme aus `ui/receipts/charts/`, Farben über `chartSeriesColors()`, jedes Diagramm mit Beschreibung und
   Werten als Text), `.claude/guidelines/sync-patterns.md` (Zeile zu `PRESERVE_IF_UNSET` in der Server-Checkliste),
   `.claude/features/bons-kosten/plan.md` (Abschnitt „Phase 3b", Umfang um `charts/`), `.claude/features/maerkte/plan.md`
@@ -387,10 +387,43 @@ Zusätzlich:
 - `:wear`-Modul und `ui/widget/`.
 
 ## Abschluss
-- [ ] Baseline aus S0 notiert
-- [ ] `VS` grün (Anzahl Tests), `V` grün (Anzahl Tests)
-- [ ] `app/schemas/**/38.json` committet, `Migration37To38Test` grün
-- [ ] Trefferquote der Auto-Zuordnung notiert: Liste A …/150, Liste B …/60 (Ausgabe aus S20)
-- [ ] Bereichs-`plan.md`, Feature-Index, Guidelines aktualisiert (S24)
-- [ ] Gemeldete Abweichungen und Ausnahmen (je Schritt eine Zeile)
-- [ ] Gesammelte „Prüfliste (Gerät)" aus S15, S16, S18, S22, S23 für den Nutzer (von Stufe B nicht abgehakt)
+
+Stand nach Stufe B (Sonnet 5.5), alle Schritte S0–S24 umgesetzt und committet. **Nicht auf einem Gerät geprüft** (kein
+Emulator in der Umgebung, kein echter KI-Schlüssel): alles unter „Prüfliste (Gerät)" ist offen.
+
+- [x] Baseline aus S0 notiert: Server 91 Tests, App 213 Tests (alle grün).
+- [x] `VS` grün: **110** Server-Tests (+19). `V` grün: **282** App-Tests (+69), `:app:compileDebugKotlin` grün.
+- [x] `app/schemas/com.helga.android.data.local.AppDatabase/38.json` committet, `Migration37To38Test` grün.
+- [x] Trefferquote der Auto-Zuordnung (Ausgabe aus S20): Liste A **150/150**, Liste B **55/60** (91,7 %); die fünf
+      bekannten Fehlzuordnungen sind als eigene Zusicherung im Test festgehalten.
+- [x] Bereichs-`plan.md` (bons-kosten, maerkte, einkaufsliste), Feature-Index, Guidelines (`ux-accessibility`,
+      `sync-patterns`) und Phasen-README aktualisiert (S24).
+- [x] Gemeldete Abweichungen und Ausnahmen:
+  - S14: `CostOverviewViewModel` hat einen `internal`-Primärkonstruktor (mit `today`-Lieferant) und einen
+    `@Inject`-Sekundärkonstruktor, damit der Test das Datum festlegen kann; Hilt baut damit fehlerfrei.
+  - S16: Die bisherige Linie „Preisverlauf" aus den lokalen Einzelkäufen bleibt zusätzlich zur neuen Linie
+    „Preisentwicklung (alle Monate)" bestehen; auf dem Artikel-Screen stehen also bis zu zwei Liniendiagramme.
+    Der String `product_prices_history_title` („Kaufverlauf") wurde durch `price_single_purchases_title` ersetzt.
+  - S17: `addAisle` setzt bei einem erkannten Standardnamen nur den Schlüssel; der Gangname bleibt wie eingegeben
+    (nur getrimmt), z. B. „fisch" bleibt „fisch".
+  - S23: `assignRemote` gibt die tatsächlich geänderte Zahl zurück — auch wenn lokale Treffer geschrieben wurden und
+    der anschließende Server-Aufruf scheitert (Plantext: „ergeben 0"). Die Server-KI-Zuordnung wird mit
+    `AisleProductKey.normalize` gelernt, das Wortendungen kürzt (z. B. „Geschenkpapier" → „geschenkpapi"); das ist das
+    bestehende Verhalten des Lexikons.
+  - S22: Alle fünf Aufrufstellen im `ShoppingListViewModel` übergeben keinen Gang mehr; `grep -c findAisleForProduct`
+    liefert dort 0.
+  - Server-Test der KI-Kategorisierung nutzt einen Mock; ein echter Haiku-Aufruf wurde nicht ausgeführt.
+- [ ] **Prüfliste (Gerät)** für den Nutzer — von Stufe B bewusst nicht abgehakt:
+  - **Kostenübersicht (S15):** alle vier Diagramme hell und dunkel und mit jeder Akzentfarbe lesbar; Budgetlinie sitzt
+    auf Höhe des Budgets; Flugmodus → Diagramme bleiben; Wechsel Monat/Woche und der Zeitraum-Chips wirkt; Tippen auf
+    einen Top-Artikel öffnet dessen Preisverlauf; TalkBack liest zu jedem Diagramm die Beschreibung; Querformat/Tablet:
+    Inhalt bleibt auf 840 dp begrenzt.
+  - **Preisentwicklung (S16):** Ein Artikel, der seit über 3 Monaten nicht gekauft wurde, zeigt über
+    „Top-Artikel → Gesamt" weiterhin seine Preisentwicklung (mit dem Hinweis zu den Einzelkäufen).
+  - **Gang-Editor (S18):** Kategorie eines Gangs ändern → auf dem zweiten Handy nach Sync sichtbar; neuer Markt mit
+    Vorlage hat 15 Gänge; Ziehen der Reihenfolge funktioniert weiter; TalkBack liest Gangname und Kategorie.
+  - **Einkaufsliste (S22):** „Tomaten", „Milch", „Spülmittel", „Bier" landen ohne Zutun im passenden Gang; ein von Hand
+    umsortierter Artikel landet beim nächsten Mal im gewählten Gang.
+  - **Server-KI (S23, Server mit KI):** „Geschenkpapier" oder „Leinsamen" hinzufügen → nach einigen Sekunden im
+    passenden Gang; erneut hinzufügen → sofort (gelernt); im Flugmodus bleibt der Artikel ohne Gang und die App
+    reagiert sofort.

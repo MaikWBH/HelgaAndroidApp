@@ -165,3 +165,11 @@ _Weitere Aufgaben nach dem Interview._
 - Review-Ansicht mit Kopfkarte, Rabatt je Position, Pfand, Kategorie und OFF-Produktzuordnung; Bon-Liste mit Monatsgruppen, Status-Chips und „Ältere Bons laden"; Detail mit Neu-auslesen.
 - Einstellungen: „Bons offline behalten" (Server löscht nie), Lexikon-Ansicht.
 - Details und Prüflisten: [phase-3a](../../phasen/phase-3a-bons-server-scan.md). Auswertung, Diagramme und Gang-Kategorien folgen in [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).
+
+## Phase 3b (Auswertung, Diagramme)
+
+- Server rechnet die Auswertung auf Abruf: `GET /api/receipts/aggregates` (Gesamt, Woche, Markt, Kategorie, Artikel) und `POST /api/ai/categorize-items`; die App hält einen Abzug (`receipt_aggregates`, Room v38) und ersetzt ihn nach jedem Bon-Abgleich vollständig. Diagramme lesen nur aus diesem Abzug und bleiben offline erhalten.
+- Neu im Umfang: `ui/receipts/charts/` (`SpendingBarChart`, `ShareDonutChart`, `HorizontalBarChart`, `TrendLineChart`, `ChartMath`), `data/receipts/ReceiptStats.kt`, `ReceiptStatsRepository`, `ReceiptAggregateEntity`/`ReceiptAggregateDao`.
+- Kostenübersicht: Ausgaben je Monat/Woche mit Budgetlinie und Durchschnitt, Zeitraum-Chips, Märkte als Ring, Kategorien und Top-Artikel als Querbalken; Hinweis auf vorläufige Bons, die noch fehlen. Preisentwicklung eines Artikels über alle Monate, Einzelkäufe nur für den lokalen Zeitraum.
+- Alte Kostenabfragen (`costByStore`, `costByDate`, `totalCostForRange` u. a.) entfernt.
+- Details und Geräte-Prüfliste: [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).

@@ -148,6 +148,9 @@ Beim Hinzufügen einer neuen Entity diese Checkliste vollständig abarbeiten:
 - [ ] `server/app/models.py` — `MyRecord` Pydantic-Modell + SyncPayload-Felder
 - [ ] `server/app/db.py` — CREATE TABLE in SCHEMA + zu SYNC_TABLES + Indices
 - [ ] `server/app/sync.py` — TABLE_COLUMNS + PAYLOAD_FIELD Einträge
+- [ ] Neue Spalte an bestehender Sync-Tabelle: in `PRESERVE_IF_UNSET` (`server/app/sync.py`) eintragen, solange ältere
+      App-Versionen pushen — sonst setzt deren Upsert die Spalte auf den Standardwert zurück (Beispiel:
+      `store_aisles.category_key`, Phase 3b)
 
 ### Überprüfung
 - [ ] Room-Schema exportiert (schemas/X.json vorhanden)
