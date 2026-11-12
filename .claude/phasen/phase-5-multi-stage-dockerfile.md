@@ -152,7 +152,7 @@ zeigt die Kontextgröße.
   Verifikation: `V` (Größe notieren, erwartet ≈ 194 MB, jedenfalls **nicht größer als die Baseline**);
   `docker run --rm helga-verify:new sh -c 'id helga; pip list 2>/dev/null | grep -i "recipe\|uvicorn"; ls -ld /app /app/data'`
   → `uid=1000(helga)`, `recipe_scrapers 15.13.0`, `/app` gehört `root`, `/app/data` gehört `helga`. Akzeptanz: alles erfüllt.
-- [ ] **S4 Test-Stage und Makefile** — Dateien: `$S/Makefile`. Verifikation `VT` (erwartet `177 passed`). Im Makefile unter
+- [x] **S4 Test-Stage und Makefile** — Dateien: `$S/Makefile`. Verifikation `VT` (erwartet `177 passed`). Im Makefile unter
   `.PHONY` und in der Hilfe-Ausgabe ein Ziel `docker-test` ergänzen (`docker build --target test -t helga-test .`,
   Hilfetext `make docker-test       – Server-Tests im Container (Python 3.12)`). Das Makefile-Ziel selbst wird hier nicht
   ausgeführt (Proxy-Workaround nötig). Akzeptanz: `VT` grün; `make -n docker-test` zeigt den Befehl. Danach Block A pushen.

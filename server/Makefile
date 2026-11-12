@@ -10,7 +10,7 @@ SERVICE     = helga-sync
 DATA_PATH   = /home/maik/repo/homelab-data/helga
 # ─────────────────────────────────────────────────────────────────────────────
 
-.PHONY: deploy logs backup restore migrate status dev help testset
+.PHONY: deploy logs backup restore migrate status dev help testset docker-test
 
 help:
 	@echo "Verfügbare Befehle:"
@@ -22,6 +22,7 @@ help:
 	@echo "  make migrate          – Helga-Daten importieren (einmalig)"
 	@echo "  make dev              – Lokal starten (kein SSH)"
 	@echo "  make testset DIR=...  – Bon-Modelle auf eigenen Fotos vergleichen (Fotos nie ins Repo)"
+	@echo "  make docker-test       – Server-Tests im Container (Python 3.12)"
 
 deploy:
 	@echo "Deploy läuft über das Homelab-Repo:"
@@ -62,6 +63,9 @@ migrate:
 
 dev:
 	docker compose up --build
+
+docker-test:
+	docker build --target test -t helga-test .
 
 testset:
 ifndef DIR
