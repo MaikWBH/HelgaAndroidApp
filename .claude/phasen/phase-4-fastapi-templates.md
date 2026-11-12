@@ -86,7 +86,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   jede Route außer `GET /api/health` auf einen Aufruf **ohne** `X-Api-Key` (Pfadparameter `{…}` durch `x` ersetzen,
   kein Body) mit 401; `GET /api/health` mit 200. Akzeptanz: `V` grün. Der Test bleibt in S4–S11 **unverändert** grün; eine
   neue Route (z. B. keine) wird nur mit ausdrücklichem Hinweis in „Abweichungen" ergänzt.
-- [ ] **S4 Router: Sync, Bilder, OFF** — Dateien: neu `$SA/sync_api.py`, `$SA/images_api.py`, `$SA/off_api.py`,
+- [x] **S4 Router: Sync, Bilder, OFF** — Dateien: neu `$SA/sync_api.py`, `$SA/images_api.py`, `$SA/off_api.py`,
   `$SA/main.py`. Je Datei `router = APIRouter(dependencies=[Depends(require_auth)])` (Muster `receipt_api.py`), Routen
   1:1 verschoben (`GET/POST /api/sync`; `POST /api/images/upload`, `GET /api/images/{filename}`;
   `POST /api/off/lookup-barcode`, `/api/off/search` mit dem Import von `off` oben in der Datei statt in der Funktion).

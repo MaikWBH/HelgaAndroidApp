@@ -1,29 +1,22 @@
 import asyncio
 import logging
-import uuid
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import Depends, FastAPI, Query
+from fastapi.responses import StreamingResponse
 
 from .auth import require_auth
 from .db import init_db, get_db, now_ms
 from .models import (
     AiClassifyRequest, AiGenerateRequest, AiNutritionRequest, AiRemixRequest,
     AiUrlImportRequest,
-    OffLookupBarcodeRequest, OffSearchRequest,
     ReceiptParseRequest,
     ReceiptParseResponse, ReceiptReconcileRequest,
     CategorizeRequest, CategorizeResponse,
-    SyncPullResponse, SyncPushRequest,
 )
-from .sync import pull_since, push_records
 from . import ai as ai_module
-from . import receipt_api, receipts, settings
-
-ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+from . import images_api, off_api, receipt_api, receipts, settings, sync_api
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +40,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="HelgaSyncServer", version="1.0.0", lifespan=lifespan)
 app.include_router(receipt_api.router)
+app.include_router(sync_api.router)
+app.include_router(images_api.router)
+app.include_router(off_api.router)
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -54,18 +50,6 @@ app.include_router(receipt_api.router)
 @app.get("/api/health")
 async def health():
     return {"ok": True, "ts": now_ms()}
-
-
-# ── Sync ──────────────────────────────────────────────────────────────────────
-
-@app.get("/api/sync", response_model=SyncPullResponse, dependencies=[Depends(require_auth)])
-async def sync_pull(since: int = Query(default=0, alias="since")):
-    return await pull_since(since)
-
-
-@app.post("/api/sync", response_model=SyncPullResponse, dependencies=[Depends(require_auth)])
-async def sync_push(payload: SyncPushRequest):
-    return await push_records(payload)
 
 
 # ── KI ────────────────────────────────────────────────────────────────────────
@@ -128,46 +112,6 @@ async def ai_categorize_items(req: CategorizeRequest):
     async with get_db() as db:
         results = await receipts.categorize(db, req.names)
     return CategorizeResponse(results=results)
-
-
-# ── Bilder ────────────────────────────────────────────────────────────────────
-
-@app.post("/api/images/upload", dependencies=[Depends(require_auth)])
-async def upload_image(file: UploadFile = File(...)):
-    ext = Path(file.filename or "").suffix.lower()
-    if ext not in ALLOWED_IMAGE_EXTS:
-        raise HTTPException(status_code=400, detail=f"Dateitype nicht erlaubt: {ext}")
-
-    image_uuid = str(uuid.uuid4())
-    dest = settings.IMAGES_DIR / f"{image_uuid}{ext}"
-    content = await file.read()
-    dest.write_bytes(content)
-
-    return {"uuid": image_uuid, "filename": dest.name}
-
-
-@app.get("/api/images/{filename}", dependencies=[Depends(require_auth)])
-async def get_image(filename: str):
-    # Pfad-Traversal verhindern
-    safe_name = Path(filename).name
-    path = settings.IMAGES_DIR / safe_name
-    if not path.exists() or not path.is_file():
-        raise HTTPException(status_code=404, detail="Bild nicht gefunden")
-    return FileResponse(path)
-
-
-# ── Open Food Facts Lookups ──────────────────────────────────────────────────
-
-@app.post("/api/off/lookup-barcode", dependencies=[Depends(require_auth)])
-async def off_lookup_barcode(req: OffLookupBarcodeRequest):
-    from . import off as off_module
-    return await off_module.lookup_barcode(req.barcode)
-
-
-@app.post("/api/off/search", dependencies=[Depends(require_auth)])
-async def off_search(req: OffSearchRequest):
-    from . import off as off_module
-    return await off_module.search_products(req.query, req.limit)
 
 
 # ── Vorschläge (Autocomplete) ─────────────────────────────────────────────────
