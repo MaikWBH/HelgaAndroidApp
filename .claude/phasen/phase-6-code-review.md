@@ -222,7 +222,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
   `nicht statisch prüfbar` (nur bei Rollout-, Optik- und Echt-KI-Prüfungen: G01, G04, G12, G14, G22, G23 Optik-Teil,
   G28) eintragen. Spalte „Gerät" bleibt `[ ]`. Akzeptanz: `grep -c '<…>' $D/review-bericht.md` zählt nur noch die
   Platzhalter von S23 (Zusammenfassung, Nutzerliste).
-- [ ] **S23 Zusammenfassung und Nutzerliste** — Datei: `$D/review-bericht.md`. „Zusammenfassung": Tabelle mit Zeilen
+- [x] **S23 Zusammenfassung und Nutzerliste** — Datei: `$D/review-bericht.md`. „Zusammenfassung": Tabelle mit Zeilen
   B1–B11 und Spalten „Standards: Blocker/Hoch/Mittel/Niedrig" und „Spec: Blocker/Hoch/Mittel/Niedrig" (Zahlen aus den
   „Ergebnis"-Zeilen), darunter je Achse ein Satz mit dem schwersten Befund (Nr. und Block) — keine Wertung über beide
   Achsen hinweg. „An den Nutzer zur Entscheidung": V3, V5, V6, V10 (Vorschlag aus der Vorbefund-Tabelle übernehmen)

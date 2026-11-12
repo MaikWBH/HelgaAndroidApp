@@ -11,11 +11,76 @@
 - Akzeptierte Abweichungen der Phasen 1–5 werden nicht erneut gemeldet (Liste: `blocks.md` Abschnitt 3)
 
 ## Zusammenfassung
-<S23: Tabelle Block × Achse × Anzahl je Grad; je Achse der schwerste Befund (keine Gesamtwertung über beide Achsen)>
+Zählung je Block aus den „Ergebnis“-Zeilen der Sub-Agenten (Blocker / Hoch / Mittel / Niedrig); Beifang ohne Grad ist nicht mitgezählt. Block B11 hat nur die Spec-Achse.
+
+| Block | Standards: Blocker/Hoch/Mittel/Niedrig | Spec: Blocker/Hoch/Mittel/Niedrig |
+|-------|----------------------------------------|-----------------------------------|
+| B3 Server-Bon-Archiv | 0 / 0 / 1 / 13 | 0 / 0 / 2 / 7 |
+| B2 Bon-Protokoll App | 0 / 0 / 3 / 11 | 0 / 0 / 3 / 4 |
+| B1 Migrationen, Schema, DAOs | 0 / 0 / 0 / 11 | 0 / 0 / 0 / 3 |
+| B4 Server-Sicherheit und -Struktur | 0 / 0 / 2 / 11 | 0 / 0 / 2 / 2 |
+| B6 Auto-Zuordnung zum Gang | 0 / 0 / 4 / 9 | 0 / 0 / 0 / 2 |
+| B5 Container | 0 / 0 / 0 / 7 | 0 / 0 / 0 / 1 |
+| B7 Auswertung und Diagramme | 0 / 0 / 6 / 4 | 0 / 0 / 0 / 5 |
+| B8 Bon-UI | 0 / 0 / 3 / 7 | 0 / 0 / 2 / 4 |
+| B9 Architektur aus Phase 1 | 0 / 0 / 4 / 7 | 0 / 0 / 0 / 3 |
+| B10 UI-Querschnitt aus Phase 2 | 0 / 0 / 0 / 4 | 0 / 0 / 0 / 0 |
+| B11 Doku-Abgleich | – | 0 / 0 / 0 / 6 |
+| **Summe** | **0 / 0 / 23 / 84** | **0 / 0 / 9 / 37** |
+
+**Standards:** Der höchste Grad ist Mittel (23 Befunde in B3, B2, B4, B6, B7, B8, B9). Als schwerster Befund nennen die Reviewer je Block B3-S1, B2-S1, B4-S1/S2, B6-S1, B7-S3, B8-S1 (S2/S3 gleichrangig) und B9-S1 (S2–S4 gleichrangig).
+
+**Spec:** Der höchste Grad ist Mittel (9 Befunde in B3, B2, B4, B8). Als schwerster Befund nennen die Reviewer B3-P1, B2-P1, B4-P2 und B8-P1.
+
+Blocker und Hoch: keine Befunde auf beiden Achsen. Zwei Hinweise auf mögliche Datenverluste stehen als „Vermutung“ unter „An den Nutzer zur Entscheidung“ (B2-S1, Stufe-B-Anmerkung zu B1).
 
 ## An den Nutzer zur Entscheidung
-<S23: jeder Befund mit Markierung „ändert Verhalten" aus allen Blöcken plus V3, V5, V6, V10 — je Zeile: Nr., Befund,
-Lösungsvorschlag aus diesem Bericht bzw. „Vorschlag: <ein Satz>">
+Alle Befunde mit Markierung „ändert Verhalten“ (Stufe B behebt sie nie) plus V3, V5, V6, V10 und eine Anmerkung von Stufe B. Spalte „Vorschlag“: der Vorschlag aus dem Befund bzw. aus der Vorbefund-Tabelle, sonst „Vorschlag offen“. Quelle jeweils der Abschnitt des Blocks unten; „(Vermutung)“ heißt, dass der Reviewer die Stelle nicht ausgeführt hat.
+
+| Nr. | Befund | Grad | Vorschlag |
+|-----|--------|------|-----------|
+| B1-Anm | Stufe-B-Anmerkung zum Beifang von B1: `ReceiptDao.upsertReceipt` ist `REPLACE`, `receipt_items` hat `ON DELETE CASCADE`. In reinem SQLite löscht `INSERT OR REPLACE` mit `foreign_keys=ON` die Positionen (per Python bestätigt). Ob Room die Fremdschlüssel aktiviert und die Einzelaufrufer (`updateReceipt`, `linkReceiptToShoppingList`, `updateReceiptStore`, `ReceiptUploader.kt:66,89`) Positionen löschen, ist nicht getestet. Möglicher Datenverlust | ungeprüft (Hoch/Blocker, falls bestätigt) | Vorschlag: zuerst mit einem Test auf der JVM klären; falls bestätigt `@Update` bzw. `upsertReceiptWithItems` statt `REPLACE` |
+| V3 | Race: `cleanupImages()` kann das Scan-Foto löschen, solange die Room-Zeile fehlt (Vermutung) | Hoch | `cleanupOrphans` lässt Dateien jünger als 1 Stunde stehen, oder `prepare()` legt die Zeile vor dem Server-Aufruf an |
+| V5 | Weiterleitung ohne `Location` → `KeyError` → HTTP 500 statt 422 (`ai.py:246`); B4-S4: Test-Attrappe verdeckt das | Niedrig | `resp.headers.get("location")`, fehlt er → `ValueError("Ungültige Weiterleitung")` (422) |
+| V6 | Lost Update im `AisleAssigner`: Kopien des alten Artikelstands werden nach dem KI-Aufruf geschrieben (Vermutung) | Mittel | vor dem Schreiben Artikel neu laden und nur schreiben, wenn `aisle` noch leer, `isChecked == 0` und `name` unverändert |
+| V10 | DTO-Pflichtobjekte ohne Standardwert (`receipt`, `period`, `dimension`); B2-P5 ergänzt `id`, `updatedAt`, `query` | Niedrig | so lassen und in kotlin-quality §9 Pflichtobjekte von Antworten ausnehmen |
+| B3-S1 | PUT und `preliminary` nehmen `ReceiptIn`/`ReceiptItemIn` ohne Limits (Texte, `items`, `id`); gleich B4-S1 | Mittel | Vorschlag offen |
+| B3-S2 | Dateiname-Regex `^…$` mit `match` lässt abschließendes `\n` durch | Niedrig | Vorschlag offen |
+| B3-S4 / B4-S3 | KI-Ausfall in `_ai_parse`, `categorize`, `reparse` ergibt 200 (leer bzw. `parsed:false`) statt 502 (Plan-Vorgabe) | Niedrig | Vorschlag offen |
+| B3-P1 | `_set_parse_state` stempelt keinen `server_seq`: Wechsel auf `failed`/`queued` erreicht per `since_seq` kein Gerät | Mittel | Vorschlag offen |
+| B3-P2 | Reparse-Misserfolg erhöht `parse_attempts` ohne Obergrenze; ab 5 bleibt der Bon `queued`, wird nie aufgenommen, nie `failed` | Mittel | Vorschlag offen |
+| B2-S1 | Server-Antwort ersetzt den Bon aus einer alten Zeilenkopie ohne LWW-Vergleich mit `dirty=0` (Scan bis 120 s; Vermutung) | Mittel | Vorschlag offen |
+| B2-S2 | Löschzweig in `pull()` löscht hart, auch bei `pendingUpload=1` und älterem `dirty=1` (Vermutung: braucht Server-Tombstone) | Mittel | Vorschlag offen |
+| B2-S3 | `provisional` ohne `imagePath` gilt als „nie hochgeladen“; der Uploader setzt dort `dirty=1`, danach geht der Bon per PUT zum Server; Löschen entfernt ihn nur lokal (Vermutung) | Mittel | Vorschlag offen |
+| B2-P1 | Scan mit KI-Fehler: Server legt leere Hülle mit `updated_at = now_ms()` an; bei Uhrenabweichung überschreibt sie per LWW die ML-Kit-Werte (Vermutung; Widerspruch in der Spec) | Mittel | Vorschlag offen |
+| B2-P2 | `olderMonthCursor` (In-Memory) wird nie zurückgesetzt; nach der Verdrängung nach 24 h entsteht eine Lücke | Mittel | Vorschlag offen |
+| B2-P3 | Bestandsfotos werden unverkleinert hochgeladen; 413 vom Server (8 MB) lässt `pendingUpload = 1` dauerhaft stehen (Vermutung) | Mittel | Vorschlag offen |
+| B2-P4 | `pushDirty` fängt alle HTTP-4xx ab und lässt den Bon `dirty` (Wiederholung bei jedem Sync) | Niedrig | Vorschlag offen |
+| B1-S1 | Migration 36→37 löscht per `DELETE` auch lokal gelöschte Bons mit `dirty = 1` samt Positionen; sie können beim Pull wieder auftauchen (Plan Annahme 7 verlangt es; Standards-Konflikt) | Niedrig | Vorschlag offen |
+| B1-P2 | Drei neue `@Transaction`-Methoden im `ReceiptDao` (Phase 6 S2) gehen über den Planwortlaut hinaus | Niedrig | Vorschlag offen (Entscheidung: so lassen) |
+| B4-S2 / B4-P2 | Anthropic-`error`-Event im Stream wird übersprungen, Stream endet mit `[DONE]`; fehlerhafte Stream-Frames (`data: null`) lösen `TypeError`/`AttributeError` statt `AiUpstreamError` aus (500 bzw. Abbruch ohne Log) | Mittel | Vorschlag offen |
+| B4-S12 | `q`/`item` in `suggestions_api.py` ohne `max_length` (Vermutung: SQLite-Fehler bei sehr langen Mustern, HTTP 500) | Niedrig | Vorschlag offen |
+| B4-P1 | `/docs`, `/redoc`, `/openapi.json` ohne `X-Api-Key` erreichbar (Altbestand; nur Schema) | Niedrig | Vorschlag offen |
+| B4-P3 | Datei/JSON-Body wird vermutlich komplett gelesen, bevor `require_auth` und die Limits greifen (Vermutung) | Mittel | Vorschlag offen |
+| B5-S6 | `pytest>=8` und Basis-Image ohne Patchversion/Digest ungepinnt (Build-Ergebnis ändert sich) | Niedrig | Vorschlag offen |
+| B6-S1 / B9-S6 | `catch (e: Exception)` ohne `CancellationException`-Rethrow in `AisleCategorizeWorker`, `suggestItems`, `ServerConnectionChecker`, `AiRepository`, `WeekplanGenerator` und mehreren ViewModels | Mittel / Niedrig | Vorschlag: wie in S8 `catch (e: CancellationException) { throw e }` davor |
+| B6-S4 | `draggedId` ist `rememberSaveable`, `dragOffset` nicht; Konfigurationswechsel beim Ziehen lässt die Zeile als „gezogen“ stehen (Vermutung) | Mittel | Vorschlag offen |
+| B6-P1 | `ExistingWorkPolicy.KEEP`: Artikel, der während des KI-Aufrufs ohne Gang angelegt wird, bleibt bis zum nächsten unbekannten Artikel ohne Gang (Vermutung; Lücke in der Spec) | Niedrig | Vorschlag offen |
+| B7-S3 | `BudgetEditDialog`: `text`/`warnThreshold` mit `remember`, Eingabe geht bei Rotation verloren | Mittel | Vorschlag offen (`rememberSaveable`) |
+| B7-S7 / B7-P2 | `state.loaded` wird nicht gelesen; vor der ersten Emission blitzt „Noch keine Auswertung …“ auf | Niedrig | Vorschlag offen |
+| B7-P1 | Budget-Karte steht vor dem Leerzustand (Spec: Leerzustand vorher) | Niedrig | Vorschlag offen |
+| B7-P4 | `"%d-W%02d".format` mit Standard-Locale; bei Geräten mit anderen Ziffern kann die Wochenreihe leer sein (Vermutung) | Niedrig | Vorschlag offen (`Locale.ROOT`) |
+| B8-S1 | Lexikon-Eintrag wird ohne Bestätigung oder Undo gelöscht (nicht umkehrbar) | Mittel | Vorschlag offen |
+| B8-S2 | Textfelder in `HeaderEditDialog`/`EditItemDialog` ohne `imeAction`/`KeyboardActions` | Mittel | Vorschlag offen |
+| B8-S3 | Provisional-Zweig in `ReceiptScanViewModel` ohne `triggerOneShot()`; Push erst beim periodischen Sync (Vermutung) | Mittel | Vorschlag offen |
+| B8-S4 | Lexikon-Leerzustand nur Text ohne Aktion (Plan S32 gibt nur „Leertext“ vor) | Niedrig | Vorschlag offen |
+| B8-S7 / B8-P4 | Button „Erneut versuchen“ im Detail schließt nur den Fehler, liest nicht neu aus | Niedrig | Vorschlag offen |
+| B8-P1 | `HeaderEditDialog` prüft nur Datum/Uhrzeit; ungültiger Betrag/Rabatt wird stumm zu 0,00 | Mittel | Vorschlag offen |
+| B8-P2 | Leerzustand der Bon-Liste ohne „Ältere Bons laden“; nur ältere Bons auf dem Server sind unerreichbar | Mittel | Vorschlag offen |
+| B8-P3 | „Positionen %1$s“ zeigt `expectedTotal` statt `itemsSum` (Vermutung: gewollt) | Niedrig | Vorschlag offen |
+| B9-S3 | `recipesForDay` ist ein `suspend`-Snapshot in `combine(days, allRecipes)`; `weekBalance` kann nach Hinzufügen/Entfernen veralten (Vermutung); Flow `observeRecipesForDays` existiert | Mittel | Vorschlag: auf den vorhandenen Flow umstellen |
+| B9-P1 | `classifyRecipe`/`estimateNutrition` reichen Exceptions roh durch; ViewModels zeigen `e.message` („HTTP 500 …“) | Niedrig | Vorschlag offen |
+| B10-S4 | Timer-`SuggestionChip` in einer `toggleable`-Zeile (Vermutung: für TalkBack nicht einzeln erreichbar) | Niedrig | Vorschlag offen |
 
 ## Vorbefunde (Stufe A, vor Block B gelesen und belegt)
 
