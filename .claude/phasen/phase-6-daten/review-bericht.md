@@ -350,7 +350,28 @@ Geprüft und ohne Befund: Checklistenpunkt 1 (grep leer), Punkt 2 (alle vier Dia
 
 **Ergebnis:** 0 Blocker, 0 Hoch, 6 Mittel, 4 Niedrig; schwerster Befund: S3
 
-<Spec-Antwort>
+### Spec — B7 — Auswertung und Diagramme
+Gelesen: Spec S8–S16, alle Diffs im Umfang und die Dateien auf Stand 451819d. Die Dateien im Umfang sind bis HEAD unverändert.
+
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|-------------|---------------|--------|----------------------------|------|------------|
+| P1 | `ui/receipts/CostOverviewScreen.kt:141-151` | c | Die Budget-Karte steht vor dem Leerzustand (Reihenfolge Hinweis, Budget, Leerzustand). Die Spec nennt den Leerzustand als Punkt 2 vor der Budget-Karte (Punkt 3). | phase-3b, S15: „2. Bei `empty`: Leerzustand … und sonst nichts außer der Budget-Karte. 3. Budget-Karte" | Niedrig | [ändert Verhalten] |
+| P2 | `ui/receipts/CostOverviewScreen.kt` (ganze Datei), `CostOverviewViewModel.kt:23,65` | c | `state.loaded` wird im Screen nirgends gelesen. Der Startzustand hat `empty = true`, also blitzt bis zur ersten Room-Emission „Noch keine Auswertung …" auf. Der alte Screen hatte einen `isLoading`-Zweig, der jetzt fehlt. | phase-3b, S14: `CostOverviewUiState(val loaded: Boolean, val empty: Boolean, …)`; S15 Punkt 2: Leerzustand „Bei `empty`" | Niedrig | [ändert Verhalten] |
+| P3 | `ReceiptStatsTest.kt:23-40` | d | Der Datensatz hat 16 statt 15 Zeilen (Zeile 40 hängt per `+ row(...)` eine an), der Kommentar „15 Zeilen" stimmt nicht. | phase-3b, S8: „festem Datensatz (15 Zeilen, `today = 2026-11-11`)" | Niedrig | – |
+| P4 | `data/receipts/ReceiptStats.kt:34` | c | `"%d-W%02d".format(...)` nutzt das Standard-Locale. Bei Geräte-Locales mit nicht-lateinischen Ziffern passen die Wochenschlüssel nicht mehr zum Server-Format `YYYY-Www`, die Wochenreihe wäre leer (Vermutung, nicht getestet). | phase-3b, S8: „Format `YYYY-Www`"; server-vertrag §6: „ISO-Woche `YYYY-Www` … zweistellig" | Niedrig | [Ermessensfrage] [ändert Verhalten] |
+| P5 | `ReceiptStats.kt:95-98`, `CostOverviewScreen.kt:294-300` | c | Die Fußnote „Bon-Rabatte" summiert `total.discount`. Der Server addiert dort auch Positionsrabatte (`receipts.py:621,638`), die in den Kategorie-Beträgen schon abgezogen sind. Die Fußnote überzeichnet damit die nicht verteilten Bon-weiten Rabatte. Die Umsetzung folgt S8 und Vertrag §6 wörtlich, der Widerspruch liegt in der Spec (Vermutung zur Absicht). | phase-3b, Annahme 2: „Bon-weite Rabatte werden nicht auf Kategorien verteilt; … Fußnote" | Niedrig | [Ermessensfrage] |
+
+Punkte, die ich geprüft habe und die der Spec entsprechen:
+- **Reihenfolge der Karten:** 1, 3–8 stimmen.
+- **Zeiträume:** Karte 1 zeigt immer 12 Monate bzw. 12 Wochen, die Chips wirken nur auf die Karten Märkte, Kategorien und Top-Artikel (`ReceiptStats.kt:44-48`).
+- **Wochenbudget:** `budget * 12.0 / 52.0` im ViewModel (Z. 78), per Test belegt.
+- **Vorläufige Bons:** Hinweis als Plural, auch im leeren Zustand sichtbar.
+- **Datenquelle:** Die Diagramme lesen nur `receipt_aggregates`. Das Budget und die Anzahl vorläufiger Bons kommen aus `receipts`, das ist nach Spec zulässig.
+- **Verbotene Treffer:** `grep costByStore\|CostSummary` im App-Code ist leer.
+- **ViewModel-Zugriff:** `viewModel.` kommt nur in `CostOverviewScreen` vor (Treffer 1).
+- **Farben:** Außerhalb von `ui/theme` gibt es kein `Color(0x`.
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 5 (P1–P5); schwerster Befund: P1 und P2 (beide Niedrig mit Nutzerwirkung)
 
 ## B8 — Bon-UI (Checkliste)
 <Standards-Antwort> · <Spec-Antwort>

@@ -208,7 +208,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
 - [x] **S14 R4 — B4 Server-Sicherheit und -Struktur (voll)**
 - [x] **S15 R5 — B6 Auto-Zuordnung zum Gang (voll)**
 - [x] **S16 R6 — B5 Container (voll)**
-- [ ] **S17 R7 — B7 Auswertung und Diagramme (Checkliste)**
+- [x] **S17 R7 — B7 Auswertung und Diagramme (Checkliste)**
 - [ ] **S18 R8 — B8 Bon-UI (Checkliste)**
 - [ ] **S19 R9 — B9 Architektur aus Phase 1 (Checkliste)**
 - [ ] **S20 R10 — B10 UI-Querschnitt aus Phase 2 (Checkliste)**
