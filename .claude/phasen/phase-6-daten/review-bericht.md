@@ -258,7 +258,18 @@ _Sub-Agent-Modell: sonnet_
 
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 4 (S1–S4), Niedrig 9 (S5–S13); schwerster Befund: S1.
 
-<Spec-Antwort>
+### Spec — B6 — Auto-Zuordnung zum Gang
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|-------------|---------------|--------|----------------------------|------|------------|
+| P1 | `data/sync/SyncScheduler.kt:89` mit `data/shopping/AisleAssigner.kt:57` | c | Vermutung: `KEEP` verwirft ein neues Einreihen, solange der Worker läuft (laufende Arbeit gilt als nicht abgeschlossen). `assignRemote()` liest die offenen Artikel einmal am Anfang. Ein Artikel, der während des KI-Aufrufs ohne Gang angelegt wird, bleibt ohne Gang, bis später wieder ein unbekannter Artikel dazukommt. Die Umsetzung entspricht dem Wortlaut der Spec; es ist eine Lücke im Spec-Entwurf, kein Abweichen von ihm. | phase-3b S23: „`enqueueUniqueWork("helga.aisle.categorize", ExistingWorkPolicy.KEEP, …)`"; Annahme 7: „ordnet nur zu, … Artikel noch keinen Gang hat" | Niedrig | [Ermessensfrage] [ändert Verhalten] |
+| P2 | `data/repository/StoreRepository.kt:180-181` (Hinweis auch `data/util/AisleProductKey.kt:9`) | b | `StoreRepository.findAisleForProduct` hat nach S22/S21 keinen Aufrufer mehr. `AisleAssigner` fragt `storeDao` direkt ab, wie die Spec es vorgibt. Die Funktion bleibt als toter Code stehen. Der KDoc von `AisleProductKey` nennt sie weiter als Lesepfad. Die Spec verlangt kein Entfernen. | phase-3b S22: „Im ViewModel entfallen die fünf eigenen Abfragen (Z.249, 261, 293, 414, 443)"; S21: „1. `storeDao.findAisleForProduct(AisleProductKey.normalize(productName), storeId)`" | Niedrig | [Ermessensfrage] |
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 2; schwerster Befund: P1. Ohne Abweichung geprüft:
+- Alle Pflichtfragen: Reihenfolge Lexikon → Stichwort → Server-KI, Ausweichkette genau eine Stufe, `sonstiges`/`pfand` nie als Gang, KI nur mit aktivem Markt und nur für Artikel ohne Gang, Hinzufügen wartet nie auf das Netz.
+- Algorithmus Schritte 1–6.
+- S17–S23 vollständig umgesetzt, auch `kategorien.md` (Namen und Ausweichkette).
+- Test-Blöcke Liste A und B sowie `RAW` sind per `diff` zeichengleich zur Spec.
+- Die verlangten Tests (Liste C Fälle 1–12, S17, S19, S20, S22) sind vorhanden.
 
 ## B5 — Container
 <Standards-Antwort> · <Spec-Antwort>

@@ -206,7 +206,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
 - [x] **S12 R2 — B2 Bon-Protokoll App (voll)**
 - [x] **S13 R3 — B1 Migrationen, Schema, DAOs (voll)**
 - [x] **S14 R4 — B4 Server-Sicherheit und -Struktur (voll)**
-- [ ] **S15 R5 — B6 Auto-Zuordnung zum Gang (voll)**
+- [x] **S15 R5 — B6 Auto-Zuordnung zum Gang (voll)**
 - [ ] **S16 R6 — B5 Container (voll)**
 - [ ] **S17 R7 — B7 Auswertung und Diagramme (Checkliste)**
 - [ ] **S18 R8 — B8 Bon-UI (Checkliste)**
