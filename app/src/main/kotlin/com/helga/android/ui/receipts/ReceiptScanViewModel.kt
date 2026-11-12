@@ -14,7 +14,6 @@ import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.repository.ReceiptRepository
 import com.helga.android.data.repository.StoreRepository
 import com.helga.android.data.sync.SyncScheduler
-import com.helga.android.data.util.ReceiptImagePreprocessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -74,26 +73,11 @@ class ReceiptScanViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = ReceiptScanUiState.Scanning
             try {
-                sourceImageUri = uri
-                // Aufrecht ausrichten (EXIF) + speicherschonend laden – entscheidend
-                // für die Erkennungsrate von OCR und KI-Vision.
-                val bitmap = withContext(Dispatchers.IO) {
-                    ReceiptImagePreprocessor.loadUprightBitmap(context, uri)
-                } ?: throw IllegalStateException("Bild konnte nicht geladen werden")
-
-                val result = receiptRepository.scanReceipt(bitmap)
-                scannedReceiptId = result.receipt.id
-                _uiState.value = ReceiptScanUiState.Preview(
-                    storeName = result.receipt.storeName,
-                    storeId = result.receipt.storeId,
-                    totalAmount = result.receipt.totalAmount,
-                    purchaseDate = result.receipt.purchaseDate,
-                    rawOcrText = result.receipt.rawOcrText,
-                    items = result.items,
-                    lowConfidenceItemIds = result.lowConfidenceItemIds,
-                    needsReview = result.needsReview,
-                    source = result.source,
-                )
+                // Übergang (S24): scanFromUri speichert den Bon bereits in Room; die Review-Ansicht
+                // folgt in S28/S29. Bis dahin gilt jedes Ergebnis wie „gespeichert".
+                receiptRepository.scanFromUri(uri, shoppingListId)
+                syncScheduler.triggerOneShot()
+                _uiState.value = ReceiptScanUiState.Saved
             } catch (e: Exception) {
                 Timber.e(e, "Receipt scan failed")
                 _uiState.value = ReceiptScanUiState.Error(UiText.Res(R.string.receipt_scan_read_failed))

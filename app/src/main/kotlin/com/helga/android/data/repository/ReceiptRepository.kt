@@ -1,11 +1,8 @@
 package com.helga.android.data.repository
 
 import android.graphics.Bitmap
-import android.util.Base64
+import android.net.Uri
 import com.helga.android.data.local.ReceiptScanner
-import com.helga.android.data.local.ReceiptScanResult
-import com.helga.android.data.local.ScanSource
-import com.helga.android.data.local.toDbValue
 import com.helga.android.data.model.CostByDate
 import com.helga.android.data.model.CostByStore
 import com.helga.android.data.model.CostSummary
@@ -15,9 +12,15 @@ import com.helga.android.data.local.entity.MonthlyBudgetEntity
 import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
+import com.helga.android.data.receipts.ReceiptImageStore
+import com.helga.android.data.receipts.ReceiptScanFlow
+import com.helga.android.data.receipts.ReceiptScanOutcome
 import com.helga.android.data.util.ReceiptItemNormalizer
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.helga.android.data.remote.ApiProvider
-import com.helga.android.data.remote.dto.ReceiptParseRequest
 import com.helga.android.data.remote.dto.ReceiptReconcileRequest
 import com.helga.android.data.remote.dto.ReconcileReceiptItemDto
 import com.helga.android.data.remote.dto.ReconcileShoppingItemDto
@@ -25,7 +28,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.io.ByteArrayOutputStream
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -80,6 +82,7 @@ class ReceiptRepository @Inject constructor(
     private val monthlyBudgetDao: MonthlyBudgetDao,
     private val shoppingDao: ShoppingDao,
     private val apiProvider: ApiProvider,
+    private val imageStore: ReceiptImageStore,
 ) {
 
     fun observeReceipts(): Flow<List<ReceiptEntity>> = receiptDao.observeReceipts()
@@ -127,116 +130,46 @@ class ReceiptRepository @Inject constructor(
 
     suspend fun findReceipt(id: String): ReceiptEntity? = receiptDao.findById(id)
 
-    /**
-     * Liest einen Bon aus — bevorzugt per KI-Vision auf dem Server (deutlich
-     * zuverlässiger), mit automatischem Fallback auf die On-Device-OCR (ML Kit),
-     * wenn der Server nicht erreichbar ist oder kein brauchbares Ergebnis liefert.
-     * Kein DB-Write, kein Speichern — nur für die Vorschau.
-     */
-    suspend fun scanReceipt(bitmap: Bitmap): ReceiptScanResult = withContext(Dispatchers.IO) {
-        try {
-            val aiResult = parseReceiptWithAi(bitmap)
-            if (aiResult != null) return@withContext aiResult
-            Timber.i("KI-Bon-Erkennung ohne Ergebnis – Fallback auf On-Device-OCR")
-        } catch (e: Exception) {
-            Timber.w(e, "KI-Bon-Erkennung fehlgeschlagen – Fallback auf On-Device-OCR")
-        }
-        receiptScanner.scanReceiptImage(bitmap)
-    }
-
-    /** Scannt und speichert in einem Schritt (Direkt-Speicherung ohne Vorschau). */
-    suspend fun scanAndSaveReceipt(bitmap: Bitmap): String {
-        val result = scanReceipt(bitmap)
-        saveReceipt(result.receipt, result.items)
-        return result.receipt.id
-    }
-
-    /**
-     * Sendet das Bon-Foto an das Vision-Modell und baut daraus ein [ReceiptScanResult].
-     * Gibt `null` zurück, wenn die KI nichts Verwertbares erkannt hat (→ Fallback).
-     */
-    private suspend fun parseReceiptWithAi(bitmap: Bitmap): ReceiptScanResult? {
-        val base64 = encodeJpegBase64(bitmap)
-        val response = apiProvider.api().parseReceipt(
-            ReceiptParseRequest(imageBase64 = base64, mimeType = "image/jpeg")
-        )
-
-        val hasContent = response.items.isNotEmpty() ||
-            response.storeName.isNotBlank() ||
-            response.totalAmount > 0.0
-        if (!hasContent) return null
-
-        val now = System.currentTimeMillis()
-        val receiptId = UUID.randomUUID().toString()
-        val receipt = ReceiptEntity(
-            id = receiptId,
-            storeName = response.storeName,
-            purchaseDate = if (response.purchaseDate > 0) response.purchaseDate else now,
-            totalAmount = response.totalAmount,
-            currency = "EUR",
-            rawOcrText = "",
-            status = "scanned",
-            source = ScanSource.AI.toDbValue(),
-            updatedAt = now,
-            deleted = 0,
-            dirty = 0,
-        )
-        val lowConfidenceIds = mutableSetOf<String>()
-        val items = response.items.mapIndexed { index, dto ->
-            val total = if (dto.totalPrice != 0.0) dto.totalPrice else dto.unitPrice * dto.quantity
-            val qty = if (dto.quantity != 0.0) dto.quantity else 1.0
-            val itemId = UUID.randomUUID().toString()
-            // Unsicher, wenn das Modell wenig Vertrauen meldet oder kein Preis erkannt wurde.
-            if (dto.confidence < CONFIDENCE_THRESHOLD || total <= 0.0) {
-                lowConfidenceIds += itemId
-            }
-            ReceiptItemEntity(
-                id = itemId,
-                receiptId = receiptId,
-                position = index,
-                rawText = dto.name,
-                name = dto.name,
-                quantity = qty,
-                unitPrice = if (dto.unitPrice != 0.0) dto.unitPrice else total / qty,
-                totalPrice = total,
-                updatedAt = now,
-                deleted = 0,
-                dirty = 0,
+    private val scanFlow = ReceiptScanFlow<Bitmap>(
+        scanOnServer = { request ->
+            val file = request.file
+            val plainText = "text/plain".toMediaType()
+            apiProvider.api().scanReceipt(
+                file = MultipartBody.Part.createFormData(
+                    "file", file.name, file.asRequestBody("image/jpeg".toMediaType()),
+                ),
+                receiptId = request.receiptId.toRequestBody(plainText),
+                shoppingListId = request.shoppingListId.toRequestBody(plainText),
+                capturedAt = request.capturedAt.toString().toRequestBody(plainText),
+                preliminary = null,
             )
+        },
+        scanLocally = { bitmap ->
+            val scanned = receiptScanner.scanReceiptImage(bitmap)
+            scanned.receipt to scanned.items
+        },
+        saveLocal = { receipt, items ->
+            receiptDao.upsertReceipt(receipt)
+            receiptDao.upsertItems(items)
+        },
+        deleteFile = { imageStore.delete(it.absolutePath) },
+    )
+
+    /**
+     * Scannt einen Bon: verkleinertes Foto zum Server (KI liest aus), bei Ausfall vorläufige ML-Kit-Werte.
+     * Das Ergebnis liegt immer in Room; die Kamera-Temp-Datei wird in jedem Fall gelöscht.
+     */
+    suspend fun scanFromUri(uri: Uri, shoppingListId: String): ReceiptScanOutcome = withContext(Dispatchers.IO) {
+        val receiptId = UUID.randomUUID().toString()
+        try {
+            val prepared = imageStore.prepare(uri, receiptId)
+                ?: throw IllegalStateException("Bild konnte nicht geladen werden")
+            val outcome = scanFlow.run(receiptId, prepared.file, prepared.bitmap, shoppingListId)
+            prepared.bitmap.recycle()
+            outcome
+        } finally {
+            imageStore.deleteCameraTemp(uri)
         }
-
-        // Deterministischer Gegencheck: Summe der Positionen vs. Bon-Gesamtbetrag.
-        // Das kann Smart Receipts nicht (nur Kopfdaten) – wir haben die Positionen.
-        val itemsSum = items.sumOf { it.totalPrice }
-        val sumMismatch = response.totalAmount > 0.0 &&
-            kotlin.math.abs(itemsSum - response.totalAmount) >
-            maxOf(response.totalAmount * 0.05, 0.10)
-
-        val needsReview = lowConfidenceIds.isNotEmpty() ||
-            response.confidence < CONFIDENCE_THRESHOLD ||
-            sumMismatch
-
-        return ReceiptScanResult(receipt, items, lowConfidenceIds, needsReview, ScanSource.AI)
-    }
-
-    /** Skaliert das Bild herunter und kodiert es als Base64-JPEG für die KI-Anfrage. */
-    private fun encodeJpegBase64(bitmap: Bitmap): String {
-        val scaled = downscale(bitmap, MAX_AI_IMAGE_DIM)
-        val baos = ByteArrayOutputStream()
-        // Höhere Qualität: kleiner Bon-Druck darf durch JPEG-Artefakte nicht
-        // verschmieren – das Vision-Modell liest sonst Preise/Namen falsch.
-        scaled.compress(Bitmap.CompressFormat.JPEG, AI_JPEG_QUALITY, baos)
-        if (scaled !== bitmap) scaled.recycle()
-        return Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-    }
-
-    private fun downscale(bitmap: Bitmap, maxDim: Int): Bitmap {
-        val largest = maxOf(bitmap.width, bitmap.height)
-        if (largest <= maxDim) return bitmap
-        val scale = maxDim.toFloat() / largest
-        return Bitmap.createScaledBitmap(
-            bitmap, (bitmap.width * scale).toInt(), (bitmap.height * scale).toInt(), true
-        )
     }
 
     suspend fun saveReceipt(receipt: ReceiptEntity, items: List<ReceiptItemEntity> = emptyList()) {
@@ -431,13 +364,5 @@ class ReceiptRepository @Inject constructor(
     }
 
     private companion object {
-        // Längste Bildkante für die KI-Anfrage; begrenzt Payload-Größe und Latenz,
-        // ohne dass Bon-Text unleserlich wird. Bewusst höher als zuvor (1600),
-        // damit kleiner Druck auf langen Bons für das Vision-Modell lesbar bleibt.
-        const val MAX_AI_IMAGE_DIM = 2000
-        // JPEG-Qualität für die KI-Anfrage (höher = schärferer Text, größere Payload).
-        const val AI_JPEG_QUALITY = 90
-        // Unter diesem Konfidenz-Wert wird eine Position zur Prüfung markiert.
-        const val CONFIDENCE_THRESHOLD = 0.7
     }
 }

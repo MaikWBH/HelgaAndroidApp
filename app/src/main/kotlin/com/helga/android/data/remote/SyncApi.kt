@@ -15,8 +15,6 @@ import com.helga.android.data.remote.dto.OffSearchResponse
 import com.helga.android.data.remote.dto.OkResponse
 import com.helga.android.data.remote.dto.ReceiptImageResponse
 import com.helga.android.data.remote.dto.ReceiptListResponse
-import com.helga.android.data.remote.dto.ReceiptParseRequest
-import com.helga.android.data.remote.dto.ReceiptParseResponse
 import com.helga.android.data.remote.dto.ReceiptPutResponse
 import com.helga.android.data.remote.dto.ReceiptReconcileRequest
 import com.helga.android.data.remote.dto.ReceiptReconcileResponse
@@ -72,8 +70,6 @@ interface SyncApi {
     @POST("api/receipts/reconcile")
     suspend fun reconcileReceipt(@Body req: ReceiptReconcileRequest): ReceiptReconcileResponse
 
-    @POST("api/ai/parse-receipt")
-    suspend fun parseReceipt(@Body req: ReceiptParseRequest): ReceiptParseResponse
 
     // ── Bon-Archiv (Phase 3a): bon-weises Protokoll, siehe server-vertrag.md ─────────────
 

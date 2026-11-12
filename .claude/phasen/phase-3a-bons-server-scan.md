@@ -430,7 +430,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   $B/data/sync/ImageUploadWorker.kt $B/data/sync/ImageDownloadWorker.kt` leer; `grep -rn 'SyncApiFactory'
   $B/data/repository` leer. Prüfliste (Gerät, Server mit Block A–C): Bon auf Gerät 1 ändern → nach Sync auf Gerät 2
   geändert; Bon löschen → auf Gerät 2 weg; Rezept-/Listen-Sync unverändert.
-- [ ] **S24 Scan-Ablauf im Repository** — Dateien: `$B/data/repository/ReceiptRepository.kt`, neu
+- [x] **S24 Scan-Ablauf im Repository** — Dateien: `$B/data/repository/ReceiptRepository.kt`, neu
   `$B/data/receipts/ReceiptScanOutcome.kt`, neu `$T/ReceiptScanFlowTest.kt`. `sealed interface ReceiptScanOutcome {
   data class Parsed(val receiptId: String); data class Provisional(val receiptId: String, val queuedOnServer:
   Boolean) }`. Neu `suspend fun scanFromUri(uri: Uri, shoppingListId: String): ReceiptScanOutcome`: (1) `receiptId` =
@@ -636,3 +636,4 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - S20: `ReceiptDao.clearPendingUpload(id, imagePath)` hat bewusst **keinen** `updatedAt`-Parameter (Plan nannte ihn): ein lokal neuerer Zeitstempel ohne `dirty` würde spätere Server-Änderungen im LWW-Vergleich unterdrücken. Aufrufer in S22/S25 entsprechend.
 - S23: Zusätzlich zur Liste entfernt: `ReceiptDao.findIdsOlderThan` (nur von `purgeReceiptsOlderThan` genutzt). Die Prüfliste (zwei Geräte, Server mit Block A–C) steht unter „Prüflisten (Nutzer)".
 - **S23 Umschaltung (Gerät, Server mit Block A–C, beide Handys):** Bon auf Gerät 1 ändern → nach Sync auf Gerät 2 geändert; Bon löschen → auf Gerät 2 weg; Rezept- und Listen-Sync unverändert.
+- S24: `CONFIDENCE_THRESHOLD` wurde aus `ReceiptRepository` entfernt; die neue Konstante entsteht in S27 (`ReceiptReviewCheck`). `ReceiptScanViewModel.scanImage` ist bis S28 ein Übergang (ruft `scanFromUri`, danach `Saved`).
