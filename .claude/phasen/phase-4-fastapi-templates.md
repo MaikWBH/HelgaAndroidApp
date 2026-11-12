@@ -70,7 +70,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   `scripts/receipt_testset.py:152` liest `settings.AI_VISION_MODEL`. `.env.example`: Zeilen `ALLOW_NO_AUTH=` (leer, mit
   Kommentar „nur lokal") und `LOG_LEVEL=INFO` ergänzen. Akzeptanz: `V` grün; `grep -n "os.getenv" $SA/ai.py $SA/db.py`
   leer; `grep -n "load_dotenv" $SA/*.py` nur in `settings.py`.
-- [ ] **S2 Start ohne API_KEY verweigern** — Dateien: `$SA/main.py` (Lifespan), `$ST/conftest.py`,
+- [x] **S2 Start ohne API_KEY verweigern** — Dateien: `$SA/main.py` (Lifespan), `$ST/conftest.py`,
   neu `$ST/test_startup_auth.py`. Am Anfang des Lifespans (vor `init_db()`): ist `settings.API_KEY` leer **und**
   `settings.ALLOW_NO_AUTH` falsch → `raise RuntimeError("API_KEY fehlt. Für lokale Entwicklung ALLOW_NO_AUTH=1 setzen.")`.
   Ist `API_KEY` leer und `ALLOW_NO_AUTH` wahr → `logger.warning("API läuft ohne Authentifizierung (ALLOW_NO_AUTH)")`.

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -24,9 +25,15 @@ from . import receipt_api, receipts, settings
 
 ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if not settings.API_KEY:
+        if not settings.ALLOW_NO_AUTH:
+            raise RuntimeError("API_KEY fehlt. Für lokale Entwicklung ALLOW_NO_AUTH=1 setzen.")
+        logger.warning("API läuft ohne Authentifizierung (ALLOW_NO_AUTH)")
     await init_db()
     queue_task = None
     if settings.RECEIPT_QUEUE_INTERVAL_SEC > 0:

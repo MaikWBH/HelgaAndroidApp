@@ -30,6 +30,7 @@ def client(tmp_path, db_path, monkeypatch):
     img.mkdir()
     monkeypatch.setattr(settings, "IMAGES_DIR", img)
     monkeypatch.setattr(settings, "API_KEY", "")
+    monkeypatch.setattr(settings, "ALLOW_NO_AUTH", True)
     monkeypatch.setattr(settings, "RECEIPT_QUEUE_INTERVAL_SEC", 0)
     with TestClient(app) as c:
         yield c
