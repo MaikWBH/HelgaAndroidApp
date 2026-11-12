@@ -267,7 +267,7 @@ Zusätzlich:
   des Budgets; Flugmodus → Diagramme bleiben; Wechsel Monat/Woche und der Zeitraum-Chips wirkt; Tippen auf einen
   Top-Artikel öffnet dessen Preisverlauf; TalkBack liest zu jedem Diagramm die Beschreibung; Querformat/Tablet:
   Inhalt bleibt auf 840 dp begrenzt.
-- [ ] **S16 Preisentwicklung und Aufräumen** — Dateien: `$U/receipts/ProductPriceDetailViewModel.kt`,
+- [x] **S16 Preisentwicklung und Aufräumen** — Dateien: `$U/receipts/ProductPriceDetailViewModel.kt`,
   `$U/receipts/ProductPriceDetailScreen.kt`, `$U/receipts/ProductPriceListScreen.kt`,
   `$B/data/repository/ReceiptRepository.kt`, `$B/data/local/dao/ReceiptDao.kt`, `$B/data/model/ReceiptCosts.kt`,
   `$R/values/strings.xml`. ViewModel zusätzlich: `trend: StateFlow<List<TrendPoint>>` =

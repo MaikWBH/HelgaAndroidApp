@@ -409,7 +409,6 @@
     <string name="product_prices_cheapest_store">Günstigster Markt</string>
     <string name="product_prices_sparkline_title">Preisverlauf</string>
     <string name="product_prices_store_comparison">Marktvergleich</string>
-    <string name="product_prices_history_title">Kaufverlauf</string>
 
     <!-- Phase 2: Kostenübersicht -->
     <string name="cost_overview_title">Kostenübersicht</string>
@@ -687,4 +686,10 @@
     <string name="cost_chart_stores_description">Anteil je Markt, größter Anteil: %1$s mit %2$s</string>
     <string name="cost_chart_categories_description">Ausgaben je Kategorie, größte Kategorie: %1$s mit %2$s</string>
     <string name="cost_chart_products_description">Top-Artikel nach Ausgaben, an erster Stelle: %1$s mit %2$s</string>
+    <!-- Phase 3b: Preisentwicklung -->
+    <string name="price_trend_all_months_title">Preisentwicklung (alle Monate)</string>
+    <string name="price_trend_all_months_description">Monatlicher Durchschnittspreis von %1$s über %2$d Monate, zuletzt %3$s</string>
+    <string name="price_single_purchases_title">Einzelkäufe der letzten Monate</string>
+    <string name="price_single_purchases_missing">Einzelne Käufe liegen nur für die letzten Monate auf dem Handy.</string>
+    <string name="product_prices_subtitle">Aus den Bons der letzten Monate</string>
 </resources>

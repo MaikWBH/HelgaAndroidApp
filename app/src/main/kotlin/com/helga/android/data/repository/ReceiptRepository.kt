@@ -3,9 +3,6 @@ package com.helga.android.data.repository
 import android.graphics.Bitmap
 import android.net.Uri
 import com.helga.android.data.local.ReceiptScanner
-import com.helga.android.data.model.CostByDate
-import com.helga.android.data.model.CostByStore
-import com.helga.android.data.model.CostSummary
 import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
@@ -120,20 +117,6 @@ class ReceiptRepository @Inject constructor(
 
     fun observeReceiptCountForListToday(listId: String, startMs: Long, endMs: Long): Flow<Int> =
         receiptDao.observeReceiptCountForListToday(listId, startMs, endMs)
-
-    /** Summe und Anzahl der Kassenbons im Zeitraum (Epoch-Sekunden). */
-    suspend fun totalCost(startEpochSec: Long, endEpochSec: Long): CostSummary =
-        receiptDao.totalCostForRange(startEpochSec, endEpochSec)
-
-    /** Ausgaben pro Markt; ohne Zeitraum über alle Bons. */
-    suspend fun costByStore(startEpochSec: Long? = null, endEpochSec: Long? = null): List<CostByStore> =
-        if (startEpochSec == null || endEpochSec == null) receiptDao.costByStore()
-        else receiptDao.costByStoreRange(startEpochSec, endEpochSec)
-
-    /** Ausgaben pro Datum; ohne Zeitraum über alle Bons. */
-    suspend fun costByDate(startEpochSec: Long? = null, endEpochSec: Long? = null): List<CostByDate> =
-        if (startEpochSec == null || endEpochSec == null) receiptDao.costByDate()
-        else receiptDao.costByDateRange(startEpochSec, endEpochSec)
 
     fun observeReceiptDetail(id: String): Flow<ReceiptEntity?> = receiptDao.observeById(id)
 

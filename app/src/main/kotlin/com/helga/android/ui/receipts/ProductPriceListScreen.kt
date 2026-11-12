@@ -74,6 +74,13 @@ fun ProductPriceListScreen(
                 singleLine = true,
             )
 
+            Text(
+                stringResource(R.string.product_prices_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

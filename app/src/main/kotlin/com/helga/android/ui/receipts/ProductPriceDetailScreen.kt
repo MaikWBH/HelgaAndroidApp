@@ -27,6 +27,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import com.helga.android.data.model.TrendPoint
+import com.helga.android.ui.receipts.charts.ChartMath
 import com.helga.android.ui.receipts.charts.ChartPoint
 import com.helga.android.ui.receipts.charts.TrendLineChart
 import java.time.Instant
@@ -49,6 +51,7 @@ fun ProductPriceDetailScreen(
     viewModel: ProductPriceDetailViewModel = hiltViewModel(),
 ) {
     val history = viewModel.history.collectAsStateWithLifecycle().value
+    val trend = viewModel.trend.collectAsStateWithLifecycle().value
     val isLoading = viewModel.isLoading.collectAsStateWithLifecycle().value
 
     Scaffold(
@@ -69,13 +72,14 @@ fun ProductPriceDetailScreen(
                 contentAlignment = Alignment.Center,
             ) { LoadingIndicator() }
 
-            history == null -> Box(
+            history == null && trend.size < 2 -> Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
             ) { Text(stringResource(R.string.price_no_data)) }
 
             else -> ProductPriceContent(
                 history = history,
+                trend = trend,
                 formatCurrency = viewModel::formatCurrency,
                 modifier = Modifier.fillMaxSize().padding(padding),
             )
@@ -85,11 +89,32 @@ fun ProductPriceDetailScreen(
 
 @Composable
 private fun ProductPriceContent(
-    history: ProductPriceHistory,
+    history: ProductPriceHistory?,
+    trend: List<TrendPoint>,
     formatCurrency: (Double) -> String,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(modifier = modifier) {
+        if (trend.size >= 2) {
+            item(key = "trend") {
+                MonthlyTrendSection(
+                    displayName = history?.displayName ?: stringResource(R.string.price_product_fallback),
+                    trend = trend,
+                    formatCurrency = formatCurrency,
+                )
+            }
+        }
+        if (history == null) {
+            item(key = "only_trend_note") {
+                Text(
+                    stringResource(R.string.price_single_purchases_missing),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+            return@LazyColumn
+        }
         item {
             PriceHeaderCard(history = history, formatCurrency = formatCurrency)
         }
@@ -110,7 +135,7 @@ private fun ProductPriceContent(
         item {
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             Text(
-                stringResource(R.string.product_prices_history_title),
+                stringResource(R.string.price_single_purchases_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -119,6 +144,31 @@ private fun ProductPriceContent(
         items(history.points, key = { "${it.purchaseDate}_${it.storeId}" }) { point ->
             PricePointRow(point = point, formatCurrency = formatCurrency)
         }
+    }
+}
+
+@Composable
+private fun MonthlyTrendSection(
+    displayName: String,
+    trend: List<TrendPoint>,
+    formatCurrency: (Double) -> String,
+) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            stringResource(R.string.price_trend_all_months_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        TrendLineChart(
+            points = trend.map { ChartPoint(label = ChartMath.periodLabel(it.period), value = it.avgUnitPrice) },
+            description = stringResource(
+                R.string.price_trend_all_months_description,
+                displayName,
+                trend.size,
+                formatCurrency(trend.last().avgUnitPrice),
+            ),
+        )
     }
 }
 
