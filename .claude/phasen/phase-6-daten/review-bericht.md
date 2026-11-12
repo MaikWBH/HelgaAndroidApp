@@ -441,7 +441,24 @@ Checkliste (1) und (2) leer (grep ohne Treffer). (4) alle Mutationen mit `trigge
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 3 (P1–P3), Beifang 1 (P4); schwerster Befund: P1.
 
 ## B10 — UI-Querschnitt aus Phase 2 (Checkliste)
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B10 — UI-Querschnitt aus Phase 2
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | ui/components/ColorSwatchPicker.kt:82 | Häkchen-Tint `Color.White` fest verdrahtet statt Rolle aus dem Farbschema (Kontrast auf hellen Farbtönen nicht abgesichert) | ux-accessibility.md §7, §13 | Niedrig | Ermessensfrage |
+| S2 | RecipeListScreen.kt:58,69; SettingsScreen.kt:13,27,29,72; ShoppingListScreen.kt:88; WeekplanScreen.kt:98 | Durch den Diff neu ungenutzte Imports (`clickable`, `Dp`, `border`, `LazyRow`, `itemsIndexed`, `Color`). Neue Imports stehen unsortiert am Dateianfang (z. B. SettingsScreen.kt:3-4, DayMarker.kt:3-4, SyncStatusIcon.kt:3-5) | keine dokumentierte Regel | Niedrig | Ermessensfrage |
+| S3 | res/values/strings.xml:449, 487-489 | Tote Strings: `receipt_list_empty`, `cost_receipts_summary`, `cost_bon_one/_other` ohne Verwendung. Die Ausnahme „S18 cost_bon_one/other“ gilt nur für die Umsetzung, nicht für ungenutzte Ressourcen | keine dokumentierte Regel | Niedrig | Ermessensfrage |
+| S4 | ui/recipes/RecipeCookScreen.kt:407, 434-445 (ähnlich :658) | Timer-`SuggestionChip` liegen in einer `toggleable`-Zeile (merged Semantics). Vermutung: Der Chip-Klick ist für TalkBack nicht mehr einzeln erreichbar | ux-accessibility.md §13 „Rollen“ | Niedrig | Ermessensfrage, ändert Verhalten |
+
+**Beifang (Altbestand, ohne Grad):**
+- DayMarker.kt:26 `Color.Gray` (ux-accessibility §7).
+- HelgaNavGraph.kt:244ff. Argumentnamen `navArgument("recipeId")` usw. als Literale (kotlin-quality §10). Zeilen nur eingerückt.
+- Zählstrings ohne Plurals: strings.xml:105, 106, 386 (`import_url_ingredients`, `import_url_steps`, `stats_cooked`).
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 4; schwerster Befund: S4 (Niedrig, Vermutung). Checks (1) bis (4), (6), (7) und (8) sind sauber. Bei (5) bleibt nur WeekplanScreen.kt:451 (Scrim, dokumentierte Ausnahme). Die zweite Ausnahme SettingsScreen:998 ist durch ColorSwatchPicker entfallen. Die Arbeitskopie entspricht für `app/src` dem Stand 451819d.
+
+<Spec-Antwort>
 
 ## B11 — Doku-Abgleich (nur Spec)
 <Spec-Antwort>
