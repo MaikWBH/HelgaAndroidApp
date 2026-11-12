@@ -105,7 +105,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   fälschlich über Wildcards; `q="%"` liefert nur Namen, die ein echtes `%` enthalten (hier: leer); `aisles` und `units`
   liefern wie vorher (Treffer / leer). Danach hat `main.py` nur noch: Lifespan, App, Health, `include_router`-Zeilen,
   Exception-Handler (folgt S8). Akzeptanz: `V` grün; `wc -l $SA/main.py` < 80.
-- [ ] **S7 `ai_client.py` abtrennen** — Dateien: neu `$SA/ai_client.py`, `$SA/ai.py`, `$ST/test_ai_receipt_config.py`.
+- [x] **S7 `ai_client.py` abtrennen** — Dateien: neu `$SA/ai_client.py`, `$SA/ai.py`, `$ST/test_ai_receipt_config.py`.
   Nach `ai_client.py` verschieben (mit Konfiguration über `settings`): `DEFAULT_MODEL`, `DEFAULT_VISION_MODEL`,
   `DEFAULT_RECEIPT_MODEL`, `_EFFORT_MODEL_PREFIXES`, `RECEIPT_MAX_TOKENS`, `ANTHROPIC_BASE`, `_openai_base()`, die
   Modellwahl, die HTTP-Aufrufe für Text-Stream, Einmalaufruf, Vision und Bon. Öffentliche Namen dort:

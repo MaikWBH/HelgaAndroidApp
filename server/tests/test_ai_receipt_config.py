@@ -1,6 +1,6 @@
 import asyncio
 
-from app import ai, settings
+from app import ai, ai_client, settings
 
 from conftest import run
 
@@ -77,7 +77,7 @@ class _FakeClient:
 def test_receipt_once_joins_text_blocks_and_sends_image(monkeypatch):
     monkeypatch.setattr(settings, "AI_PROVIDER", "anthropic")
     monkeypatch.setattr(settings, "AI_RECEIPT_MODEL", "")
-    monkeypatch.setattr(ai.httpx, "AsyncClient", _FakeClient)
+    monkeypatch.setattr(ai_client.httpx, "AsyncClient", _FakeClient)
     out = run(ai._receipt_once("sys", "frage", image_b64="QUJD"))
     assert out == "AB"
     sent = _FakeClient.last_payload
