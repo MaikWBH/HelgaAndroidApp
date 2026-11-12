@@ -208,7 +208,26 @@ _Sub-Agent-Modell: sonnet_
 
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 2, Niedrig 11; schwerster Befund: S2 (gleichrangig S1)
 
-<Spec-Antwort>
+### Spec — B4 — Server-Sicherheit und -Struktur
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|-------------|---------------|--------|----------------------------|------|------------|
+| P1 | `server/app/main.py:36` (`app = FastAPI(...)`, Altbestand, Zeile nicht im Diff) | a | `/docs`, `/redoc` und `/openapi.json` bleiben ohne `require_auth` offen (kein `docs_url=None`/`openapi_url=None`). Das sind Starlette-`Route`, keine `APIRoute`. `test_routes_guard.py` (Test 1 und 2) sieht sie nicht. Schema der öffentlich erreichbaren API ist ohne Key lesbar. Nur Schema, keine Daten. | Pflichtfrage „jede Route außer Health mit Auth"; phase-4 „Geprüft und in Ordnung: alle Routen außer Health mit Auth"; `server/CLAUDE.md` „Auth immer … nie weglassen" | Niedrig | [ändert Verhalten] [Ermessensfrage] |
+| P2 | `server/app/ai_client.py:197-210`, `:231-243` | c | Die zwei Anbieter-Streams bilden fehlerhafte Antwortformen nicht auf `AiUpstreamError` ab. `KeyError`/`IndexError`/`JSONDecodeError` werden still übersprungen. `TypeError`/`AttributeError` (z. B. Frame `data: null` oder `data: 123`, dann `obj["choices"]` bzw. `obj.get`) werden gar nicht gefangen. Vor dem ersten Chunk gibt das HTTP 500 statt 502. Danach bricht der Stream ohne Log ab. In `_post_json`, `_openai_text`, `_anthropic_text` ist `_SHAPE_ERRORS` abgedeckt. | phase-4 S8 „alle Anbieter-Aufrufe fangen … fehlerhafte Antwortformen (KeyError, IndexError, ValueError …) → ‚unerwartete Antwort des KI-Anbieters'"; Abschluss S8 „zusätzlich TypeError und AttributeError" | Mittel | [ändert Verhalten] |
+| P3 | `server/app/images_api.py:25-39` | c | Vermutung (nicht ausgeführt): FastAPI 0.115 parst das Multipart-Formular (`File(...)`) vor den Dependencies. Starlette spoolt die komplette Datei, bevor `require_auth` und das 413-Limit greifen. Das Limit schützt daher nur das Schreiben nach `IMAGES_DIR`, nicht Speicher/Platte (Prod: `/tmp` ist tmpfs). Gleiches gilt für JSON-Bodys, die vor der Prüfung der S10-Limits komplett gelesen werden. Das ist wörtlich wie in S11 umgesetzt, das Ziel („riesige Uploads unbehandelt") ist nur teilweise erreicht. | phase-4 „Ziel": „riesige Uploads … sind unbehandelt"; Befund 5 „liest die ganze Datei in den Speicher, kein Größenlimit"; S11 „bei Überschreitung 413" | Mittel | [Ermessensfrage] [ändert Verhalten] |
+| P4 | `server/tests/test_suggestions.py:41-47` | d | S6 verlangt für `q="%"` „liefert nur Namen, die ein echtes `%` enthalten (hier: leer)". Der Test legt „100% Saft" an und erwartet `["100% Saft"]`. Das ist strenger, weicht aber vom Wortlaut ab und steht nicht in den gemeldeten Abweichungen (dort nur `q="oma"`). Das Escapen von `\` ist ungetestet (verlangt S6 nicht). | phase-4 S6 „`q="%"` liefert nur Namen, die ein echtes `%` enthalten (hier: leer)" | Niedrig | – |
+
+Geprüft und ohne Befund:
+- Alle sechs Router haben `dependencies=[Depends(require_auth)]`. Die Routenmenge (28) stimmt mit dem Test überein, Reihenfolge der `include_router`-Aufrufe wie verlangt.
+- Pfade, Felder und Formate der bestehenden Endpunkte sind unverändert.
+- 502-Meldung ohne Geheimnisse, 5 Hops, alle aufgelösten Adressen, 5 MiB (dekomprimiert gezählt).
+- S10-Limits Feld für Feld gleich, `settings` zur Aufrufzeit gelesen. `db.DB_PATH` und `logging.basicConfig` sind laut Spec.
+- Bon-Nutzlast (`receipt_payload`) ohne `temperature`/`top_p`/`top_k`/`thinking` bei Effort-Modellen, `max_tokens` 16000.
+- Prompt `RECEIPT_PARSE_USER` ist Byte-identisch zu Vertrag 5.2 (per Skript verglichen).
+- `main.py` hat 54 Zeilen, `ai.py` 606.
+- Phase 4 hat `receipts.py`, `receipt_api.py` und `sync.py` nicht angefasst.
+- Die Tests der Schritte S2, S3, S6 (bis auf P4), S8, S9, S10, S11 und 3a S5 bis S7 entsprechen dem Verlangten.
+
+**Ergebnis:** 0 Blocker, 0 Hoch, 2 Mittel (P2, P3), 2 Niedrig (P1, P4); schwerster Befund: P2 (P3 ist eine Vermutung)
 
 ## B6 — Auto-Zuordnung zum Gang
 <Standards-Antwort> · <Spec-Antwort>
