@@ -93,7 +93,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   `main.py` bindet sie per `include_router` ein. Reihenfolge der `include_router`-Aufrufe in `main.py` am Ende:
   `receipt_api`, `sync_api`, `images_api`, `off_api` (danach S5/S6 ergänzen). Akzeptanz: `V` grün (insbesondere
   `test_routes_guard.py`); `grep -c "app\.\(get\|post\)" $SA/main.py` sinkt entsprechend.
-- [ ] **S5 Router: KI** — Dateien: neu `$SA/ai_api.py`, `$SA/main.py`. Verschieben: `_sse`, `POST /api/ai/generate`,
+- [x] **S5 Router: KI** — Dateien: neu `$SA/ai_api.py`, `$SA/main.py`. Verschieben: `_sse`, `POST /api/ai/generate`,
   `/remix`, `/classify`, `/nutrition`, `/import-url`, `/parse-receipt`, `/categorize-items` **und**
   `POST /api/receipts/reconcile` (Pfad bleibt, Handler ruft `ai`). `router = APIRouter(dependencies=[Depends(require_auth)])`
   ohne Prefix (Pfade vollständig angeben). `include_router(ai_api.router)` **nach** `receipt_api` einbinden (wie bisher,
