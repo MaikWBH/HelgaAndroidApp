@@ -1,14 +1,12 @@
 import json
-import os
 import re
 from datetime import date
 from typing import AsyncIterator
 
 import httpx
-from dotenv import load_dotenv
 from fastapi import HTTPException
 
-from . import categories, receipt_text
+from . import categories, receipt_text, settings
 from .ingredient_parser import is_header_line, parse_ingredient_line
 from .models import (
     AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiNutritionRequest,
@@ -16,22 +14,12 @@ from .models import (
     AiImportResponse, ImportedIngredient, ImportedInstruction,
 )
 
-load_dotenv()
-
-AI_PROVIDER = os.getenv("AI_PROVIDER", "openai")
-AI_API_KEY = os.getenv("AI_API_KEY", "")
-AI_MODEL = os.getenv("AI_MODEL", "")
-AI_API_BASE = os.getenv("AI_API_BASE", "")
-# Referenzmodell (stärker, bild-fähig) – seit Phase 3a nur noch vom Testset-Skript
-# scripts/receipt_testset.py genutzt. Siehe _vision_model().
-AI_VISION_MODEL = os.getenv("AI_VISION_MODEL", "")
-# Modell für ALLE Bon-Aufrufe (Auslesen, Abgleich, Kategorisieren). Leer = DEFAULT_RECEIPT_MODEL.
-AI_RECEIPT_MODEL = os.getenv("AI_RECEIPT_MODEL", "")
-# output_config.effort für Modelle, die es kennen: low | medium | high
-AI_RECEIPT_EFFORT = os.getenv("AI_RECEIPT_EFFORT", "medium")
-
-OPENAI_BASE = AI_API_BASE or "https://api.openai.com/v1"
 ANTHROPIC_BASE = "https://api.anthropic.com/v1"
+
+
+def _openai_base() -> str:
+    return settings.AI_API_BASE or "https://api.openai.com/v1"
+
 
 DEFAULT_MODEL = {
     "openai": "gpt-4o-mini",
@@ -108,24 +96,24 @@ KRITISCH: Nur rohes HTML ausgeben — kein Markdown, keine Erklärungen."""
 
 
 def _model() -> str:
-    return AI_MODEL or DEFAULT_MODEL.get(AI_PROVIDER, "gpt-4o-mini")
+    return settings.AI_MODEL or DEFAULT_MODEL.get(settings.AI_PROVIDER, "gpt-4o-mini")
 
 
 def _vision_model() -> str:
     """Modell für Bild-Eingaben (Kassenbon-Erkennung).
 
     Reihenfolge:
-    1. AI_VISION_MODEL – explizite Wahl (empfohlen, um z. B. Sonnet zu erzwingen).
-    2. AI_MODEL – falls bewusst gesetzt, respektieren wir die Nutzerwahl.
+    1. settings.AI_VISION_MODEL – explizite Wahl (empfohlen, um z. B. Sonnet zu erzwingen).
+    2. settings.AI_MODEL – falls bewusst gesetzt, respektieren wir die Nutzerwahl.
     3. Starker Provider-Default (NICHT der günstige Text-Default), weil dichte
        deutsche Bons sonst unzuverlässig erkannt werden.
     """
-    return AI_VISION_MODEL or AI_MODEL or DEFAULT_VISION_MODEL.get(AI_PROVIDER, "gpt-4o")
+    return settings.AI_VISION_MODEL or settings.AI_MODEL or DEFAULT_VISION_MODEL.get(settings.AI_PROVIDER, "gpt-4o")
 
 
 def _receipt_model() -> str:
-    """Modell für alle Bon-Aufrufe. AI_VISION_MODEL wirkt hier bewusst nicht mehr."""
-    return AI_RECEIPT_MODEL or DEFAULT_RECEIPT_MODEL.get(AI_PROVIDER, "gpt-4o-mini")
+    """Modell für alle Bon-Aufrufe. settings.AI_VISION_MODEL wirkt hier bewusst nicht mehr."""
+    return settings.AI_RECEIPT_MODEL or DEFAULT_RECEIPT_MODEL.get(settings.AI_PROVIDER, "gpt-4o-mini")
 
 
 def _uses_effort(model: str) -> bool:
@@ -145,20 +133,20 @@ def _receipt_payload(model: str, system: str, content: list) -> dict:
         "messages": [{"role": "user", "content": content}],
     }
     if _uses_effort(model):
-        payload["output_config"] = {"effort": AI_RECEIPT_EFFORT}
+        payload["output_config"] = {"effort": settings.AI_RECEIPT_EFFORT}
     else:
         payload["temperature"] = 0
     return payload
 
 
 def _openai_headers() -> dict:
-    base = AI_API_BASE or "https://api.openai.com/v1"
-    return {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}, base
+    base = _openai_base()
+    return {"Authorization": f"Bearer {settings.AI_API_KEY}", "Content-Type": "application/json"}, base
 
 
 def _anthropic_headers() -> dict:
     return {
-        "x-api-key": AI_API_KEY,
+        "x-api-key": settings.AI_API_KEY,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
     }, ANTHROPIC_BASE
@@ -366,7 +354,7 @@ async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
 # ── Low-level streaming ──────────────────────────────────────────────────────
 
 async def _stream(system: str, user: str) -> AsyncIterator[str]:
-    if AI_PROVIDER == "anthropic":
+    if settings.AI_PROVIDER == "anthropic":
         async for chunk in _stream_anthropic(system, user):
             yield chunk
     else:
@@ -375,8 +363,8 @@ async def _stream(system: str, user: str) -> AsyncIterator[str]:
 
 
 async def _stream_openai(system: str, user: str) -> AsyncIterator[str]:
-    base = AI_API_BASE or "https://api.openai.com/v1"
-    headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
+    base = _openai_base()
+    headers = {"Authorization": f"Bearer {settings.AI_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": _model(),
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -404,7 +392,7 @@ async def _stream_openai(system: str, user: str) -> AsyncIterator[str]:
 
 async def _stream_anthropic(system: str, user: str) -> AsyncIterator[str]:
     headers = {
-        "x-api-key": AI_API_KEY,
+        "x-api-key": settings.AI_API_KEY,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
     }
@@ -445,14 +433,14 @@ async def _call_once(system: str, user: str) -> str:
 # ── Vision (Bild-Eingabe, einmaliger Aufruf) ─────────────────────────────────
 
 async def _vision_once(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
-    if AI_PROVIDER == "anthropic":
+    if settings.AI_PROVIDER == "anthropic":
         return await _vision_anthropic(system, user_text, image_b64, mime_type)
     return await _vision_openai(system, user_text, image_b64, mime_type)
 
 
 async def _vision_openai(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
-    base = AI_API_BASE or "https://api.openai.com/v1"
-    headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
+    base = _openai_base()
+    headers = {"Authorization": f"Bearer {settings.AI_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": _vision_model(),
         "messages": [
@@ -477,7 +465,7 @@ async def _vision_openai(system: str, user_text: str, image_b64: str, mime_type:
 
 async def _vision_anthropic(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
     headers = {
-        "x-api-key": AI_API_KEY,
+        "x-api-key": settings.AI_API_KEY,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
     }
@@ -505,14 +493,14 @@ async def _receipt_once(system: str, user_text: str, image_b64: str | None = Non
                         mime_type: str = "image/jpeg", model: str | None = None) -> str:
     """Einmaliger Bon-Aufruf mit dem Bon-Modell, mit oder ohne Bild."""
     used_model = model or _receipt_model()
-    if AI_PROVIDER == "anthropic":
+    if settings.AI_PROVIDER == "anthropic":
         content: list = []
         if image_b64:
             content.append({"type": "image", "source": {
                 "type": "base64", "media_type": mime_type, "data": image_b64}})
         content.append({"type": "text", "text": user_text})
         headers = {
-            "x-api-key": AI_API_KEY,
+            "x-api-key": settings.AI_API_KEY,
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
@@ -525,8 +513,8 @@ async def _receipt_once(system: str, user_text: str, image_b64: str | None = Non
                 p.get("text", "") for p in obj.get("content", []) if p.get("type") == "text"
             )
 
-    base = AI_API_BASE or "https://api.openai.com/v1"
-    headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
+    base = _openai_base()
+    headers = {"Authorization": f"Bearer {settings.AI_API_KEY}", "Content-Type": "application/json"}
     if image_b64:
         user_content: object = [
             {"type": "text", "text": user_text},

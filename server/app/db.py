@@ -2,11 +2,10 @@ import os
 import time
 from contextlib import asynccontextmanager
 import aiosqlite
-from dotenv import load_dotenv
 
-load_dotenv()
+from . import settings
 
-DB_PATH = os.getenv("DB_PATH", "data/recipes.db")
+DB_PATH = settings.DB_PATH
 
 
 def now_ms() -> int:

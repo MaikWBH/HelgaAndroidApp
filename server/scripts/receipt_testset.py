@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import ai  # noqa: E402
+from app import ai, settings  # noqa: E402
 
 PHOTO_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
@@ -149,7 +149,7 @@ def main(argv=None) -> int:
         return 0
 
     models = [m.strip() for m in args.models.split(",") if m.strip()] or [
-        ai._receipt_model(), ai.AI_VISION_MODEL or "claude-sonnet-4-6"]
+        ai._receipt_model(), settings.AI_VISION_MODEL or "claude-sonnet-4-6"]
     report = render_report(asyncio.run(_run_models(photos, models)))
     if args.out:
         Path(args.out).write_text(report, encoding="utf-8")
