@@ -19,6 +19,9 @@ class SyncCompletenessTest {
     private val intentionallyLocalOnly = setOf(
         // reiner Abzug des Server-Lexikons (Phase 3a), Quelle der Wahrheit ist /api/receipts/lexicon
         "ReceiptLexicon",
+        // Bons laufen über ein eigenes bon-weises Protokoll (ReceiptSyncer), nicht über den Voll-Sync.
+        "Receipt",
+        "ReceiptItem",
     )
 
     private fun projectRoot(): File {

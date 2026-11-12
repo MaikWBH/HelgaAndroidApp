@@ -16,7 +16,7 @@ import com.helga.android.data.local.dao.ShoppingDao
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.util.ReceiptItemNormalizer
-import com.helga.android.data.remote.SyncApiFactory
+import com.helga.android.data.remote.ApiProvider
 import com.helga.android.data.remote.dto.ReceiptParseRequest
 import com.helga.android.data.remote.dto.ReceiptReconcileRequest
 import com.helga.android.data.remote.dto.ReconcileReceiptItemDto
@@ -79,7 +79,7 @@ class ReceiptRepository @Inject constructor(
     private val receiptScanner: ReceiptScanner,
     private val monthlyBudgetDao: MonthlyBudgetDao,
     private val shoppingDao: ShoppingDao,
-    private val apiFactory: SyncApiFactory,
+    private val apiProvider: ApiProvider,
 ) {
 
     fun observeReceipts(): Flow<List<ReceiptEntity>> = receiptDao.observeReceipts()
@@ -157,7 +157,7 @@ class ReceiptRepository @Inject constructor(
      */
     private suspend fun parseReceiptWithAi(bitmap: Bitmap): ReceiptScanResult? {
         val base64 = encodeJpegBase64(bitmap)
-        val response = apiFactory.api().parseReceipt(
+        val response = apiProvider.api().parseReceipt(
             ReceiptParseRequest(imageBase64 = base64, mimeType = "image/jpeg")
         )
 
@@ -283,16 +283,6 @@ class ReceiptRepository @Inject constructor(
         }
     }
 
-    /**
-     * Löscht (soft) alle Bons mit Kaufdatum vor [beforeEpochMillis] — für die einstellbare
-     * automatische Bon-Löschung (bons-kosten A4). Gibt die Anzahl gelöschter Bons zurück.
-     */
-    suspend fun purgeReceiptsOlderThan(beforeEpochMillis: Long): Int {
-        val ids = receiptDao.findIdsOlderThan(beforeEpochMillis)
-        ids.forEach { deleteReceipt(it) }
-        return ids.size
-    }
-
     suspend fun linkReceiptToShoppingList(receiptId: String, shoppingListId: String) {
         val receipt = receiptDao.findById(receiptId) ?: return
         receiptDao.upsertReceipt(
@@ -406,7 +396,7 @@ class ReceiptRepository @Inject constructor(
             },
         )
 
-        val response = apiFactory.api().reconcileReceipt(request)
+        val response = apiProvider.api().reconcileReceipt(request)
 
         val matchByReceiptId = response.matches.associate { it.receiptItemId to it.shoppingItemId }
         val unexpectedIds = response.unexpected.toSet()

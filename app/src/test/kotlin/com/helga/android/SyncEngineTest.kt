@@ -5,7 +5,6 @@ import com.helga.android.data.local.AppDatabase
 import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
-import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
@@ -65,7 +64,6 @@ class SyncEngineTest {
     private val weekplanConstraintsDao = mockk<WeekplanConstraintsDao>(relaxed = true)
     private val recipeHistoryDao = mockk<RecipeHistoryDao>(relaxed = true)
     private val recipeFeedbackDao = mockk<RecipeFeedbackDao>(relaxed = true)
-    private val receiptDao = mockk<ReceiptDao>(relaxed = true)
     private val monthlyBudgetDao = mockk<MonthlyBudgetDao>(relaxed = true)
     private val offProductDao = mockk<OffProductDao>(relaxed = true)
     private val apiFactory = mockk<SyncApiFactory>()
@@ -88,7 +86,7 @@ class SyncEngineTest {
         engine = SyncEngine(
             database, recipeDao, syncDao, shoppingDao, storeDao, quickEmojiDao,
             weekplanDao, weekplanSettingsDao, weekplanConstraintsDao,
-            recipeHistoryDao, recipeFeedbackDao, receiptDao, monthlyBudgetDao,
+            recipeHistoryDao, recipeFeedbackDao, monthlyBudgetDao,
             offProductDao, apiFactory, preferences,
         )
     }

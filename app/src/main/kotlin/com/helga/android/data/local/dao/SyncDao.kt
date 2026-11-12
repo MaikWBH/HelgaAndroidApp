@@ -62,12 +62,6 @@ interface SyncDao {
     @Query("SELECT id, updatedAt FROM weekplan_constraints")
     suspend fun weekplanConstraintsTimestamps(): List<TimestampRow>
 
-    @Query("SELECT id, updatedAt FROM receipts")
-    suspend fun receiptTimestamps(): List<TimestampRow>
-
-    @Query("SELECT id, updatedAt FROM receipt_items")
-    suspend fun receiptItemTimestamps(): List<TimestampRow>
-
     @Query("SELECT id, updatedAt FROM monthly_budgets")
     suspend fun monthlyBudgetTimestamps(): List<TimestampRow>
 

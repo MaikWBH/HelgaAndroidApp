@@ -7,7 +7,6 @@ import androidx.work.WorkerParameters
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.util.ImageUrls
@@ -29,7 +28,6 @@ class ImageDownloadWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val recipeDao: RecipeDao,
-    private val receiptDao: ReceiptDao,
     private val preferences: AppPreferences,
 ) : CoroutineWorker(context, params) {
 
@@ -37,9 +35,7 @@ class ImageDownloadWorker @AssistedInject constructor(
         val conn = preferences.currentConnection()
         if (!conn.isConfigured) return Result.success()
 
-        val recipeImagePaths = recipeDao.recipesNeedingImageDownload().map { it.imagePath }
-        val receiptImagePaths = receiptDao.receiptsNeedingImageDownload().map { it.imagePath }
-        val imagePaths = (recipeImagePaths + receiptImagePaths).distinct()
+        val imagePaths = recipeDao.recipesNeedingImageDownload().map { it.imagePath }.distinct()
         if (imagePaths.isEmpty()) return Result.success()
 
         val loader = applicationContext.imageLoader

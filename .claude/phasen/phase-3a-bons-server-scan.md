@@ -412,7 +412,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   Test mit `mockk`-DAO und Attrappen-API: Push PUT/DELETE inkl. hartem Löschen; Pull legt an, ersetzt, entfernt
   fehlende Positionen, respektiert lokales `dirty` und `pendingUpload`, löscht serverseitig gelöschte; Fenster
   vergrößert → `since = 0`; `evict` ruft für `months = 0` nichts auf; Cursor wird gespeichert. Akzeptanz: `V` grün.
-- [ ] **S23 Umschalten: Bons raus aus dem Voll-Sync** — Dateien: `$B/data/sync/SyncEngine.kt`,
+- [x] **S23 Umschalten: Bons raus aus dem Voll-Sync** — Dateien: `$B/data/sync/SyncEngine.kt`,
   `$B/data/sync/SyncWorker.kt`, `$B/data/sync/ImageUploadWorker.kt`, `$B/data/sync/ImageDownloadWorker.kt`,
   `$B/data/repository/ReceiptRepository.kt`, `$B/data/local/dao/SyncDao.kt`, `$B/data/local/dao/ReceiptDao.kt`,
   `$T/SyncEngineTest.kt`, `$T/SyncCompletenessTest.kt`. `SyncEngine`: alle Bon-Zeilen entfernen (Z.139–140, 153,
@@ -634,3 +634,5 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - **S13 Wiederherstellung (vor der Umschaltung, auf dem Server):** `make backup`, dann
   `python scripts/restore_purged_receipts.py --db data/recipes.db` (nur Liste), Ergebnis prüfen, erst dann `--apply`.
 - S20: `ReceiptDao.clearPendingUpload(id, imagePath)` hat bewusst **keinen** `updatedAt`-Parameter (Plan nannte ihn): ein lokal neuerer Zeitstempel ohne `dirty` würde spätere Server-Änderungen im LWW-Vergleich unterdrücken. Aufrufer in S22/S25 entsprechend.
+- S23: Zusätzlich zur Liste entfernt: `ReceiptDao.findIdsOlderThan` (nur von `purgeReceiptsOlderThan` genutzt). Die Prüfliste (zwei Geräte, Server mit Block A–C) steht unter „Prüflisten (Nutzer)".
+- **S23 Umschaltung (Gerät, Server mit Block A–C, beide Handys):** Bon auf Gerät 1 ändern → nach Sync auf Gerät 2 geändert; Bon löschen → auf Gerät 2 weg; Rezept- und Listen-Sync unverändert.
