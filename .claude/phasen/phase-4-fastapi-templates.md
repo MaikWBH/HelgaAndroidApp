@@ -98,7 +98,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   `POST /api/receipts/reconcile` (Pfad bleibt, Handler ruft `ai`). `router = APIRouter(dependencies=[Depends(require_auth)])`
   ohne Prefix (Pfade vollständig angeben). `include_router(ai_api.router)` **nach** `receipt_api` einbinden (wie bisher,
   damit `/api/receipts/reconcile` nicht von `/api/receipts/{id}` geschluckt wird). Akzeptanz: `V` grün.
-- [ ] **S6 Router: Vorschläge** — Dateien: neu `$SA/suggestions_api.py`, `$SA/main.py`,
+- [x] **S6 Router: Vorschläge** — Dateien: neu `$SA/suggestions_api.py`, `$SA/main.py`,
   neu `$ST/test_suggestions.py`. Verschieben: `GET /api/suggestions/items`, `/aisles`, `/units` unverändert im
   Verhalten. Einzige Änderung in `items`: `%`, `_` und `\` im Suchwort mit `\` escapen und `LIKE ? ESCAPE '\'`
   verwenden. Tests (Daten über `POST /api/sync` oder direkt per `app_db`): `q="oma"` findet „Tomate" nicht
