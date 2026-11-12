@@ -326,7 +326,7 @@ Zusätzlich:
   `"Eis"` → `tiefkuehl`, `"Tee"` → `fruehstueck` und `"Eistee"` → `getraenke` (längstes Stichwort), `"Türkei"` und
   `"Brei"` → `""` (Wörter unter 4 Zeichen treffen nur als ganzes Wort), `""` → `""`, `"Geschenkpapier"` → `""`.
   Akzeptanz: `V` grün; die ausgegebene Trefferzahl der Stichprobe unter „Abschluss" notieren (erwartet 55/60).
-- [ ] **S21 `AisleAssigner` (lokal)** — Dateien: neu `$B/data/shopping/AisleAssigner.kt`, neu
+- [x] **S21 `AisleAssigner` (lokal)** — Dateien: neu `$B/data/shopping/AisleAssigner.kt`, neu
   `$T/AisleAssignerTest.kt`. `@Singleton class AisleAssigner(storeDao, shoppingDao, apiProvider)`: `suspend fun
   aisleForCategory(storeId: String, categoryKey: String): String` (Gänge des Markts nach `sortOrder`; erster mit dem
   Schlüssel, sonst erster mit `ProductCategory.fallbackFor(...)`, sonst `""`; `sonstiges`, `pfand`, unbekannt →
