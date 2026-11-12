@@ -504,7 +504,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `repository.confirmReceipt(...)`, `syncScheduler.triggerOneShot()`, `Saved`. `persistImage`, `sourceImageUri` und der
   `@ApplicationContext` entfallen. Akzeptanz: `V` grün; `ArchitectureRulesTest` grün;
   `grep -n 'ApplicationContext\|persistImage' $U/receipts/ReceiptScanViewModel.kt` leer.
-- [ ] **S29 Scan-/Review-Screen** — Dateien: `$U/receipts/ReceiptScanScreen.kt`, neu
+- [x] **S29 Scan-/Review-Screen** — Dateien: `$U/receipts/ReceiptScanScreen.kt`, neu
   `$U/receipts/ReceiptReviewComponents.kt`, `$R/values/strings.xml`. `ReceiptScanScreen` sammelt State und reicht an
   `internal fun ReceiptScanContent(state, stores, suggestions, <Callbacks>, modifier)` weiter. Neu im Review: Kopfkarte
   mit Markt, Adresse, Datum, Uhrzeit, Summe, Bon-Rabatt und Stift-Button → `HeaderEditDialog` (Textfelder; Datum
@@ -639,3 +639,4 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - S24: `CONFIDENCE_THRESHOLD` wurde aus `ReceiptRepository` entfernt; die neue Konstante entsteht in S27 (`ReceiptReviewCheck`). `ReceiptScanViewModel.scanImage` ist bis S28 ein Übergang (ruft `scanFromUri`, danach `Saved`).
 - **S25 Offline-Scan (Gerät, Server mit Block A–C):** Flugmodus → Bon scannen → „vorläufig" erscheint sofort; Flugmodus aus → innerhalb weniger Minuten ersetzt die KI-Auswertung die Werte, Status „Bitte prüfen"; unter `Android/data/…/files/receipts/` liegt danach keine Datei mehr.
 - S28: `ReceiptImageStore.deleteCameraTemp` (S21) kannte nur Dateipfade; die Kamera liefert aber eine FileProvider-`content://`-URI. Nachgezogen: die URI wird über Autorität und `receipt_captures`-Pfadsegment auf `cacheDir/receipts/<datei>` abgebildet. Der Screen hat bis S29 einen schlichten Übergangszweig für `Provisional`.
+- **S29 Review (Gerät):** Bon mit Rabatt und Pfand scannen → Uhrzeit, Adresse, Rabatt je Position, Pfand-Chip und Kategorien stehen im Review; Kategorie ändern, speichern, denselben Artikel im selben Markt erneut scannen → Korrektur ist übernommen; „Produkt zuordnen" zeigt Treffer; Drehen im geöffneten Dialog behält Eingaben; TalkBack liest Chips und Buttons.

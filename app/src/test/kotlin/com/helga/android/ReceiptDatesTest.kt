@@ -54,4 +54,14 @@ class ReceiptDatesTest {
         assertEquals("2026-08-10", ReceiptDates.cutoffDay(today, 3))
         assertEquals("2025-11-10", ReceiptDates.cutoffDay(today, 12))
     }
+
+    @Test
+    fun `parseDisplayDay converts german input and rejects invalid dates`() {
+        assertEquals("2026-11-10", ReceiptDates.parseDisplayDay("10.11.2026"))
+        assertEquals("2026-01-05", ReceiptDates.parseDisplayDay(" 5.1.2026 "))
+        assertEquals("", ReceiptDates.parseDisplayDay("  "))
+        assertNull(ReceiptDates.parseDisplayDay("31.02.2026"))
+        assertNull(ReceiptDates.parseDisplayDay("2026-11-10"))
+        assertNull(ReceiptDates.parseDisplayDay("10.11.26"))
+    }
 }

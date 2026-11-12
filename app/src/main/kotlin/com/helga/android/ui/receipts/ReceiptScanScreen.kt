@@ -1,18 +1,13 @@
 package com.helga.android.ui.receipts
 
-import com.helga.android.ui.common.asString
-import com.helga.android.R
-import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.helga.android.ui.common.formatEuro
 import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,62 +15,63 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.background
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Button
-import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
-import android.content.pm.PackageManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.helga.android.R
 import com.helga.android.data.local.ScanSource
 import com.helga.android.data.local.entity.ReceiptItemEntity
+import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.receipts.ReceiptReviewCheck
+import com.helga.android.data.remote.dto.OffProductDto
+import com.helga.android.ui.common.asString
+import com.helga.android.ui.common.formatEuro
+import com.helga.android.ui.components.LoadingIndicator
+import com.helga.android.ui.components.PreviewSurface
+import com.helga.android.ui.components.ThemePreviews
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiptScanScreen(
     shoppingListId: String? = null,
     onBack: () -> Unit,
     onSaved: () -> Unit,
+    onOpenReceipt: (String) -> Unit,
     viewModel: ReceiptScanViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val stores by viewModel.stores.collectAsStateWithLifecycle()
+    val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
+    val suggestionsLoading by viewModel.suggestionsLoading.collectAsStateWithLifecycle()
 
     LaunchedEffect(shoppingListId) {
         viewModel.setShoppingListId(shoppingListId)
@@ -88,7 +84,7 @@ fun ReceiptScanScreen(
     }
 
     // Temporäre Datei + FileProvider-URI für die Kamera-Aufnahme
-    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+    var cameraImageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
@@ -127,7 +123,53 @@ fun ReceiptScanScreen(
         if (granted) doLaunchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
+    ReceiptScanContent(
+        state = uiState,
+        stores = stores,
+        suggestions = suggestions,
+        suggestionsLoading = suggestionsLoading,
+        onBack = onBack,
+        onCamera = ::launchCamera,
+        onGallery = {
+            galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        },
+        onHeaderConfirm = viewModel::updateHeader,
+        onSelectStore = viewModel::selectStore,
+        onRemoveItem = viewModel::removeItem,
+        onUpdateItem = viewModel::updateItem,
+        onSuggest = viewModel::suggestProducts,
+        onClearSuggestions = viewModel::clearSuggestions,
+        onApplyProduct = viewModel::applyProduct,
+        onSave = viewModel::save,
+        onReset = viewModel::reset,
+        onOpenReceipt = onOpenReceipt,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ReceiptScanContent(
+    state: ReceiptScanUiState,
+    stores: List<StoreEntity>,
+    suggestions: List<OffProductDto>,
+    suggestionsLoading: Boolean,
+    onBack: () -> Unit,
+    onCamera: () -> Unit,
+    onGallery: () -> Unit,
+    onHeaderConfirm: (String, String, String, String, Double, Double) -> Unit,
+    onSelectStore: (StoreEntity) -> Unit,
+    onRemoveItem: (ReceiptItemEntity) -> Unit,
+    onUpdateItem: (ReceiptItemEntity) -> Unit,
+    onSuggest: (ReceiptItemEntity) -> Unit,
+    onClearSuggestions: () -> Unit,
+    onApplyProduct: (String, OffProductDto) -> Unit,
+    onSave: () -> Unit,
+    onReset: () -> Unit,
+    onOpenReceipt: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.receipt_scan_title)) },
@@ -145,17 +187,8 @@ fun ReceiptScanScreen(
                 .padding(padding)
                 .padding(16.dp),
         ) {
-            when (val state = uiState) {
-                is ReceiptScanUiState.Idle -> {
-                    CaptureButtons(
-                        onCamera = { launchCamera() },
-                        onGallery = {
-                            galleryLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                    )
-                }
+            when (state) {
+                is ReceiptScanUiState.Idle -> CaptureButtons(onCamera = onCamera, onGallery = onGallery)
 
                 is ReceiptScanUiState.Scanning -> {
                     Column(
@@ -169,16 +202,33 @@ fun ReceiptScanScreen(
                     }
                 }
 
-                is ReceiptScanUiState.Preview -> {
-                    PreviewContent(
-                        state = state,
-                        onStoreNameChange = viewModel::updateStoreName,
-                        onTotalChange = viewModel::updateTotal,
-                        onRemoveItem = viewModel::removeItem,
-                        onUpdateItem = viewModel::updateItem,
-                        onSave = viewModel::save,
-                        onRetry = viewModel::reset,
-                    )
+                is ReceiptScanUiState.Preview -> PreviewContent(
+                    state = state,
+                    stores = stores,
+                    suggestions = suggestions,
+                    suggestionsLoading = suggestionsLoading,
+                    onHeaderConfirm = onHeaderConfirm,
+                    onSelectStore = onSelectStore,
+                    onRemoveItem = onRemoveItem,
+                    onUpdateItem = onUpdateItem,
+                    onSuggest = onSuggest,
+                    onClearSuggestions = onClearSuggestions,
+                    onApplyProduct = onApplyProduct,
+                    onSave = onSave,
+                    onRetry = onReset,
+                )
+
+                is ReceiptScanUiState.Provisional -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        ProvisionalCard(
+                            receiptId = state.receiptId,
+                            queuedOnServer = state.queuedOnServer,
+                            onOpenReceipt = onOpenReceipt,
+                        )
+                    }
                 }
 
                 is ReceiptScanUiState.Error -> {
@@ -189,24 +239,7 @@ fun ReceiptScanScreen(
                     ) {
                         Text(state.message.asString())
                         Spacer(Modifier.height(16.dp))
-                        Button(onClick = viewModel::reset) { Text(stringResource(R.string.action_retry)) }
-                    }
-                }
-
-                is ReceiptScanUiState.Provisional -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Text(
-                            stringResource(
-                                if (state.queuedOnServer) R.string.receipt_scan_provisional_queued
-                                else R.string.receipt_scan_provisional_offline
-                            ),
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Button(onClick = onSaved) { Text(stringResource(R.string.receipt_scan_open_receipt)) }
+                        Button(onClick = onReset) { Text(stringResource(R.string.action_retry)) }
                     }
                 }
 
@@ -235,7 +268,6 @@ private fun CaptureButtons(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Filled.CameraAlt, contentDescription = null)
-            Spacer(Modifier.height(0.dp))
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.receipt_scan_take_photo))
         }
@@ -252,96 +284,79 @@ private fun CaptureButtons(
 }
 
 @Composable
-private fun ReviewBanner() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.colorScheme.errorContainer)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            Icons.Filled.Warning,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(end = 8.dp),
-        )
-        Text(
-            stringResource(R.string.receipt_scan_review_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
-    }
-}
-
-/**
- * Zeigt transparent, wie der Bon gelesen wurde (KI-Vision vs. On-Device-OCR) und
- * macht den rohen OCR-Text bei Bedarf einsehbar – hilft beim Nachvollziehen,
- * warum Positionen evtl. nicht erkannt wurden.
- */
-@Composable
-private fun ScanSourceInfo(source: ScanSource, rawOcrText: String) {
-    var showRaw by remember { mutableStateOf(false) }
-    val label = when (source) {
-        ScanSource.AI -> stringResource(R.string.receipt_scan_source_ai)
-        ScanSource.ON_DEVICE -> stringResource(R.string.receipt_scan_source_ocr)
-    }
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (rawOcrText.isNotBlank()) {
-            TextButton(
-                onClick = { showRaw = !showRaw },
-                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-            ) {
-                Text(if (showRaw) stringResource(R.string.receipt_scan_raw_hide) else stringResource(R.string.receipt_scan_raw_show))
-            }
-            if (showRaw) {
-                Text(
-                    rawOcrText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(8.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun PreviewContent(
     state: ReceiptScanUiState.Preview,
-    onStoreNameChange: (String) -> Unit,
-    onTotalChange: (Double) -> Unit,
+    stores: List<StoreEntity>,
+    suggestions: List<OffProductDto>,
+    suggestionsLoading: Boolean,
+    onHeaderConfirm: (String, String, String, String, Double, Double) -> Unit,
+    onSelectStore: (StoreEntity) -> Unit,
     onRemoveItem: (ReceiptItemEntity) -> Unit,
     onUpdateItem: (ReceiptItemEntity) -> Unit,
+    onSuggest: (ReceiptItemEntity) -> Unit,
+    onClearSuggestions: () -> Unit,
+    onApplyProduct: (String, OffProductDto) -> Unit,
     onSave: () -> Unit,
     onRetry: () -> Unit,
 ) {
-    var totalText by remember(state.totalAmount) {
-        mutableStateOf(if (state.totalAmount > 0) String.format("%.2f", state.totalAmount) else "")
+    var showHeaderDialog by rememberSaveable { mutableStateOf(false) }
+    // Aktuell zur Korrektur geöffnete Position (nur die id überlebt Drehen/Prozess-Tod).
+    var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
+    var showSuggestions by rememberSaveable { mutableStateOf(false) }
+    val editingItem = state.items.firstOrNull { it.id == editingItemId }
+
+    if (showHeaderDialog) {
+        HeaderEditDialog(
+            storeName = state.storeName,
+            storeAddress = state.storeAddress,
+            purchaseDay = state.purchaseDay,
+            purchaseTime = state.purchaseTime,
+            totalAmount = state.totalAmount,
+            discountTotal = state.discountTotal,
+            stores = stores,
+            onSelectStore = onSelectStore,
+            onConfirm = { name, address, day, time, total, discount ->
+                onHeaderConfirm(name, address, day, time, total, discount)
+                showHeaderDialog = false
+            },
+            onDismiss = { showHeaderDialog = false },
+        )
     }
-    // Aktuell zur Korrektur geöffnete Position (null = kein Dialog offen).
-    var editingItem by remember { mutableStateOf<ReceiptItemEntity?>(null) }
 
     editingItem?.let { item ->
         EditItemDialog(
             item = item,
-            onDismiss = { editingItem = null },
+            onDismiss = { editingItemId = null },
             onConfirm = {
                 onUpdateItem(it)
-                editingItem = null
+                editingItemId = null
+            },
+            onAssignProduct = { edited ->
+                onUpdateItem(edited)
+                onSuggest(edited)
+                showSuggestions = true
             },
         )
     }
+
+    if (showSuggestions && editingItem != null) {
+        ProductSuggestionSheet(
+            loading = suggestionsLoading,
+            suggestions = suggestions,
+            onPick = { product ->
+                onApplyProduct(editingItem.id, product)
+                showSuggestions = false
+                editingItemId = null
+            },
+            onDismiss = {
+                showSuggestions = false
+                onClearSuggestions()
+            },
+        )
+    }
+
+    val itemsSum = ReceiptReviewCheck.expectedTotal(state.items, state.discountTotal)
+    val mismatch = ReceiptReviewCheck.sumMismatch(state.totalAmount, state.items, state.discountTotal)
 
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.weight(1f)) {
@@ -356,28 +371,27 @@ private fun PreviewContent(
                 }
             }
             item {
-                OutlinedTextField(
-                    value = state.storeName,
-                    onValueChange = onStoreNameChange,
-                    label = { Text(stringResource(R.string.receipt_scan_store)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
+                ReviewHeaderCard(
+                    storeName = state.storeName,
+                    storeAddress = state.storeAddress,
+                    purchaseDay = state.purchaseDay,
+                    purchaseTime = state.purchaseTime,
+                    totalAmount = state.totalAmount,
+                    discountTotal = state.discountTotal,
+                    onEdit = { showHeaderDialog = true },
                 )
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = totalText,
-                    onValueChange = {
-                        totalText = it
-                        it.replace(",", ".").toDoubleOrNull()?.let(onTotalChange)
-                    },
-                    label = { Text(stringResource(R.string.receipt_scan_total)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
+                Text(
+                    stringResource(
+                        R.string.receipt_review_sum_line, formatEuro(itemsSum), formatEuro(state.totalAmount)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (mismatch) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
                     stringResource(R.string.receipt_scan_items, state.items.size),
-                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
@@ -389,57 +403,19 @@ private fun PreviewContent(
             }
 
             items(state.items, key = { it.id }) { item ->
-                val uncertain = item.id in state.lowConfidenceItemIds
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .then(
-                            if (uncertain) Modifier
-                                .clip(MaterialTheme.shapes.small)
-                                .background(MaterialTheme.colorScheme.errorContainer)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                            else Modifier
-                        ),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (uncertain) {
-                        Icon(
-                            Icons.Filled.Warning,
-                            contentDescription = stringResource(R.string.receipt_scan_check),
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(end = 6.dp),
-                        )
-                    }
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { editingItem = item },
-                    ) {
-                        Text(item.name.ifEmpty { item.rawText })
-                        Text(
-                            "${formatQuantity(item.quantity)} × ${formatEuro(item.unitPrice)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Text(
-                        formatEuro(item.totalPrice),
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clickable { editingItem = item },
-                    )
-                    IconButton(onClick = { onRemoveItem(item) }) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.weekplan_remove_recipe))
-                    }
-                }
+                ReviewItemRow(
+                    item = item,
+                    uncertain = item.id in state.lowConfidenceItemIds,
+                    onEdit = { editingItemId = item.id },
+                    onRemove = { onRemoveItem(item) },
+                )
             }
 
             if (state.items.isEmpty()) {
                 item {
                     Text(
                         stringResource(R.string.receipt_scan_no_items),
-                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }
@@ -463,91 +439,57 @@ private fun PreviewContent(
     }
 }
 
-/**
- * Dialog zum manuellen Korrigieren einer erkannten Position. Der Gesamtpreis wird
- * automatisch aus Menge × Einzelpreis berechnet, solange er nicht von Hand
- * überschrieben wurde (z. B. bei Rabatten oder Pfand auf dem Bon).
- */
+// ── Previews ─────────────────────────────────────────────────────────────────
+
+private fun sampleReview() = ReceiptScanUiState.Preview(
+    receiptId = "r1",
+    storeName = "REWE",
+    storeId = "",
+    storeAddress = "Hauptstr. 12, 12345 Musterstadt",
+    purchaseDay = "2026-11-10",
+    purchaseTime = "17:42",
+    totalAmount = 4.2,
+    discountTotal = 0.3,
+    purchaseDate = 1_794_268_800_000L,
+    rawOcrText = "",
+    items = listOf(
+        ReceiptItemEntity(
+            id = "i1", receiptId = "r1", rawText = "G&G H-MILCH 3,5%", name = "H-Milch 3,5 %",
+            quantity = 2.0, unit = "stk", unitPrice = 0.95, totalPrice = 1.9, category = "milch_eier",
+        ),
+        ReceiptItemEntity(
+            id = "i2", receiptId = "r1", rawText = "BANANE", name = "Bananen", quantity = 0.512, unit = "kg",
+            unitPrice = 1.99, totalPrice = 1.02, discount = 0.3, category = "obst_gemuese", confidence = 0.5,
+        ),
+        ReceiptItemEntity(
+            id = "i3", receiptId = "r1", rawText = "PFAND", name = "Pfand", unitPrice = 0.25, totalPrice = 0.25,
+            isDeposit = 1, category = "pfand",
+        ),
+    ),
+    lowConfidenceItemIds = setOf("i2"),
+    needsReview = true,
+    source = ScanSource.AI,
+)
+
+@ThemePreviews
 @Composable
-private fun EditItemDialog(
-    item: ReceiptItemEntity,
-    onDismiss: () -> Unit,
-    onConfirm: (ReceiptItemEntity) -> Unit,
-) {
-    var name by remember { mutableStateOf(item.name.ifEmpty { item.rawText }) }
-    var quantityText by remember { mutableStateOf(formatQuantity(item.quantity)) }
-    var unitPriceText by remember { mutableStateOf(String.format("%.2f", item.unitPrice)) }
-    var totalText by remember { mutableStateOf(String.format("%.2f", item.totalPrice)) }
-    // Solange true, folgt der Gesamtpreis automatisch Menge × Einzelpreis.
-    var autoTotal by remember { mutableStateOf(true) }
+private fun ReceiptReviewPreview() = PreviewSurface {
+    ReceiptScanContent(
+        state = sampleReview(), stores = emptyList(), suggestions = emptyList(), suggestionsLoading = false,
+        onBack = {}, onCamera = {}, onGallery = {}, onHeaderConfirm = { _, _, _, _, _, _ -> },
+        onSelectStore = {}, onRemoveItem = {}, onUpdateItem = {}, onSuggest = {}, onClearSuggestions = {},
+        onApplyProduct = { _, _ -> }, onSave = {}, onReset = {}, onOpenReceipt = {},
+    )
+}
 
-    fun parse(value: String): Double? = value.replace(",", ".").toDoubleOrNull()
-
-    fun recomputeTotal() {
-        if (!autoTotal) return
-        val q = parse(quantityText)
-        val u = parse(unitPriceText)
-        if (q != null && u != null) totalText = String.format("%.2f", q * u)
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.receipt_scan_edit_item)) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.receipt_scan_item_name)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = quantityText,
-                    onValueChange = { quantityText = it; recomputeTotal() },
-                    label = { Text(stringResource(R.string.recipe_form_quantity)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = unitPriceText,
-                    onValueChange = { unitPriceText = it; recomputeTotal() },
-                    label = { Text(stringResource(R.string.receipt_scan_unit_price)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = totalText,
-                    onValueChange = { totalText = it; autoTotal = false },
-                    label = { Text(stringResource(R.string.receipt_scan_total_price)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val q = parse(quantityText) ?: item.quantity
-                val u = parse(unitPriceText) ?: item.unitPrice
-                val t = parse(totalText) ?: (q * u)
-                onConfirm(
-                    item.copy(
-                        name = name.trim(),
-                        quantity = q,
-                        unitPrice = u,
-                        totalPrice = t,
-                    )
-                )
-            }) { Text(stringResource(R.string.weekplan_export_preview_confirm)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.recipe_delete_confirm_cancel)) }
-        },
+@ThemePreviews
+@Composable
+private fun ReceiptProvisionalPreview() = PreviewSurface {
+    ReceiptScanContent(
+        state = ReceiptScanUiState.Provisional(receiptId = "r1", queuedOnServer = false),
+        stores = emptyList(), suggestions = emptyList(), suggestionsLoading = false,
+        onBack = {}, onCamera = {}, onGallery = {}, onHeaderConfirm = { _, _, _, _, _, _ -> },
+        onSelectStore = {}, onRemoveItem = {}, onUpdateItem = {}, onSuggest = {}, onClearSuggestions = {},
+        onApplyProduct = { _, _ -> }, onSave = {}, onReset = {}, onOpenReceipt = {},
     )
 }

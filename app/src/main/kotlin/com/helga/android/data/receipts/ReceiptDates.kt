@@ -36,6 +36,22 @@ object ReceiptDates {
         return parsed?.format(DISPLAY).orEmpty()
     }
 
+    /**
+     * `TT.MM.JJJJ` (Eingabe im Bearbeiten-Dialog) → `YYYY-MM-DD`. Leer bleibt leer („unbekannt");
+     * ungültige Eingaben (falsches Format, 31.02.) → `null`.
+     */
+    fun parseDisplayDay(text: String): String? {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return ""
+        val match = Regex("""(\d{1,2})\.(\d{1,2})\.(\d{4})""").matchEntire(trimmed) ?: return null
+        val (day, month, year) = match.destructured
+        return try {
+            LocalDate.of(year.toInt(), month.toInt(), day.toInt()).toString()
+        } catch (_: java.time.DateTimeException) {
+            null
+        }
+    }
+
     /** Ältester Tag, der lokal gehalten wird (`months` Monate vor heute); `months <= 0` → alles laden (`null`). */
     fun cutoffDay(today: LocalDate, months: Int): String? =
         if (months <= 0) null else today.minusMonths(months.toLong()).toString()

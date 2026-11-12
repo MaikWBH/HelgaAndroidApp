@@ -331,6 +331,11 @@ fun HelgaNavGraph(
                             shoppingListId = listId.ifBlank { null },
                             onBack = { navController.popBackStack() },
                             onSaved = { navController.popBackStack() },
+                            onOpenReceipt = { id ->
+                                navController.navigate(receiptDetailRoute(id)) {
+                                    popUpTo(ROUTE_RECEIPT_SCAN) { inclusive = true }
+                                }
+                            },
                         )
                     }
                     composable(

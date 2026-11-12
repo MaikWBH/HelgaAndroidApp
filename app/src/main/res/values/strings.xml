@@ -601,4 +601,29 @@
     <string name="receipt_scan_provisional_offline">Vorläufig gespeichert. Die genaue Auswertung folgt, sobald der Server erreichbar ist.</string>
     <string name="receipt_scan_provisional_queued">Vorläufig gespeichert. Die Auswertung läuft auf dem Server nach.</string>
     <string name="receipt_scan_open_receipt">Bon ansehen</string>
+    <!-- Phase 3a: Review (Kopfkarte, Positionen, Produktzuordnung) -->
+    <string name="receipt_review_edit_header">Kopfdaten bearbeiten</string>
+    <string name="receipt_review_header_title">Kopfdaten</string>
+    <string name="receipt_review_address">Adresse</string>
+    <string name="receipt_review_date">Datum (TT.MM.JJJJ)</string>
+    <string name="receipt_review_time">Uhrzeit (HH:MM)</string>
+    <string name="receipt_review_discount_total">Bon-Rabatt (€)</string>
+    <string name="receipt_review_date_invalid">Bitte ein Datum wie 10.11.2026 eingeben</string>
+    <string name="receipt_review_time_invalid">Bitte eine Uhrzeit wie 17:42 eingeben</string>
+    <string name="receipt_review_date_unknown">Datum unbekannt</string>
+    <string name="receipt_review_sum_line">Positionen %1$s · Bon %2$s</string>
+    <string name="receipt_review_discount_item">− %1$s</string>
+    <string name="receipt_review_discount_receipt">Bon-Rabatt − %1$s</string>
+    <string name="receipt_review_deposit">Pfand</string>
+    <string name="receipt_review_unit">Einheit</string>
+    <string name="receipt_review_discount">Rabatt (€)</string>
+    <string name="receipt_review_category">Kategorie</string>
+    <string name="receipt_review_assign_product">Produkt zuordnen</string>
+    <string name="receipt_review_no_matches">Keine Treffer – Name anpassen und erneut suchen</string>
+    <string name="receipt_review_choose_store">Bekannter Markt</string>
+    <string name="receipt_unit_stk">Stück</string>
+    <string name="receipt_unit_kg">kg</string>
+    <string name="receipt_unit_g">g</string>
+    <string name="receipt_unit_l">l</string>
+    <string name="receipt_unit_ml">ml</string>
 </resources>
