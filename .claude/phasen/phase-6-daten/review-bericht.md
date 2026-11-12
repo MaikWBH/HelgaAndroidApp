@@ -272,7 +272,35 @@ _Sub-Agent-Modell: sonnet_
 - Die verlangten Tests (Liste C Fälle 1–12, S17, S19, S20, S22) sind vorhanden.
 
 ## B5 — Container
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B5 — Container
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | doku/casaos-deployment.md:82 vs :95 | Zeile 82 sagt "Ohne gesetzten Wert startet der Server nicht". Zeile 95 sagt "Fehlt `API_KEY`, beendet sich der Container nicht, er wird `unhealthy`". Zeile 82 stammt aus Phase 4 und wurde in Phase 5 nicht angepasst. Beide Sätze stehen nur zwei Schritte auseinander, Leser sehen einen Widerspruch. Die akzeptierte Abweichung betrifft das Containerverhalten, nicht diese Formulierung. | server/CLAUDE.md §Deployment (Hinweis zu fehlendem `API_KEY`) | Niedrig | – |
+| S2 | doku/casaos-deployment.md:90-95 | Der Hinweis "Datenordner muss UID 1000 gehören" steht nach `docker compose up -d --build`. Vermutung: Legt Docker `./data` selbst an, gehört es root. `settings.py:26` (`IMAGES_DIR.mkdir`) scheitert dann bei read_only/UID 1000, und `chown` kommt zu spät. Zudem steht "(Phase 5)" als interne Projektbezeichnung in der Betriebsdoku. | server/CLAUDE.md §Konventionen (neue Schreibpfade nur unter `/app/data`), Doku-Qualität | Niedrig | Ermessensfrage |
+| S3 | server/Dockerfile:20 | Test-Stage prüft per `python -c` hartkodiert dieselben Importnamen wie `app/ai.py:261-262` (`scrape_html`, `NoSchemaFoundInWildMode`, `WebsiteNotImplementedError`). Es fehlt ein Kommentar zum Zweck. Ändert sich der Import in `ai.py`, muss die Dockerfile-Zeile mitgezogen werden. Der Plan gibt die Zeile wörtlich vor, daher als Standards-Konflikt gemeldet. | K-SM Duplicated Code / Mysterious Name | Niedrig | Ermessensfrage |
+| S4 | server/Dockerfile:5,12; :33,35,36; docker-compose.prod.yml:6 | `ENV PIP_NO_CACHE_DIR… PIP_DISABLE_PIP_VERSION_CHECK…` steht in builder und test doppelt. Port 8000 steht in EXPOSE, HEALTHCHECK, CMD und Compose-Ports je einzeln. | K-SM Duplicated Code | Niedrig | Ermessensfrage |
+| S5 | server/Dockerfile:29-30 | `COPY --chown=helga:helga` macht Code (`app/`, `scripts/`) für den Laufzeitnutzer beschreibbar. Ein einfaches `COPY` (root-eigen, lesbar) hätte keine Extra-Schicht und wäre restriktiver. Der Plan schreibt `--chown` vor, daher Standards-Konflikt. Die Prod-Compose mit `read_only` mildert es, das Dev-Compose nicht. | .agents/skills/multi-stage-dockerfile §Security Practices ("Set restrictive file permissions") | Niedrig | Ermessensfrage |
+| S6 | server/requirements-dev.txt:2; Dockerfile:1 | `pytest>=8` ist ungepinnt, obwohl Phase 5 `recipe-scrapers` für reproduzierbare Builds pinnt. Auch das Basis-Image (`python:3.12-slim-bookworm`, ohne Patchversion oder Digest) und transitive Abhängigkeiten sind nicht fixiert. | multi-stage-dockerfile §Base Images / Phase-5-Befund 4 ("reproducible builds") | Niedrig | Ermessensfrage, ändert Verhalten (Build-Ergebnis) |
+| S7 | server/.env.example:22-29 | `ALLOW_NO_AUTH`, `LOG_LEVEL`, `RECEIPT_QUEUE_INTERVAL_SEC` und `WEB_CONCURRENCY` stehen unter der Überschrift "---- KI ----". `settings.py` gruppiert sie dagegen nach Zugang, Logging und Warteschlange. `ALLOW_NO_AUTH` gehört thematisch zu `API_KEY`. | K-SM Mysterious Name (Gliederung) | Niedrig | Ermessensfrage |
+
+Geprüft und ohne Befund:
+- K-SV Schreibpfade: Im Code schreiben nur `/app/data` (`db.py:617`, `images_api.py:39`, `receipts.py:342`, `settings.py:26`) und `/tmp`. Das passt zu `read_only` und `tmpfs`.
+- Healthcheck steht nur noch im Dockerfile.
+- `.dockerignore` schließt `.env` und `data/` aus dem Kontext aus.
+- `.env.example`-Angaben (Defaults, `low|medium|high`, 600/0) stimmen mit `settings.py` und `ai_client.py` überein.
+- Die Hilfezeile `docker-test` und der Container ohne `API_KEY` sind akzeptierte Abweichungen und nicht gemeldet.
+
+**Beifang (Altbestand, ohne Grad):**
+- `.env.example:5`: `API_KEY=changeme` wird vom Start akzeptiert, `main.py:21` prüft nur auf leer. Eine unveränderte Kopie ergibt ein bekanntes Secret bei öffentlicher API.
+- `doku/casaos-deployment.md:133-141`: Migration mit `--src /DATA/AppData/helga/…` im Container, dort ist dieser Pfad nicht gemountet.
+- `doku/casaos-deployment.md:166`: nennt `SERVER_PATH`, das Makefile kennt nur `HOMELAB_PATH`. Zeile 175 beschreibt `make deploy` als "git pull + rebuild", das Ziel gibt aber nur einen Hinweis aus.
+- `server/Makefile:5`: personenbezogener Host und IP fest eingetragen.
+
+**Ergebnis:** 0 Blocker, 0 Hoch, 0 Mittel, 7 Niedrig; schwerster Befund: S1
+
+<Spec-Antwort>
 
 ## B7 — Auswertung und Diagramme (Checkliste)
 <Standards-Antwort> · <Spec-Antwort>
