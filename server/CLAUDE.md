@@ -160,6 +160,6 @@ Alle weiteren Befehle: `make help`
 - KI-Ausfall (Anbieter-Status, nicht erreichbar, unbrauchbare Antwort) → HTTP 502 mit `KI-Dienst hat nicht geantwortet`; Meldungen enthalten nie Schlüssel oder Antwortkörper, Details stehen im Log
 - SSE-Streams: Fehler vor dem ersten Chunk → 502; Abbruch danach → Log, Stream endet ohne `[DONE]`
 - Eingabe-Limits in `models.py`: Kurztexte 200, Langtexte 4000 Zeichen, Tag-Liste 300, Zutaten-/Schrittlisten gedeckelt, Bild-Base64 ca. 8 MiB, `portions` 1–100, OFF-`limit` 1–20
-- Rezept-Import per URL (SSRF-Schutz in `url_guard.py`): nur http/https; Loopback, Privatnetz, Link-Local, Reserviert, Multicast und unspezifizierte Adressen werden abgelehnt, auch nach Weiterleitungen (jeder Hop geprüft, max. 5); Seite max. 5 MiB. Bekannte Grenze: DNS-Rebinding zwischen Prüfung und Abruf
+- Rezept-Import per URL (SSRF-Schutz in `url_guard.py`): nur http/https; Loopback, Privatnetz, Link-Local, Reserviert, Multicast und unspezifizierte Adressen sowie alles nicht global Routbare (z. B. 100.64.0.0/10) werden abgelehnt, auch nach Weiterleitungen (jeder Hop geprüft, max. 5); Seite max. 5 MiB. Bekannte Grenze: DNS-Rebinding zwischen Prüfung und Abruf
 - Bild-Upload: max. 8 MiB (`settings.MAX_IMAGE_BYTES`), darüber 413 ohne Datei
 - Neue Umgebungsvariablen: `ALLOW_NO_AUTH` (nur lokal, Standard aus), `LOG_LEVEL` (Standard `INFO`). Alle übrigen Werte stehen in `settings.py`

@@ -156,7 +156,7 @@ Abschnitt „Tests").
   `Regex("""receiptDao\.(upsertItems|hardDeleteItemsOf|hardDeleteItemsExcept|hardDeleteReceipt)\(""")` treffen.
   Akzeptanz: `V` grün; `TC` = S2 + 1; `grep -c 'upsertReceiptWithItems\|hardDeleteReceiptWithItems' $B/data/repository/ReceiptRepository.kt` ≥ 5.
   Danach nicht pushen (Push nach S9).
-- [ ] **S5 CGNAT sperren (V4)** — Dateien: `$SA/url_guard.py`, `$ST/test_url_guard.py`, `server/CLAUDE.md`.
+- [x] **S5 CGNAT sperren (V4)** — Dateien: `$SA/url_guard.py`, `$ST/test_url_guard.py`, `server/CLAUDE.md`.
   `_is_forbidden`: Rückgabe um `or not ip.is_global` erweitern (bestehende Prüfungen bleiben davor stehen);
   Docstring/Modulkommentar: „Gesperrt ist jede nicht global routbare Adresse, u. a. 100.64.0.0/10 (CGNAT, Tailscale)".
   Test: in `test_blocked_addresses` die Parameter `"http://100.64.0.1/"` und `"http://100.127.255.254/"` ergänzen.

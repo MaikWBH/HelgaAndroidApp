@@ -21,10 +21,12 @@ def _resolve(host: str) -> list[str]:
 
 
 def _is_forbidden(ip: ipaddress._BaseAddress) -> bool:
+    """Gesperrt ist jede nicht global routbare Adresse, u. a. 100.64.0.0/10 (CGNAT, Tailscale)."""
     if ip.version == 6 and ip.ipv4_mapped is not None:
         ip = ip.ipv4_mapped
     return (ip.is_private or ip.is_loopback or ip.is_link_local
-            or ip.is_reserved or ip.is_multicast or ip.is_unspecified)
+            or ip.is_reserved or ip.is_multicast or ip.is_unspecified
+            or not ip.is_global)
 
 
 async def ensure_public_http_url(url: str) -> None:

@@ -42,6 +42,8 @@ def dns(monkeypatch):
     "http://192.168.178.1/",
     "http://10.0.0.5/",
     "http://169.254.169.254/",
+    "http://100.64.0.1/",
+    "http://100.127.255.254/",
     "http://localhost/",
     "http://mixed.example/",
 ])
