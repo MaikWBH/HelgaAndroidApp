@@ -579,7 +579,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `ArchitectureRulesTest`). Zwei Tests: (1) `SyncEngine.kt` enthält weder `ReceiptEntity` noch `receiptDao`;
   (2) außerhalb von `data/receipts/` und `data/local/dao/` ruft keine Datei `hardDeleteReceipt`/`hardDeleteItems`
   auf, mit Ausnahme von `ReceiptRepository.kt`. Akzeptanz: `V` grün.
-- [ ] **S35 Guidelines** — Dateien: `.claude/guidelines/sync-patterns.md`, `.claude/guidelines/architecture-layers.md`,
+- [x] **S35 Guidelines** — Dateien: `.claude/guidelines/sync-patterns.md`, `.claude/guidelines/architecture-layers.md`,
   `CLAUDE.md` (Wurzel). `sync-patterns.md`: neuer Abschnitt „Server-Archiv mit lokalem Cache (Bons)" (höchstens 30
   Zeilen): Bons nicht in `SyncEngine`; Schreiben weiter mit `dirty`/`updatedAt`; Push/Pull über `ReceiptSyncer`;
   hartes Löschen nur für serverbestätigte Zeilen (`dirty = 0`, `pendingUpload = 0`) und nur in `data/receipts/`;

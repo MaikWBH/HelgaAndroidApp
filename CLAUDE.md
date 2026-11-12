@@ -104,6 +104,10 @@ Jede Entity besitzt:
 
 **Trigger:** Connectivity-Change (NetworkCallback), App-Foreground, manuell (Pull-to-Refresh in Settings).
 
+**Ausnahme Bons:** Bons (`Receipt`, `ReceiptItem`) liegen als Archiv auf dem Server und laufen über ein eigenes
+bon-weises Protokoll (`ReceiptSyncer`, `/api/receipts`), nicht über `GET/POST /api/sync`. Das Handy hält nur ein
+Zeitfenster; Regeln siehe `.claude/guidelines/sync-patterns.md` (Abschnitt „Server-Archiv mit lokalem Cache").
+
 ---
 
 ## Sync-Backend (`server/`)
@@ -129,7 +133,7 @@ Die Server-URL wird beim ersten App-Start eingegeben und in `DataStore` gespeich
 - **Benennung:** Kotlin-Standard (camelCase, PascalCase für Klassen)
 - **Single Source of Truth:** ViewModels lesen **immer** aus Room, nie direkt aus Retrofit-Responses
 - **Fehlerbehandlung:** `sealed class UiState<T>` in ViewModels; Netzwerkfehler sind nicht-fatal (Snackbar), Room-Fehler sind fatal (Dialog)
-- **Soft-Delete:** Nie `DELETE` in Room ohne `deleted = true` + Sync-Bestätigung
+- **Soft-Delete:** Nie `DELETE` in Room ohne `deleted = true` + Sync-Bestätigung (Ausnahme: Cache-Verdrängung der Bons)
 - **IDs:** Clientseitig als UUID generieren – kein Server-Roundtrip zum Anlegen nötig
 - **Bilder:** Erst lokal im App-Cache speichern, nach Sync zum Server hochladen; Coil liest zuerst aus lokalem Cache
 - **Streaming (SSE):** KI-Generierung und Mealie-Import via OkHttp `EventSource`
