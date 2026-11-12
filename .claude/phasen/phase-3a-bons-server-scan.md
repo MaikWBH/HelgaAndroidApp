@@ -588,7 +588,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   Dienst-Paket nennen. `CLAUDE.md`: im Abschnitt „Sync-Protokoll" ein Absatz „Ausnahme Bons" (3 Zeilen) und in
   „Konventionen" bei Soft-Delete der Zusatz „(Ausnahme: Cache-Verdrängung der Bons)". Akzeptanz:
   `grep -c 'Server-Archiv' .claude/guidelines/sync-patterns.md` ≥ 1.
-- [ ] **S36 Pläne und Index** — Dateien: `.claude/features/bons-kosten/plan.md`, `.claude/features/sync/plan.md`,
+- [x] **S36 Pläne und Index** — Dateien: `.claude/features/bons-kosten/plan.md`, `.claude/features/sync/plan.md`,
   `.claude/features/naehrwerte/plan.md`, `.claude/features/README.md`, `.claude/phasen/README.md`.
   `bons-kosten/plan.md`: Abschnitt „Phase 3a" (umgesetzte Punkte in 8–10 Zeilen), Frage 8 mit Vermerk „überholt durch
   Phase 3, Entscheidung 4", Entscheidungszeilen für Server-Archiv, Haiku 5.5, Lexikon; Umfang-Tabelle um
@@ -611,15 +611,17 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - `:wear`-Modul und `ui/widget/`.
 
 ## Abschluss
-- [ ] Baseline aus S0 notiert (Server-Tests, App-Tests)
-- [ ] `VS` grün (Anzahl Tests notieren), `V` grün (Anzahl Tests notieren)
-- [ ] `app/schemas/**/37.json` committet, `Migration36To37Test` grün
-- [ ] Bereichs-`plan.md`, Feature-Index, Guidelines aktualisiert (S35, S36)
-- [ ] Gemeldete Abweichungen und Ausnahmen (je Schritt eine Zeile)
-- [ ] Gesammelte „Prüfliste (Gerät)" aus S12, S23, S25, S29–S32 und der Ausroll-Hinweis aus S33 für den Nutzer
-      (von Stufe B nicht abgehakt)
+- [x] Baseline aus S0 notiert: Server 11 Tests, App 154 Tests, `version = 36` (siehe unten)
+- [x] `VS` grün: **91 Tests** · `V` grün: **213 Tests**, 0 Fehler (Lauf am Ende von S36; `BUILD SUCCESSFUL`)
+- [x] `app/schemas/**/37.json` committet, `Migration36To37Test` grün
+- [x] Bereichs-`plan.md`, Feature-Index, Guidelines aktualisiert (S35, S36)
+- [x] Gemeldete Abweichungen und Ausnahmen (je Schritt eine Zeile, siehe „Notizen Umsetzung 3a")
+- [x] Gesammelte „Prüfliste (Gerät)" und Ausroll-Hinweis stehen unter „Prüflisten (Nutzer, nicht abgehakt)" —
+      von Stufe B nicht abgehakt, weil ohne Emulator nicht prüfbar
 
-## Abschluss
+**Nicht geprüft (kein Emulator, kein echter KI-Schlüssel):** das Aussehen und Verhalten von Scan, Review, Liste, Detail
+und Lexikon auf dem Gerät, der Offline-Scan mit echtem WorkManager, die Haiku-5.5-Qualität auf echten Bons (Testset-Skript
+S12) und der Zwei-Geräte-Abgleich. Die Logik dahinter ist durch Unit- bzw. Server-Tests abgedeckt.
 
 ### Baseline S0 (2026-11-11)
 - Server: `pytest` 11 passed · App: `V` 154 Tests, grün · `version = 36` in `AppDatabase.kt`: 1 Treffer.

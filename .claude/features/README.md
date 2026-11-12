@@ -3,8 +3,8 @@
 Routing-Einstieg für die Feature-für-Feature-Verbesserung. Diese Datei ist die **einzige
 Stelle mit Gesamtstatus**; der inhaltliche Stand liegt jeweils im `plan.md` des Bereichs.
 
-**Stand:** 2026-08-31 · **Basis:** DB v36, 131 Kotlin-Dateien (app-Modul; seit plattform A3 dazu
-ein eigenständiges `:wear`-Gradle-Modul, 4 Kotlin-Dateien), 25 Room-Entities — alle elf
+**Stand:** 2026-11-12 · **Basis:** DB v37, 167 Kotlin-Dateien (app-Modul; seit plattform A3 dazu
+ein eigenständiges `:wear`-Gradle-Modul, 4 Kotlin-Dateien), 26 Room-Entities — alle elf
 Bereiche interviewt
 
 ➡️ **Womit anfangen?** [ROADMAP.md](ROADMAP.md) sortiert alle 58 offenen Punkte nach
@@ -86,6 +86,7 @@ Gilt für alle Pläne, hier einmal zentral festgehalten statt elfmal wiederholt:
 | `items()` ohne `key` | 0 Stellen in Compose-Listen (Phase 2) | [compose-performance](../guidelines/compose-performance.md) |
 | `contentDescription = null` | Durchsicht abgeschlossen (plattform A2): 27 von 82 Stellen waren unbeschriftete Bedienelemente, jetzt beschriftet; verbleibende 55 bewusst dekorativ/redundant | [ux-accessibility](../guidelines/ux-accessibility.md) |
 | Nicht gesyncte Entities | 0 von 23 — behoben: `OffProductEntity` jetzt an `SyncEngine` angebunden (naehrwerte A2), `WeekplanTemplateEntity`/`WeekplanTemplateEntryEntity` per wochenplan A1 komplett entfernt statt angebunden | [sync-patterns](../guidelines/sync-patterns.md) |
+| Bon-Archiv | Bons laufen seit Phase 3a außerhalb des Voll-Syncs (`ReceiptSyncer`, `/api/receipts`); das Handy hält nur ein Zeitfenster, der Server löscht nie | [sync-patterns](../guidelines/sync-patterns.md) |
 | Benachrichtigungen wirkungslos | `POST_NOTIFICATIONS` fehlt im Manifest und wird nie zur Laufzeit angefragt — bei `targetSdk 35` verwirft Android 13+ jede Zustellung. Betrifft die fertigen Einkaufstag- und Koch-Erinnerungen; Aufgabe in [plattform](plattform/plan.md) A4 | – |
 | Schichtung ViewModel → Repository | Phase 1 umgesetzt: keine DAO-/Retrofit-Importe mehr in ViewModels (Ausnahme `SseClient`); Test `ArchitectureRulesTest`; `WeekplanViewModel` 555 Zeilen (bewusst akzeptiert) | [architecture-layers](guidelines/architecture-layers.md) |
 | UI-Konventionen | Phase 2 umgesetzt: vollständige Farbschemata mit Dynamic-Color-Option, Insets am NavHost, NavigationRail, Strings/Plurals/`UiText`, Rollen und `rememberSaveable`; Test `UiConventionsTest` | [ux-accessibility](../guidelines/ux-accessibility.md) §13 |

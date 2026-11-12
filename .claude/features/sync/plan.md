@@ -178,3 +178,5 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Automatisierte Sync-Vollständigkeitsprüfung wird eingeführt | Verhindert Wiederholung des „vergessene Entity"-Musters |
 | 2026-08-30 | Bilder bekommen einen proaktiven Download-Mechanismus | Nutzer legt Wert auf Bilder auf allen Geräten, auch offline |
 | 2026-08-30 | Konflikt-Sichtbarkeit (Frage 5 aus der urspr. Liste) bleibt wie bisher still per LWW | Kein bewusster Datenverlust bekannt, kein Bedarf an sichtbarer Konfliktauflösung geäußert |
+
+**Phase 3a:** Bons (`Receipt`, `ReceiptItem`) laufen seit Phase 3a außerhalb des Voll-Syncs über ein eigenes bon-weises Protokoll (`ReceiptSyncer`, `/api/receipts`); Regeln in `.claude/guidelines/sync-patterns.md`, Abschnitt „Server-Archiv mit lokalem Cache".

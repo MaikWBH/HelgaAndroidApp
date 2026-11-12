@@ -14,7 +14,8 @@ bisherigen Dokumentation auftauchte.
 | DAO | `app/src/main/kotlin/com/helga/android/data/local/dao/ReceiptDao.kt`, `MonthlyBudgetDao.kt` |
 | Repository | `app/src/main/kotlin/com/helga/android/data/repository/ReceiptRepository.kt` |
 | Hilfsklassen | `app/src/main/kotlin/com/helga/android/data/util/ReceiptImagePreprocessor.kt`, `ReceiptItemNormalizer.kt` |
-| Server | `/api/ai/parse-receipt`, `/api/receipts/reconcile` in `server/app/main.py` |
+| Bon-Archiv (Phase 3a) | `app/src/main/kotlin/com/helga/android/data/receipts/` — `ReceiptSyncer`, `ReceiptUploader`, `ReceiptImageStore`, `ReceiptScanFlow`, `ReceiptReviewCheck`, `ReceiptMapping`, `ReceiptDates`; `ReceiptLexiconEntity`/`ReceiptLexiconDao`, `ReceiptLexiconRepository` |
+| Server | `/api/ai/parse-receipt`, `/api/receipts/reconcile` in `server/app/main.py`; Bon-Archiv: `server/app/receipt_api.py`, `receipts.py`, `receipt_text.py`, `categories.py`, `settings.py`, `auth.py` (`/api/receipts…`) |
 | Routen | 6 der 21 Navigationsrouten in `app/src/main/kotlin/com/helga/android/HelgaNavGraph.kt` |
 
 ## Ist-Analyse
@@ -83,6 +84,8 @@ String-Verarbeitung — ohne Tests ist jede Änderung daran riskant.
    Antwort: Ja, aber einstellbar — Startwert 3 Monate.
 8. **Braucht der Scan einen Offline-Weg?**
    Antwort: Server-Pflicht ist akzeptabel, kein Offline-Weg nötig.
+   **Überholt durch Phase 3 (Entscheidung 4):** Offline wird gepuffert; bis der Server erreichbar ist, zeigt die App
+   vorläufige ML-Kit-Werte, die Auswertung wird nachgeholt.
 9. **Nachfrage — wo soll der Ein-Klick-Zugang liegen?**
    Antwort: Eigener Bottom-Nav-Tab (viertes Icon neben Einkaufsliste/Rezepte/Wochenplan), führt
    auf `ReceiptListScreen` — die bietet bereits Scan/Kostenüberblick/Preisverlauf als
@@ -140,7 +143,10 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Vierter Bottom-Nav-Tab statt App-Shortcut oder TopBar-Icon | Nutzer bevorzugt den klassischen, immer sichtbaren Weg gegenüber weniger entdeckbaren Alternativen |
 | 2026-08-30 | Bestehende Einstiege (Menüpunkt, Erinnerungs-Banner) bleiben zusätzlich bestehen | Kein Grund zum Entfernen, der neue Tab ergänzt statt ersetzt |
 | 2026-08-30 | Automatische Bon-Löschung wird einstellbar, nicht fest | Nutzer will Kontrolle über die Aufbewahrungsdauer, Startwert 3 Monate |
-| 2026-08-30 | Preiswarnung, Budget-Granularität, Offline-Scan bleiben unverändert | Im Interview kein Bedarf geäußert |
+| 2026-08-30 | Preiswarnung und Budget-Granularität bleiben unverändert | Im Interview kein Bedarf geäußert |
+| 2026-11-11 | Bons liegen als Archiv nur auf dem Server; das Handy hält die letzten Monate plus eine Upload-Warteschlange | Handy soll nicht zugemüllt werden; eigenes bon-weises Protokoll statt Voll-Sync (Phase 3) |
+| 2026-11-11 | Alle Bon-KI-Aufrufe laufen mit Haiku 5.5 (`AI_RECEIPT_MODEL`), Qualität per Testset geprüft | Kosten gering halten; kein automatischer Rückfall auf ein größeres Modell |
+| 2026-11-11 | Lernendes Produkt-Lexikon je Markt (Kürzel → Artikel), lernt automatisch aus Korrekturen im Review | Gleicher Bon-Artikel soll künftig ohne Nachkorrektur stimmen |
 
 ---
 
@@ -150,3 +156,12 @@ _Weitere Aufgaben nach dem Interview._
 
 - Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).
 - Leer-/Fehlerzustände und Layout der Bon-Screens folgen in Phase 3.
+
+## Phase 3a (Bons, Server-Archiv, Scan, Review)
+
+- Server: `/api/receipts…` (Liste, PUT/DELETE, Scan, Foto, Re-Parse, Lexikon), Warteschlange für fehlgeschlagene KI-Auswertung, Bon-Modell Haiku 5.5, Testset-Skript, Wiederherstellungs-Skript.
+- Room v37: Uhrzeit, Filiale, Rabatte, Pfand, Einheit, Kategorie, `pendingUpload`, `cachedUntil`; `receipt_lexicon`.
+- Scan: Foto verkleinert zum Server, KI liest aus; ohne Server vorläufige ML-Kit-Werte und Upload-Warteschlange (WorkManager).
+- Review-Ansicht mit Kopfkarte, Rabatt je Position, Pfand, Kategorie und OFF-Produktzuordnung; Bon-Liste mit Monatsgruppen, Status-Chips und „Ältere Bons laden"; Detail mit Neu-auslesen.
+- Einstellungen: „Bons offline behalten" (Server löscht nie), Lexikon-Ansicht.
+- Details und Prüflisten: [phase-3a](../../phasen/phase-3a-bons-server-scan.md). Auswertung, Diagramme und Gang-Kategorien folgen in [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).
