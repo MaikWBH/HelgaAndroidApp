@@ -171,7 +171,7 @@ Zusätzlich:
   Gleichstand in `topProducts` (stabil nach `key`). Akzeptanz: `V` grün. Danach Block B pushen.
 
 ### Block C — App: Diagramme und Kostenübersicht (Befunde 1–5)
-- [ ] **S9 Rechenkern der Diagramme** — Dateien: neu `$U/receipts/charts/ChartMath.kt`, neu `$T/ChartMathTest.kt`.
+- [x] **S9 Rechenkern der Diagramme** — Dateien: neu `$U/receipts/charts/ChartMath.kt`, neu `$T/ChartMathTest.kt`.
   Reines Kotlin, kein Compose-Import: `niceMax(value: Double): Double` (kleinster Wert aus {1, 2, 2.5, 5, 10} × 10ⁿ,
   der ≥ `value` ist; `value <= 0` → 1.0); `fraction(value, max): Float` (auf 0–1 begrenzt, `max <= 0` → 0);
   `data class ShareSlice(key, label, amount, fraction, startAngle, sweepAngle)` und `shareSlices(items:
