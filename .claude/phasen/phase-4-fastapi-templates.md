@@ -57,7 +57,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
 ## Schritte (Stufe B arbeitet nur diese Liste ab)
 
 ### Block A — Fundament (Befunde 3, 7)
-- [ ] **S0 Baseline** — `V` ausführen, Testzahl unter „Abschluss" notieren (erwartet 110). Akzeptanz: grün.
+- [x] **S0 Baseline** — `V` ausführen, Testzahl unter „Abschluss" notieren (erwartet 110). Akzeptanz: grün.
 - [ ] **S1 Konfiguration zentral** — Dateien: `$SA/settings.py`, `$SA/ai.py`, `$SA/db.py`,
   `$S/scripts/receipt_testset.py`, betroffene Tests in `$ST`, `$S/.env.example`. In `settings.py` ergänzen (alle mit
   `os.getenv`, Defaults unverändert): `AI_PROVIDER` („openai"), `AI_API_KEY`, `AI_MODEL`, `AI_API_BASE`,
