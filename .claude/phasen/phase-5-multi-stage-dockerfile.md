@@ -158,7 +158,7 @@ zeigt die Kontextgröße.
   ausgeführt (Proxy-Workaround nötig). Akzeptanz: `VT` grün; `make -n docker-test` zeigt den Befehl. Danach Block A pushen.
 
 ### Block B — Compose, Doku
-- [ ] **S5 Prod-Compose härten** — Datei: `$S/docker-compose.prod.yml`. Den kompletten `healthcheck:`-Block entfernen
+- [x] **S5 Prod-Compose härten** — Datei: `$S/docker-compose.prod.yml`. Den kompletten `healthcheck:`-Block entfernen
   (steht im Dockerfile). Unter `helga-sync:` ergänzen: `read_only: true`, `tmpfs:` mit `- /tmp`, `cap_drop:` mit `- ALL`,
   `security_opt:` mit `- no-new-privileges:true`. `build`, `restart`, `ports`, `volumes`, `env_file`, `logging` unverändert.
   Verifikation: (a) `cd $S && docker compose -f docker-compose.prod.yml config > /dev/null` (Syntax) und
