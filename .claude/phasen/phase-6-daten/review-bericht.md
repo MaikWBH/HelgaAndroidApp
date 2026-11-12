@@ -39,7 +39,31 @@ Lösungsvorschlag aus diesem Bericht bzw. „Vorschlag: <ein Satz>">
 | V16 | B9 | `ui/recipes/RecipeListViewModel.kt:44-47`, `ui/weekplan/WeekplanRecipePickerViewModel.kt:37-39` | öffentliche `MutableStateFlow` (kotlin-quality §3), Altbestand | – | – | Beifang |
 
 ## B3 — Server-Bon-Archiv
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B3 — Server-Bon-Archiv
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | receipt_api.py:99,61,53 (Modelle models.py:429-472) | PUT und `preliminary` nehmen `ReceiptIn`/`ReceiptItemIn` ohne jedes Limit (Texte, `id`, `items` unbegrenzt); Form `shopping_list_id` ungedeckelt | server/CLAUDE.md §Konventionen „Eingabe-Limits in models.py“ | Mittel | ändert Verhalten |
+| S2 | receipts.py:19,334 | `^…$` mit `match` lässt abschließendes `\n` durch; Dateiname `receipt_<id>\n.jpg` | §Konventionen Pfad-/Eingabeprüfung | Niedrig | ändert Verhalten |
+| S3 | receipts.py:342,352,494 | V11-Nachtrag: `dest.open("wb")`, `dest.unlink`, `is_file()` laufen noch direkt im Event-Loop | §Konventionen „kein blockierendes Datei-I/O“ (Muster images_api.py) | Niedrig | – |
+| S4 | receipts.py:460,702; receipt_api.py:129 | KI-Ausfall in `_ai_parse`/`categorize`/`reparse` ergibt 200 (leer bzw. `parsed:false`) statt 502; dokumentiert ist nur der Scan-Fallback | §Konventionen „KI-Ausfall → 502“ (Plan-Konflikt) | Niedrig | ändert Verhalten, Ermessensfrage |
+| S5 | receipt_api.py:65-69,119 | Router fragt per SQL direkt Bon-Zustand ab, obwohl `receipts._receipt_row` existiert | Feature Envy | Niedrig | Ermessensfrage |
+| S6 | receipts.py:1-2,497,521,523,596 | Docstring „committet nicht selbst“ falsch (`categorize` :717, `reparse`, `process_parse_queue`); `db_factory` in `process_parse_queue` ohne abweichenden Aufrufer; Imports im Funktionskörper, obwohl `.db` oben importiert wird | Speculative Generality | Niedrig | Ermessensfrage |
+| S7 | sync.py:244-283, :229, :271; db.py:538-540 | `_push_legacy_receipts` wiederholt LWW-/Upsert-Form von `push_records`; `strftime(…'+2 hours')` doppelt (db.py, sync.py); Tabellen-Sonderfälle per `if table ==` neben `PRESERVE_IF_UNSET` | Duplicated Code / Repeated Switches | Niedrig | Ermessensfrage |
+| S8 | scripts/receipt_testset.py:32,39; restore_purged_receipts.py:63 | `_clean` dupliziert `receipt_text._clean_store_name`; `utcfromtimestamp(...).strftime` doppelt, ab Python 3.12 veraltet | Duplicated Code | Niedrig | Ermessensfrage |
+| S9 | receipts.py:591-674 | `aggregate_rows`: fünfmal gleiche Zeilenform mit 9 Schlüsseln; Namen `t,w,st,c,p,v` | Duplicated Code / Mysterious Name | Niedrig | Ermessensfrage |
+| S10 | receipt_api.py:74; receipts.py:393,429,466 | `image_name, shopping_list_id, captured_at` (+`preliminary`) wandern gemeinsam durch drei Funktionen | Data Clumps | Niedrig | Ermessensfrage |
+| S11 | receipts.py:412,421,437,447,561,600; receipt_api.py:69 | Status-/Parse-Status-Strings als Literale verstreut; nur `LEARNING_STATUSES` ist Konstante | Primitive Obsession | Niedrig | Ermessensfrage |
+| S12 | receipts.py (719 Zeilen) | CRUD, Lexikon/Lernen, Foto-I/O, KI-Scan, Warteschlange, Aggregate (:591), Kategorisieren (:677) in einem Modul | Divergent Change | Niedrig | Ermessensfrage |
+| S13 | receipt_api.py:79-86 | Nur eine Leerzeile vor `@router.get("/aggregates")`; verwaister Platzhalterkommentar „weitere feste Pfade folgen…“ | Stil | Niedrig | – |
+| S14 | test_receipt_aggregates.py:1, test_receipt_lexicon.py:23, test_receipt_scan.py:41, test_receipts_crud.py:21, test_sync_legacy_receipts.py:10 | `put`-Helfer fünfmal identisch; `RID`/`scan` in queue+scan doppelt; Reconcile-Endpunkttest doppelt (test_receipts_crud.py:107, test_reconcile_receipt.py:59) | Duplicated Code | Niedrig | Ermessensfrage |
+
+**Beifang (Altbestand, ohne Grad):** keiner
+
+**Ergebnis:** 0 Blocker, 0 Hoch, 1 Mittel, 13 Niedrig; schwerster Befund: S1
+
+<Spec-Antwort>
 
 ## B2 — Bon-Protokoll App
 <Standards-Antwort> · <Spec-Antwort>
