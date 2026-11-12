@@ -283,7 +283,7 @@ Zusätzlich:
   Block C pushen.
 
 ### Block D — Gang-Kategorien und Auto-Zuordnung (Befunde 6–10)
-- [ ] **S17 Repository der Märkte** — Dateien: `$B/data/model/ProductCategory.kt`,
+- [x] **S17 Repository der Märkte** — Dateien: `$B/data/model/ProductCategory.kt`,
   `$B/data/repository/StoreRepository.kt`, `$B/data/local/dao/StoreDao.kt`, neu `$T/StoreRepositoryAisleTest.kt`.
   `ProductCategory` bekommt `val defaultAisleName: String` (deutscher Name aus dem Katalog; Datenwert wie der
   bisherige `DEFAULT_AISLE_TEMPLATE`, kein UI-Text). `DEFAULT_AISLE_TEMPLATE` wird zu
