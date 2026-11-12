@@ -39,15 +39,13 @@ SYNC_TABLES = [
     "weekplan_settings",
     "weekplan_constraints",
     "off_products",
-    "receipts",
-    "receipt_items",
     "monthly_budgets",
     "weekplan_day_markers",
     "weekplan_day_marker_assignments",
 ]
 
-# Bon-Tabellen (eigenes bon-weises Protokoll, Phase 3a). Bleiben bis zur Umschaltung in
-# Block G zusätzlich in SYNC_TABLES, damit alte App-Versionen weiter funktionieren.
+# Bon-Tabellen: eigenes bon-weises Protokoll (/api/receipts, Phase 3a) statt Voll-Sync. Alte App-Versionen
+# dürfen sie weiterhin über POST /api/sync einliefern (sync.LEGACY_PUSH_TABLES), erhalten sie aber nicht mehr zurück.
 RECEIPT_TABLES = ["receipts", "receipt_items"]
 
 SCHEMA = """
@@ -570,7 +568,7 @@ async def _ensure_server_seq(db):
     Daten weiterhin in sinnvoller Reihenfolge geliefert werden. Neue Schreib-
     vorgänge erhalten ab dann eine monotone Commit-Sequenz (siehe push_records).
     """
-    for table in SYNC_TABLES:
+    for table in SYNC_TABLES + RECEIPT_TABLES:
         async with db.execute(f"PRAGMA table_info({table})") as cursor:
             existing = {row[1] for row in await cursor.fetchall()}
         if "server_seq" not in existing:
@@ -585,7 +583,7 @@ async def _ensure_server_seq(db):
     # Globalen Zähler auf das Maximum aller server_seq heben, damit die nächste
     # Commit-Sequenz garantiert über allen bestehenden Werten liegt.
     global_max = 0
-    for table in SYNC_TABLES:
+    for table in SYNC_TABLES + RECEIPT_TABLES:
         async with db.execute(f"SELECT COALESCE(MAX(server_seq), 0) FROM {table}") as cur:
             value = (await cur.fetchone())[0] or 0
             if value > global_max:

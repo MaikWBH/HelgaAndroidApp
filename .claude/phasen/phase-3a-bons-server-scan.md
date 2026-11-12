@@ -564,7 +564,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   einer Review-Korrektur, Löschen entfernt ihn und die Korrektur greift beim nächsten Scan nicht mehr.
 
 ### Block G — Umschaltung der Alt-Clients, Absicherung, Doku
-- [ ] **S33 Server: Bons raus aus dem Voll-Sync** — Dateien: `$SA/db.py`, `$SA/sync.py`, neu
+- [x] **S33 Server: Bons raus aus dem Voll-Sync** — Dateien: `$SA/db.py`, `$SA/sync.py`, neu
   `$ST/test_sync_legacy_receipts.py`, neu `$ST/test_sync_basic.py`. `SYNC_TABLES` ohne `receipts`/`receipt_items`;
   `_ensure_server_seq` iteriert über `SYNC_TABLES + RECEIPT_TABLES`; `sync.py` nach Vertrag 7 (`LEGACY_PUSH_TABLES`,
   `pull_since` liefert die beiden Tabellen nicht mehr; `SyncPullResponse(**result)` bekommt für sie leere Listen).
@@ -643,3 +643,4 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - **S30 Bon-Liste (Gerät):** Status-Chips sichtbar; „Ältere Bons laden" holt den Vormonat, offline erscheint die Meldung; leere Liste zeigt den Leerzustand.
 - **S31 Bon-Detail (Gerät):** vorläufiger Bon zeigt das lokale Foto und lässt sich nicht bearbeiten; „Neu auslesen" ersetzt die Werte; Foto eines alten Bons lädt vom Server.
 - **S32 Lexikon (Gerät):** Eintrag erscheint nach einer Review-Korrektur, Löschen entfernt ihn und die Korrektur greift beim nächsten Scan nicht mehr.
+- **S33 Ausrollen (Nutzer):** Reihenfolge = zuerst die Server-Version mit dieser Phase deployen, dann die neue App auf **beiden** Handys installieren. Bis dahin bleiben alte App-Versionen funktionsfähig (sie liefern Bons weiter über `POST /api/sync` ein; Löschungen werden ignoriert), sehen aber keine Bons anderer Geräte mehr. Vorher einmal `make backup` und `python scripts/restore_purged_receipts.py --db data/recipes.db` (nur Liste) ansehen.
