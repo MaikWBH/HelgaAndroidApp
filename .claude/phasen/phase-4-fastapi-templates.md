@@ -10,7 +10,7 @@ Pfade: `$S` = `server` · `$SA` = `server/app` · `$ST` = `server/tests`
 Kein Docker, keine echten KI-Aufrufe. Jeder Schritt endet mit grünem `V`; die Testzahl darf nur steigen.
 
 ## Modelle
-- Definition: Sonnet 5.5 · Umsetzung: **wird vor Stufe B gewählt (Gate)** · Datum: 2026-11-12
+- Definition: Sonnet 5.5 · Umsetzung: Haiku 5.5 · Datum: 2026-11-12 (Plan vom Nutzer freigegeben)
 
 ## Ziel und Bereich
 `server/app/main.py` bündelt Sync, KI, Bilder, Open Food Facts und Vorschläge in einer Datei; `ai.py` (849 Zeilen)
