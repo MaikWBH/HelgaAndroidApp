@@ -106,7 +106,27 @@ _Sub-Agent-Modell: sonnet_
 
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 3 (S1–S3), Niedrig 11 (S4–S14); schwerster Befund: S1
 
-<Spec-Antwort>
+### Spec — B2 — Bon-Protokoll App
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|-------------|---------------|--------|----------------------------|------|------------|
+| P1 | `data/receipts/ReceiptScanFlow.kt:55-59` mit `ReceiptSyncer.kt:42-44` | c | Vermutung: Scan mit Server-KI-Fehler sendet kein `preliminary`, der Server legt eine leere Hülle mit `updated_at = now_ms()` an. Der Bon wird lokal mit `dirty = 1` und `updatedAt` = Uhrzeit vor dem Aufruf gespeichert. Der nächste Push verliert per LWW (`applied = false`) und überschreibt die ML-Kit-Werte durch die leere Hülle. Das hängt von der Uhrenabweichung ab; die Werte sind weg, bis die Server-Warteschlange den Bon ausliest (nach 5 Fehlversuchen bleibt er leer). Der Code folgt dem Wortlaut, der Widerspruch liegt in der Spec. | phase-3a S24 (4): „… `dirty = 1`, `updatedAt = now`“; server-vertrag §3.1 PUT: „Server `updated_at` > Eingabe → `applied = false`“, Scan (5): „leere Hülle“ | Mittel | ändert Verhalten |
+| P2 | `data/repository/ReceiptRepository.kt:257-272` | b/c | `loadOlderMonth` nutzt einen In-Memory-`olderMonthCursor`, den die Spec nicht kennt. Der Cursor wird nie zurückgesetzt. Nach 24 h evictet `SyncWorker` die geladenen Monate, der Cursor steht aber weiter. Der nächste Klick überspringt die verdrängten Monate und lässt eine Lücke. | phase-3a S26: „`loadOlderMonth()` (Monat vor `oldestPurchaseDay()`, bzw. vor dem aktuellen Monat; … 24 h)“ | Mittel | ändert Verhalten |
+| P3 | `data/receipts/ReceiptUploader.kt:96-99` | a/c | Vermutung: Bestandsfotos (unverkleinerte Kopie des Altcodes) werden unverändert hochgeladen. Der Server begrenzt auf 8 MB. Ein 413 zählt als 4xx, die Zeile bleibt mit `pendingUpload = 1`. Dann überspringt der Pull sie dauerhaft (`ReceiptSyncer.kt:75`), `evictableIds` nimmt sie nie heraus, und der Foto-Upload wird bei jedem Sync wiederholt. | phase-3a Annahme 1: „… vor dem Upload verkleinert (2000 px, JPEG 85)“; S25: „4xx → loggen, Zeile bleibt“ | Mittel | ändert Verhalten |
+| P4 | `data/receipts/ReceiptSyncer.kt:47-50` | b | `pushDirty` fängt alle HTTP-4xx ab und lässt den Bon dirty. Das steht nicht in der Spec; dort gibt es nur PUT/DELETE und Room-Schreiben. Bei 401 oder 422 wird jeder Sync-Lauf alle Bons erneut versuchen. | phase-3a S22: „`pushDirty()` — … `deleteReceipt` … sonst `putReceipt` …“ | Niedrig | Ermessensfrage |
+| P5 | `data/remote/dto/ReceiptDto.kt:12,35,61,75,105,128` | c | Weitere Fundstellen zu V10: `id` (4 DTOs), `updatedAt` in `ReceiptUpsertDto` und `query` in `OffSearchRequest` haben keinen Standardwert. | phase-3a S18: „alle Felder mit Standardwerten“ | Niedrig | Ermessensfrage |
+| P6 | `ReceiptSyncerTest.kt:62-73` | d | Der Pull-Test prüft nur die Argumente von `replaceWithServerState`. „entfernt fehlende Positionen“ wird nicht geprüft, die Logik liegt im ungetesteten DAO. | phase-3a S22 Test: „Pull legt an, ersetzt, entfernt fehlende Positionen …“ | Niedrig | – |
+| P7 | `ReceiptUploader.kt:36-49`, `ReceiptUploadWorker.kt:26`, `SyncWorker.kt:75` | c | Vermutung: Kein Mutex. `ReceiptUploadWorker` und `SyncWorker` (Connectivity-Trigger) können parallel `uploadPending()` laufen lassen. Der zweite Lauf kann mit veraltetem Snapshot in den Zweig „Datei fehlt“ geraten. Dort überschreibt er den Server-Stand mit `dirty = 1`. Der nächste Push heilt das per LWW; dazu kommt eine doppelte KI-Auswertung. | phase-3a S25: „`ReceiptUploader.uploadPending()` … Datei fehlt → `pendingUpload = 0` … `dirty = 1`“ | Niedrig | – |
+
+Pflichtfragen ohne Abweichung von der Spec:
+- Pull-Cursor, Fenster-Vergrößerung und `localWins`/`pendingUpload` sind wortgleich umgesetzt (S22).
+- Die Zweige von `ReceiptUploader` stimmen mit S25 überein. Auch die Retry-Regeln stimmen.
+- Der Scan nutzt die drei Zweige aus S24. `HttpException` und `IllegalArgumentException` zählen als offline.
+- `deleteReceipt` löscht hart oder weich genau nach S26.
+- Die Reihenfolge im `SyncWorker` ist Upload → Push → Pull → Aggregate.
+- Die Datei-Löschung nach Upload ist umgesetzt (Annahme 1), ebenso die Kamera-Temp-Löschung.
+- S23-Greps sind leer. Die Timeouts liegen bei 120 s (Annahme 12). Der Bon-Teil im `ImageDownloadWorker` ist entfernt (Annahme 13).
+
+**Ergebnis:** 0 Blocker, 0 Hoch, 3 Mittel (P1–P3), 4 Niedrig (P4–P7); schwerster Befund: P1
 
 ## B1 — Room-Migrationen, Schema, DAOs
 <Standards-Antwort> · <Spec-Antwort>
