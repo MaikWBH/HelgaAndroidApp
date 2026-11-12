@@ -484,7 +484,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   weich. Akzeptanz: `V` grün. Danach Block D–E pushen.
 
 ### Block F — App: Scan, Review, Liste, Detail (Befunde 14, 22, 23)
-- [ ] **S27 Prüf-Logik** — Dateien: neu `$B/data/receipts/ReceiptReviewCheck.kt`, neu `$T/ReceiptReviewCheckTest.kt`.
+- [x] **S27 Prüf-Logik** — Dateien: neu `$B/data/receipts/ReceiptReviewCheck.kt`, neu `$T/ReceiptReviewCheckTest.kt`.
   `object ReceiptReviewCheck { const val CONFIDENCE_THRESHOLD = 0.7; fun lowConfidenceIds(items): Set<String>`
   (`confidence < Schwelle` oder `totalPrice == 0.0` bei nicht-Pfand); `fun itemsSum(items): Double` (Σ `totalPrice −
   discount`); `fun expectedTotal(items, discountTotal) = itemsSum − discountTotal`; `fun sumMismatch(total, items,
