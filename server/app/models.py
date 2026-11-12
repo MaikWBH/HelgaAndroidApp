@@ -517,3 +517,20 @@ class LexiconEntryOut(BaseModel):
 
 class LexiconListResponse(BaseModel):
     entries: List[LexiconEntryOut] = []
+
+
+class AggregateRow(BaseModel):
+    period: str
+    dimension: str
+    key: str = ""
+    label: str = ""
+    amount: float = 0.0
+    quantity: float = 0.0
+    count: int = 0
+    avg_unit_price: float = 0.0
+    discount: float = 0.0
+
+
+class AggregatesResponse(BaseModel):
+    generated_at: int = 0
+    rows: List[AggregateRow] = []

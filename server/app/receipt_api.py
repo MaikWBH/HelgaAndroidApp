@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 
 from . import receipts
 from .auth import require_auth
-from .db import get_db
+from .db import get_db, now_ms
 from .models import (
-    LexiconListResponse, ReceiptIn, ReceiptListResponse, ReceiptOut, ReceiptPutResponse,
+    AggregatesResponse, LexiconListResponse, ReceiptIn, ReceiptListResponse, ReceiptOut, ReceiptPutResponse,
     ReceiptScanResponse,
 )
 
@@ -76,6 +76,12 @@ async def scan_receipt(
         )
         await db.commit()
     return ReceiptScanResponse(parsed=parsed, receipt=receipt)
+
+@router.get("/aggregates", response_model=AggregatesResponse)
+async def get_aggregates():
+    async with get_db() as db:
+        rows = await receipts.aggregate_rows(db)
+    return AggregatesResponse(generated_at=now_ms(), rows=rows)
 
 # (weitere feste Pfade folgen in den nächsten Schritten, jeweils vor /{receipt_id})
 

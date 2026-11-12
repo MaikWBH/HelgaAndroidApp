@@ -99,7 +99,7 @@ Zusätzlich:
   Push mit `category_key` → Pull liefert ihn; Push desselben Gangs **ohne** das Feld und mit neuerem `updated_at`
   (Umbenennung) → Schlüssel bleibt; Push mit `"category_key": ""` → Schlüssel wird geleert; Backfill auf einer
   Alt-DB mit „Obst & Gemüse" und „Kasse" → `obst_gemuese` bzw. `''`. Akzeptanz: `VS` grün.
-- [ ] **S2 Aggregate** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, `$SA/models.py`, neu
+- [x] **S2 Aggregate** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, `$SA/models.py`, neu
   `$ST/test_receipt_aggregates.py`. `aggregate_rows(db) -> list[dict]` und `GET /api/receipts/aggregates` (vor
   `/{receipt_id}` deklariert) nach Vertrag 6; Gruppierung in Python aus zwei Abfragen (Bons; Positionen mit
   Bon-Feldern). Test mit festen Daten: drei Bons in zwei Monaten und zwei Märkten, einer `provisional`, einer

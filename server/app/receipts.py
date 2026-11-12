@@ -575,3 +575,101 @@ async def queue_loop(interval_sec: int) -> None:
             raise
         except Exception:
             logger.exception("Bon-Warteschlange fehlgeschlagen")
+
+
+# ── Auswertung (Phase 3b, Vertrag Abschnitt 6) ───────────────────────────────────────────
+
+def _most_common(values: list[str]) -> str:
+    counts: dict[str, int] = {}
+    for value in values:
+        counts[value] = counts.get(value, 0) + 1
+    if not counts:
+        return ""
+    best = max(counts.values())
+    return sorted(v for v, c in counts.items() if c == best)[0]  # bei Gleichstand stabil alphabetisch
+
+
+async def aggregate_rows(db) -> list[dict]:
+    """Berechnet die Auswertung bei jedem Aufruf aus den Bons (keine gespeicherte Tabelle).
+
+    Grundlage: Bons mit `deleted = 0`, Status nicht `provisional`, gesetztem `purchase_day`; Positionen mit `deleted = 0`.
+    """
+    from datetime import date
+
+    async with db.execute(
+        "SELECT id, store_id, store_name, purchase_day, total_amount, discount_total FROM receipts "
+        "WHERE deleted = 0 AND status != 'provisional' AND purchase_day != ''"
+    ) as cur:
+        receipts_rows = await cur.fetchall()
+    async with db.execute(
+        "SELECT r.purchase_day, ri.category, ri.is_deposit, ri.name, ri.quantity, ri.unit_price, "
+        "ri.total_price, ri.discount FROM receipt_items ri JOIN receipts r ON ri.receipt_id = r.id "
+        "WHERE ri.deleted = 0 AND r.deleted = 0 AND r.status != 'provisional' AND r.purchase_day != ''"
+    ) as cur:
+        item_rows = await cur.fetchall()
+
+    total: dict[str, dict] = {}
+    week: dict[str, dict] = {}
+    store: dict[tuple, dict] = {}
+    category: dict[tuple, dict] = {}
+    product: dict[tuple, dict] = {}
+
+    for _id, store_id, store_name, day, amount, discount_total in receipts_rows:
+        month = day[:7]
+        t = total.setdefault(month, {"amount": 0.0, "count": 0, "discount": 0.0})
+        t["amount"] += amount or 0.0
+        t["count"] += 1
+        t["discount"] += discount_total or 0.0
+        try:
+            iso = date.fromisoformat(day).isocalendar()
+        except ValueError:
+            continue
+        w = week.setdefault(f"{iso[0]}-W{iso[1]:02d}", {"amount": 0.0, "count": 0})
+        w["amount"] += amount or 0.0
+        w["count"] += 1
+        key = receipt_text.store_key(store_id, store_name)
+        st = store.setdefault((month, key), {"amount": 0.0, "count": 0, "names": []})
+        st["amount"] += amount or 0.0
+        st["count"] += 1
+        st["names"].append(store_name or "")
+
+    for day, cat, is_deposit, name, quantity, unit_price, total_price, discount in item_rows:
+        month = day[:7]
+        net = (total_price or 0.0) - (discount or 0.0)
+        total.setdefault(month, {"amount": 0.0, "count": 0, "discount": 0.0})["discount"] += discount or 0.0
+        cat_key = "pfand" if is_deposit else (cat or "sonstiges")
+        c = category.setdefault((month, cat_key), {"amount": 0.0, "count": 0})
+        c["amount"] += net
+        c["count"] += 1
+        if is_deposit:
+            continue
+        product_key = receipt_text.normalize_item_key(name)
+        if not product_key:
+            continue
+        p = product.setdefault((month, product_key), {"amount": 0.0, "count": 0, "quantity": 0.0, "prices": [], "names": []})
+        p["amount"] += net
+        p["count"] += 1
+        p["quantity"] += quantity or 0.0
+        p["prices"].append(unit_price or 0.0)
+        p["names"].append(name or "")
+
+    rows: list[dict] = []
+    for month, v in total.items():
+        rows.append({"period": month, "dimension": "total", "key": "", "label": "", "amount": round(v["amount"], 2),
+                     "quantity": 0.0, "count": v["count"], "avg_unit_price": 0.0, "discount": round(v["discount"], 2)})
+    for period, v in week.items():
+        rows.append({"period": period, "dimension": "week", "key": "", "label": "", "amount": round(v["amount"], 2),
+                     "quantity": 0.0, "count": v["count"], "avg_unit_price": 0.0, "discount": 0.0})
+    for (month, key), v in store.items():
+        rows.append({"period": month, "dimension": "store", "key": key, "label": _most_common(v["names"]),
+                     "amount": round(v["amount"], 2), "quantity": 0.0, "count": v["count"],
+                     "avg_unit_price": 0.0, "discount": 0.0})
+    for (month, key), v in category.items():
+        rows.append({"period": month, "dimension": "category", "key": key, "label": "", "amount": round(v["amount"], 2),
+                     "quantity": 0.0, "count": v["count"], "avg_unit_price": 0.0, "discount": 0.0})
+    for (month, key), v in product.items():
+        rows.append({"period": month, "dimension": "product", "key": key, "label": _most_common(v["names"]),
+                     "amount": round(v["amount"], 2), "quantity": round(v["quantity"], 3), "count": v["count"],
+                     "avg_unit_price": round(sum(v["prices"]) / len(v["prices"]), 2), "discount": 0.0})
+    rows.sort(key=lambda r: (r["dimension"], r["period"], r["key"]))
+    return rows
