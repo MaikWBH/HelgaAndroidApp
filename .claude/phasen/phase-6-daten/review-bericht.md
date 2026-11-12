@@ -82,7 +82,31 @@ Alle übrigen Pflichtfragen habe ich gegen den Code geprüft und ohne Abweichung
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 2, Niedrig 7; schwerster Befund: P1
 
 ## B2 — Bon-Protokoll App
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B2 — Bon-Protokoll App
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | ReceiptSyncer.kt:44; ReceiptUploader.kt:87,104-106 | Server-Antwort ersetzt den Bon aus einer alten Zeilenkopie, ohne erneutes Lesen oder LWW-Vergleich, immer mit `dirty=0`. Eine Änderung während des Aufrufs (Scan bis 120 s) geht verloren. Vermutung | K-SP LWW / Server-Archiv | Mittel | ändert Verhalten |
+| S2 | ReceiptSyncer.kt:68-73 | Löschzweig in `pull()` löscht hart, auch bei `pendingUpload=1` und bei `dirty=1` mit älterem Stand. Nur der Schreibzweig prüft `pendingUpload`. Vermutung: braucht einen Server-Tombstone mit gleicher ID | K-SP Server-Archiv (hartes Löschen nur `dirty=0`/`pendingUpload=0`) | Mittel | ändert Verhalten |
+| S3 | ReceiptRepository.kt:208-212 | `imagePath` leer und `provisional` gilt als „nie hochgeladen". Der Uploader (ReceiptUploader.kt:66-69) setzt bei fehlender Datei aber `dirty=1`, danach geht der Bon per PUT zum Server. Löschen entfernt ihn dann nur lokal, der Server behält ihn. Vermutung | K-SP Server-Archiv | Mittel | ändert Verhalten |
+| S4 | ReceiptUploadWorker.kt:27 | `catch (e: Exception)` verschluckt `CancellationException` (weitere Fundstelle zu V12) | K-KQ §6 | Niedrig | – |
+| S5 | ReceiptRepository.kt:110 | Literal `"global"` statt `const val` (ebenso WeekplanRepository.kt:40) | K-KQ §10 | Niedrig | – |
+| S6 | ReceiptScanFlowTest.kt:64,84; ReceiptUploaderTest.kt:35 | `!!` und `lateinit` im Testcode; der Regeltest scannt nur `src/main` | K-KQ §1, §7 | Niedrig | – |
+| S7 | ReceiptSyncer.kt:141-144 ≈ ReceiptUploader.kt:104-106 ≈ ReceiptScanFlow.kt:52; ReceiptRepository.kt:131-141 ≈ ReceiptUploader.kt:72-84 | Duplicated Code: Server-Bon plus Positionen nach Room dreifach, Multipart-Scan-Aufruf doppelt | K-SM Duplicated Code | Niedrig | Ermessensfrage |
+| S8 | ReceiptSyncer.kt:92-102; ReceiptRepository.kt:272-283; ReceiptLexiconRepository.kt:44-55; ReceiptScanFlow.kt:38-45; ReceiptUploader.kt:36-52 | Dieselbe Kaskade `IOException`/`HttpException`/`IllegalArgumentException` fünfmal. IAE (aus `require` in `ApiProvider.api()`) steht für „nicht konfiguriert" und fängt auch echte IAE | K-SM Duplicated Code, Primitive Obsession | Niedrig | Ermessensfrage |
+| S9 | ReceiptRepository.kt:209,239,434; ReceiptScanFlow.kt:57,83-84; ReceiptUploader.kt:64,91 | Status-, Quell- und Parse-Strings (`"provisional"`, `"confirmed"`, `"queued"`, `"on_device"`) als Literale in Daten- und UI-Schicht verstreut | K-SM Primitive Obsession, Shotgun Surgery (§10 sinngemäß) | Niedrig | Ermessensfrage |
+| S10 | ReceiptScanFlow.kt:36,60-75 | Data Clump `receiptId, bitmap, shoppingListId, now` läuft durch `run`/`offline`/`provisional`; `ScanRequest` existiert, wird dort nicht genutzt | K-SM Data Clumps | Niedrig | Ermessensfrage |
+| S11 | ReceiptRepository.kt:98-117,257 | Divergent Change: Scan, Budget, Preisverlauf, Abgleich, OFF-Suche in einer Klasse. Dazu veränderlicher, nicht threadsicherer Singleton-Zustand `olderMonthCursor` | K-SM Divergent Change | Niedrig | Ermessensfrage |
+| S12 | SyncApi.kt:88 | `getReceipt` hat in `main` keinen Aufrufer | K-SM Speculative Generality | Niedrig | Ermessensfrage |
+| S13 | SyncScheduler.kt:24-26,43-45,74,86 | Constraints-Aufbau (`NetworkType.CONNECTED`) viermal | K-SM Duplicated Code | Niedrig | Ermessensfrage |
+| S14 | AppPreferences.kt:55,147 | Magische `-1` (`ACCENT_SYSTEM` liegt in `ui/theme`, `data/` darf nicht importieren) an zwei Stellen dupliziert | K-SM Mysterious Name (K-AL) | Niedrig | Ermessensfrage |
+
+**Beifang (Altbestand, ohne Grad):** SyncWorker.kt:46 `catch (e: Exception)` verschluckt `CancellationException` und setzt `SyncStatus.Error`, dadurch wirkt das `throw e` in `syncReceipts()` nicht. ImageUploadWorker.kt (Konstruktor) injiziert `SyncApiFactory` statt `ApiProvider` (K-AL). ReceiptRepository.kt:186 `addItemToReceipt` hat keinen Aufrufer und setzt nur die Position auf dirty, nicht den Bon (bon-weiser Push würde sie nie senden). `productSummaries`/`productPriceHistory` sind `suspend` statt `Flow` (K-KQ §4).
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 3 (S1–S3), Niedrig 11 (S4–S14); schwerster Befund: S1
+
+<Spec-Antwort>
 
 ## B1 — Room-Migrationen, Schema, DAOs
 <Standards-Antwort> · <Spec-Antwort>
