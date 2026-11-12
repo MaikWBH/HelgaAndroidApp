@@ -306,7 +306,11 @@ fun HelgaNavGraph(
                         )
                     }
                     composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
-                        CostOverviewScreen(onBack = { navController.popBackStack() })
+                        CostOverviewScreen(
+                            onBack = { navController.popBackStack() },
+                            onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
+                            onAllProductsClick = { navController.navigate(ROUTE_RECEIPTS_PRODUCTS) },
+                        )
                     }
                     composable(ROUTE_RECEIPTS_PRODUCTS) {
                         ProductPriceListScreen(

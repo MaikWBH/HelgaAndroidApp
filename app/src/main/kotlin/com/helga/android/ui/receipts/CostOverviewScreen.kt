@@ -1,81 +1,109 @@
 package com.helga.android.ui.receipts
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
-import com.helga.android.ui.components.LoadingIndicator
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
-import com.helga.android.data.model.CostByDate
-import com.helga.android.data.model.CostByStore
+import com.helga.android.data.model.KeyAmount
+import com.helga.android.data.model.ProductCategory
+import com.helga.android.data.model.StatsRange
+import com.helga.android.ui.common.formatEuro
+import com.helga.android.ui.components.PreviewSurface
+import com.helga.android.ui.components.ThemePreviews
+import com.helga.android.ui.receipts.charts.ChartBar
+import com.helga.android.ui.receipts.charts.ChartMath
+import com.helga.android.ui.receipts.charts.ChartRow
+import com.helga.android.ui.receipts.charts.HorizontalBarChart
+import com.helga.android.ui.receipts.charts.ShareDonutChart
+import com.helga.android.ui.receipts.charts.SpendingBarChart
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CostOverviewScreen(
     onBack: () -> Unit,
+    onProductClick: (String) -> Unit = {},
+    onAllProductsClick: () -> Unit = {},
     viewModel: CostOverviewViewModel = hiltViewModel(),
 ) {
-    val period = viewModel.period.collectAsStateWithLifecycle().value
-    val costByStore = viewModel.costByStore.collectAsStateWithLifecycle().value
-    val costByDate = viewModel.costByDate.collectAsStateWithLifecycle().value
-    val totalCost = viewModel.totalCost.collectAsStateWithLifecycle().value
-    val receiptCount = viewModel.receiptCount.collectAsStateWithLifecycle().value
-    val isLoading = viewModel.isLoading.collectAsStateWithLifecycle().value
-    val maxCost = viewModel.getMaxCost()
-    val budget = viewModel.budget.collectAsStateWithLifecycle().value
-    val monthSpending = viewModel.monthSpending.collectAsStateWithLifecycle().value
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    CostOverviewContent(
+        state = state,
+        onBack = onBack,
+        onGranularityChange = viewModel::setGranularity,
+        onRangeChange = viewModel::setRange,
+        onSaveBudget = viewModel::saveBudget,
+        onProductClick = onProductClick,
+        onAllProductsClick = onAllProductsClick,
+    )
+}
 
-    var showBudgetDialog by remember { mutableStateOf(false) }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CostOverviewContent(
+    state: CostOverviewUiState,
+    onBack: () -> Unit,
+    onGranularityChange: (Granularity) -> Unit,
+    onRangeChange: (StatsRange) -> Unit,
+    onSaveBudget: (Double, Double) -> Unit,
+    onProductClick: (String) -> Unit,
+    onAllProductsClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var showBudgetDialog by rememberSaveable { mutableStateOf(false) }
 
     if (showBudgetDialog) {
         BudgetEditDialog(
-            currentAmount = budget?.amount ?: 0.0,
-            currentWarnThreshold = budget?.warnThreshold ?: 0.8,
+            currentAmount = state.budget,
+            currentWarnThreshold = state.warnThreshold,
             onConfirm = { amount, warnThreshold ->
-                viewModel.saveBudget(amount, warnThreshold)
+                onSaveBudget(amount, warnThreshold)
                 showBudgetDialog = false
             },
             onDismiss = { showBudgetDialog = false },
@@ -83,220 +111,258 @@ fun CostOverviewScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.cost_overview_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Monatsbudget + Warnung
-            BudgetCard(
-                budgetAmount = budget?.amount ?: 0.0,
-                warnThreshold = budget?.warnThreshold ?: 0.8,
-                monthSpending = monthSpending,
-                formatCurrency = viewModel::formatCurrency,
-                onEdit = { showBudgetDialog = true },
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)
-            )
-
-            // Summary Card
-            CostSummaryCard(
-                totalCost = viewModel.formatCurrency(totalCost),
-                receiptCount = receiptCount,
-                modifier = Modifier.padding(16.dp)
-            )
-
-            // Period Selector
-            TabRow(
-                selectedTabIndex = period.ordinal,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+        Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
+            LazyColumn(
+                modifier = Modifier.widthIn(max = 840.dp).fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                TimePeriod.values().forEach { tab ->
-                    Tab(
-                        selected = period == tab,
-                        onClick = { viewModel.setPeriod(tab) },
-                        text = {
-                            Text(
-                                when (tab) {
-                                    TimePeriod.WEEK -> stringResource(R.string.stats_period_week)
-                                    TimePeriod.MONTH -> stringResource(R.string.stats_period_month)
-                                    TimePeriod.ALL -> stringResource(R.string.recipes_filter_all)
-                                }
-                            )
-                        }
+                if (state.provisionalCount > 0) {
+                    item(key = "hint") {
+                        Text(
+                            pluralStringResource(R.plurals.cost_provisional_hint, state.provisionalCount, state.provisionalCount),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                item(key = "budget") {
+                    BudgetCard(
+                        budgetAmount = state.budget,
+                        warnThreshold = state.warnThreshold,
+                        monthSpending = state.monthSpending,
+                        formatCurrency = ::formatEuro,
+                        onEdit = { showBudgetDialog = true },
+                    )
+                }
+                if (state.empty) {
+                    item(key = "empty") { EmptyStats() }
+                } else {
+                    item(key = "spending") {
+                        SpendingCard(state = state, onGranularityChange = onGranularityChange)
+                    }
+                    item(key = "range") { RangeChips(selected = state.range, onSelect = onRangeChange) }
+                    item(key = "stores") { StoresCard(state = state) }
+                    item(key = "categories") { CategoriesCard(state = state) }
+                    item(key = "products") {
+                        ProductsCard(state = state, onProductClick = onProductClick, onAllProductsClick = onAllProductsClick)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionCard(title: String, content: @Composable () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            content()
+        }
+    }
+}
+
+@Composable
+private fun EmptyStats() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(Icons.Filled.BarChart, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            stringResource(R.string.cost_stats_empty),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SpendingCard(state: CostOverviewUiState, onGranularityChange: (Granularity) -> Unit) {
+    val weekly = state.granularity == Granularity.WEEK
+    SectionCard(stringResource(R.string.cost_section_spending)) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            Granularity.entries.forEachIndexed { index, granularity ->
+                SegmentedButton(
+                    selected = state.granularity == granularity,
+                    onClick = { onGranularityChange(granularity) },
+                    shape = SegmentedButtonDefaults.itemShape(index, Granularity.entries.size),
+                ) {
+                    Text(
+                        stringResource(
+                            if (granularity == Granularity.MONTH) R.string.stats_period_month else R.string.stats_period_week
+                        )
                     )
                 }
             }
-
-            if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    LoadingIndicator()
-                }
-            } else {
-                // Cost by Store
-                if (costByStore.isNotEmpty()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            stringResource(R.string.cost_overview_by_store),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
-                        costByStore.forEach { store ->
-                            CostBarItem(
-                                label = store.storeName.ifBlank { store.storeId.ifBlank { stringResource(R.string.receipt_unknown_store) } },
-                                amount = viewModel.formatCurrency(store.totalAmount),
-                                progress = store.totalAmount / maxCost,
-                                receiptCount = store.receiptCount,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Cost by Date
-                if (costByDate.isNotEmpty()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            stringResource(R.string.cost_overview_by_date),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
-                        costByDate.forEach { dateEntry ->
-                            CostBarItem(
-                                label = viewModel.formatDate(dateEntry.date),
-                                amount = viewModel.formatCurrency(dateEntry.totalAmount),
-                                progress = dateEntry.totalAmount / maxCost,
-                                receiptCount = dateEntry.receiptCount,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                        }
-                    }
-                }
-
-                if (costByStore.isEmpty() && costByDate.isEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(stringResource(R.string.cost_overview_empty))
-                    }
-                }
-            }
         }
-    }
-}
-
-@Composable
-private fun CostSummaryCard(
-    totalCost: String,
-    receiptCount: Int,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = MaterialTheme.shapes.medium
-            )
-            .padding(16.dp)
-    ) {
-        Column {
-            Text(
-                stringResource(R.string.cost_overview_total),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Text(
-                totalCost,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-            Text(
-                stringResource(R.string.cost_receipts_summary, receiptCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun CostBarItem(
-    label: String,
-    amount: String,
-    progress: Double,
-    receiptCount: Int,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
-                )
-                Text(
-                    if (receiptCount != 1) stringResource(R.string.cost_bon_other, receiptCount) else stringResource(R.string.cost_bon_one, receiptCount),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text(
-                amount,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
-
-        LinearProgressIndicator(
-            progress = progress.coerceIn(0.0, 1.0).toFloat(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp),
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        val last = state.bars.lastOrNull()?.amount ?: 0.0
+        SpendingBarChart(
+            bars = state.bars.mapIndexed { index, bar ->
+                ChartBar(ChartMath.periodLabel(bar.period), bar.amount, highlighted = index == state.bars.lastIndex)
+            },
+            budget = state.barBudget,
+            description = stringResource(
+                if (weekly) R.string.cost_chart_weeks_description else R.string.cost_chart_months_description,
+                formatEuro(last), formatEuro(state.average),
+            ),
+        )
+        Text(
+            stringResource(
+                if (weekly) R.string.cost_average_week else R.string.cost_average_month,
+                formatEuro(state.average),
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+@Composable
+private fun RangeChips(selected: StatsRange, onSelect: (StatsRange) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        StatsRange.entries.forEach { range ->
+            FilterChip(
+                selected = selected == range,
+                onClick = { onSelect(range) },
+                label = {
+                    Text(
+                        stringResource(
+                            when (range) {
+                                StatsRange.THIS_MONTH -> R.string.cost_range_this_month
+                                StatsRange.THREE_MONTHS -> R.string.cost_range_three_months
+                                StatsRange.TWELVE_MONTHS -> R.string.cost_range_twelve_months
+                                StatsRange.ALL -> R.string.cost_range_all
+                            }
+                        )
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun StoresCard(state: CostOverviewUiState) {
+    val unknown = stringResource(R.string.receipt_unknown_store)
+    val other = stringResource(R.string.cost_other)
+    SectionCard(stringResource(R.string.cost_section_stores)) {
+        val slices = ChartMath.shareSlices(
+            state.stores.map { it.copy(label = it.label.ifBlank { unknown }) }, maxSlices = 5, otherLabel = other,
+        )
+        if (slices.isEmpty()) {
+            NoDataText()
+        } else {
+            val top = slices.first()
+            ShareDonutChart(
+                slices = slices,
+                centerText = formatEuro(state.stores.sumOf { it.amount }),
+                description = stringResource(R.string.cost_chart_stores_description, top.label, formatEuro(top.amount)),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoriesCard(state: CostOverviewUiState) {
+    SectionCard(stringResource(R.string.cost_section_categories)) {
+        val rows = state.categories.filter { it.amount > 0.0 }.map {
+            ChartRow(it.key, stringResource(ProductCategory.fromKey(it.key).labelRes()), it.amount)
+        }
+        if (rows.isEmpty()) {
+            NoDataText()
+        } else {
+            HorizontalBarChart(
+                rows = rows,
+                description = stringResource(R.string.cost_chart_categories_description, rows.first().label, formatEuro(rows.first().value)),
+            )
+            if (state.categoryDiscount > 0.0) {
+                Text(
+                    stringResource(R.string.cost_category_discount_note, formatEuro(state.categoryDiscount)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProductsCard(state: CostOverviewUiState, onProductClick: (String) -> Unit, onAllProductsClick: () -> Unit) {
+    SectionCard(stringResource(R.string.cost_section_top_products)) {
+        val rows = state.topProducts.filter { it.amount > 0.0 }.map {
+            ChartRow(it.key, it.label.ifBlank { it.key }, it.amount, stringResource(R.string.cost_times_bought, it.count))
+        }
+        if (rows.isEmpty()) {
+            NoDataText()
+        } else {
+            HorizontalBarChart(
+                rows = rows,
+                description = stringResource(R.string.cost_chart_products_description, rows.first().label, formatEuro(rows.first().value)),
+                onRowClick = onProductClick,
+            )
+        }
+        TextButton(onClick = onAllProductsClick) { Text(stringResource(R.string.cost_all_products)) }
+    }
+}
+
+@Composable
+private fun NoDataText() {
+    Text(
+        stringResource(R.string.cost_no_receipts_range),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+// ── Previews ─────────────────────────────────────────────────────────────────
+
+private fun sampleState() = CostOverviewUiState(
+    loaded = true, empty = false, provisionalCount = 1,
+    bars = (1..12).map { com.helga.android.data.model.PeriodAmount("2026-%02d".format(it), it * 12.0, it) },
+    barBudget = 100.0, average = 78.0, monthSpending = 144.0, budget = 150.0,
+    stores = listOf(
+        KeyAmount("a", "REWE", 120.0, 0.0, 4), KeyAmount("b", "Aldi", 80.0, 0.0, 3), KeyAmount("c", "dm", 25.0, 0.0, 1),
+    ),
+    categories = listOf(
+        KeyAmount("milch_eier", "", 82.4, 0.0, 12), KeyAmount("obst_gemuese", "", 61.0, 0.0, 9),
+        KeyAmount("getraenke", "", 23.5, 0.0, 3),
+    ),
+    categoryDiscount = 4.5,
+    topProducts = listOf(KeyAmount("milch", "Milch", 32.4, 18.0, 12), KeyAmount("brot", "Brot", 21.0, 6.0, 6)),
+)
+
+@ThemePreviews
+@Composable
+private fun CostOverviewPreview() = PreviewSurface {
+    CostOverviewContent(
+        state = sampleState(), onBack = {}, onGranularityChange = {}, onRangeChange = {},
+        onSaveBudget = { _, _ -> }, onProductClick = {}, onAllProductsClick = {},
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun CostOverviewEmptyPreview() = PreviewSurface {
+    CostOverviewContent(
+        state = CostOverviewUiState(loaded = true, empty = true), onBack = {}, onGranularityChange = {},
+        onRangeChange = {}, onSaveBudget = { _, _ -> }, onProductClick = {}, onAllProductsClick = {},
+    )
 }
 
 /**

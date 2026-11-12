@@ -1,155 +1,116 @@
 package com.helga.android.ui.receipts
 
-import com.helga.android.ui.common.formatEuro
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.model.CostByDate
-import com.helga.android.data.model.CostByStore
-import com.helga.android.data.local.entity.MonthlyBudgetEntity
+import com.helga.android.data.model.KeyAmount
+import com.helga.android.data.model.PeriodAmount
+import com.helga.android.data.model.StatsRange
+import com.helga.android.data.receipts.ReceiptStats
 import com.helga.android.data.repository.ReceiptRepository
+import com.helga.android.data.repository.ReceiptStatsRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
-enum class TimePeriod {
-    WEEK, MONTH, ALL
-}
+enum class Granularity { MONTH, WEEK }
+
+/** Zustand der Kostenübersicht; alle Werte kommen aus dem lokalen Abzug der Server-Auswertung (offline verfügbar). */
+data class CostOverviewUiState(
+    val loaded: Boolean = false,
+    val empty: Boolean = true,
+    val provisionalCount: Int = 0,
+    val granularity: Granularity = Granularity.MONTH,
+    val range: StatsRange = StatsRange.THREE_MONTHS,
+    val bars: List<PeriodAmount> = emptyList(),
+    val barBudget: Double? = null,
+    val average: Double = 0.0,
+    val monthSpending: Double = 0.0,
+    val budget: Double = 0.0,
+    val warnThreshold: Double = 0.8,
+    val stores: List<KeyAmount> = emptyList(),
+    val categories: List<KeyAmount> = emptyList(),
+    val categoryDiscount: Double = 0.0,
+    val topProducts: List<KeyAmount> = emptyList(),
+)
 
 @HiltViewModel
-class CostOverviewViewModel @Inject constructor(
+class CostOverviewViewModel internal constructor(
+    private val statsRepository: ReceiptStatsRepository,
     private val receiptRepository: ReceiptRepository,
     private val syncScheduler: SyncScheduler,
+    private val today: () -> LocalDate,
 ) : ViewModel() {
 
-    private val _period = MutableStateFlow(TimePeriod.MONTH)
-    val period: StateFlow<TimePeriod> = _period
+    @Inject
+    constructor(
+        statsRepository: ReceiptStatsRepository,
+        receiptRepository: ReceiptRepository,
+        syncScheduler: SyncScheduler,
+    ) : this(statsRepository, receiptRepository, syncScheduler, LocalDate::now)
 
-    /** Gemeinsames Monatsbudget (zentral via Sync). null = noch nicht geladen. */
-    val budget: StateFlow<MonthlyBudgetEntity?> = receiptRepository.observeBudget()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    private val granularity = MutableStateFlow(Granularity.MONTH)
+    private val range = MutableStateFlow(StatsRange.THREE_MONTHS)
 
-    /** Ausgaben im laufenden Kalendermonat – Basis für die Budget-Warnung. */
-    private val _monthSpending = MutableStateFlow(0.0)
-    val monthSpending: StateFlow<Double> = _monthSpending
-
-    private val _costByStore = MutableStateFlow<List<CostByStore>>(emptyList())
-    val costByStore: StateFlow<List<CostByStore>> = _costByStore
-
-    private val _costByDate = MutableStateFlow<List<CostByDate>>(emptyList())
-    val costByDate: StateFlow<List<CostByDate>> = _costByDate
-
-    private val _totalCost = MutableStateFlow(0.0)
-    val totalCost: StateFlow<Double> = _totalCost
-
-    private val _receiptCount = MutableStateFlow(0)
-    val receiptCount: StateFlow<Int> = _receiptCount
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val uiState: StateFlow<CostOverviewUiState> = combine(
+        statsRepository.observeAggregates(),
+        receiptRepository.observeBudget(),
+        statsRepository.observeProvisionalCount(),
+        granularity,
+        range,
+    ) { rows, budgetEntity, provisional, gran, selectedRange ->
+        val now = today()
+        val budget = budgetEntity?.amount ?: 0.0
+        val series = when (gran) {
+            Granularity.MONTH -> ReceiptStats.monthSeries(rows, now, 12)
+            Granularity.WEEK -> ReceiptStats.weekSeries(rows, now, 12)
+        }
+        CostOverviewUiState(
+            loaded = true,
+            empty = rows.isEmpty(),
+            provisionalCount = provisional,
+            granularity = gran,
+            range = selectedRange,
+            bars = series,
+            barBudget = when {
+                budget <= 0.0 -> null
+                gran == Granularity.MONTH -> budget
+                else -> budget * 12.0 / 52.0 // Monatsbudget auf eine Woche umgerechnet
+            },
+            average = ReceiptStats.monthlyAverage(series),
+            monthSpending = ReceiptStats.currentMonthTotal(rows, now),
+            budget = budget,
+            warnThreshold = budgetEntity?.warnThreshold ?: 0.8,
+            stores = ReceiptStats.storeTotals(rows, selectedRange, now),
+            categories = ReceiptStats.categoryTotals(rows, selectedRange, now),
+            categoryDiscount = ReceiptStats.discountTotal(rows, selectedRange, now),
+            topProducts = ReceiptStats.topProducts(rows, selectedRange, now),
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CostOverviewUiState())
 
     init {
-        loadData()
-        loadMonthSpending()
+        // Auswertung vom Server auffrischen; offline bleibt der lokale Abzug stehen.
+        viewModelScope.launch { statsRepository.refresh() }
     }
 
-    fun setPeriod(period: TimePeriod) {
-        _period.value = period
-        loadData()
+    fun setGranularity(value: Granularity) {
+        granularity.value = value
     }
 
-    /** Summiert die Ausgaben des laufenden Kalendermonats (lokal, offline-fähig). */
-    private fun loadMonthSpending() {
-        viewModelScope.launch {
-            val zone = ZoneId.systemDefault()
-            val firstOfMonth = LocalDate.now().withDayOfMonth(1)
-            val startEpoch = firstOfMonth.atStartOfDay(zone).toEpochSecond()
-            val endEpoch = firstOfMonth.plusMonths(1).atStartOfDay(zone).toEpochSecond()
-            _monthSpending.value = receiptRepository.totalCost(startEpoch, endEpoch).totalAmount
-        }
+    fun setRange(value: StatsRange) {
+        range.value = value
     }
 
-    /**
-     * Speichert das gemeinsame Monatsbudget lokal (dirty = 1) und stößt sofort
-     * einen Sync an, damit der Wert zentral auf dem Server landet und das andere
-     * Handy ihn erhält. [amount] = 0 löscht das Budget faktisch (keine Warnung mehr).
-     */
     fun saveBudget(amount: Double, warnThreshold: Double) {
         viewModelScope.launch {
             receiptRepository.saveBudget(amount, warnThreshold)
             syncScheduler.triggerOneShot()
         }
-    }
-
-    private fun loadData() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val (startEpoch, endEpoch) = getEpochRange(_period.value)
-                val isAll = _period.value == TimePeriod.ALL
-
-                // Ausgaben pro Markt – konsistent zum gewählten Zeitraum
-                _costByStore.value = if (isAll) {
-                    receiptRepository.costByStore()
-                } else {
-                    receiptRepository.costByStore(startEpoch, endEpoch)
-                }
-
-                // Verlauf nach Datum – ebenfalls zeitraum-gefiltert
-                _costByDate.value = if (isAll) {
-                    receiptRepository.costByDate()
-                } else {
-                    receiptRepository.costByDate(startEpoch, endEpoch)
-                }
-
-                // Load summary
-                val summary = receiptRepository.totalCost(startEpoch, endEpoch)
-                _totalCost.value = summary.totalAmount
-                _receiptCount.value = summary.receiptCount
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    private fun getEpochRange(period: TimePeriod): Pair<Long, Long> {
-        val today = LocalDate.now()
-        val startDate = when (period) {
-            TimePeriod.WEEK -> today.minus(6, ChronoUnit.DAYS)
-            TimePeriod.MONTH -> today.minusMonths(1)
-            TimePeriod.ALL -> LocalDate.ofEpochDay(0) // very old date
-        }
-
-        val zone = java.time.ZoneId.systemDefault()
-        val startEpoch = startDate.atStartOfDay(zone).toEpochSecond()
-        val endEpoch = today.plusDays(1).atStartOfDay(zone).toEpochSecond()
-
-        return startEpoch to endEpoch
-    }
-
-    fun getMaxCost(): Double {
-        val stores = _costByStore.value
-        val dates = _costByDate.value
-
-        val maxStore = stores.maxOfOrNull { it.totalAmount } ?: 0.0
-        val maxDate = dates.maxOfOrNull { it.totalAmount } ?: 0.0
-
-        return maxOf(maxStore, maxDate, 0.1) // min 0.1 to avoid division by zero
-    }
-
-    fun formatDate(dateStr: String): String {
-        // dateStr format: "2026-06-15 HH:MM:SS" or "2026-06-15"
-        return dateStr.split(" ")[0]
-    }
-
-    fun formatCurrency(amount: Double): String {
-        return formatEuro(amount)
     }
 }

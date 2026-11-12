@@ -224,7 +224,7 @@ Zusätzlich:
   `history.points`, älteste zuerst, Label = Datum `TT.MM.`); gleiches Verhalten, jetzt mit Beschreibung
   „Preisverlauf von %1$s: zuletzt %2$s, niedrigster Preis %3$s, höchster Preis %4$s". `@ThemePreviews`.
   Akzeptanz: `V` grün; `grep -c 'Canvas(' $U/receipts/ProductPriceDetailScreen.kt` = 0.
-- [ ] **S14 ViewModel der Kostenübersicht** — Dateien: `$U/receipts/CostOverviewViewModel.kt`, neu
+- [x] **S14 ViewModel der Kostenübersicht** — Dateien: `$U/receipts/CostOverviewViewModel.kt`, neu
   `$T/CostOverviewViewModelTest.kt`. Konstruktor: `ReceiptStatsRepository`, `ReceiptRepository` (Budget),
   `SyncScheduler`. `enum class Granularity { MONTH, WEEK }`; `data class CostOverviewUiState(val loaded: Boolean,
   val empty: Boolean, val provisionalCount: Int, val granularity: Granularity, val range: StatsRange, val bars:
@@ -239,7 +239,7 @@ Zusätzlich:
   Repositories mit `MutableStateFlow`, `kotlinx-coroutines-test`, `turbine`): Zustand für festen Datensatz; Wechsel
   Monat ↔ Woche ändert `bars` und `barBudget`; Wechsel des Zeitraums ändert `stores`; leerer Abzug → `empty == true`.
   Akzeptanz: `V` grün; `ArchitectureRulesTest` grün.
-- [ ] **S15 Screen der Kostenübersicht** — Dateien: `$U/receipts/CostOverviewScreen.kt`, `$B/HelgaNavGraph.kt`,
+- [x] **S15 Screen der Kostenübersicht** — Dateien: `$U/receipts/CostOverviewScreen.kt`, `$B/HelgaNavGraph.kt`,
   `$R/values/strings.xml`. `CostOverviewScreen(onBack, onProductClick, onAllProductsClick, viewModel)` sammelt State;
   `internal fun CostOverviewContent(state, <Callbacks>, modifier)` als `LazyColumn` (Abstand 16 dp, je Abschnitt eine
   `Card` mit Titel `titleMedium`), Reihenfolge:

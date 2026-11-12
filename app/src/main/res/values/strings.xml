@@ -661,4 +661,30 @@
     <string name="cost_chart_percent">%1$d %%</string>
     <string name="chart_trend_too_few">Noch zu wenige Käufe für einen Verlauf.</string>
     <string name="product_prices_chart_description">Preisverlauf von %1$s: zuletzt %2$s, niedrigster Preis %3$s, höchster Preis %4$s</string>
+    <!-- Phase 3b: Kostenübersicht -->
+    <plurals name="cost_provisional_hint">
+        <item quantity="one">%1$d vorläufiger Bon ist noch nicht enthalten.</item>
+        <item quantity="other">%1$d vorläufige Bons sind noch nicht enthalten.</item>
+    </plurals>
+    <string name="cost_stats_empty">Noch keine Auswertung. Sie erscheint nach dem ersten Abgleich mit dem Server.</string>
+    <string name="cost_section_spending">Ausgaben</string>
+    <string name="cost_section_stores">Märkte</string>
+    <string name="cost_section_categories">Kategorien</string>
+    <string name="cost_section_top_products">Top-Artikel</string>
+    <string name="cost_average_month">Ø %1$s je Monat</string>
+    <string name="cost_average_week">Ø %1$s je Woche</string>
+    <string name="cost_range_this_month">Dieser Monat</string>
+    <string name="cost_range_three_months">3 Monate</string>
+    <string name="cost_range_twelve_months">12 Monate</string>
+    <string name="cost_range_all">Gesamt</string>
+    <string name="cost_other">Sonstige</string>
+    <string name="cost_no_receipts_range">Keine Bons in diesem Zeitraum.</string>
+    <string name="cost_category_discount_note">Bon-Rabatte in diesem Zeitraum: %1$s</string>
+    <string name="cost_times_bought">%1$d× gekauft</string>
+    <string name="cost_all_products">Alle Artikel</string>
+    <string name="cost_chart_months_description">Ausgaben der letzten 12 Monate, zuletzt %1$s, Durchschnitt %2$s</string>
+    <string name="cost_chart_weeks_description">Ausgaben der letzten 12 Wochen, zuletzt %1$s, Durchschnitt %2$s</string>
+    <string name="cost_chart_stores_description">Anteil je Markt, größter Anteil: %1$s mit %2$s</string>
+    <string name="cost_chart_categories_description">Ausgaben je Kategorie, größte Kategorie: %1$s mit %2$s</string>
+    <string name="cost_chart_products_description">Top-Artikel nach Ausgaben, an erster Stelle: %1$s mit %2$s</string>
 </resources>
