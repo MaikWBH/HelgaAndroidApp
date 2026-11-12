@@ -307,7 +307,7 @@ Zusätzlich:
   grün; `G-S $U/stores/StoreListScreen.kt` regelkonform. Prüfliste (Gerät): Kategorie eines Gangs ändern → auf dem
   zweiten Handy nach Sync sichtbar; neuer Markt mit Vorlage hat 15 Gänge; Ziehen der Reihenfolge funktioniert weiter;
   TalkBack liest Gangname und Kategorie.
-- [ ] **S19 Stichwortliste** — Dateien: neu `$B/data/util/AisleKeywords.kt`, neu `$T/AisleKeywordsTest.kt`.
+- [x] **S19 Stichwortliste** — Dateien: neu `$B/data/util/AisleKeywords.kt`, neu `$T/AisleKeywordsTest.kt`.
   `object AisleKeywords { internal const val RAW = """…""" ; data class Entry(val word: String, val category: String,
   val priority: Boolean); val entries: List<Entry> by lazy { parse(RAW) } ; internal fun parse(raw: String):
   List<Entry> }` — `RAW` ist der Datenblock aus `$D/aisle-keywords.md` zeichengenau; `parse` nach „Format des
