@@ -177,12 +177,18 @@ zeigt die Kontextgröße.
   docker exec hv python -c "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8000/api/health').status)"  # 200
   docker rm -f hv
   ```
-  Außerdem ohne `API_KEY` starten (`docker run --rm --network host helga-verify:new`) → Container endet mit der Meldung aus
-  Phase 4 (`API_KEY fehlt …`). Akzeptanz: alle Antworten wie angegeben.
+  Außerdem ohne `API_KEY` starten (Korrektur nach Rückmeldung von Stufe B: mit mehreren Uvicorn-Workern **beendet** ein
+  Startfehler den Container nicht, der Supervisor startet die Worker immer wieder neu — das war schon vor Phase 5 so und
+  bleibt; kein neuer Code): `docker run -d --name hn --network host --health-interval=5s --health-start-period=1s
+  --health-retries=2 helga-verify:new`, nach etwa 30 Sekunden: `docker logs hn 2>&1 | grep -c "API_KEY fehlt"` ist größer
+  als 0 und `docker inspect -f '{{.State.Health.Status}}' hn` ist `unhealthy`; danach `docker rm -f hn`. Akzeptanz: alle
+  Antworten wie angegeben.
 - [ ] **S6 Dokumentation** — Dateien: `$S/CLAUDE.md` (Abschnitt „Deployment": Mehrstufiges Image, `--target test`,
   `make docker-test`, `WEB_CONCURRENCY`, gehärteter Prod-Container: schreibbar sind nur `/app/data` und `/tmp`; neue
   Schreibpfade im Code müssen unter `/app/data` liegen; Pin von `recipe-scrapers` und Hinweis zu `jstyleson` →
-  kein `--only-binary`), `$S/.env.example` (Zeile `# WEB_CONCURRENCY=2` mit Kommentar „Anzahl Uvicorn-Worker, Standard 2"),
+  kein `--only-binary`; außerdem der Hinweis: Fehlt `API_KEY`, beendet sich der Container **nicht** — die Worker brechen
+  mit „API_KEY fehlt …" ab, Uvicorn startet sie neu, der Container wird `unhealthy`; Ursache im Log suchen),
+  `$S/.env.example` (Zeile `# WEB_CONCURRENCY=2` mit Kommentar „Anzahl Uvicorn-Worker, Standard 2"),
   `doku/casaos-deployment.md` (kurzer Hinweis nahe der Compose-Befehle: Datenordner muss UID 1000 gehören; Container ist
   `read_only`), `.claude/features/sync/plan.md` (Abschnitt „Phase 5"), `.claude/phasen/README.md` (Phase 5 → „umgesetzt
   (Stufe B)", Umsetzungsmodell Haiku 5.5, Definition Sonnet 5.5). Akzeptanz: Dateien geändert; `VS` grün. Danach Block B pushen.
