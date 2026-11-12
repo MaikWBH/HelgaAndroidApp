@@ -63,7 +63,23 @@ _Sub-Agent-Modell: sonnet_
 
 **Ergebnis:** 0 Blocker, 0 Hoch, 1 Mittel, 13 Niedrig; schwerster Befund: S1
 
-<Spec-Antwort>
+### Spec — B3 — Server-Bon-Archiv
+
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|---|---|---|---|---|---|
+| P1 | `server/app/receipts.py:382,447,514,559` | c | `_set_parse_state` ändert `parse_status` und `parse_attempts` ohne `next_seq` und ohne `server_seq`. Das betrifft `failed` (Warteschlange), `queued` (Reparse-Misserfolg) und `queued` beim Re-Scan eines vorhandenen Bons. Per `since_seq` erreicht der Wechsel kein Gerät, obwohl die App `failed` auswertet (`ReceiptGrouping.kt:12`). | server-vertrag §3.1 „Schreiben allgemein": „Jeder Schreibvorgang an einem Bon … erhöht sync_state.seq um 1 und stempelt … server_seq auf den Bon" | Mittel | [ändert Verhalten] |
+| P2 | `server/app/receipts.py:514` | c | Ein Reparse-Misserfolg erhöht `parse_attempts` ohne Obergrenze. Ab 5 bleibt der Bon `queued`, wird aber nie mehr aufgenommen (`parse_attempts < 5`) und nie `failed`. | server-vertrag §3.1 Reparse: „bei Misserfolg bleiben die bisherigen Werte, nur `parse_status = 'queued'`" | Mittel | [ändert Verhalten] [Ermessensfrage] |
+| P3 | `server/app/receipts.py:203,276,397,535,249` | b | Gegenüber dem Wortlaut kommen fünf Bedingungen dazu. Lernen entfällt bei Bon- oder Positions-`deleted`. `apply_parse` setzt `updated_at = max(now_ms(), alt+1)`. Die Warteschlange filtert `deleted = 0`. Der Lexikon-Name wird nur bei nicht leerem Eintrag übernommen. | server-vertrag §3.1 PUT „Danach Lernen, wenn applied und status in (confirmed, reconciled)"; Scan Schritt 4 „updated_at = now_ms()"; §4 „name übernehmen" | Niedrig | [Ermessensfrage] |
+| P4 | `server/app/receipts.py` (`apply_parse`) | a | Die Spec nennt die Funktion `write_parsed`. Im Code heißt sie `apply_parse`, `write_parsed` existiert nirgends im Repo außerhalb der Spec. | phase-3a S10 „`write_parsed`, `save_receipt_image(receipt_id, upload) -> str`" | Niedrig | – |
+| P5 | `server/app/receipts.py:342,352,494` | – (Beifang) | Gleiche Art wie V11: `dest.open("wb")`, `unlink` und `is_file()` laufen weiter synchron im Event-Loop. | – | Niedrig | – |
+| P6 | `server/scripts/restore_purged_receipts.py:59` | c | Vermutung: `sqlite3.connect` legt bei falschem `--db`-Pfad auch ohne `--apply` eine leere Datei an. Es gibt keinen Nur-Lese-Modus. | phase-3a S13 „Ohne `--apply` nur Liste" | Niedrig | [Ermessensfrage] |
+| P7 | `server/tests/test_schema_migration.py:96` | d | `test_init_db_is_idempotent` prüft nur die Zeilenzahl. Er prüft nicht, dass der zweite Lauf nichts ändert (Backfill läuft nicht erneut, `purchase_day` und `source` bleiben leer). | phase-3a S3 „(3) zweiter `init_db()`-Lauf ändert nichts und wirft nicht" | Niedrig | – |
+| P8 | `server/tests/test_categorize_items.py:43` | d | „`user` bleibt" fehlt. Der Test lässt nur einen Treffer ohne KI-Aufruf zu. Der Schutz `WHERE source != 'user'` beim Speichern ist nicht getestet. | phase-3b S3 „… KI wirft → `""`, nichts gespeichert; `user` bleibt; …" | Niedrig | – |
+| P9 | `server/tests/test_receipt_aggregates.py` | d | „Häufigster Name" wird nie mit abweichenden Namen getestet. Die Dimension `product` prüft nicht, dass vorläufige, gelöschte und datumlose Bons fehlen. | phase-3b S2 „store-Schlüssel und häufigster Name … vorläufige/gelöschte/datumlose Bons fehlen überall" | Niedrig | – |
+
+Alle übrigen Pflichtfragen habe ich gegen den Code geprüft und ohne Abweichung gefunden. Das gilt für PUT, DELETE, Scan, Reparse, Warteschlange, Lernen, Aggregate (Filter, Rundung, Sortierung, Pfand), Alt-Clients (`deleted = 1` ignoriert, nur alte Spalten), `PRESERVE_IF_UNSET`, Schema und den Schreibzugriff des Restore-Skripts.
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 2, Niedrig 7; schwerster Befund: P1
 
 ## B2 — Bon-Protokoll App
 <Standards-Antwort> · <Spec-Antwort>
