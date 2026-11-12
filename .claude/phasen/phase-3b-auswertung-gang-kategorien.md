@@ -315,7 +315,7 @@ Zusätzlich:
   Schritt `normalize` bereits als `internal fun` in `AisleKeywords.kt` anlegen und in S20 von dort verwenden). Test:
   Gesamtzahl 605, Anzahl je Kategorie nach der Tabelle „Prüfzahlen", 5 Vorrang-Einträge, 26 Phrasen, keine Dublette,
   jede Kategorie ist ein Gang-Schlüssel aus `ProductCategory.aisleCategories`. Akzeptanz: `V` grün.
-- [ ] **S20 Stichwort-Zuordnung** — Dateien: neu `$B/data/util/AisleKeywordMatcher.kt`, neu
+- [x] **S20 Stichwort-Zuordnung** — Dateien: neu `$B/data/util/AisleKeywordMatcher.kt`, neu
   `$T/AisleKeywordMatcherTest.kt`. `object AisleKeywordMatcher { fun normalize(raw: String): String; fun
   categoryFor(name: String): String }` exakt nach „Algorithmus" in `$D/aisle-keywords.md` (Schritte 1–6, gleiche
   Reihenfolge der Entscheidungskriterien). Test, Blöcke aus `$D/aisle-testfaelle.md` als Raw-Strings: (1) **Liste A**:
