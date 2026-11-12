@@ -458,7 +458,21 @@ _Sub-Agent-Modell: sonnet_
 
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 4; schwerster Befund: S4 (Niedrig, Vermutung). Checks (1) bis (4), (6), (7) und (8) sind sauber. Bei (5) bleibt nur WeekplanScreen.kt:451 (Scrim, dokumentierte Ausnahme). Die zweite Ausnahme SettingsScreen:998 ist durch ColorSwatchPicker entfallen. Die Arbeitskopie entspricht für `app/src` dem Stand 451819d.
 
-<Spec-Antwort>
+### Spec — B10 — UI-Querschnitt aus Phase 2
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|-------------|---------------|--------|----------------------------|------|------------|
+| (keine Befunde) | | | | | | |
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 0; schwerster Befund: keiner.
+
+Geprüfte Checklistenpunkte, jeweils am Stand 451819d und selbst gelesen:
+- **T1–T3:** In `ui/theme/Color.kt` (Z.19–38, 68–127) stimmen alle Werte der Tabelle T1 überein, also nicht nur Grün hell/dunkel und Orange hell. Die Neutralrollen aus T2 stimmen für Hell und Dunkel. `inversePrimary` ist je das `main` der anderen Helligkeit. Die Zuordnung der Akzente in `Theme.kt` Z.38–45 entspricht T3 (Lila-hell dunkel = Lila dunkel). `Color(0x` kommt außerhalb von `theme/` nicht vor.
+- **S2:** `ACCENT_SYSTEM = -1` steht in `Color.kt`. `AppPreferences` nutzt `?: -1` mit Kommentar und `coerceIn(-1, 5)`. `HelgaTheme` hat den Default `ACCENT_SYSTEM`, die Bedingung `== ACCENT_SYSTEM && SDK_INT >= S` und `coerceIn(0, lastIndex)`. `MainActivity` nutzt `collectAsStateWithLifecycle(initialValue = ACCENT_SYSTEM)`. `SettingsUiState.accentColor` hat den Default `ACCENT_SYSTEM`.
+- **S8:** `HelgaNavGraph.kt` Z.125–143 verwendet `rememberSaveable` für `startRoute` und `importHandled`, das Surface mit `return` und `LaunchedEffect(start)`. `rememberNavController()` steht vor dem `return`. `!!` kommt nicht vor, und `startDestination = ROUTE_ONBOARDING` ist weg.
+- **S11:** Die Abhängigkeit steht in `libs.versions.toml` und `app/build.gradle.kts`. `useRail`, `navigateToRoot`, `bottomBar` nur ohne Rail, die `Row` mit `padding`, `consumeWindowInsets` und `imePadding`, die `Box` mit `TopCenter` und `widthIn(max = 840.dp)` nur bei `Expanded` entsprechen der Spec. `NavigationRail(modifier = Modifier.fillMaxHeight())` ist die akzeptierte Abweichung.
+- **Nicht-Ziele:** Es gibt kein Grid, keinen Zweispalter, kein `scrollBehavior`, kein `animateItem` und keine eigene Typografie. In den Groß-Screens gibt es keine neuen Composables oder `Content`-Funktionen. In `ui/receipts` hat Phase 2 weder `rememberSaveable` noch Rollen ergänzt. `DayMarker` hat nur Shape und Preview geändert.
+
+Nicht gemeldet: Die zweite neue Zeile `sqlite-jdbc` unter `[libraries]` stammt aus Phase 3a S15 (132f757), nicht aus Phase 2.
 
 ## B11 — Doku-Abgleich (nur Spec)
 <Spec-Antwort>
