@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 import aiosqlite
 
+from . import categories
 from .db import get_db, SYNC_TABLES
 from .models import SyncPayload, SyncPullResponse, SyncPushRequest
 
@@ -29,7 +30,7 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     ],
     "stores": ["id", "name", "is_active", "updated_at", "deleted"],
     "store_aisles": [
-        "id", "store_id", "aisle_name", "sort_order", "updated_at", "deleted",
+        "id", "store_id", "aisle_name", "sort_order", "category_key", "updated_at", "deleted",
     ],
     "aisle_products": [
         "id", "aisle_name", "product_name", "store_id", "updated_at", "deleted",
@@ -103,6 +104,13 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
 # in SYNC_TABLES (der Pull liefert sie nicht mehr; Bons laufen über /api/receipts), werden aber weiter angenommen:
 # nur Datensätze mit deleted = 0, nur die bisherigen Spalten, nie als server_wins (siehe server-vertrag.md, Abschnitt 7).
 LEGACY_PUSH_TABLES = ["receipts", "receipt_items"]
+
+# Spalten, die ein Client-Update nur überschreibt, wenn der Client das Feld mitschickt. Alte App-Versionen kennen neue
+# Spalten nicht; ohne diese Schutzliste würde ihr Upsert sie auf den Standardwert zurücksetzen. Neue Spalten an
+# Sync-Tabellen hier eintragen, solange alte App-Versionen pushen.
+PRESERVE_IF_UNSET: Dict[str, List[str]] = {
+    "store_aisles": ["category_key"],
+}
 
 # Mapping Tabellenname → Feldname im SyncPayload
 PAYLOAD_FIELD = {
@@ -212,9 +220,14 @@ async def push_records(payload: SyncPushRequest) -> SyncPullResponse:
                 else:
                     # Client ist neuer oder Record ist neu → upsert + server_seq stempeln
                     placeholders = ", ".join("?" * len(insert_cols))
+                    preserved = {
+                        c for c in PRESERVE_IF_UNSET.get(table, []) if c not in record.model_fields_set
+                    }
                     update_set = ", ".join(
-                        f"{c} = excluded.{c}" for c in insert_cols if c != "id"
+                        f"{c} = excluded.{c}" for c in insert_cols if c != "id" and c not in preserved
                     )
+                    if table == "store_aisles":
+                        rec_dict["category_key"] = categories.coerce(rec_dict.get("category_key"))
                     values = [rec_dict.get(c) for c in cols] + [commit_seq]
                     await db.execute(
                         f"INSERT INTO {table} ({', '.join(insert_cols)}) VALUES ({placeholders}) "

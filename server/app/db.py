@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS store_aisles (
     store_id    TEXT NOT NULL,
     aisle_name  TEXT NOT NULL DEFAULT '',
     sort_order  INTEGER DEFAULT 0,
+    category_key TEXT NOT NULL DEFAULT '',
     updated_at  INTEGER NOT NULL DEFAULT 0,
     deleted     INTEGER NOT NULL DEFAULT 0
 );
@@ -493,6 +494,10 @@ ADDED_COLUMNS = {
     "weekplan_recipes": [
         ("meal_slot", "TEXT NOT NULL DEFAULT ''"),
     ],
+    # Phase 3b: Kategorie-Schlüssel je Gang (gemeinsamer Katalog, siehe categories.py)
+    "store_aisles": [
+        ("category_key", "TEXT NOT NULL DEFAULT ''"),
+    ],
     # Phase 3a: Bon-Felder (Uhrzeit, Filiale, Rabatte, Pfand, Einheit, Kategorie, Warteschlange)
     "receipts": [
         ("store_address", "TEXT NOT NULL DEFAULT ''"),
@@ -536,6 +541,22 @@ COLUMN_BACKFILL = {
             THEN strftime('%Y-%m-%d', purchase_date / 1000, 'unixepoch', '+2 hours') ELSE '' END
     """,
     ("receipts", "source"): "UPDATE receipts SET source = 'legacy'",
+    # Phase 3b: die zehn bisherigen Standardgänge bekommen ihren Kategorie-Schlüssel (alle anderen bleiben leer)
+    ("store_aisles", "category_key"): """
+        UPDATE store_aisles SET category_key = CASE aisle_name
+            WHEN 'Obst & Gemüse' THEN 'obst_gemuese'
+            WHEN 'Brot & Backwaren' THEN 'brot_backwaren'
+            WHEN 'Milchprodukte & Eier' THEN 'milch_eier'
+            WHEN 'Fleisch & Wurst' THEN 'fleisch_wurst'
+            WHEN 'Fisch' THEN 'fisch'
+            WHEN 'Tiefkühl' THEN 'tiefkuehl'
+            WHEN 'Konserven & Trockenware' THEN 'trockenware'
+            WHEN 'Getränke' THEN 'getraenke'
+            WHEN 'Süßes & Snacks' THEN 'suesses_snacks'
+            WHEN 'Drogerie & Haushalt' THEN 'drogerie'
+            ELSE ''
+        END
+    """,
 }
 
 

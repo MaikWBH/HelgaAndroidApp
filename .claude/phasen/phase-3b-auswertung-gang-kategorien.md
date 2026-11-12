@@ -84,11 +84,11 @@ Zusätzlich:
   Zeichenlogik, die rechnet (Skalierung, Winkel, Zeiträume), liegt in reinen Funktionen mit Unit-Test.
 
 ### Block 0 — Basis
-- [ ] **S0 Baseline** — `VS` und `V` ausführen, Testzahlen unter „Abschluss" notieren;
+- [x] **S0 Baseline** — `VS` und `V` ausführen, Testzahlen unter „Abschluss" notieren;
   `grep -c 'version = 37' $B/data/local/AppDatabase.kt` (erwartet 1). Steht dort nicht 37: stoppen (3a fehlt).
 
 ### Block A — Server (abwärtskompatibel; Befunde 6, 12)
-- [ ] **S1 Gang-Schlüssel im Sync** — Dateien: `$SA/db.py`, `$SA/sync.py`, `$SA/models.py`, neu
+- [x] **S1 Gang-Schlüssel im Sync** — Dateien: `$SA/db.py`, `$SA/sync.py`, `$SA/models.py`, neu
   `$ST/test_sync_aisle_category.py`. `store_aisles` bekommt `category_key TEXT NOT NULL DEFAULT ''` (in `SCHEMA` und
   `ADDED_COLUMNS`); `COLUMN_BACKFILL[("store_aisles", "category_key")]` = `UPDATE store_aisles SET category_key = CASE
   aisle_name WHEN 'Obst & Gemüse' THEN 'obst_gemuese' … ELSE '' END` mit den zehn Zeilen aus `$D/kategorien.md`

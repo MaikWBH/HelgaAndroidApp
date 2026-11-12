@@ -70,6 +70,7 @@ class StoreAisleRecord(SyncRecord):
     store_id: str
     aisle_name: str = ""
     sort_order: int = 0
+    category_key: str = ""
 
 
 class AisleProductRecord(SyncRecord):
