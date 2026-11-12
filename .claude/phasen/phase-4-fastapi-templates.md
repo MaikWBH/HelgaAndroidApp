@@ -174,7 +174,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   pushen.
 
 ### Block D — Dokumentation und Abschluss
-- [ ] **S12 Doku und Index** — Dateien: `$S/CLAUDE.md` (Struktur-Abschnitt auf die neuen Dateien `sync_api.py`,
+- [x] **S12 Doku und Index** — Dateien: `$S/CLAUDE.md` (Struktur-Abschnitt auf die neuen Dateien `sync_api.py`,
   `images_api.py`, `off_api.py`, `ai_api.py`, `suggestions_api.py`, `ai_client.py`, `url_guard.py` umstellen; Abschnitt
   „Konventionen" um: Start nur mit `API_KEY` oder `ALLOW_NO_AUTH=1`; KI-Ausfall → 502; Eingabe-Limits; SSRF-Schutz;
   neue Umgebungsvariablen), `doku/casaos-deployment.md` (Hinweis: `API_KEY` ist Pflicht, sonst startet der Container
@@ -192,10 +192,23 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
 - Entfernen der alten Endpunkte `/api/ai/parse-receipt` und `/api/receipts/reconcile` (alte App-Versionen).
 
 ## Abschluss
-- [ ] Baseline aus S0 notiert; Endstand `V`: … Tests (Anzahl), grün
-- [ ] `wc -l`-Werte vorher/nachher: `main.py` 211 → …, `ai.py` 849 → …
-- [ ] Gemeldete Abweichungen und Ausnahmen (je Schritt eine Zeile)
-- [ ] Bereichs-`plan.md` (sync, ki), Phasen-README, `server/CLAUDE.md` aktualisiert (S12)
+- [x] Baseline aus S0 notiert: 110 grün. Endstand `V`: 177 Tests, grün
+- [x] `wc -l`-Werte vorher/nachher: `main.py` 211 → 54, `ai.py` 849 → 606 (nach S7 allein 570; S9 hat die Abruf-Helfer ergänzt, ca. +36)
+- [x] Gemeldete Abweichungen und Ausnahmen (je Schritt eine Zeile)
+  - S0: keine Abweichung. Commit-Nachricht zunächst mit „S00“ gebaut und vor dem Push auf „S0“ korrigiert.
+  - S1: keine Abweichung. Zusätzlich: Die Ersetzung hat im Kommentar und Docstring von `ai.py` Verweise auf `settings.AI_*` gesetzt (rein kosmetisch).
+  - S2: keine Abweichung.
+  - S3: keine Abweichung. Momentaufnahme: 28 Routen, vor S4 erzeugt.
+  - S4: keine Abweichung. `main.py` wurde als Ganzes neu geschrieben; die Routen-Funktionen sind 1:1 übernommen.
+  - S5: keine Abweichung. `ai_api.include_router` steht hinter `off_api`, also nach `receipt_api`.
+  - S6: Abweichung in der Testerwartung. Der Plan nennt `q="oma"` als Beispiel, das „Tomate“ nicht finden soll. „oma“ ist aber eine echte Teilzeichenkette von „Tomate“ (T-oma-te), also ist der Treffer korrekt, auch ohne Wildcard. Der Test erwartet deshalb `{Oma-Ei, Tomate, Tomatenmark}`. Den Wildcard-Fall prüft zusätzlich `q="t_mate"` (ohne Escaping würde „Tomate“ treffen).
+  - S7: keine Abweichung. `_vision_once` ist als Alias angelegt, wird in `ai.py` aber nicht genutzt.
+  - S8: Die Fehlerabbildung für unbrauchbare Antworten fängt zusätzlich `TypeError` und `AttributeError` (über `KeyError`, `IndexError`, `ValueError` hinaus). Eine Antwort, die kein JSON-Objekt ist, zählt ebenfalls als unbrauchbar.
+  - S9: Der Abruf liegt in der Hilfsfunktion `ai._fetch_html`, die `import_url` aufruft. Grund: `recipe_scrapers` ist in der Testumgebung nicht installiert. Die Tests prüfen `_fetch_html` direkt, nicht den Endpunkt. `MAX_IMPORT_PAGE_BYTES` steht in `settings.py` (Plan impliziert das). Ein DNS-Fehler wird als „Seite nicht erreichbar“ gemeldet (der Plan nennt keinen Text). Die Schema-/Host-Meldungen („Nur http- und https-Adressen sind erlaubt“, „Ungültige Adresse“) sind eigene Formulierungen, weil der Plan dafür keinen Wortlaut vorgibt.
+  - S10: keine Abweichung. Die Grenzfälle laufen über die Endpunkte; die KI- und OFF-Funktionen sind dafür durch Attrappen ersetzt.
+  - S11: keine Abweichung. Lesen in Blöcken zu 1 MiB (`UPLOAD_BLOCK_BYTES`).
+  - S12: Doku wie geplant. `server/CLAUDE.md` nennt zusätzlich `off.py`, `ingredient_parser.py` und `ai_api.py` in der Struktur; die Plan-Liste nannte sie nicht.
+- [x] Bereichs-`plan.md` (sync, ki), Phasen-README, `server/CLAUDE.md` aktualisiert (S12)
 - [ ] **Hinweis für den Nutzer (Rollout):** Vor dem nächsten Deploy im Homelab prüfen, dass `API_KEY` in der Produktions-`.env`
       gesetzt ist — der Container startet sonst nicht mehr. Der Server ist nach dem Tag `vX.Y.Z` per `scripts/app.sh bump helga`
       im Homelab-Repo auszurollen (liegt außerhalb dieses Repos).

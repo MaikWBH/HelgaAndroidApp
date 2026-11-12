@@ -180,3 +180,7 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Konflikt-Sichtbarkeit (Frage 5 aus der urspr. Liste) bleibt wie bisher still per LWW | Kein bewusster Datenverlust bekannt, kein Bedarf an sichtbarer Konfliktauflösung geäußert |
 
 **Phase 3a:** Bons (`Receipt`, `ReceiptItem`) laufen seit Phase 3a außerhalb des Voll-Syncs über ein eigenes bon-weises Protokoll (`ReceiptSyncer`, `/api/receipts`); Regeln in `.claude/guidelines/sync-patterns.md`, Abschnitt „Server-Archiv mit lokalem Cache".
+
+## Phase 4 (fastapi-templates)
+
+- Phase 4 umgesetzt (Stufe B, 2026-11-12): Sync-Endpunkte liegen in `server/app/sync_api.py`; Sync-Logik (`sync.py`) und Protokoll sind unverändert. Der Server startet nicht ohne `API_KEY` (außer `ALLOW_NO_AUTH=1`). Bild-Upload mit 8-MiB-Limit (`images_api.py`). Siehe [phase-4](../../phasen/phase-4-fastapi-templates.md).

@@ -79,6 +79,8 @@ DB_PATH=data/recipes.db
 IMAGES_DIR=data/images
 ```
 
+> **Hinweis:** `API_KEY` ist Pflicht. Ohne gesetzten Wert startet der Server nicht. Die Ausnahme `ALLOW_NO_AUTH=1` ist nur für lokale Entwicklung gedacht und darf in Produktion nicht gesetzt sein. `LOG_LEVEL` ist optional (Standard `INFO`).
+
 ---
 
 ## Schritt 4 – Container bauen und starten

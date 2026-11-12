@@ -22,17 +22,25 @@ Schlankes FastAPI-Backend das ausschließlich als Datenhub für die Helga Androi
 
 ```
 app/
-├── main.py         # Routen (Sync, KI, Bilder, OFF), Lifespan (Bon-Warteschlange)
-├── settings.py     # API_KEY, IMAGES_DIR, Warteschlangen-Takt, Foto-Limit (zur Aufrufzeit lesen)
-├── auth.py         # require_auth
-├── db.py           # Schema, init_db(), get_db(), SYNC_TABLES, RECEIPT_TABLES, now_ms()
-├── models.py       # Pydantic-Modelle (SyncPayload, DTOs für KI, Bon-Archiv)
-├── sync.py         # pull_since(), push_records() – LWW-Merge
-├── ai.py           # stream_generate(), stream_remix(), classify(), parse_receipt(), reconcile_receipt()
-├── categories.py   # gemeinsamer Kategorien-Katalog (Bons, Auswertung, Gänge)
-├── receipt_text.py # Schlüssel- und Datumshilfen für Bons (reine Funktionen)
-├── receipts.py     # Bon-Speicherschicht, Scan, Anreichern, Lernen, Warteschlange
-└── receipt_api.py  # Router /api/receipts (Bon-Archiv, Lexikon)
+├── main.py            # App, Lifespan (Start-Prüfung, Bon-Warteschlange), Logging, 502-Handler, Health
+├── settings.py        # Alle Umgebungsvariablen zentral; zur Aufrufzeit über settings.X gelesen
+├── auth.py            # require_auth
+├── db.py              # Schema, init_db(), get_db(), SYNC_TABLES, RECEIPT_TABLES, now_ms()
+├── models.py          # Pydantic-Modelle (Sync, KI, Bon-Archiv, OFF) mit Eingabe-Limits
+├── sync.py            # pull_since(), push_records() – LWW-Merge
+├── sync_api.py        # Router /api/sync
+├── images_api.py      # Router /api/images (Upload mit Größenlimit, Abruf)
+├── off.py             # Open-Food-Facts-Abfragen; off_api.py = Router /api/off
+├── suggestions_api.py # Router /api/suggestions (Autocomplete)
+├── ai.py              # Prompts und Aufgaben: stream_generate(), stream_remix(), classify(), import_url(), parse_receipt(), reconcile_receipt()
+├── ai_client.py       # Anbieter-Schicht: Modellwahl, HTTP zu OpenAI/Anthropic, AiUpstreamError
+├── ai_api.py          # Router KI-Endpunkte (SSE, JSON) und /api/receipts/reconcile
+├── url_guard.py       # SSRF-Schutz für den Rezept-Import
+├── ingredient_parser.py # Zutatenzeilen aus Rezept-Import
+├── categories.py      # gemeinsamer Kategorien-Katalog (Bons, Auswertung, Gänge)
+├── receipt_text.py    # Schlüssel- und Datumshilfen für Bons (reine Funktionen)
+├── receipts.py        # Bon-Speicherschicht, Scan, Anreichern, Lernen, Warteschlange
+└── receipt_api.py     # Router /api/receipts (Bon-Archiv, Lexikon)
 scripts/
 ├── migrate_from_helga.py         # Einmalige Migration
 ├── receipt_testset.py            # Qualitätstest des Bon-Modells auf eigenen Fotos
@@ -122,7 +130,7 @@ git tag vX.Y.Z && git push --tags
 make migrate           # Pfad zur Helga-DB im Makefile-Rezept anpassen
 ```
 
-Da die API öffentlich erreichbar ist, muss `API_KEY` in Produktion gesetzt sein. Ohne ihn ist `require_auth` offen, und `validate-env.sh` im Homelab bricht deshalb ab.
+Da die API öffentlich erreichbar ist, muss `API_KEY` in Produktion gesetzt sein. Ohne ihn startet der Server nicht (Ausnahme nur lokal: `ALLOW_NO_AUTH=1`), und `validate-env.sh` im Homelab bricht ohne `API_KEY` ab.
 
 Alle weiteren Befehle: `make help`
 
@@ -134,3 +142,11 @@ Alle weiteren Befehle: `make help`
 - Pfad-Traversal bei Bildabruf abwehren: `Path(filename).name`
 - Schema-Änderungen sind **nicht destruktiv** – nur `ALTER TABLE ... ADD COLUMN`
 - `deleted = 1` ist Soft-Delete – nie physisch löschen (würde Sync brechen)
+- Router je Bereich: `APIRouter(dependencies=[Depends(require_auth)])`, eingebunden in `main.py` per `include_router`
+- Start nur mit `API_KEY` oder mit `ALLOW_NO_AUTH=1` (nur lokale Entwicklung und Tests); sonst bricht der Lifespan mit `RuntimeError` ab
+- KI-Ausfall (Anbieter-Status, nicht erreichbar, unbrauchbare Antwort) → HTTP 502 mit `KI-Dienst hat nicht geantwortet`; Meldungen enthalten nie Schlüssel oder Antwortkörper, Details stehen im Log
+- SSE-Streams: Fehler vor dem ersten Chunk → 502; Abbruch danach → Log, Stream endet ohne `[DONE]`
+- Eingabe-Limits in `models.py`: Kurztexte 200, Langtexte 4000 Zeichen, Tag-Liste 300, Zutaten-/Schrittlisten gedeckelt, Bild-Base64 ca. 8 MiB, `portions` 1–100, OFF-`limit` 1–20
+- Rezept-Import per URL (SSRF-Schutz in `url_guard.py`): nur http/https; Loopback, Privatnetz, Link-Local, Reserviert, Multicast und unspezifizierte Adressen werden abgelehnt, auch nach Weiterleitungen (jeder Hop geprüft, max. 5); Seite max. 5 MiB. Bekannte Grenze: DNS-Rebinding zwischen Prüfung und Abruf
+- Bild-Upload: max. 8 MiB (`settings.MAX_IMAGE_BYTES`), darüber 413 ohne Datei
+- Neue Umgebungsvariablen: `ALLOW_NO_AUTH` (nur lokal, Standard aus), `LOG_LEVEL` (Standard `INFO`). Alle übrigen Werte stehen in `settings.py`
