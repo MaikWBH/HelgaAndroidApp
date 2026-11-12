@@ -79,7 +79,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   /api/health` 200; mit `API_KEY="x"` und ohne Flag → 200. Akzeptanz: `V` grün. Danach Block A pushen.
 
 ### Block B — Struktur (Befunde 1, 8, 9)
-- [ ] **S3 Schutznetz für den Umbau** — Datei: neu `$ST/test_routes_guard.py`. Vor dem Umbau eine Momentaufnahme
+- [x] **S3 Schutznetz für den Umbau** — Datei: neu `$ST/test_routes_guard.py`. Vor dem Umbau eine Momentaufnahme
   festhalten: `python3 -c "from app.main import app; from fastapi.routing import APIRoute; print(sorted((m, r.path) for r in app.routes if isinstance(r, APIRoute) for m in sorted(r.methods - {'HEAD','OPTIONS'})))"`
   (in `$S`) und die Ausgabe als `EXPECTED_ROUTES` (Menge von Tupeln) in den Test kopieren. Test 1: die Routenmenge
   des Apps ist gleich `EXPECTED_ROUTES`. Test 2: mit `settings.API_KEY = "geheim"` und `ALLOW_NO_AUTH = False` antwortet
