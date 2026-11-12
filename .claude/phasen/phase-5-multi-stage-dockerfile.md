@@ -107,7 +107,7 @@ zeigt die Kontextgröße.
   `.gitignore` ausgeschlossenen Ordner, danach löschen) und baue mit dem Hilfsskript: die Zeile `transferring context`
   zeigt weniger als 1 MB. Akzeptanz: Kontext < 1 MB trotz Testdatei; Build der **alten** Dockerfile bleibt grün
   (`/tmp/claude-0/docker-verify.sh helga-verify:ignore`).
-- [ ] **S2 Abhängigkeit pinnen** — Datei: `$S/requirements.txt`. Zeile `recipe-scrapers>=14.0.0` →
+- [x] **S2 Abhängigkeit pinnen** — Datei: `$S/requirements.txt`. Zeile `recipe-scrapers>=14.0.0` →
   `recipe-scrapers==15.13.0`. Alle anderen Zeilen unverändert. Akzeptanz: Zeile geändert; Build in S3 löst auf 15.13.0 auf.
 - [ ] **S3 Multi-Stage-Dockerfile** — Datei: `$S/Dockerfile` **komplett ersetzen** durch genau diesen Inhalt (im Prototyp
   gebaut und geprüft, Quelle: Scratchpad `Dockerfile.final`):
