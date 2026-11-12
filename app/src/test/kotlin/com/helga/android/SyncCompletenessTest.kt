@@ -19,6 +19,8 @@ class SyncCompletenessTest {
     private val intentionallyLocalOnly = setOf(
         // reiner Abzug des Server-Lexikons (Phase 3a), Quelle der Wahrheit ist /api/receipts/lexicon
         "ReceiptLexicon",
+        // Abzug der Server-Auswertung (Phase 3b), wird nach jedem Bon-Abgleich ersetzt
+        "ReceiptAggregate",
         // Bons laufen über ein eigenes bon-weises Protokoll (ReceiptSyncer), nicht über den Voll-Sync.
         "Receipt",
         "ReceiptItem",

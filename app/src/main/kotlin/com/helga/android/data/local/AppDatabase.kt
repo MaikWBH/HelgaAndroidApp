@@ -25,6 +25,7 @@ import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
+import com.helga.android.data.local.entity.ReceiptAggregateEntity
 import com.helga.android.data.local.entity.ReceiptLexiconEntity
 import com.helga.android.data.local.entity.OffProductEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
@@ -48,7 +49,7 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
 
 @Database(
-    version = 37,
+    version = 38,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -73,6 +74,7 @@ import com.helga.android.data.local.entity.WeekplanSettingsEntity
         ReceiptEntity::class,
         ReceiptItemEntity::class,
         ReceiptLexiconEntity::class,
+        ReceiptAggregateEntity::class,
         MonthlyBudgetEntity::class,
         OffProductEntity::class,
         WeekplanDayMarkerEntity::class,
@@ -877,10 +879,44 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Phase 3b: Kategorie-Schlüssel je Gang und lokaler Abzug der Server-Auswertung.
+         * Die zehn bisherigen Standardgänge bekommen ihren Schlüssel automatisch (ohne `dirty`: der Server füllt per
+         * Backfill dieselben Werte); alle anderen Gänge ordnet der Nutzer im Gang-Editor zu. `internal` für den Test.
+         */
+        internal val MIGRATION_37_38 = object : Migration(37, 38) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE store_aisles ADD COLUMN categoryKey TEXT NOT NULL DEFAULT ''")
+                val defaults = mapOf(
+                    "Obst & Gemüse" to "obst_gemuese",
+                    "Brot & Backwaren" to "brot_backwaren",
+                    "Milchprodukte & Eier" to "milch_eier",
+                    "Fleisch & Wurst" to "fleisch_wurst",
+                    "Fisch" to "fisch",
+                    "Tiefkühl" to "tiefkuehl",
+                    "Konserven & Trockenware" to "trockenware",
+                    "Getränke" to "getraenke",
+                    "Süßes & Snacks" to "suesses_snacks",
+                    "Drogerie & Haushalt" to "drogerie",
+                )
+                defaults.forEach { (name, key) ->
+                    db.execSQL("UPDATE store_aisles SET categoryKey = '$key' WHERE aisleName = '$name' AND categoryKey = ''")
+                }
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `receipt_aggregates` (`id` TEXT NOT NULL, `period` TEXT NOT NULL, " +
+                        "`dimension` TEXT NOT NULL, `key` TEXT NOT NULL, `label` TEXT NOT NULL, `amount` REAL NOT NULL, " +
+                        "`quantity` REAL NOT NULL, `avgUnitPrice` REAL NOT NULL, `discount` REAL NOT NULL, " +
+                        "`count` INTEGER NOT NULL, PRIMARY KEY(`id`))"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_aggregates_dimension ON receipt_aggregates(dimension)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_aggregates_period ON receipt_aggregates(period)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38)
                 .build()
     }
 }

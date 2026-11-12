@@ -123,7 +123,7 @@ Zusätzlich:
   App-Versionen pushen"). Akzeptanz: `grep -c 'PRESERVE_IF_UNSET' $S/CLAUDE.md` ≥ 1. Danach Block A pushen.
 
 ### Block B — App: Daten (Befunde 1, 5, 6)
-- [ ] **S5 Room v38** — Dateien: `$B/data/local/entity/StoreAisleEntity.kt`, neu
+- [x] **S5 Room v38** — Dateien: `$B/data/local/entity/StoreAisleEntity.kt`, neu
   `$B/data/local/entity/ReceiptAggregateEntity.kt`, `$B/data/local/AppDatabase.kt`, `app/schemas/**/38.json`,
   `$T/SyncCompletenessTest.kt`, neu `$T/Migration37To38Test.kt`. `StoreAisleEntity.categoryKey: String = ""`.
   `ReceiptAggregateEntity` (`receipt_aggregates`): `id: String` (PK, `"$dimension|$period|$key"`), `period`,
