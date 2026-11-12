@@ -150,7 +150,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   `http://93.184.216.34/` ist erlaubt; ein Hostname, der **eine** öffentliche und **eine** private Adresse liefert, wird
   abgelehnt; Weiterleitung von öffentlich auf `http://192.168.1.1/` → 422; mehr als 5 Weiterleitungen → 422; zu große
   Seite → 422. Akzeptanz: `V` grün.
-- [ ] **S10 Eingabe-Limits der Modelle** — Dateien: `$SA/models.py`, neu `$ST/test_request_limits.py`. Oben in
+- [x] **S10 Eingabe-Limits der Modelle** — Dateien: `$SA/models.py`, neu `$ST/test_request_limits.py`. Oben in
   `models.py`: `ShortText = Annotated[str, StringConstraints(max_length=200)]`,
   `LongText = Annotated[str, StringConstraints(max_length=4000)]`, `TagList = Annotated[List[ShortText], Field(max_length=300)]`.
   Anwenden (Pydantic 2): `AiGenerateRequest`: `prompt` LongText, `available_tags` TagList, `custom_instructions`

@@ -1,5 +1,11 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import Annotated, List, Optional
+
+from pydantic import BaseModel, Field, StringConstraints
+
+# Eingabe-Limits (Phase 4, S10): kurze Namen, lange Freitexte und Listen sind begrenzt.
+ShortText = Annotated[str, StringConstraints(max_length=200)]
+LongText = Annotated[str, StringConstraints(max_length=4000)]
+TagList = Annotated[List[ShortText], Field(max_length=300)]
 
 
 class SyncRecord(BaseModel):
@@ -266,40 +272,40 @@ class SyncPushRequest(SyncPayload):
 # ── KI-Requests ─────────────────────────────────────────────────────────────
 
 class AiGenerateRequest(BaseModel):
-    prompt: str
-    available_tags: List[str] = []
-    custom_instructions: Optional[str] = None
-    exclude_allergens: List[str] = []
+    prompt: LongText
+    available_tags: TagList = []
+    custom_instructions: Optional[LongText] = None
+    exclude_allergens: List[ShortText] = Field(default=[], max_length=50)
 
 
 class AiRemixRequest(BaseModel):
-    recipe_name: str
-    recipe_description: str = ""
-    recipe_ingredients: List[str] = []
-    recipe_instructions: List[str] = []
-    remix_prompt: str
-    available_tags: List[str] = []
-    exclude_allergens: List[str] = []
+    recipe_name: ShortText
+    recipe_description: LongText = ""
+    recipe_ingredients: List[ShortText] = Field(default=[], max_length=200)
+    recipe_instructions: List[LongText] = Field(default=[], max_length=100)
+    remix_prompt: LongText
+    available_tags: TagList = []
+    exclude_allergens: List[ShortText] = Field(default=[], max_length=50)
 
 
 class AiClassifyRequest(BaseModel):
-    name: str
-    description: str = ""
-    tags: List[str] = []
-    ingredients: List[str] = []
+    name: ShortText
+    description: LongText = ""
+    tags: List[ShortText] = Field(default=[], max_length=100)
+    ingredients: List[ShortText] = Field(default=[], max_length=200)
 
 
 class AiNutritionRequest(BaseModel):
-    name: str
-    description: str = ""
+    name: ShortText
+    description: LongText = ""
     # Zutaten als Freitext-Zeilen ("200g Mehl"), bereits auf die Nährwert-Basis
     # von `portions` Portionen skaliert (siehe NUTRITION_BASELINE_PORTIONS).
-    ingredients: List[str] = []
-    portions: int = 4
+    ingredients: List[ShortText] = Field(default=[], max_length=200)
+    portions: int = Field(default=4, ge=1, le=100)
 
 
 class AiUrlImportRequest(BaseModel):
-    url: str
+    url: str = Field(max_length=2048)
 
 
 class ImportedIngredient(BaseModel):
@@ -335,7 +341,7 @@ class AiImportResponse(BaseModel):
 # ── OFF-Lookups ──────────────────────────────────────────────────────────────
 
 class OffLookupBarcodeRequest(BaseModel):
-    barcode: str
+    barcode: str = Field(max_length=32)
 
 
 class OffLookupBarcodeResponse(OffProductRecord):
@@ -343,8 +349,8 @@ class OffLookupBarcodeResponse(OffProductRecord):
 
 
 class OffSearchRequest(BaseModel):
-    query: str
-    limit: int = 5
+    query: str = Field(max_length=200)
+    limit: int = Field(default=5, ge=1, le=20)
 
 
 class OffSearchResponse(BaseModel):
@@ -368,8 +374,8 @@ class ReconcileReceiptItem(BaseModel):
 
 
 class ReceiptReconcileRequest(BaseModel):
-    checked_items: List[ReconcileShoppingItem] = []
-    receipt_items: List[ReconcileReceiptItem] = []
+    checked_items: List[ReconcileShoppingItem] = Field(default=[], max_length=300)
+    receipt_items: List[ReconcileReceiptItem] = Field(default=[], max_length=300)
 
 
 class ReconcileMatch(BaseModel):
@@ -388,7 +394,8 @@ class ReceiptReconcileResponse(BaseModel):
 # On-Device-OCR, weil das Modell Layout, Mengen und Preise direkt versteht.
 
 class ReceiptParseRequest(BaseModel):
-    image_base64: str
+    # ca. 8 MiB Binärdaten als Base64
+    image_base64: str = Field(max_length=11_200_000)
     mime_type: str = "image/jpeg"
 
 
@@ -537,7 +544,7 @@ class AggregatesResponse(BaseModel):
 
 
 class CategorizeRequest(BaseModel):
-    names: List[str] = Field(default_factory=list, max_length=50)
+    names: List[ShortText] = Field(default_factory=list, max_length=50)
 
 
 class CategorizeResult(BaseModel):
