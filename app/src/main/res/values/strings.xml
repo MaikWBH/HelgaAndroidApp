@@ -626,4 +626,13 @@
     <string name="receipt_unit_g">g</string>
     <string name="receipt_unit_l">l</string>
     <string name="receipt_unit_ml">ml</string>
+    <!-- Phase 3a: Bon-Liste -->
+    <string name="receipt_status_provisional">Vorläufig</string>
+    <string name="receipt_status_review">Bitte prüfen</string>
+    <string name="receipt_status_failed">Auswertung fehlgeschlagen</string>
+    <string name="receipt_list_empty_hint">Noch keine Bons. Fotografiere deinen ersten Kassenbon.</string>
+    <string name="receipt_list_scan_button">Bon scannen</string>
+    <string name="receipt_list_load_older">Ältere Bons laden</string>
+    <string name="receipt_list_older_hint">Auf dem Handy liegen nur die Bons der letzten Monate. Ältere werden für einen Tag nachgeladen.</string>
+    <string name="receipt_list_older_failed">Ältere Bons konnten nicht geladen werden. Server erreichbar?</string>
 </resources>

@@ -526,7 +526,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   Rabatt und Pfand scannen → Uhrzeit, Adresse, Rabatt je Position, Pfand-Chip und Kategorien stehen im Review;
   Kategorie ändern, speichern, denselben Artikel im selben Markt erneut scannen → Korrektur ist übernommen; „Produkt
   zuordnen" zeigt Treffer; Drehen im geöffneten Dialog behält Eingaben; TalkBack liest Chips und Buttons.
-- [ ] **S30 Bon-Liste** — Dateien: `$U/receipts/ReceiptListViewModel.kt`, `$U/receipts/ReceiptListScreen.kt`,
+- [x] **S30 Bon-Liste** — Dateien: `$U/receipts/ReceiptListViewModel.kt`, `$U/receipts/ReceiptListScreen.kt`,
   `$R/values/strings.xml`. ViewModel: `receipts`, `loadingOlder: StateFlow<Boolean>`, `olderMessage:
   SharedFlow<UiText>`, `fun loadOlder()` (`repository.loadOlderMonth()`; `false` → Meldung „Ältere Bons konnten nicht
   geladen werden. Server erreichbar?"). Screen (`Screen`/`Content`-Teilung): Zeilen gruppiert nach Monat (Sticky
@@ -640,3 +640,4 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - **S25 Offline-Scan (Gerät, Server mit Block A–C):** Flugmodus → Bon scannen → „vorläufig" erscheint sofort; Flugmodus aus → innerhalb weniger Minuten ersetzt die KI-Auswertung die Werte, Status „Bitte prüfen"; unter `Android/data/…/files/receipts/` liegt danach keine Datei mehr.
 - S28: `ReceiptImageStore.deleteCameraTemp` (S21) kannte nur Dateipfade; die Kamera liefert aber eine FileProvider-`content://`-URI. Nachgezogen: die URI wird über Autorität und `receipt_captures`-Pfadsegment auf `cacheDir/receipts/<datei>` abgebildet. Der Screen hat bis S29 einen schlichten Übergangszweig für `Provisional`.
 - **S29 Review (Gerät):** Bon mit Rabatt und Pfand scannen → Uhrzeit, Adresse, Rabatt je Position, Pfand-Chip und Kategorien stehen im Review; Kategorie ändern, speichern, denselben Artikel im selben Markt erneut scannen → Korrektur ist übernommen; „Produkt zuordnen" zeigt Treffer; Drehen im geöffneten Dialog behält Eingaben; TalkBack liest Chips und Buttons.
+- **S30 Bon-Liste (Gerät):** Status-Chips sichtbar; „Ältere Bons laden" holt den Vormonat, offline erscheint die Meldung; leere Liste zeigt den Leerzustand.

@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -663,5 +664,31 @@ internal fun ProvisionalCard(
                 Text(stringResource(R.string.receipt_scan_open_receipt))
             }
         }
+    }
+}
+
+/** Kleiner Status-Chip für Bon-Liste und -Detail: Vorläufig, Bitte prüfen, Auswertung fehlgeschlagen. */
+@Composable
+internal fun ReceiptStatusChip(kind: ReceiptStatusKind, modifier: Modifier = Modifier) {
+    val (label, container, content) = when (kind) {
+        ReceiptStatusKind.PROVISIONAL -> Triple(
+            R.string.receipt_status_provisional,
+            MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer,
+        )
+        ReceiptStatusKind.REVIEW -> Triple(
+            R.string.receipt_status_review,
+            MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        ReceiptStatusKind.FAILED -> Triple(
+            R.string.receipt_status_failed,
+            MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+    Surface(modifier = modifier, shape = MaterialTheme.shapes.small, color = container, contentColor = content) {
+        Text(
+            stringResource(label),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+        )
     }
 }
