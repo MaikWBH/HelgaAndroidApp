@@ -9,6 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptAggregateDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.ReceiptLexiconDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
@@ -95,6 +96,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
     abstract fun receiptDao(): ReceiptDao
     abstract fun receiptLexiconDao(): ReceiptLexiconDao
+    abstract fun receiptAggregateDao(): ReceiptAggregateDao
     abstract fun monthlyBudgetDao(): MonthlyBudgetDao
     abstract fun offProductDao(): OffProductDao
 

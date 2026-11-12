@@ -1,5 +1,6 @@
 package com.helga.android.data.receipts
 
+import com.helga.android.data.local.dao.ReceiptAggregateDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.preferences.AppPreferences
@@ -8,6 +9,7 @@ import com.helga.android.data.remote.dto.ReceiptRemoteDto
 import kotlinx.coroutines.flow.first
 import retrofit2.HttpException
 import timber.log.Timber
+import java.io.IOException
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,6 +25,7 @@ class ReceiptSyncer @Inject constructor(
     private val apiProvider: ApiProvider,
     private val preferences: AppPreferences,
     private val imageStore: ReceiptImageStore,
+    private val aggregateDao: ReceiptAggregateDao,
 ) {
 
     /** Schickt lokale Änderungen an den Server (PUT bzw. DELETE). Gibt die Anzahl übertragener Bons zurück. */
@@ -78,6 +81,25 @@ class ReceiptSyncer @Inject constructor(
         }
         preferences.saveReceiptSyncState(response.serverSeq, fromDay.orEmpty())
         return changed
+    }
+
+    /**
+     * Holt die Server-Auswertung und ersetzt den lokalen Abzug vollständig (Diagramme lesen nur daraus, auch offline).
+     * Bei einem Fehler bleibt der bisherige Abzug stehen und es wird `false` zurückgegeben.
+     */
+    suspend fun refreshAggregates(): Boolean = try {
+        val response = apiProvider.api().receiptAggregates()
+        aggregateDao.replaceAll(response.rows.map { it.toEntity() })
+        true
+    } catch (e: IOException) {
+        Timber.w(e, "Auswertung konnte nicht geladen werden")
+        false
+    } catch (e: HttpException) {
+        Timber.w(e, "Auswertung abgelehnt (HTTP %d)", e.code())
+        false
+    } catch (e: IllegalArgumentException) {
+        Timber.w(e, "Auswertung: Server nicht konfiguriert")
+        false
     }
 
     /** Verdrängt Bons außerhalb des Zeitfensters aus dem lokalen Cache (nur serverbestätigte Zeilen). */

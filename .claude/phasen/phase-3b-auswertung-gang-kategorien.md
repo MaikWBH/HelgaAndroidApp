@@ -146,7 +146,7 @@ Zusätzlich:
   der Test prüft über Moshi, dass `StoreAisleDto` ohne `category_key` zu `""` wird und mit Wert serialisiert wird,
   und über `SyncEngine` (Aufbau wie `SyncEngineTest`), dass ein gepullter Gang mit Schlüssel so in `upsertAisles`
   ankommt. Akzeptanz: `V` grün.
-- [ ] **S7 Aggregat-Abzug** — Dateien: neu `$B/data/local/dao/ReceiptAggregateDao.kt`, `$B/data/local/AppDatabase.kt`,
+- [x] **S7 Aggregat-Abzug** — Dateien: neu `$B/data/local/dao/ReceiptAggregateDao.kt`, `$B/data/local/AppDatabase.kt`,
   `$B/di/DatabaseModule.kt`, `$B/data/receipts/ReceiptSyncer.kt`, `$B/data/receipts/ReceiptMapping.kt`,
   `$B/data/sync/SyncWorker.kt`, `$T/ReceiptSyncerTest.kt`. DAO: `observeAll(): Flow<List<ReceiptAggregateEntity>>`,
   `count()`, `@Transaction replaceAll(rows)` (alles löschen, einfügen). `ReceiptSyncer.refreshAggregates(): Boolean`

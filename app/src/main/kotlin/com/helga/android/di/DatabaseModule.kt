@@ -6,6 +6,7 @@ import com.helga.android.data.local.ReceiptScanner
 import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptAggregateDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.ReceiptLexiconDao
 import com.helga.android.data.local.dao.RecipeDao
@@ -68,6 +69,9 @@ object DatabaseModule {
 
     @Provides
     fun provideReceiptLexiconDao(db: AppDatabase): ReceiptLexiconDao = db.receiptLexiconDao()
+
+    @Provides
+    fun provideReceiptAggregateDao(db: AppDatabase): ReceiptAggregateDao = db.receiptAggregateDao()
 
     @Provides
     fun provideMonthlyBudgetDao(db: AppDatabase): MonthlyBudgetDao = db.monthlyBudgetDao()

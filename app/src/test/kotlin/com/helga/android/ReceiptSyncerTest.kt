@@ -1,5 +1,6 @@
 package com.helga.android
 
+import com.helga.android.data.local.dao.ReceiptAggregateDao
 import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
@@ -9,6 +10,8 @@ import com.helga.android.data.receipts.ReceiptSyncer
 import com.helga.android.data.remote.ApiProvider
 import com.helga.android.data.remote.SyncApi
 import com.helga.android.data.remote.dto.OkResponse
+import com.helga.android.data.remote.dto.ReceiptAggregateDto
+import com.helga.android.data.remote.dto.ReceiptAggregatesResponse
 import com.helga.android.data.remote.dto.ReceiptListResponse
 import com.helga.android.data.remote.dto.ReceiptPutResponse
 import com.helga.android.data.remote.dto.ReceiptRemoteDto
@@ -23,6 +26,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 import java.time.LocalDate
 
 class ReceiptSyncerTest {
@@ -32,7 +36,8 @@ class ReceiptSyncerTest {
     private val provider: ApiProvider = mockk()
     private val prefs: AppPreferences = mockk(relaxed = true)
     private val imageStore: ReceiptImageStore = mockk(relaxed = true)
-    private val syncer = ReceiptSyncer(dao, provider, prefs, imageStore)
+    private val aggregateDao: ReceiptAggregateDao = mockk(relaxed = true)
+    private val syncer = ReceiptSyncer(dao, provider, prefs, imageStore, aggregateDao)
     private val today = LocalDate.of(2026, 11, 10)
 
     private fun remote(id: String, updatedAt: Long = 100, deleted: Int = 0, items: List<String> = listOf("i1")) =
@@ -150,5 +155,29 @@ class ReceiptSyncerTest {
         coEvery { api.listReceipts("2026-07-01", "2026-07-31", 0L, 0) } returns response(remote("a"))
         assertEquals(1, syncer.loadRange("2026-07-01", "2026-07-31", 5_000L))
         coVerify { dao.upsertReceipt(match { it.id == "a" && it.cachedUntil == 5_000L }) }
+    }
+
+    @Test
+    fun `refreshAggregates replaces the local copy with the server rows`() = runTest {
+        coEvery { api.receiptAggregates() } returns ReceiptAggregatesResponse(
+            generatedAt = 1,
+            rows = listOf(
+                ReceiptAggregateDto(period = "2026-11", dimension = "total", amount = 12.5, count = 2),
+                ReceiptAggregateDto(period = "2026-11", dimension = "store", key = "name:rewe", label = "REWE", amount = 12.5),
+            ),
+        )
+        assertEquals(true, syncer.refreshAggregates())
+        coVerify {
+            aggregateDao.replaceAll(match { rows ->
+                rows.map { it.id } == listOf("total|2026-11|", "store|2026-11|name:rewe") && rows[0].amount == 12.5
+            })
+        }
+    }
+
+    @Test
+    fun `refreshAggregates keeps the old copy when the server is unreachable`() = runTest {
+        coEvery { api.receiptAggregates() } throws IOException("offline")
+        assertEquals(false, syncer.refreshAggregates())
+        coVerify(exactly = 0) { aggregateDao.replaceAll(any()) }
     }
 }

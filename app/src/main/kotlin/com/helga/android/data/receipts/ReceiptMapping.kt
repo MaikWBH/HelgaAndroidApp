@@ -1,7 +1,9 @@
 package com.helga.android.data.receipts
 
+import com.helga.android.data.local.entity.ReceiptAggregateEntity
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
+import com.helga.android.data.remote.dto.ReceiptAggregateDto
 import com.helga.android.data.remote.dto.ReceiptRemoteDto
 import com.helga.android.data.remote.dto.ReceiptRemoteItemDto
 import com.helga.android.data.remote.dto.ReceiptUpsertDto
@@ -99,4 +101,17 @@ fun ReceiptEntity.toUpsertDto(items: List<ReceiptItemEntity>): ReceiptUpsertDto 
     updatedAt = updatedAt,
     deleted = deleted,
     items = items.map { it.toRemoteDto() },
+)
+
+fun ReceiptAggregateDto.toEntity(): ReceiptAggregateEntity = ReceiptAggregateEntity(
+    id = "$dimension|$period|$key",
+    period = period,
+    dimension = dimension,
+    key = key,
+    label = label,
+    amount = amount,
+    quantity = quantity,
+    avgUnitPrice = avgUnitPrice,
+    discount = discount,
+    count = count,
 )

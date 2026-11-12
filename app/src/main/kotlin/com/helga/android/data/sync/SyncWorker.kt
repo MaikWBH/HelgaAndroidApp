@@ -72,6 +72,7 @@ class SyncWorker @AssistedInject constructor(
             receiptUploader.uploadPending()
             receiptSyncer.pushDirty()
             receiptSyncer.pull()
+            receiptSyncer.refreshAggregates()
         } catch (e: Exception) {
             Timber.w(e, "Bon-Abgleich fehlgeschlagen")
         }
