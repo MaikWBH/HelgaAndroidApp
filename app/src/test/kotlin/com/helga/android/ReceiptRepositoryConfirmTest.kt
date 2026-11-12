@@ -36,8 +36,7 @@ class ReceiptRepositoryConfirmTest {
         coEvery { dao.allItemsForReceipt("r1") } returns listOf(item("a"), item("b"), item("old", deleted = 1))
         val receiptSlot = slot<ReceiptEntity>()
         val itemsSlot = slot<List<ReceiptItemEntity>>()
-        coEvery { dao.upsertReceipt(capture(receiptSlot)) } returns Unit
-        coEvery { dao.upsertItems(capture(itemsSlot)) } returns Unit
+        coEvery { dao.upsertReceiptWithItems(capture(receiptSlot), capture(itemsSlot)) } returns Unit
 
         repo.confirmReceipt(
             ReceiptEntity(id = "r1", status = "review", purchaseDay = "2026-11-10", purchaseDate = 1L),
@@ -61,7 +60,7 @@ class ReceiptRepositoryConfirmTest {
     fun `confirmReceipt keeps the purchase date when no valid day is known`() = runTest {
         coEvery { dao.allItemsForReceipt("r1") } returns emptyList()
         val receiptSlot = slot<ReceiptEntity>()
-        coEvery { dao.upsertReceipt(capture(receiptSlot)) } returns Unit
+        coEvery { dao.upsertReceiptWithItems(capture(receiptSlot), any()) } returns Unit
         repo.confirmReceipt(ReceiptEntity(id = "r1", purchaseDay = "", purchaseDate = 42L), emptyList())
         assertEquals(42L, receiptSlot.captured.purchaseDate)
     }
@@ -71,16 +70,15 @@ class ReceiptRepositoryConfirmTest {
         coEvery { dao.findById("r1") } returns ReceiptEntity(id = "r1", pendingUpload = 1, localImageUri = "/x/r1.jpg")
         repo.deleteReceipt("r1")
         coVerify { store.delete("/x/r1.jpg") }
-        coVerify { dao.hardDeleteItemsOf("r1") }
-        coVerify { dao.hardDeleteReceipt("r1") }
-        coVerify(exactly = 0) { dao.upsertReceipt(any()) }
+        coVerify { dao.hardDeleteReceiptWithItems("r1") }
+        coVerify(exactly = 0) { dao.upsertReceiptWithItems(any(), any()) }
     }
 
     @Test
     fun `deleteReceipt hard deletes provisional receipts that never reached the server`() = runTest {
         coEvery { dao.findById("r1") } returns ReceiptEntity(id = "r1", status = "provisional", imagePath = "")
         repo.deleteReceipt("r1")
-        coVerify { dao.hardDeleteReceipt("r1") }
+        coVerify { dao.hardDeleteReceiptWithItems("r1") }
     }
 
     @Test
@@ -88,8 +86,12 @@ class ReceiptRepositoryConfirmTest {
         coEvery { dao.findById("r1") } returns ReceiptEntity(id = "r1", status = "confirmed", imagePath = "receipt_r1.jpg")
         coEvery { dao.itemsForReceipt("r1") } returns listOf(item("a"))
         repo.deleteReceipt("r1")
-        coVerify { dao.upsertReceipt(match { it.deleted == 1 && it.dirty == 1 }) }
-        coVerify { dao.upsertItem(match { it.id == "a" && it.deleted == 1 && it.dirty == 1 }) }
-        coVerify(exactly = 0) { dao.hardDeleteReceipt(any()) }
+        coVerify {
+            dao.upsertReceiptWithItems(
+                match { it.deleted == 1 && it.dirty == 1 },
+                match { items -> items.any { it.id == "a" && it.deleted == 1 && it.dirty == 1 } },
+            )
+        }
+        coVerify(exactly = 0) { dao.hardDeleteReceiptWithItems(any()) }
     }
 }

@@ -143,10 +143,7 @@ class ReceiptRepository @Inject constructor(
             val scanned = receiptScanner.scanReceiptImage(bitmap)
             scanned.receipt to scanned.items
         },
-        saveLocal = { receipt, items ->
-            receiptDao.upsertReceipt(receipt)
-            receiptDao.upsertItems(items)
-        },
+        saveLocal = { receipt, items -> receiptDao.upsertReceiptWithItems(receipt, items) },
         deleteFile = { imageStore.delete(it.absolutePath) },
     )
 
@@ -173,12 +170,10 @@ class ReceiptRepository @Inject constructor(
 
     suspend fun saveReceipt(receipt: ReceiptEntity, items: List<ReceiptItemEntity> = emptyList()) {
         val now = System.currentTimeMillis()
-        receiptDao.upsertReceipt(receipt.copy(updatedAt = now, dirty = 1))
-
-        if (items.isNotEmpty()) {
-            val itemsWithReceiptId = items.map { it.copy(receiptId = receipt.id, updatedAt = now, dirty = 1) }
-            receiptDao.upsertItems(itemsWithReceiptId)
-        }
+        receiptDao.upsertReceiptWithItems(
+            receipt.copy(updatedAt = now, dirty = 1),
+            items.map { it.copy(receiptId = receipt.id, updatedAt = now, dirty = 1) },
+        )
     }
 
     suspend fun updateReceipt(receipt: ReceiptEntity) {
@@ -213,15 +208,14 @@ class ReceiptRepository @Inject constructor(
             (receipt.imagePath.isBlank() && receipt.status == "provisional")
         if (neverOnServer) {
             if (receipt.localImageUri.isNotBlank()) imageStore.delete(receipt.localImageUri)
-            receiptDao.hardDeleteItemsOf(receiptId)
-            receiptDao.hardDeleteReceipt(receiptId)
+            receiptDao.hardDeleteReceiptWithItems(receiptId)
             return
         }
         val now = System.currentTimeMillis()
-        receiptDao.upsertReceipt(receipt.copy(deleted = 1, updatedAt = now, dirty = 1))
-        receiptDao.itemsForReceipt(receiptId).forEach { item ->
-            receiptDao.upsertItem(item.copy(deleted = 1, updatedAt = now, dirty = 1))
-        }
+        receiptDao.upsertReceiptWithItems(
+            receipt.copy(deleted = 1, updatedAt = now, dirty = 1),
+            receiptDao.itemsForReceipt(receiptId).map { it.copy(deleted = 1, updatedAt = now, dirty = 1) },
+        )
     }
 
     /**
@@ -239,7 +233,7 @@ class ReceiptRepository @Inject constructor(
             item.copy(receiptId = receipt.id, position = index, deleted = 0, updatedAt = now, dirty = 1)
         }
         val dayMs = ReceiptDates.dayToEpochMs(receipt.purchaseDay)
-        receiptDao.upsertReceipt(
+        receiptDao.upsertReceiptWithItems(
             receipt.copy(
                 status = "confirmed",
                 purchaseDate = if (dayMs > 0) dayMs else receipt.purchaseDate,
@@ -247,9 +241,9 @@ class ReceiptRepository @Inject constructor(
                 deleted = 0,
                 updatedAt = now,
                 dirty = 1,
-            )
+            ),
+            confirmedItems + removed,
         )
-        receiptDao.upsertItems(confirmedItems + removed)
     }
 
     /** Liest einen Bon aus dem gespeicherten Server-Foto neu aus; die Antwort landet in Room. */
@@ -434,8 +428,7 @@ class ReceiptRepository @Inject constructor(
                 dirty = 1,
             )
         }
-        if (updatedItems.isNotEmpty()) receiptDao.upsertItems(updatedItems)
-        receiptDao.upsertReceipt(receipt.copy(status = "reconciled", updatedAt = now, dirty = 1))
+        receiptDao.upsertReceiptWithItems(receipt.copy(status = "reconciled", updatedAt = now, dirty = 1), updatedItems)
 
         val missingIds = response.missing.toSet()
         val missingNames = checked.filter { it.id in missingIds }.map { it.name }

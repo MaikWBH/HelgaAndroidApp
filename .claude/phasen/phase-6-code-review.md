@@ -134,7 +134,7 @@ Abschnitt „Tests").
   Tests mit `upsertReceipt` für fehlende Datei und „could not parse" bleiben (Einzel-Tabellen-Schreibzugriffe).
   Akzeptanz: `grep -n 'hardDeleteItemsOf\|hardDeleteItemsExcept\|upsertItems' $B/data/receipts/*.kt` leer; `V` grün;
   `TC` unverändert gegenüber S2.
-- [ ] **S4 `ReceiptRepository` atomar und Regel-Test (V2, Teil 3)** — Dateien:
+- [x] **S4 `ReceiptRepository` atomar und Regel-Test (V2, Teil 3)** — Dateien:
   `$B/data/repository/ReceiptRepository.kt`, `$T/ReceiptRepositoryConfirmTest.kt`, `$T/ReceiptProtocolRulesTest.kt`.
   Ersetzen: `scanFlow.saveLocal` → `receiptDao.upsertReceiptWithItems(receipt, items)`; `saveReceipt` →
   `receiptDao.upsertReceiptWithItems(receipt.copy(updatedAt = now, dirty = 1), items.map { … wie bisher … })` (bei leerer

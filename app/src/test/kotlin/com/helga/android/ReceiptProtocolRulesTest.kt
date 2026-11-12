@@ -60,4 +60,24 @@ class ReceiptProtocolRulesTest {
             assertTrue("ReceiptDao.$name braucht @Transaction (Bon und Positionen atomar)", previous?.trim() == "@Transaction")
         }
     }
+
+    @Test
+    fun bon_und_positionen_nur_ueber_transaktionsmethoden() {
+        val direct = Regex("""receiptDao\.(upsertItems|hardDeleteItemsOf|hardDeleteItemsExcept|hardDeleteReceipt)\(""")
+        val violations = sources()
+            .filter {
+                val path = it.invariantSeparatorsPath
+                path.contains("/data/receipts/") || it.name == "ReceiptRepository.kt"
+            }
+            .flatMap { file ->
+                file.readLines().mapIndexedNotNull { index, line ->
+                    if (direct.containsMatchIn(line)) "${file.name}:${index + 1}: ${line.trim()}" else null
+                }
+            }
+        assertTrue(
+            "Bon und Positionen nur über die @Transaction-Methoden des ReceiptDao schreiben/löschen:\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty(),
+        )
+    }
 }
