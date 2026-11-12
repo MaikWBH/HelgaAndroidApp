@@ -575,7 +575,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   (älterer Push verliert) funktionieren weiter. Akzeptanz: `VS` grün. Hinweis für den Nutzer unter „Abschluss":
   Reihenfolge beim Ausrollen = Server-Version mit dieser Phase deployen, dann die neue App auf **beiden** Handys
   installieren.
-- [ ] **S34 Regel-Test für das Bon-Protokoll** — Datei: neu `$T/ReceiptProtocolRulesTest.kt` (Aufbau wie
+- [x] **S34 Regel-Test für das Bon-Protokoll** — Datei: neu `$T/ReceiptProtocolRulesTest.kt` (Aufbau wie
   `ArchitectureRulesTest`). Zwei Tests: (1) `SyncEngine.kt` enthält weder `ReceiptEntity` noch `receiptDao`;
   (2) außerhalb von `data/receipts/` und `data/local/dao/` ruft keine Datei `hardDeleteReceipt`/`hardDeleteItems`
   auf, mit Ausnahme von `ReceiptRepository.kt`. Akzeptanz: `V` grün.
