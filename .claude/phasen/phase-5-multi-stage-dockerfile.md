@@ -183,7 +183,7 @@ zeigt die Kontextgröße.
   --health-retries=2 helga-verify:new`, nach etwa 30 Sekunden: `docker logs hn 2>&1 | grep -c "API_KEY fehlt"` ist größer
   als 0 und `docker inspect -f '{{.State.Health.Status}}' hn` ist `unhealthy`; danach `docker rm -f hn`. Akzeptanz: alle
   Antworten wie angegeben.
-- [ ] **S6 Dokumentation** — Dateien: `$S/CLAUDE.md` (Abschnitt „Deployment": Mehrstufiges Image, `--target test`,
+- [x] **S6 Dokumentation** — Dateien: `$S/CLAUDE.md` (Abschnitt „Deployment": Mehrstufiges Image, `--target test`,
   `make docker-test`, `WEB_CONCURRENCY`, gehärteter Prod-Container: schreibbar sind nur `/app/data` und `/tmp`; neue
   Schreibpfade im Code müssen unter `/app/data` liegen; Pin von `recipe-scrapers` und Hinweis zu `jstyleson` →
   kein `--only-binary`; außerdem der Hinweis: Fehlt `API_KEY`, beendet sich der Container **nicht** — die Worker brechen
@@ -201,15 +201,26 @@ zeigt die Kontextgröße.
 - Healthcheck-Logik der API (Prüfung der Datenbank) und Uvicorn-Tuning über `WEB_CONCURRENCY` hinaus.
 
 ## Abschluss
-- [ ] Baseline (S0): Größe 199 627 092 Bytes (Docker: 200 MB), UID 1000 (`uid=1000(helga)`), `VS` 177 passed; Endstand: Größe …, `VT` …, `VS` …
-- [ ] Kontextgröße vorher/nachher (S1)
-- [ ] Gemeldete Abweichungen und Ausnahmen (je Schritt eine Zeile)
-- [ ] Bereichs-`plan.md` (sync), Phasen-README, `server/CLAUDE.md` aktualisiert (S6)
+- [x] Baseline (S0): Größe 199 627 092 Bytes (Docker: 200 MB), UID 1000 (`uid=1000(helga)`), `VS` 177 passed; Endstand (S3/S4): Größe 193 724 063 Bytes (Docker: 194 MB), `VT` 177 passed, `VS` 177 passed.
+- [x] Kontextgröße vorher/nachher (S1): vorher 20.98 MB (ohne `.dockerignore`, mit 20-MB-Testdatei; nachträglich gemessen, Stufe B hatte vor S1 nicht gemessen), nachher 377.46 kB (gleiche Testdatei).
+- [x] Gemeldete Abweichungen und Ausnahmen (je Schritt eine Zeile):
+  - S0: keine. Docker-Daemon musste gestartet werden; Basis-Image gezogen.
+  - S1: keine inhaltliche Abweichung. Vorher-Kontext nachträglich gemessen (siehe oben).
+  - S2: keine.
+  - S3: keine. Dockerfile unverändert aus dem Plan übernommen. Größe 194 MB wie erwartet.
+  - S4: Hilfezeile `make docker-test` hat eine Spalte mehr Abstand als die übrigen Zeilen (Plan-Text wörtlich übernommen). `make docker-test` selbst nicht ausgeführt (nur `make -n`), die Test-Stage lief per Docker-Build mit dem Proxy-Hilfsskript.
+  - S5 (a): Die Compose-Syntaxprüfung im Verzeichnis `server/` scheitert, weil `server/.env` (gitignored) im Klon fehlt. Geprüft wurde in einer Kopie mit `.env` aus `.env.example`. Prod- und Dev-Compose gültig.
+  - S5 (b): Plan-Korrektur durch den Koordinator (Commit `e8fb60d`): Der erste Plan erwartete, dass der Container ohne `API_KEY` endet. Das trifft mit mehreren Workern nicht zu (Supervisor startet Worker neu). Neue Akzeptanz geprüft: Log enthält `API_KEY fehlt` (34 Treffer), Status `unhealthy`. Das Baseline-Image verhält sich genauso.
+  - S5: Härtungslauf nach Daemon-Neustart wiederholt, alle Antworten wie angegeben.
+  - S6: keine Abweichung zum Plan. Im Feature-Plan (`sync`) bleibt der alte Phase-4-Satz „startet nicht ohne `API_KEY`" stehen; die Korrektur steht im neuen Abschnitt „Phase 5".
+- [x] Bereichs-`plan.md` (sync), Phasen-README, `server/CLAUDE.md` aktualisiert (S6)
 - [ ] **Hinweis für den Nutzer (Rollout):** Das Image muss im Homelab neu gebaut werden (neuer Tag, `scripts/app.sh bump helga`,
       dann `scripts/deploy.sh`). Der Daten-Ordner muss UID 1000 gehören (wie bisher). Prüfen, dass das Homelab-Override
       weder `read_only`/`tmpfs` noch den Healthcheck überschreibt (`docker compose config` im Homelab ansehen).
 - [ ] **Prüfliste (Server)** für den Nutzer, von Stufe B nicht abgehakt: nach dem Deploy zeigt `docker compose ps` den Status
       `healthy`; App-Sync, Foto-Upload (auch ein großes Bon-Foto um 5–8 MB) und Bon-Scan funktionieren; Rezept-Import per
       URL funktioniert (neuer `recipe-scrapers` 15.13.0); `docker stats` zeigt zwei Uvicorn-Worker.
-- [ ] **Nicht geprüft** (Stufe B nur ausfüllen): echte ARM-/Multi-Arch-Builds (Homelab-CPU unbekannt; alle Abhängigkeiten außer
+- [x] **Nicht geprüft** (Stufe B nur ausfüllen): echte ARM-/Multi-Arch-Builds (Homelab-CPU unbekannt; alle Abhängigkeiten außer
       dem reinen Python-Paket `jstyleson` sind Wheels für x86_64 geprüft), Verhalten hinter dem Cloudflare-Tunnel, Image-Scan.
+      Zusätzlich nicht geprüft: Start der Prod-Compose-Datei per `docker compose up` (nur `config` und Container mit denselben Flags),
+      Homelab-Override, Verhalten mit echten KI-Anbietern (Tests ersetzen KI-Aufrufe), Geräte-Prüfung der App gegen den neuen Container.

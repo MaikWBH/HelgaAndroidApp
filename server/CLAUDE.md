@@ -132,6 +132,19 @@ make migrate           # Pfad zur Helga-DB im Makefile-Rezept anpassen
 
 Da die API öffentlich erreichbar ist, muss `API_KEY` in Produktion gesetzt sein. Ohne ihn startet der Server nicht (Ausnahme nur lokal: `ALLOW_NO_AUTH=1`), und `validate-env.sh` im Homelab bricht ohne `API_KEY` ab.
 
+**Image und Container (Phase 5):**
+
+- Mehrstufiges Dockerfile: Stage `builder` (Abhängigkeiten per `pip install --prefix=/install`), `test`, `runtime`.
+  Der Standard-Build (`docker build .`, letzte Stage `runtime`) führt die Tests **nicht** aus. Tests im Container:
+  `make docker-test` (= `docker build --target test -t helga-test .`, Python 3.12).
+- `WEB_CONCURRENCY` (Standard 2) bestimmt die Anzahl Uvicorn-Worker; Uvicorn liest die Variable selbst.
+- Pin: `recipe-scrapers==15.13.0`. `jstyleson` (über `extruct`) gibt es nur als Quellpaket: **kein** `--only-binary`
+  beim Installieren, sonst fällt pip auf eine ältere `recipe-scrapers` zurück.
+- Gehärteter Prod-Container (`docker-compose.prod.yml`): `read_only`, schreibbar sind nur `/app/data` (Volume) und
+  `/tmp` (tmpfs), `cap_drop: ALL`, `no-new-privileges`. Neue Schreibpfade im Code müssen unter `/app/data` liegen.
+- Fehlt `API_KEY`, beendet sich der Container **nicht**: die Worker brechen mit `API_KEY fehlt …` ab, Uvicorn startet
+  sie neu, der Container wird `unhealthy`. Ursache im Log suchen (`make logs`).
+
 Alle weiteren Befehle: `make help`
 
 ---

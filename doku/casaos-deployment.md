@@ -90,6 +90,10 @@ cd /DATA/AppData/helga-sync
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+> **Hinweis (Phase 5):** Der Datenordner `./data` muss dem Benutzer mit UID 1000 gehören (`sudo chown -R 1000:1000 data`),
+> sonst kann der Container nicht schreiben. Der Container läuft mit `read_only`; schreibbar sind nur `/app/data` und `/tmp`.
+> Fehlt `API_KEY`, beendet sich der Container nicht, er wird `unhealthy` (Ursache: `docker compose -f docker-compose.prod.yml logs`).
+
 Beim ersten Start: ca. 2–3 Minuten (Python-Image + Dependencies werden heruntergeladen).
 
 **Status prüfen:**

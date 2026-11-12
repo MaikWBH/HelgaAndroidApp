@@ -184,3 +184,9 @@ _Weitere Aufgaben nach dem Interview._
 ## Phase 4 (fastapi-templates)
 
 - Phase 4 umgesetzt (Stufe B, 2026-11-12): Sync-Endpunkte liegen in `server/app/sync_api.py`; Sync-Logik (`sync.py`) und Protokoll sind unverändert. Der Server startet nicht ohne `API_KEY` (außer `ALLOW_NO_AUTH=1`). Bild-Upload mit 8-MiB-Limit (`images_api.py`). Siehe [phase-4](../../phasen/phase-4-fastapi-templates.md).
+
+## Phase 5 (multi-stage-dockerfile)
+
+- Phase 5 umgesetzt (Stufe B, 2026-11-12): `server/Dockerfile` ist mehrstufig (`builder`, `test`, `runtime`), `server/.dockerignore` begrenzt den Build-Kontext, `recipe-scrapers==15.13.0` ist gepinnt, `make docker-test` führt die Tests im Container aus. Der Prod-Compose ist gehärtet (`read_only`, `tmpfs /tmp`, `cap_drop: ALL`, `no-new-privileges`); der Healthcheck steht nur noch im Dockerfile. UID 1000 bleibt. Image 200 MB → 194 MB (Prototyp-Erwartung bestätigt).
+- Korrektur zum Startverhalten ohne `API_KEY` (siehe oben, Phase 4): Mit mehreren Uvicorn-Workern beendet sich der Container nicht. Die Worker brechen mit `API_KEY fehlt …` ab und werden neu gestartet; der Container wird `unhealthy`. Das war schon vor Phase 5 so.
+- Siehe [phase-5](../../phasen/phase-5-multi-stage-dockerfile.md).
