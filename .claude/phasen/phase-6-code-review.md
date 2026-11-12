@@ -245,7 +245,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
   `ReceiptProtocolRulesTest`)." — `sync-patterns.md`, Abschnitt „Server-Archiv": Zeile ergänzen „Bon und Positionen
   werden nur gemeinsam und atomar geschrieben bzw. gelöscht (`@Transaction`-Methoden im `ReceiptDao`)." Akzeptanz:
   `grep -c 'Phase 6' .claude/guidelines/architecture-layers.md .claude/guidelines/kotlin-quality.md` je ≥ 1; `V` grün.
-- [ ] **S25 Phase-1-Datei klarstellen (V14)** — Datei: `.claude/phasen/phase-1-android-clean-architecture.md`. Direkt
+- [x] **S25 Phase-1-Datei klarstellen (V14)** — Datei: `.claude/phasen/phase-1-android-clean-architecture.md`. Direkt
   unter der Überschrift „### Abschluss Stufe B (Stand: Stopp bei S16)" und unter „### Stand nach Entscheidungen
   Stufe B (STOPP bei S17 …)" je eine Zeile einfügen: „> Überholt (Phase 6): S17 mit 555 Zeilen vom Nutzer akzeptiert;
   S18–S20 umgesetzt (Commits `58126ab`, `40f4d67`)." Sonst nichts ändern. Akzeptanz: `grep -c 'Überholt (Phase 6)'` = 2.

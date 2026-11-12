@@ -102,6 +102,8 @@ Zusätzliche Abweichungen in Stufe B nach S16/S17:
 - S8 Fund-Liste (`grep -rn "SyncApiFactory\|ApiProvider\|data.remote" ui`, ohne dto): keine Factory/Provider mehr in `ui/`. Verbleibend: `ui/ai/AiGenerateViewModel.kt` und `ui/ai/AiRemixViewModel.kt` importieren `data.remote.SseClient` (SSE-Streaming, kein Factory/Provider; nicht in der S19-Verbotsliste, daher nicht Teil dieser Phase). `ConnectionResult`/`ServerConnectionChecker` in `OnboardingViewModel`/`SettingsViewModel` sind gewollte Ergebnis-/Service-Typen aus S3.
 
 ### Abschluss Stufe B (Stand: Stopp bei S16)
+
+> Überholt (Phase 6): S17 mit 555 Zeilen vom Nutzer akzeptiert; S18–S20 umgesetzt (Commits `58126ab`, `40f4d67`).
 - Baseline S0: 115 Tests, 0 Fehler, BUILD SUCCESSFUL (vor Stufe B, bereits ausgeführt).
 - Verifikation nach jedem abgeschlossenen Schritt grün; zuletzt nach S15: 142 Tests, 0 Fehler, BUILD SUCCESSFUL (`./gradlew :app:testDebugUnitTest :app:compileDebugKotlin`).
 - Erledigt: S0–S15 (Block 0, A, B, C und S15 aus D). Gepusht nach Block 0, A, B, C (Branch `ccr-c53a7201-5hd57f`), S15 liegt committed, Stand zum Push siehe Git-Log.
@@ -123,6 +125,8 @@ Abweichungen und Auffälligkeiten (Stufe B):
 - Lint: ungenutzte Imports in den geänderten Dateien entfernt (Stichprobe mit Namensprüfung, Build grün).
 
 ### Stand nach Entscheidungen Stufe B (STOPP bei S17, Ziel < 500 Zeilen nicht erreicht)
+
+> Überholt (Phase 6): S17 mit 555 Zeilen vom Nutzer akzeptiert; S18–S20 umgesetzt (Commits `58126ab`, `40f4d67`).
 - S16 umgesetzt: `WeekplanGenerator` (`data/weekplan/`) mit Generierung, Neuwürfeln, Vorwochen-Übernahme, Anwenden; Helfer (`WeekplanFilters.kt`, `WeekplanGenerateStatus.kt`, `WeekplanPlanning.kt`) in `data/weekplan/` verschoben (Vorbedingung laut Entscheidung). `discardProposal` bleibt in der VM (nur Zustand).
 - S17 DAO-Teil umgesetzt: `WeekplanViewModel` greift auf keinen DAO mehr zu (Repositories: `WeekplanRepository`, `RecipeRepository.observeFeedbackForDate/toggleFeedback`, `ShoppingRepository.observeLists`).
 - **STOPP:** `WeekplanViewModel.kt` hat **555 Zeilen** (Ziel < 500). Nicht weiter gekürzt, wie vorgegeben. S17 ist deshalb nicht abgehakt.
