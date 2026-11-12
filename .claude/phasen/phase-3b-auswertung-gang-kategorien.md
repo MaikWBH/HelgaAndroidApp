@@ -108,7 +108,7 @@ Zusätzlich:
   `category` inkl. `sonstiges` und `pfand`, `product` (Schlüssel = `normalize_item_key(name)`, `quantity`,
   `avg_unit_price`, Pfand fehlt), vorläufige/gelöschte/datumlose Bons fehlen überall, Sortierung, Rundung auf 2
   Stellen, leere DB → `rows == []`. Akzeptanz: `VS` grün.
-- [ ] **S3 Kategorisieren** — Dateien: `$SA/ai.py`, `$SA/receipts.py`, `$SA/models.py`, `$SA/main.py`, neu
+- [x] **S3 Kategorisieren** — Dateien: `$SA/ai.py`, `$SA/receipts.py`, `$SA/models.py`, `$SA/main.py`, neu
   `$ST/test_categorize_items.py`. `ai.categorize_items(names) -> list[str]` nach Vertrag 5.4 über `_receipt_once`.
   `receipts.categorize(db, names) -> list[dict]`: je Name `product_key = normalize_item_key(name)`; leere Namen →
   `""`; Treffer in `product_categories` direkt; alle übrigen (ohne Dubletten, höchstens 50) in **einem** KI-Aufruf;
@@ -118,7 +118,7 @@ Zusätzlich:
   Aufrufzähler): Treffer aus dem Speicher ohne KI-Aufruf; Fehlende in einem Aufruf, danach gespeichert; zweiter Aufruf
   ohne KI; unbekannter Schlüssel → `sonstiges`; KI wirft → `""`, nichts gespeichert; `user` bleibt; Reihenfolge der
   Antwort = Reihenfolge der Eingabe; 51 Namen → 422. Akzeptanz: `VS` grün.
-- [ ] **S4 Server-Doku** — Datei: `$S/CLAUDE.md`: Endpunkt-Tabelle um Aggregate und `categorize-items`, Hinweis auf
+- [x] **S4 Server-Doku** — Datei: `$S/CLAUDE.md`: Endpunkt-Tabelle um Aggregate und `categorize-items`, Hinweis auf
   `PRESERVE_IF_UNSET` im Abschnitt „Sync-Protokoll" („Neue Spalten an Sync-Tabellen dort eintragen, solange alte
   App-Versionen pushen"). Akzeptanz: `grep -c 'PRESERVE_IF_UNSET' $S/CLAUDE.md` ≥ 1. Danach Block A pushen.
 

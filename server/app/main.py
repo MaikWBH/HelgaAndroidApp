@@ -15,6 +15,7 @@ from .models import (
     OffLookupBarcodeRequest, OffSearchRequest,
     ReceiptParseRequest,
     ReceiptParseResponse, ReceiptReconcileRequest,
+    CategorizeRequest, CategorizeResponse,
     SyncPullResponse, SyncPushRequest,
 )
 from .sync import pull_since, push_records
@@ -112,6 +113,14 @@ async def ai_parse_receipt(req: ReceiptParseRequest):
     """Liest einen fotografierten Kassenbon per Vision-Modell aus."""
     data = await ai_module.parse_receipt(req.image_base64, req.mime_type)
     return ReceiptParseResponse(**data)
+
+
+@app.post("/api/ai/categorize-items", response_model=CategorizeResponse, dependencies=[Depends(require_auth)])
+async def ai_categorize_items(req: CategorizeRequest):
+    """Ordnet Artikelnamen einer Kategorie aus dem gemeinsamen Katalog zu (Lernspeicher, sonst Bon-Modell)."""
+    async with get_db() as db:
+        results = await receipts.categorize(db, req.names)
+    return CategorizeResponse(results=results)
 
 
 # ── Bilder ────────────────────────────────────────────────────────────────────

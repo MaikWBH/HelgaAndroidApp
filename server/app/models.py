@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SyncRecord(BaseModel):
@@ -534,3 +534,16 @@ class AggregateRow(BaseModel):
 class AggregatesResponse(BaseModel):
     generated_at: int = 0
     rows: List[AggregateRow] = []
+
+
+class CategorizeRequest(BaseModel):
+    names: List[str] = Field(default_factory=list, max_length=50)
+
+
+class CategorizeResult(BaseModel):
+    name: str = ""
+    category: str = ""
+
+
+class CategorizeResponse(BaseModel):
+    results: List[CategorizeResult] = []

@@ -673,3 +673,48 @@ async def aggregate_rows(db) -> list[dict]:
                      "avg_unit_price": round(sum(v["prices"]) / len(v["prices"]), 2), "discount": 0.0})
     rows.sort(key=lambda r: (r["dimension"], r["period"], r["key"]))
     return rows
+
+
+async def categorize(db, names: list[str]) -> list[dict]:
+    """Ordnet Namen Kategorien zu: erst aus `product_categories`, nur Unbekanntes in EINEM KI-Aufruf.
+
+    KI-Ergebnisse werden mit `source = 'ai'` gespeichert (auch `sonstiges`, damit nicht erneut gefragt wird);
+    Einträge mit `source = 'user'` werden nie überschrieben. Wirft die KI, bleiben die offenen Namen leer
+    und nichts wird gespeichert.
+    """
+    keys = [receipt_text.normalize_item_key(name) for name in names]
+    known: dict[str, str] = {}
+    for key in set(k for k in keys if k):
+        async with db.execute("SELECT category FROM product_categories WHERE product_key = ?", (key,)) as cur:
+            row = await cur.fetchone()
+        if row:
+            known[key] = row[0]
+
+    open_keys: list[str] = []
+    open_names: list[str] = []
+    for name, key in zip(names, keys):
+        if key and key not in known and key not in open_keys:
+            open_keys.append(key)
+            open_names.append(name)
+
+    if open_names:
+        try:
+            ai_categories = await ai.categorize_items(open_names)
+        except Exception as exc:  # KI-/Netzfehler: nichts speichern, Namen bleiben leer
+            logger.warning("Kategorisieren fehlgeschlagen: %s", exc)
+            ai_categories = [""] * len(open_names)
+        now = now_ms()
+        for key, name, category in zip(open_keys, open_names, ai_categories):
+            if not category:
+                continue
+            known[key] = category
+            await db.execute(
+                "INSERT INTO product_categories (product_key, product_name, category, source, updated_at) "
+                "VALUES (?, ?, ?, 'ai', ?) ON CONFLICT(product_key) DO UPDATE SET "
+                "product_name = excluded.product_name, category = excluded.category, "
+                "source = 'ai', updated_at = excluded.updated_at WHERE product_categories.source != 'user'",
+                (key, name, category, now),
+            )
+        await db.commit()
+
+    return [{"name": name, "category": known.get(key, "") if key else ""} for name, key in zip(names, keys)]

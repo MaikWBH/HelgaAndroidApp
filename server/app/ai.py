@@ -744,6 +744,51 @@ async def parse_receipt(image_b64: str, mime_type: str = "image/jpeg", model: st
     return result
 
 
+# ── Artikel kategorisieren (Phase 3b, Vertrag 5.4) ───────────────────────────────────────
+
+CATEGORIZE_SYSTEM = (
+    "Du ordnest Artikel eines deutschen Supermarkt-Einkaufs genau einer Kategorie zu. "
+    "Antworte NUR mit einem validen JSON-Objekt – kein Markdown, keine Erklärungen."
+)
+
+
+async def categorize_items(names: list[str]) -> list[str]:
+    """Ordnet Artikelnamen einer Kategorie aus dem gemeinsamen Katalog zu (ein KI-Aufruf).
+
+    Gibt je Name einen Schlüssel zurück; unbekannte Schlüssel werden zu `sonstiges`, fehlende Antworten zu ``.
+    """
+    if not names:
+        return []
+    numbered = "\n".join(f"{i}. {name}" for i, name in enumerate(names, start=1))
+    user = (
+        f"KATEGORIEN:\n{categories.prompt_lines(include_deposit=False)}\n\nARTIKEL:\n{numbered}\n\n"
+        'Antworte mit: {"results":[{"index":1,"category":"<schluessel>"}]}'
+    )
+    raw = (await _receipt_once(CATEGORIZE_SYSTEM, user)).strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1].lstrip("json").strip()
+    start, end = raw.find("{"), raw.rfind("}") + 1
+    if start == -1 or end == 0:
+        return [""] * len(names)
+    try:
+        data = json.loads(raw[start:end])
+    except json.JSONDecodeError:
+        return [""] * len(names)
+
+    result = [""] * len(names)
+    for entry in data.get("results") or []:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            index = int(entry.get("index")) - 1
+        except (TypeError, ValueError):
+            continue
+        if 0 <= index < len(names):
+            key = categories.coerce(entry.get("category"))
+            result[index] = key if key and key != "pfand" else "sonstiges"
+    return result
+
+
 # ── Receipt Reconciliation (Phase 4) ─────────────────────────────────────────
 # OCR läuft on-device (Google ML Kit). Der KI-Abgleich vergleicht die abgehakte
 # Einkaufsliste mit den erkannten Bon-Positionen – robust gegen kryptische

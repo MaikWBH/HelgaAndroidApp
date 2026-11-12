@@ -52,6 +52,10 @@ GET  /api/sync?since=<ts>   → SyncPullResponse (alle Änderungen nach ts)
 POST /api/sync              → SyncPushRequest  → SyncPullResponse (server-wins zurück)
 ```
 
+**Alt-Clients schützen:** Neue Spalten an Sync-Tabellen in `sync.py → PRESERVE_IF_UNSET` eintragen, solange alte
+App-Versionen pushen. Der Upsert überschreibt sie dann nur, wenn der Client das Feld mitschickt (z. B.
+`store_aisles.category_key`); sonst behalten sie ihren Server-Wert.
+
 Neue Tabellen im Schema erfordern:
 1. `CREATE TABLE` in `db.py → SCHEMA`
 2. Spalten in `db.py → TABLE_COLUMNS`
@@ -70,6 +74,8 @@ Neue Tabellen im Schema erfordern:
 | `POST /api/ai/parse-receipt` | JSON: Kassenbon-Foto (base64) auslesen → Kopf (Markt, Adresse, Datum, Uhrzeit, Summe, Rabatt) und Positionen. Bleibt für alte App-Versionen |
 | `POST /api/receipts/scan` | Multipart: Bon-Foto speichern, auslesen (KI), anreichern; bei KI-Ausfall vorläufig anlegen und in die Warteschlange stellen |
 | `GET/PUT/DELETE /api/receipts…` | Bon-Archiv: bon-weises Protokoll (LWW, Cursor `server_seq`), Lexikon unter `/api/receipts/lexicon` |
+| `GET /api/receipts/aggregates` | Auswertung (Monate, Wochen, Märkte, Kategorien, Artikel), bei jedem Aufruf aus den Bons berechnet; die App hält davon einen Abzug für Offline-Diagramme |
+| `POST /api/ai/categorize-items` | JSON: bis zu 50 Artikelnamen → Kategorie aus dem gemeinsamen Katalog (erst Lernspeicher `product_categories`, Unbekanntes in einem Aufruf mit dem Bon-Modell) |
 
 Vollständiger Vertrag (Schema, Endpunkte, Prompt, KI-Parameter): `.claude/phasen/phase-3-daten/server-vertrag.md`.
 
