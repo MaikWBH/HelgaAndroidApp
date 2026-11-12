@@ -300,7 +300,32 @@ Geprüft und ohne Befund:
 
 **Ergebnis:** 0 Blocker, 0 Hoch, 0 Mittel, 7 Niedrig; schwerster Befund: S1
 
-<Spec-Antwort>
+### Spec — B5 — Container
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|-------------|---------------|--------|----------------------------|------|------------|
+| P1 | doku/casaos-deployment.md:82 und :95 | b/c | Der Phase-5-Hinweis (Z. 95) sagt „Fehlt `API_KEY`, beendet sich der Container nicht, er wird `unhealthy`". Drei Zeilen darüber steht aus Phase 4 (Z. 82) noch „Ohne gesetzten Wert startet der Server nicht". Die Doku widerspricht sich also. Der API_KEY-Satz in Z. 95 ist zudem mehr als die Spec für diese Datei verlangt; der Widerspruch ist unaufgelöst geblieben. | phase-5-…md, S6: „`doku/casaos-deployment.md` (kurzer Hinweis nahe der Compose-Befehle: Datenordner muss UID 1000 gehören; Container ist `read_only`)". Der API_KEY-Satz ist dort nur für `server/CLAUDE.md` verlangt. | Niedrig | Ermessensfrage |
+
+Geprüft ohne Befund:
+- `server/Dockerfile` ist zeichengleich mit dem Codeblock in S3. Ich habe den Plan-Block extrahiert und mit `git show 451819d:server/Dockerfile` per `diff` verglichen: kein Unterschied.
+- `server/.dockerignore` ist zeichengleich mit dem Block in S1 (`diff` ohne Unterschied).
+- `server/requirements.txt`: nur die Zeile `recipe-scrapers==15.13.0` ist geändert (S2).
+- `server/docker-compose.prod.yml`:
+  - Der Healthcheck-Block ist entfernt.
+  - `read_only: true`, `tmpfs: - /tmp`, `cap_drop: - ALL` und `security_opt: - no-new-privileges:true` sind vorhanden.
+  - `build`, `restart`, `ports`, `volumes`, `env_file` und `logging` sind unverändert (S5).
+- Das Dev-Compose ist nicht im Diff (Nicht-Ziel eingehalten). Die letzte Stage ist `runtime`, daher baut der Default-Build ohne Test-Stage.
+- `server/Makefile`: `docker-test` steht unter `.PHONY` und in der Hilfe, der Befehl lautet `docker build --target test -t helga-test .` (S4). Die Hilfezeile hat eine Spalte mehr Abstand, das ist die akzeptierte Abweichung.
+- `server/.env.example`: `# WEB_CONCURRENCY=2` mit dem Kommentar „Anzahl Uvicorn-Worker, Standard 2" steht drin (S6).
+- Schreibzugriffe im Server-Code (`grep -rn` über `server/app` und `server/scripts`):
+  - `settings.py:26` legt `IMAGES_DIR` an (Default `data/images`).
+  - `images_api.py:39` und `receipts.py:342` schreiben nach `IMAGES_DIR`.
+  - `db.py:564/617/618` (aiosqlite, WAL), `migrate_from_helga.py:47-49` und `restore_purged_receipts.py:59` schreiben die DB unter `/app/data`.
+  - `receipt_testset.py:155` schreibt nach `--out`. Das ist ein Entwicklerskript und läuft nicht im Prod-Container.
+  - Keine Verwendung von `tempfile` oder `NamedTemporaryFile`. `PYTHONDONTWRITEBYTECODE=1` ist gesetzt.
+  - Ergebnis: nichts schreibt außerhalb von `/app/data` und `/tmp`.
+- Beifang (ohne Grad): Der Diff-Bereich ab `2c148ab` enthält auch Phase-3a/4-Änderungen in `.env.example`, `Makefile` (`testset`), `requirements-dev.txt` und `casaos-deployment.md` Z. 82. Das ist Altbestand früherer Phasen, nicht Phase 5.
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 1; schwerster Befund: P1
 
 ## B7 — Auswertung und Diagramme (Checkliste)
 <Standards-Antwort> · <Spec-Antwort>
