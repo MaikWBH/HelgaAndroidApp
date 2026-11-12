@@ -204,7 +204,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
   255 Dateien) unter „Abschluss" notieren. Commit.
 - [x] **S11 R1 — B3 Server-Bon-Archiv (voll)**
 - [x] **S12 R2 — B2 Bon-Protokoll App (voll)**
-- [ ] **S13 R3 — B1 Migrationen, Schema, DAOs (voll)**
+- [x] **S13 R3 — B1 Migrationen, Schema, DAOs (voll)**
 - [ ] **S14 R4 — B4 Server-Sicherheit und -Struktur (voll)**
 - [ ] **S15 R5 — B6 Auto-Zuordnung zum Gang (voll)**
 - [ ] **S16 R6 — B5 Container (voll)**

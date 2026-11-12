@@ -161,7 +161,23 @@ _Anmerkung Stufe B zum Beifang (kein Teil der Sub-Agent-Antwort):_ Nachgeprüft 
 
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 11; schwerster Befund: S1 (Niedrig, Standards-Konflikt mit dem Plan).
 
-<Spec-Antwort>
+### Spec — B1 — Room-Migrationen, Schema, DAOs
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|-------------|---------------|--------|----------------------------|------|------------|
+| P1 | `app/src/main/kotlin/com/helga/android/data/local/entity/ReceiptEntity.kt:32-33` | c | Der Kommentar zu `source` sagt, das Feld werde "bewusst nicht synchronisiert (siehe SyncEngine.toDto())". Dieser Mapper existiert nach S23 nicht mehr. Mit dem Bon-Protokoll wird `source` synchronisiert (`ReceiptMapping.kt:27` übernimmt es vom Server, `:100` schickt es mit). Die Zeile liegt als Kontext im Diff, der Kommentar ist durch ihn falsch geworden. | phase-3a S19: "`source` vom Server, leer → `local?.source ?: "ai"`"; S23: "alle Bon-Zeilen entfernen … Mapper Z.535–561" | Niedrig | – |
+| P2 | `app/src/main/kotlin/com/helga/android/data/local/dao/ReceiptDao.kt:67-86` | b | Drei `@Transaction`-Methoden sind neu: `upsertReceiptWithItems`, `replaceWithServerState`, `hardDeleteReceiptWithItems`. S20 listet sie nicht. S22 beschreibt dieselben Abläufe als einzelne Aufrufe (`upsertReceipt`, `upsertItems`, `hardDeleteItemsExcept`, `hardDeleteItemsOf` + `hardDeleteReceipt`). Sie sind inzwischen von `ReceiptSyncer`, `ReceiptUploader`, `ReceiptRepository` und den Tests verwendet und werden von `ReceiptProtocolRulesTest` abgedeckt. Vorteil: Schreiben und Löschen laufen atomar. Das ist Scope-Erweiterung gegenüber dem Planwortlaut. | phase-3a S20: "`ReceiptDao` neu: `pendingUploads()` … `clearPendingUpload(id, imagePath, updatedAt)`"; S22: "danach `hardDeleteItemsOf` + `hardDeleteReceipt`" | Niedrig | [ändert Verhalten] [Ermessensfrage] |
+| P3 | `app/src/main/kotlin/com/helga/android/data/local/entity/ReceiptAggregateEntity.kt:24-25` | c | `period` und `dimension` haben keinen Default (`String = ""`). Die Spec nennt `period`, `dimension`, `key`, `label` zusammen mit "(`String = ""`)". Die Klammer lässt sich auf alle vier Felder lesen (Vermutung). Schema und `38.json` sind davon nicht betroffen. | phase-3b S5: "`period`, `dimension`, `key`, `label` (`String = ""`)" | Niedrig | [Ermessensfrage] |
+
+**Geprüft und ohne Befund (Pflichtfragen):**
+- **Migration 36→37:** Alle neun Spalten von `receipts` stimmen in Typ und Default. Das gilt auch für die sechs von `receipt_items` und die Tabelle `receipt_lexicon`. Die Indizes `index_receipts_pendingUpload` und `index_receipt_lexicon_storeKey` sind vorhanden. Die drei Daten-Updates und die zwei `DELETE` sind wörtlich wie im Plan. `'+2 hours'` ist die akzeptierte Abweichung.
+- **Migration 37→38:** `categoryKey TEXT NOT NULL DEFAULT ''` ist da. Die zehn `UPDATE … WHERE aisleName = … AND categoryKey = ''` entsprechen der Tabelle in `kategorien.md` (Namen und Schlüssel verglichen, NFC-normalisiert), und `dirty` wird nicht angefasst. `receipt_aggregates` hat die Indizes `dimension` und `period`.
+- **Schema-Dateien:** `37.json` und `38.json` sind committet, mit `version` 37 und 38. Ein skriptgestützter Vergleich 36→37→38 liefert genau die Spalten, Tabellen und Indizes der Entities und der Migrationen.
+- **Tests:** `RoomMigrationHarness` erfüllt alle in S15 verlangten Punkte: Spaltenname, Affinität, `notNull`, PK und Indexnamen. `RoomMigrationHarnessTest` prüft den `assertThrows`-Fall. `Migration36To37Test` und `Migration37To38Test` bilden die Fälle aus S16 und S5 ab. `SyncCompletenessTest` enthält `ReceiptLexicon`, `ReceiptAggregate`, `Receipt` und `ReceiptItem`.
+- **SyncEngine ohne Bons:** `grep -i receipt` ist in `SyncEngine.kt`, `ImageUploadWorker.kt` und `ImageDownloadWorker.kt` leer. `receiptDao` ist aus dem Konstruktor entfernt. `SyncPullResponse` und `SyncPushRequest` behalten ihre Bon-Felder.
+- **`StoreAisleDto.categoryKey`:** Das DTO (`category_key`, Default `""`), `toEntity` und `toDto` reichen den Wert durch. `StoreAisleSyncTest` prüft Pull und Push.
+- **DAOs:** `ReceiptDao`, `ReceiptLexiconDao` und `ReceiptAggregateDao` entsprechen S20 und S7. In `SyncDao` sind `receiptTimestamps` und `receiptItemTimestamps` gelöscht, und die gelöschten `ReceiptDao`-Methoden haben keine Verwender mehr. Die Abweichungen `clearPendingUpload` ohne `updatedAt` und der entfernte `findIdsOlderThan` sind akzeptiert.
+
+**Ergebnis:** 0 Blocker, 0 Hoch, 0 Mittel, 3 Niedrig; schwerster Befund: P2 (Niedrig)
 
 ## B4 — Server-Sicherheit und -Struktur
 <Standards-Antwort> · <Spec-Antwort>
