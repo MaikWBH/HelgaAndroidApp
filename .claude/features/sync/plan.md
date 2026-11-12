@@ -183,7 +183,7 @@ _Weitere Aufgaben nach dem Interview._
 
 ## Phase 4 (fastapi-templates)
 
-- Phase 4 umgesetzt (Stufe B, 2026-11-12): Sync-Endpunkte liegen in `server/app/sync_api.py`; Sync-Logik (`sync.py`) und Protokoll sind unverändert. Der Server startet nicht ohne `API_KEY` (außer `ALLOW_NO_AUTH=1`). Bild-Upload mit 8-MiB-Limit (`images_api.py`). Siehe [phase-4](../../phasen/phase-4-fastapi-templates.md).
+- Phase 4 umgesetzt (Stufe B, 2026-11-12): Sync-Endpunkte liegen in `server/app/sync_api.py`; Sync-Logik (`sync.py`) und Protokoll sind unverändert. Der Server arbeitet nicht ohne `API_KEY` (außer `ALLOW_NO_AUTH=1`): die Worker brechen mit „API_KEY fehlt …“ ab, bei mehreren Uvicorn-Workern startet der Supervisor sie neu und der Container wird `unhealthy` (siehe Phase 5). Bild-Upload mit 8-MiB-Limit (`images_api.py`). Siehe [phase-4](../../phasen/phase-4-fastapi-templates.md).
 
 ## Phase 5 (multi-stage-dockerfile)
 
