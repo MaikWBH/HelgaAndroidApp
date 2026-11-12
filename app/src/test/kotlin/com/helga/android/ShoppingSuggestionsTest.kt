@@ -30,6 +30,7 @@ class ShoppingSuggestionsTest {
         quickEmojiDao = mockk<QuickEmojiDao>(relaxed = true),
         apiProvider = provider,
         aisleAssigner = mockk(relaxed = true),
+        syncScheduler = mockk(relaxed = true),
     )
 
     init {

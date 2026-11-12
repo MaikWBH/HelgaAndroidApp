@@ -77,9 +77,22 @@ class SyncScheduler @Inject constructor(
         workManager.enqueueUniqueWork(ReceiptUploadWorker.UNIQUE, ExistingWorkPolicy.KEEP, request)
     }
 
+    /**
+     * Reiht die Server-Kategorisierung neuer Artikel ohne Gang ein (kurze Verzögerung, damit mehrere schnell
+     * hinzugefügte Artikel in einem Lauf landen; ein bereits eingereihter Lauf bleibt bestehen).
+     */
+    fun enqueueAisleCategorize() {
+        val request = OneTimeWorkRequestBuilder<AisleCategorizeWorker>()
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setInitialDelay(5, TimeUnit.SECONDS)
+            .build()
+        workManager.enqueueUniqueWork(AisleCategorizeWorker.UNIQUE, ExistingWorkPolicy.KEEP, request)
+    }
+
     fun cancelAll() {
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_PERIODIC)
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_ONESHOT)
         workManager.cancelUniqueWork(ReceiptUploadWorker.UNIQUE)
+        workManager.cancelUniqueWork(AisleCategorizeWorker.UNIQUE)
     }
 }

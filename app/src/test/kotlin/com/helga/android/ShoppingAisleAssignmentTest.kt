@@ -10,8 +10,10 @@ import com.helga.android.data.repository.ReceiptRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.StoreRepository
 import com.helga.android.data.shopping.AisleAssigner
+import com.helga.android.data.sync.SyncScheduler
 import io.mockk.coEvery
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -23,6 +25,7 @@ class ShoppingAisleAssignmentTest {
     private val shoppingDao = mockk<ShoppingDao>(relaxed = true)
     private val storeDao = mockk<StoreDao>()
     private val storeRepository = mockk<StoreRepository>()
+    private val syncScheduler = mockk<SyncScheduler>(relaxed = true)
     private val saved = mutableListOf<ShoppingItemEntity>()
     private lateinit var repository: ShoppingRepository
 
@@ -43,6 +46,7 @@ class ShoppingAisleAssignmentTest {
             apiProvider = mockk<ApiProvider>(),
             quickEmojiDao = mockk<QuickEmojiDao>(relaxed = true),
             aisleAssigner = AisleAssigner(storeDao, shoppingDao, mockk<ApiProvider>()),
+            syncScheduler = syncScheduler,
         )
     }
 
@@ -69,5 +73,19 @@ class ShoppingAisleAssignmentTest {
     fun `addOrMergeItem ordnet neue Artikel zu`() = runTest {
         repository.addOrMergeItem(listId = "L", name = "Milch", quantity = 1.0, unit = "l")
         assertEquals("Kühlregal", saved.single().aisle)
+    }
+
+    @Test
+    fun `Artikel ohne Gang bei aktivem Markt reiht die Server-Kategorisierung ein`() = runTest {
+        repository.addItem(listId = "L", name = "Geschenkpapier")
+        verify(exactly = 1) { syncScheduler.enqueueAisleCategorize() }
+    }
+
+    @Test
+    fun `zugeordneter Artikel oder fehlender Markt reihen nichts ein`() = runTest {
+        repository.addItem(listId = "L", name = "Tomaten")
+        coEvery { storeRepository.findActiveStoreId() } returns null
+        repository.addItem(listId = "L", name = "Geschenkpapier")
+        verify(exactly = 0) { syncScheduler.enqueueAisleCategorize() }
     }
 }

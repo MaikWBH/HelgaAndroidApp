@@ -347,7 +347,7 @@ Zusätzlich:
   `grep -c 'findAisleForProduct' $U/shopping/ShoppingListViewModel.kt` = 0. Prüfliste (Gerät): „Tomaten", „Milch",
   „Spülmittel", „Bier" landen ohne Zutun im passenden Gang; ein von Hand umsortierter Artikel landet beim nächsten Mal
   im gewählten Gang.
-- [ ] **S23 Server-KI für Unbekanntes** — Dateien: `$B/data/shopping/AisleAssigner.kt`,
+- [x] **S23 Server-KI für Unbekanntes** — Dateien: `$B/data/shopping/AisleAssigner.kt`,
   `$B/data/local/dao/ShoppingDao.kt`, neu `$B/data/sync/AisleCategorizeWorker.kt`, `$B/data/sync/SyncScheduler.kt`,
   `$B/data/repository/ShoppingRepository.kt`, `$T/AisleAssignerTest.kt`. `ShoppingDao.uncheckedItemsWithoutAisle()`
   (`aisle = '' AND isChecked = 0 AND deleted = 0`). `AisleAssigner.assignRemote(): Int`: aktiver Markt fehlt → 0;

@@ -14,6 +14,7 @@ import com.helga.android.data.model.ItemOrigins
 import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.model.StoreCost
 import com.helga.android.data.shopping.AisleAssigner
+import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.util.ReceiptItemNormalizer
 import com.helga.android.data.util.ShoppingUnitConverter
 import kotlinx.coroutines.flow.Flow
@@ -31,6 +32,7 @@ class ShoppingRepository @Inject constructor(
     private val apiProvider: ApiProvider,
     private val quickEmojiDao: QuickEmojiDao,
     private val aisleAssigner: AisleAssigner,
+    private val syncScheduler: SyncScheduler,
 ) {
 
     fun observeQuickEmojis(): Flow<List<QuickEmojiEntity>> = quickEmojiDao.observeEmojis()
@@ -87,7 +89,7 @@ class ShoppingRepository @Inject constructor(
         val now = System.currentTimeMillis()
         val origins = listOf(ItemOrigin(recipe = recipeName, quantity = quantity, unit = unit))
         // Ohne ausdrücklich übergebenen Gang: gelernt → Stichwort (nur mit aktivem Markt)
-        val resolvedAisle = aisle.ifEmpty { aisleAssigner.resolveLocal(name, storeRepository.findActiveStoreId()) }
+        val resolvedAisle = aisle.ifEmpty { resolveAisle(name) }
         shoppingDao.upsertItem(
             ShoppingItemEntity(
                 id = id,
@@ -103,6 +105,17 @@ class ShoppingRepository @Inject constructor(
             )
         )
         return id
+    }
+
+    /**
+     * Gang für einen neuen Artikel: lokal (gelernt, Stichwort). Bleibt er bei aktivem Markt ohne Gang, wird die
+     * Server-Kategorisierung im Hintergrund eingereiht (sofort kein Warten, ohne Netz bleibt er ohne Gang).
+     */
+    private suspend fun resolveAisle(name: String): String {
+        val storeId = storeRepository.findActiveStoreId()
+        val aisle = aisleAssigner.resolveLocal(name, storeId)
+        if (aisle.isEmpty() && storeId != null) syncScheduler.enqueueAisleCategorize()
+        return aisle
     }
 
     suspend fun toggleChecked(item: ShoppingItemEntity) {
@@ -232,7 +245,7 @@ class ShoppingRepository @Inject constructor(
                 )
             )
         } else {
-            val aisle = aisleAssigner.resolveLocal(norm, storeRepository.findActiveStoreId())
+            val aisle = resolveAisle(norm)
             shoppingDao.upsertItem(
                 ShoppingItemEntity(
                     id = UUID.randomUUID().toString(),
