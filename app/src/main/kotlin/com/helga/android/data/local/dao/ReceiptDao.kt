@@ -5,6 +5,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import kotlinx.coroutines.flow.Flow
@@ -63,6 +64,28 @@ interface ReceiptDao {
 
     @Query("DELETE FROM receipt_items WHERE receiptId = :receiptId")
     suspend fun hardDeleteItemsOf(receiptId: String)
+
+    /** Bon und Positionen in einem Schritt schreiben (Repository, Scan). */
+    @Transaction
+    suspend fun upsertReceiptWithItems(receipt: ReceiptEntity, items: List<ReceiptItemEntity>) {
+        upsertReceipt(receipt)
+        if (items.isNotEmpty()) upsertItems(items)
+    }
+
+    /** Server-Stand übernehmen: Bon, Positionen, lokal überzählige Positionen entfernen — atomar. */
+    @Transaction
+    suspend fun replaceWithServerState(receipt: ReceiptEntity, items: List<ReceiptItemEntity>) {
+        upsertReceipt(receipt)
+        upsertItems(items)
+        hardDeleteItemsExcept(receipt.id, items.map { it.id })
+    }
+
+    /** Bon samt Positionen hart löschen (Cache-Verdrängung, bestätigte Server-Löschung, nie hochgeladene Bons). */
+    @Transaction
+    suspend fun hardDeleteReceiptWithItems(id: String) {
+        hardDeleteItemsOf(id)
+        hardDeleteReceipt(id)
+    }
 
     /** Bons, die älter als der Cache-Schnitt sind und sicher verdrängt werden dürfen (alles synchron, kein Upload offen). */
     @Query(

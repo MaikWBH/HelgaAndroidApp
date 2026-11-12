@@ -89,7 +89,7 @@ Abschnitt „Tests").
   `.kt`): Test `kein_not_null_assertion_operator` — je Zeile den Teil vor `//` nehmen, Inhalte von String-Literalen
   `"…"` entfernen (`Regex("\"(\\\\.|[^\"\\\\])*\"")` durch `""` ersetzen); enthält der Rest `!!`, ist es ein Verstoß;
   Fehlermeldung listet `Datei:Zeile: Text`. Akzeptanz: `grep -rn '!!' $B` leer; `V` grün; `TC` = Baseline + 1.
-- [ ] **S2 Transaktionsmethoden im `ReceiptDao` (V2, Teil 1)** — Dateien: `$B/data/local/dao/ReceiptDao.kt`,
+- [x] **S2 Transaktionsmethoden im `ReceiptDao` (V2, Teil 1)** — Dateien: `$B/data/local/dao/ReceiptDao.kt`,
   `$T/ReceiptProtocolRulesTest.kt`. Unter dem Block „Cache-Verdrängung …" in `ReceiptDao` (Muster
   `ReceiptLexiconDao.replaceAll`, `import androidx.room.Transaction`) drei Methoden ergänzen:
   ```kotlin

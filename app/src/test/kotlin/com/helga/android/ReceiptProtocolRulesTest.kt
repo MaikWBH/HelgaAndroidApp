@@ -45,4 +45,19 @@ class ReceiptProtocolRulesTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun transaktionsmethoden_tragen_transaction() {
+        val lines = File(root, "data/local/dao/ReceiptDao.kt").readLines()
+        val names = listOf("upsertReceiptWithItems", "replaceWithServerState", "hardDeleteReceiptWithItems")
+        names.forEach { name ->
+            val index = lines.indexOfFirst { it.contains("suspend fun $name(") }
+            assertTrue("ReceiptDao.$name fehlt", index >= 0)
+            val previous = lines.subList(0, index).asReversed().firstOrNull {
+                val t = it.trim()
+                t.isNotEmpty() && !t.startsWith("//") && !t.startsWith("/*") && !t.startsWith("*")
+            }
+            assertTrue("ReceiptDao.$name braucht @Transaction (Bon und Positionen atomar)", previous?.trim() == "@Transaction")
+        }
+    }
 }
