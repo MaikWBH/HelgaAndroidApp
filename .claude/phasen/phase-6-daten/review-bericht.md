@@ -230,7 +230,35 @@ Geprüft und ohne Befund:
 **Ergebnis:** 0 Blocker, 0 Hoch, 2 Mittel (P2, P3), 2 Niedrig (P1, P4); schwerster Befund: P2 (P3 ist eine Vermutung)
 
 ## B6 — Auto-Zuordnung zum Gang
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B6 — Auto-Zuordnung zum Gang
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | `data/sync/AisleCategorizeWorker.kt:27`; `data/repository/ShoppingRepository.kt:271` | `catch (e: Exception)` ohne Rethrow von `CancellationException`. Im Worker wird die (in `assignRemote` korrekt weitergereichte) Abbruch-Exception wieder verschluckt, geloggt und mit `Result.success()` beendet. In `suggestItems` (aus dem ViewModel verschoben) gilt dasselbe. | K-KQ §6 | Mittel | ändert Verhalten |
+| S2 | `data/shopping/AisleAssigner.kt:89-91` | Je Server-Ergebnis werden `shopping_items` (`upsertItem`) und `aisle_products` (`learn`) ohne `withTransaction` geschrieben. Es wird dafür keine DB injiziert. Ein Abbruch dazwischen lässt Zuordnung und Gelerntes auseinanderlaufen. | K-KQ §5 | Mittel | – |
+| S3 | `ui/stores/StoreListScreen.kt:415,436` | Der neue Kategorie-`IconButton` liegt ohne Abstand (0 dp) neben dem Löschen-`IconButton`. Ein Fehltipp löscht den Gang sofort (der Löschaufruf selbst ist Altbestand). | K-UX §1 (Mindestabstand 8 dp) | Mittel | – |
+| S4 | `ui/stores/StoreListScreen.kt:320` (mit `LaunchedEffect` bei :326) | `draggedId` ist jetzt `rememberSaveable`, `dragOffset` und die Geste sind es nicht. Vermutung (nicht ausgeführt): Ein Konfigurationswechsel mitten im Ziehen lässt `draggedId` gesetzt. Die Zeile bleibt als „gezogen" markiert, und `localOrder` wird nicht mehr aus Room aktualisiert, sodass neu gesetzte Kategorien nicht erscheinen. | keine Regel (K-UX §13 meint nur Dialog-/Sheet-Sichtbarkeit und Eingaben) | Mittel | ändert Verhalten, Ermessensfrage |
+| S5 | `ui/stores/StoreListScreen.kt:528-532` | Radio-Zeile `PrefillOption` mit `clickable(role = Role.Button)`. Verlangt ist `selectable(role = RadioButton)`. | K-UX §13 (Rollen) | Niedrig | – |
+| S6 | `ui/stores/StoreListScreen.kt:461` | Das Auswahl-Häkchen im `CategoryMenuItem` trägt den Zustand „ausgewählt", hat aber `contentDescription = null`. TalkBack erfährt die aktuelle Kategorie nicht. | K-UX §2 | Niedrig | – |
+| S7 | `data/shopping/AisleAssigner.kt:96-110` | Duplicated Code: `learn` wiederholt `StoreRepository.saveAisleProduct` (Zeile 158) fast wörtlich (vorhandenen Eintrag ändern, sonst neu anlegen). | K-SM Duplicated Code | Niedrig | Ermessensfrage |
+| S8 | `data/repository/StoreRepository.kt:142,180` | Speculative Generality: `aislesForStore` ist neu und ohne Aufrufer. `findAisleForProduct` hat seinen letzten Aufrufer durch das Diff verloren. `aislesForStore` ist außerdem ein `suspend`-Snapshot (K-KQ §4). | K-SM Speculative Generality | Niedrig | Ermessensfrage |
+| S9 | `data/util/AisleKeywordMatcher.kt:19`; `AisleKeywords.kt:11`; `AisleAssigner.kt:34,43` | Primitive Obsession: Die Kategorie ist ein `String`, `""` heißt „keine". Das gilt für `categoryFor`, `Entry.category`, `aisleForCategory` und den Rückgabewert von `resolveLocal`, obwohl `ProductCategory` existiert. | K-SM Primitive Obsession | Niedrig | Ermessensfrage |
+| S10 | `data/util/AisleKeywordMatcher.kt:55,71` | Der Block „Kandidat vergleichen, `best` und `bestCategory` setzen" steht doppelt. `best` und `bestCategory` sind ein Data Clump (Kategorie gehört in `Candidate`). `categoryFor` ist rund 65 Zeilen lang. | K-SM Duplicated Code, Data Clumps | Niedrig | Ermessensfrage |
+| S11 | `data/shopping/AisleAssigner.kt:55`; `AisleKeywordMatcher.kt:11` | Der Name `assignRemote` täuscht: Die Funktion ordnet zuerst lokal zu, dann per Server. `AisleKeywordMatcher.normalize` ist ein öffentlicher Durchreicher (Middle Man) und wird nur intern genutzt. | K-SM Mysterious Name, Middle Man | Niedrig | Ermessensfrage |
+| S12 | `data/repository/ShoppingRepository.kt:278`; `ui/shopping/ShoppingListViewModel.kt` (Barcode-Block) | `lookupBarcode` reicht den Retrofit-DTO unverändert an das ViewModel durch. Das ViewModel baut daraus die `OffProductEntity` selbst und setzt sie in den UI-State, ohne dass Room beteiligt ist (Middle Man, K-AL „nie aus Retrofit-Antworten"). Zusätzlich hat `ShoppingRepository` jetzt Quick-Emoji, Server-Vorschläge, Barcode und Gang-Zuordnung (Divergent Change). | K-AL (architecture-layers §Erlaubte Abhängigkeiten); K-SM | Niedrig | Ermessensfrage |
+| S13 | `AisleAssignerTest.kt:31`; `ShoppingAisleAssignmentTest.kt:30`; `StoreRepositoryAisleTest.kt:23` | Neue `lateinit var` in Testklassen (Initialisierung in `@Before`). | K-KQ §7 | Niedrig | Ermessensfrage |
+
+**Beifang (Altbestand, ohne Grad):**
+- `StoreListScreen.kt:88`: `aisleSheetStore` mit `remember` (K-UX §13).
+- `StoreListScreen.kt:473`: `prefill` mit `remember`, während `name` daneben `rememberSaveable` ist.
+- `StoreListScreen.kt:436`: Gang-Löschen ohne Bestätigung oder Undo (K-UX §6).
+- `ShoppingListViewModel.kt`: `catch (e: Exception)` in den Barcode- und Katalog-Funktionen ohne `CancellationException`-Rethrow (K-KQ §6).
+- `StoreRepository.createStore`: schreibt `stores` und `store_aisles` ohne Transaktion (K-KQ §5).
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 4 (S1–S4), Niedrig 9 (S5–S13); schwerster Befund: S1.
+
+<Spec-Antwort>
 
 ## B5 — Container
 <Standards-Antwort> · <Spec-Antwort>
