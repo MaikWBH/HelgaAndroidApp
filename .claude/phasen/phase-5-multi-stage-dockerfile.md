@@ -88,7 +88,7 @@ zeigt die Kontextgröße.
 ## Schritte (Stufe B arbeitet nur diese Liste ab)
 
 ### Block A — Image
-- [ ] **S0 Daemon, Hilfsskript, Baseline** — keine Repo-Dateien. Abschnitt „Umgebung für die Verifikation" ausführen.
+- [x] **S0 Daemon, Hilfsskript, Baseline** — keine Repo-Dateien. Abschnitt „Umgebung für die Verifikation" ausführen.
   Dann die **unveränderte** Baseline bauen und messen: `/tmp/claude-0/docker-verify.sh helga-verify:old` und notiere
   die Ausgabezeile (Größe; erwartet ≈ 199 MB). `docker run --rm helga-verify:old id helga` → `uid=1000`. `VS` ausführen
   (erwartet 177). Werte unter „Abschluss" notieren. Akzeptanz: Baseline-Größe und UID notiert.
@@ -195,7 +195,7 @@ zeigt die Kontextgröße.
 - Healthcheck-Logik der API (Prüfung der Datenbank) und Uvicorn-Tuning über `WEB_CONCURRENCY` hinaus.
 
 ## Abschluss
-- [ ] Baseline (S0): Größe …, UID …, `VS` … Tests; Endstand: Größe …, `VT` …, `VS` …
+- [ ] Baseline (S0): Größe 199 627 092 Bytes (Docker: 200 MB), UID 1000 (`uid=1000(helga)`), `VS` 177 passed; Endstand: Größe …, `VT` …, `VS` …
 - [ ] Kontextgröße vorher/nachher (S1)
 - [ ] Gemeldete Abweichungen und Ausnahmen (je Schritt eine Zeile)
 - [ ] Bereichs-`plan.md` (sync), Phasen-README, `server/CLAUDE.md` aktualisiert (S6)
