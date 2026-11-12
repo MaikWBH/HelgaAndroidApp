@@ -199,7 +199,7 @@ frischem Kontext starten, Antwort abwarten, dann den zweiten; (3) beide Antworte
 falsche Befunde **nicht** selbst bewerten, sondern mit dem Zusatz „(von Stufe B nicht nachgeprüft)" stehen lassen;
 (5) Commit „Phase 6 S<n>: Review <Block>". Akzeptanz je Schritt: Abschnitt enthält beide Tabellen (bei B11 eine) mit
 den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` zeigt nur `$D/review-bericht.md`.
-- [ ] **S10 Review-Bereich festlegen** — `git rev-parse --short HEAD` nach S9 = `$H`. In `$D/review-bericht.md` die
+- [x] **S10 Review-Bereich festlegen** — `git rev-parse --short HEAD` nach S9 = `$H`. In `$D/review-bericht.md` die
   Zeile „Review-Bereich" auf `2c148ab..$H` setzen; Prüfung `git diff --stat 2c148ab $H | tail -1` (erwartet etwa
   255 Dateien) unter „Abschluss" notieren. Commit.
 - [ ] **S11 R1 — B3 Server-Bon-Archiv (voll)**
@@ -269,7 +269,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
 ## Abschluss
 - [x] Baseline S0: App `TC` 282 (erwartet 282), Server 177 passed (erwartet 177), `!!` 5 (erwartet 5)
 - [x] Nach Block A: App `TC` 287 (erwartet 287 = 282 + 1 S1 + 1 S2 + 1 S4 + 2 S8), Server 180 passed (erwartet 180 = 177 + 2 S5 + 1 S6), `!!` 0
-- [ ] Review-Bereich `2c148ab..<$H>`, `git diff --stat` <…>
+- [x] Review-Bereich `2c148ab..451819d`, `git diff --stat`: 256 Dateien, +24903/−3251 (erwartet etwa 255)
 - [ ] Je Block: Sub-Agent-Modell und Anzahl Befunde je Achse (aus der Zusammenfassung des Berichts)
 - [ ] Endstand `V`/`VS` grün nach S26 (Zahlen)
 - [ ] Bericht committet; „An den Nutzer zur Entscheidung" und Abhakliste G01–G29 offen für den Nutzer

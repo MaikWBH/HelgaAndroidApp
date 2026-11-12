@@ -5,7 +5,7 @@
 > Abschnitt 3 „Nicht melden" fallen; jede Entfernung als Zeile „entfernt: <#>, Grund" darunter). Die zwei Achsen
 > werden nie zusammengeführt oder umsortiert.
 
-- Review-Bereich: `2c148ab..<$H>` · Sub-Agent-Modell: `sonnet` (Abweichung je Block vermerken)
+- Review-Bereich: `2c148ab..451819d` · Sub-Agent-Modell: `sonnet` (Abweichung je Block vermerken)
 - Spec: `.claude/phasen/phase-1…5`, `phase-3-daten/*` · Standards: `CLAUDE.md`, `server/CLAUDE.md`, `.claude/guidelines/*`
   und die Code-Smell-Basis des Skills `code-review`
 - Akzeptierte Abweichungen der Phasen 1–5 werden nicht erneut gemeldet (Liste: `blocks.md` Abschnitt 3)
