@@ -215,7 +215,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
 - [x] **S21 R11 — B11 Doku-Abgleich (nur Spec)** — danach Block B pushen.
 
 ### Block C — Bericht, Abhakliste, Doku
-- [ ] **S22 Abhakliste G01–G29** — Datei: `$D/review-bericht.md`. Für jede Zeile die Spalte „Statisch" füllen: die
+- [x] **S22 Abhakliste G01–G29** — Datei: `$D/review-bericht.md`. Für jede Zeile die Spalte „Statisch" füllen: die
   in der Quelle genannte Funktion per `grep -rn` im Code suchen (z. B. G08: `enableOnBackInvokedCallback` im Manifest;
   G17: Zweige in `ReceiptScanFlow`/`ReceiptUploader`; G29: `is_global` in `url_guard.py`) und `ja (Datei:Zeile)`,
   `Abweichung (Nr.)` (nur wenn ein Befund aus Block B oder V1–V16 genau diese Prüfung betrifft) oder
