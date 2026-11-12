@@ -129,7 +129,39 @@ Pflichtfragen ohne Abweichung von der Spec:
 **Ergebnis:** 0 Blocker, 0 Hoch, 3 Mittel (P1–P3), 4 Niedrig (P4–P7); schwerster Befund: P1
 
 ## B1 — Room-Migrationen, Schema, DAOs
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B1 — Room-Migrationen, Schema, DAOs
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | AppDatabase.kt:879-880 | Migration 36→37 löscht per `DELETE` auch lokal gelöschte Bons mit `dirty = 1` samt Positionen. Ihre Löschung ist nie beim Server angekommen, die Bons können beim Pull aus dem Archiv wieder auftauchen. Der Plan verlangt es (Annahme 7, `phase-3-bons-kategorien-entscheidungen.md:61`), die Guideline sagt Gegenteiliges. Das ist ein Standards-Konflikt, kein Spec-Verstoß. | sync-patterns.md „Server-Archiv" (hartes Löschen nur für `dirty = 0`); CLAUDE.md „Soft-Delete" | Niedrig | ändert Verhalten, Ermessensfrage |
+| S2 | ReceiptEntity.kt:32-33 | Der Kommentar zu `source` verweist auf `SyncEngine.toDto()`. Dieser Mapper wurde im selben Diff entfernt. | – (Doku) | Niedrig | – |
+| S3 | ReceiptDao.kt:34-35 | `upsertReceipts(List)` hat keinen Aufrufer mehr, seit der SyncEngine-Aufruf entfällt. Das ist toter Code. | Speculative Generality | Niedrig | Ermessensfrage |
+| S4 | ReceiptAggregateDao.kt:17-18 | `count()` hat keinen Aufrufer (grep über `app/src/main`: keiner, im Test habe ich nicht gesucht). | Speculative Generality | Niedrig | Ermessensfrage |
+| S5 | ReceiptDao.kt:28-29 und 53-55 | `itemsForReceipt` (ohne gelöschte) und `allItemsForReceipt` (mit gelöschten) heißen fast gleich. Der Unterschied steht nur im KDoc. | Mysterious Name | Niedrig | Ermessensfrage |
+| S6 | ReceiptLexiconDao.kt:25-28, ReceiptAggregateDao.kt:28-31 | `replaceAll` hat in beiden DAOs dieselbe Form: `deleteAll()` und danach `insertAll()` in `@Transaction`. | Duplicated Code | Niedrig | Ermessensfrage |
+| S7 | ReceiptEntity.kt:44 (`parseStatus`), ReceiptAggregateEntity.kt (`dimension`) | Status und Dimension sind rohe Strings (`"none"`, `"queued"`, `"failed"`, `"total"`, `"week"`). Die Literale stehen verteilt in ReceiptUploader, ReceiptScanFlow und ReceiptGrouping, eine gemeinsame Konstante fehlt. | Primitive Obsession; kotlin-quality §2/§10 sinngemäß | Niedrig | Ermessensfrage |
+| S8 | StoreAisleSyncTest.kt:46, 52 | `!!` in Testcode. `KotlinQualityRulesTest` scannt nur `src/main`, das erzwingt es also nicht. | kotlin-quality §1 | Niedrig | – |
+| S9 | StoreAisleSyncTest.kt:67-90, 108 | Der Konstruktor-Aufbau mit 13 positionalen Mocks wiederholt `SyncEngineTest` (der Kommentar sagt „Aufbau wie SyncEngineTest"). Außerdem steht ein voll qualifizierter Klassenname inline. | Duplicated Code | Niedrig | Ermessensfrage |
+| S10 | Migration36To37Test.kt:62 | `assertFalse(scalar(...) != 0)` ist schwer lesbar, `assertEquals(0, …)` wäre klarer. | – (Stil) | Niedrig | – |
+| S11 | RoomMigrationHarness.kt:55 | Der Harness stubbt nur `execSQL(String)`. Der relaxed Mock verschluckt `execSQL(String, Array)` und `query` stillschweigend. Künftige Migrationen mit Bind-Args würden nicht ausgeführt und der Test bliebe grün (Vermutung zur Zukunft). Das ist die dokumentierte Vorlage für alle Migrationstests. | sync-patterns.md Checkliste „Migrationstest über RoomMigrationHarness" | Niedrig | Ermessensfrage |
+
+Geprüft und ohne Befund:
+- Indizes und Pflichtfelder von `ReceiptEntity` und `StoreAisleEntity` sind vorhanden.
+- Beide Migrationen sind in `addMigrations` eingetragen, und `fallbackToDestructiveMigration` kommt nicht vor.
+- Die Schema-JSONs 37 und 38 sind exportiert, und beide Migrationen haben Tests.
+- `PRESERVE_IF_UNSET` enthält `store_aisles.category_key`.
+- Die DAOs sind in `DatabaseModule` bereitgestellt, und `SyncCompletenessTest` führt Lexikon, Aggregat und Bons.
+- kotlin-quality §5: Die Mehrtabellen-Schreibzugriffe im ReceiptDao laufen in `@Transaction`.
+- kotlin-quality §9: `StoreAisleDto.categoryKey` hat den Default `""`.
+
+**Beifang (Altbestand, ohne Grad):** ReceiptRepository.kt:303 und 314 und ReceiptUploader.kt:66 und 89 rufen `receiptDao.upsertReceipt(...)` einzeln auf. Die Methode nutzt `REPLACE`, und `receipt_items` hat eine Fremdschlüssel-Beziehung mit `ON DELETE CASCADE` auf `receipts`. Vermutung: `INSERT OR REPLACE` auf den Bon löscht bei aktivem `foreign_keys` die Positionen mit. Ich habe das weder getestet noch geprüft, ob Room `PRAGMA foreign_keys` setzt. Betroffen wäre auch der Pfad ohne Parse-Ergebnis in `uploadOne` (ReceiptUploader.kt:89). Die Dateien liegen außerhalb des B1-Umfangs.
+
+_Anmerkung Stufe B zum Beifang (kein Teil der Sub-Agent-Antwort):_ Nachgeprüft wurden nur die Fakten. `ReceiptItemEntity` hat einen Fremdschlüssel auf `receipts` mit `ON DELETE CASCADE` (auch in `38.json`), und `ReceiptDao.upsertReceipt` ist `@Insert(onConflict = REPLACE)`. Mit einem Python-`sqlite3`-Versuch (ohne Room) wurde bestätigt: `INSERT OR REPLACE` auf die Elternzeile löscht bei `PRAGMA foreign_keys=ON` alle Kindzeilen (0 von 2 Positionen übrig). **Nicht geprüft:** ob Room die Fremdschlüssel in der App tatsächlich aktiviert (Hinweis: `RoomDatabase.performClear` setzt `PRAGMA foreign_keys` selbst) und wie sich das im Gerät auswirkt. Bei Bestätigung wäre es Datenverlust (Hoch/Blocker, ändert Verhalten); Einzelaufrufer ohne anschließendes `upsertItems`: `ReceiptRepository.updateReceipt`, `linkReceiptToShoppingList`, `updateReceiptStore`, `ReceiptUploader.kt:66,89`.
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 11; schwerster Befund: S1 (Niedrig, Standards-Konflikt mit dem Plan).
+
+<Spec-Antwort>
 
 ## B4 — Server-Sicherheit und -Struktur
 <Standards-Antwort> · <Spec-Antwort>
