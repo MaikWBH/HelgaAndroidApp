@@ -2,12 +2,16 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
+from .ai_client import AiUpstreamError
 from .db import init_db, now_ms
 from . import (
     ai_api, images_api, off_api, receipt_api, receipts, settings, suggestions_api, sync_api,
 )
+
+logging.basicConfig(level=settings.LOG_LEVEL, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +40,11 @@ app.include_router(images_api.router)
 app.include_router(off_api.router)
 app.include_router(ai_api.router)
 app.include_router(suggestions_api.router)
+
+
+@app.exception_handler(AiUpstreamError)
+async def ai_upstream_error_handler(request: Request, exc: AiUpstreamError):
+    return JSONResponse(status_code=502, content={"detail": "KI-Dienst hat nicht geantwortet"})
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

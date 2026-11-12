@@ -120,7 +120,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   `import_url`. Danach Block B pushen.
 
 ### Block C — Härtung (Befunde 2, 4, 5, 6, 10)
-- [ ] **S8 Logging und KI-Fehlerabbildung** — Dateien: `$SA/ai_client.py`, `$SA/ai_api.py`, `$SA/main.py`,
+- [x] **S8 Logging und KI-Fehlerabbildung** — Dateien: `$SA/ai_client.py`, `$SA/ai_api.py`, `$SA/main.py`,
   neu `$ST/test_ai_errors.py`. In `ai_client.py`: `class AiUpstreamError(Exception)` mit `status: int | None`; alle
   Anbieter-Aufrufe fangen `httpx.HTTPStatusError` (→ `AiUpstreamError("KI-Anbieter antwortete mit Status N", N)`),
   `httpx.RequestError` inkl. Timeout (→ „KI-Anbieter nicht erreichbar") und fehlerhafte Antwortformen

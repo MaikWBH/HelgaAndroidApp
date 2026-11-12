@@ -3,13 +3,79 @@
 Konfiguration kommt zur Aufrufzeit aus `settings`. Prompts und Auswertung der Antworten stehen in `ai.py`.
 """
 import json
+import logging
 from typing import AsyncIterator
 
 import httpx
 
 from . import settings
 
+logger = logging.getLogger(__name__)
+
 ANTHROPIC_BASE = "https://api.anthropic.com/v1"
+
+
+class AiUpstreamError(Exception):
+    """Der KI-Anbieter war nicht erreichbar, lehnte ab oder antwortete unbrauchbar.
+
+    Die Meldung enthält nie Schlüssel oder Antwortkörper; Details stehen im Log.
+    """
+
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
+
+
+# Antwortformen, die beim Auslesen der JSON-Antwort scheitern können.
+_SHAPE_ERRORS = (KeyError, IndexError, TypeError, ValueError, AttributeError)
+
+
+def _status_error(exc: httpx.HTTPStatusError) -> AiUpstreamError:
+    status = exc.response.status_code
+    logger.warning("KI-Anbieter antwortete mit Status %s", status)
+    return AiUpstreamError(f"KI-Anbieter antwortete mit Status {status}", status)
+
+
+def _unreachable(exc: httpx.RequestError) -> AiUpstreamError:
+    logger.warning("KI-Anbieter nicht erreichbar (%s)", type(exc).__name__)
+    return AiUpstreamError("KI-Anbieter nicht erreichbar")
+
+
+def _unexpected(exc: Exception) -> AiUpstreamError:
+    logger.warning("unerwartete Antwort des KI-Anbieters (%s)", type(exc).__name__)
+    return AiUpstreamError("unerwartete Antwort des KI-Anbieters")
+
+
+async def _post_json(url: str, headers: dict, payload: dict) -> dict:
+    """POST mit JSON-Antwort; Fehler werden in AiUpstreamError übersetzt."""
+    async with httpx.AsyncClient(timeout=120) as client:
+        try:
+            resp = await client.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            obj = resp.json()
+        except httpx.HTTPStatusError as exc:
+            raise _status_error(exc) from None
+        except httpx.RequestError as exc:
+            raise _unreachable(exc) from None
+        except ValueError as exc:  # kein gültiges JSON
+            raise _unexpected(exc) from None
+    if not isinstance(obj, dict):
+        raise _unexpected(TypeError("Antwort ist kein Objekt"))
+    return obj
+
+
+def _openai_text(obj: dict) -> str:
+    try:
+        return obj["choices"][0]["message"].get("content") or ""
+    except _SHAPE_ERRORS as exc:
+        raise _unexpected(exc) from None
+
+
+def _anthropic_text(obj: dict) -> str:
+    try:
+        return "".join(p.get("text", "") for p in obj.get("content", []) if p.get("type") == "text")
+    except _SHAPE_ERRORS as exc:
+        raise _unexpected(exc) from None
 
 DEFAULT_MODEL = {
     "openai": "gpt-4o-mini",
@@ -124,22 +190,27 @@ async def _stream_openai(system: str, user: str) -> AsyncIterator[str]:
         "stream": True,
     }
     async with httpx.AsyncClient(timeout=120) as client:
-        async with client.stream("POST", f"{base}/chat/completions",
-                                 headers=headers, json=payload) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                if not line.startswith("data:"):
-                    continue
-                data = line[5:].strip()
-                if data == "[DONE]":
-                    break
-                try:
-                    obj = json.loads(data)
-                    delta = obj["choices"][0]["delta"].get("content", "")
-                    if delta:
-                        yield delta
-                except (json.JSONDecodeError, KeyError, IndexError):
-                    continue
+        try:
+            async with client.stream("POST", f"{base}/chat/completions",
+                                     headers=headers, json=payload) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        obj = json.loads(data)
+                        delta = obj["choices"][0]["delta"].get("content", "")
+                        if delta:
+                            yield delta
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        continue
+        except httpx.HTTPStatusError as exc:
+            raise _status_error(exc) from None
+        except httpx.RequestError as exc:
+            raise _unreachable(exc) from None
 
 
 async def _stream_anthropic(system: str, user: str) -> AsyncIterator[str]:
@@ -153,21 +224,26 @@ async def _stream_anthropic(system: str, user: str) -> AsyncIterator[str]:
         "stream": True,
     }
     async with httpx.AsyncClient(timeout=120) as client:
-        async with client.stream("POST", f"{ANTHROPIC_BASE}/messages",
-                                 headers=headers, json=payload) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                if not line.startswith("data:"):
-                    continue
-                data = line[5:].strip()
-                try:
-                    obj = json.loads(data)
-                    if obj.get("type") == "content_block_delta":
-                        delta = obj.get("delta", {}).get("text", "")
-                        if delta:
-                            yield delta
-                except (json.JSONDecodeError, KeyError):
-                    continue
+        try:
+            async with client.stream("POST", f"{ANTHROPIC_BASE}/messages",
+                                     headers=headers, json=payload) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    try:
+                        obj = json.loads(data)
+                        if obj.get("type") == "content_block_delta":
+                            delta = obj.get("delta", {}).get("text", "")
+                            if delta:
+                                yield delta
+                    except (json.JSONDecodeError, KeyError):
+                        continue
+        except httpx.HTTPStatusError as exc:
+            raise _status_error(exc) from None
+        except httpx.RequestError as exc:
+            raise _unreachable(exc) from None
 
 
 async def complete_text(system: str, user: str) -> str:
@@ -204,11 +280,8 @@ async def _vision_openai(system: str, user_text: str, image_b64: str, mime_type:
         ],
         "temperature": 0,
     }
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(f"{base}/chat/completions", headers=headers, json=payload)
-        resp.raise_for_status()
-        obj = resp.json()
-        return obj["choices"][0]["message"].get("content") or ""
+    obj = await _post_json(f"{base}/chat/completions", headers, payload)
+    return _openai_text(obj)
 
 
 async def _vision_anthropic(system: str, user_text: str, image_b64: str, mime_type: str) -> str:
@@ -226,11 +299,8 @@ async def _vision_anthropic(system: str, user_text: str, image_b64: str, mime_ty
             ]},
         ],
     }
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(f"{ANTHROPIC_BASE}/messages", headers=headers, json=payload)
-        resp.raise_for_status()
-        obj = resp.json()
-        return "".join(p.get("text", "") for p in obj.get("content", []) if p.get("type") == "text")
+    obj = await _post_json(f"{ANTHROPIC_BASE}/messages", headers, payload)
+    return _anthropic_text(obj)
 
 
 # ── Bon-Aufruf (einmalig, mit oder ohne Bild, Bon-Modell) ─────────────────────
@@ -246,13 +316,8 @@ async def receipt_text(system: str, user_text: str, image_b64: str | None = None
                 "type": "base64", "media_type": mime_type, "data": image_b64}})
         content.append({"type": "text", "text": user_text})
         payload = receipt_payload(used_model, system, content)
-        async with httpx.AsyncClient(timeout=120) as client:
-            resp = await client.post(f"{ANTHROPIC_BASE}/messages", headers=anthropic_headers(), json=payload)
-            resp.raise_for_status()
-            obj = resp.json()
-            return "".join(
-                p.get("text", "") for p in obj.get("content", []) if p.get("type") == "text"
-            )
+        obj = await _post_json(f"{ANTHROPIC_BASE}/messages", anthropic_headers(), payload)
+        return _anthropic_text(obj)
 
     base = _openai_base()
     headers = openai_headers()
@@ -272,8 +337,5 @@ async def receipt_text(system: str, user_text: str, image_b64: str | None = None
         ],
         "temperature": 0,
     }
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(f"{base}/chat/completions", headers=headers, json=payload)
-        resp.raise_for_status()
-        obj = resp.json()
-        return obj["choices"][0]["message"].get("content") or ""
+    obj = await _post_json(f"{base}/chat/completions", headers, payload)
+    return _openai_text(obj)

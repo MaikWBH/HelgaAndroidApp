@@ -1,4 +1,5 @@
 """KI-Endpunkte (Phase 4, S5): SSE-Streams, JSON-Aufgaben und der Bon-Abgleich unter /api/receipts/reconcile."""
+import logging
 from typing import AsyncIterator
 
 from fastapi import APIRouter, Depends
@@ -6,6 +7,7 @@ from fastapi.responses import StreamingResponse
 
 from . import ai as ai_module
 from . import receipts
+from .ai_client import AiUpstreamError
 from .auth import require_auth
 from .db import get_db
 from .models import (
@@ -16,28 +18,43 @@ from .models import (
     CategorizeRequest, CategorizeResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(dependencies=[Depends(require_auth)])
 
 
-def _sse(generator: AsyncIterator[str]) -> StreamingResponse:
+async def _sse(generator: AsyncIterator[str]) -> StreamingResponse:
+    """SSE-Stream. Der erste Chunk wird vorab geholt: scheitert der KI-Anbieter schon dort, antwortet
+    der Endpunkt mit 502 (AiUpstreamError, siehe main.py). Bricht er später ab, endet der Stream ohne [DONE]."""
+    first = await anext(generator, None)
+
     async def event_stream():
-        async for chunk in generator:
-            # Zeilenumbrüche im Chunk escapen damit SSE-Format stimmt
-            safe = chunk.replace("\n", "\\n")
-            yield f"data: {safe}\n\n"
+        try:
+            if first is not None:
+                yield _frame(first)
+            async for chunk in generator:
+                yield _frame(chunk)
+        except AiUpstreamError as exc:
+            logger.warning("KI-Stream abgebrochen: %s", exc)
+            return  # ohne [DONE]
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
+def _frame(chunk: str) -> str:
+    # Zeilenumbrüche im Chunk escapen damit SSE-Format stimmt
+    return "data: " + chunk.replace("\n", "\\n") + "\n\n"
+
+
 @router.post("/api/ai/generate")
 async def ai_generate(req: AiGenerateRequest):
-    return _sse(ai_module.stream_generate(req))
+    return await _sse(ai_module.stream_generate(req))
 
 
 @router.post("/api/ai/remix")
 async def ai_remix(req: AiRemixRequest):
-    return _sse(ai_module.stream_remix(req))
+    return await _sse(ai_module.stream_remix(req))
 
 
 @router.post("/api/ai/classify")
