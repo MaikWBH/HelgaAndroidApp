@@ -490,7 +490,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   discount`); `fun expectedTotal(items, discountTotal) = itemsSum − discountTotal`; `fun sumMismatch(total, items,
   discountTotal): Boolean` (`total > 0 && |expected − total| > max(total * 0.05, 0.10)`); `fun needsReview(receipt,
   items)` }`. Test: je Regel ein Treffer und ein Nichttreffer, Pfand mit negativem Betrag, Rabatte. Akzeptanz: `V` grün.
-- [ ] **S28 Scan-ViewModel** — Dateien: `$U/receipts/ReceiptScanViewModel.kt`, `$B/HelgaNavGraph.kt`. Route:
+- [x] **S28 Scan-ViewModel** — Dateien: `$U/receipts/ReceiptScanViewModel.kt`, `$B/HelgaNavGraph.kt`. Route:
   `ROUTE_RECEIPT_SCAN = "receipts/scan?listId={listId}&reviewId={reviewId}"` (beide optional, Standard `null`).
   `ReceiptScanUiState.Preview` wird erweitert um `receiptId`, `storeAddress`, `purchaseDay`, `purchaseTime`,
   `discountTotal` (die Felder `rawOcrText`, `lowConfidenceItemIds`, `needsReview`, `source` bleiben); neuer Zustand
@@ -638,3 +638,4 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - **S23 Umschaltung (Gerät, Server mit Block A–C, beide Handys):** Bon auf Gerät 1 ändern → nach Sync auf Gerät 2 geändert; Bon löschen → auf Gerät 2 weg; Rezept- und Listen-Sync unverändert.
 - S24: `CONFIDENCE_THRESHOLD` wurde aus `ReceiptRepository` entfernt; die neue Konstante entsteht in S27 (`ReceiptReviewCheck`). `ReceiptScanViewModel.scanImage` ist bis S28 ein Übergang (ruft `scanFromUri`, danach `Saved`).
 - **S25 Offline-Scan (Gerät, Server mit Block A–C):** Flugmodus → Bon scannen → „vorläufig" erscheint sofort; Flugmodus aus → innerhalb weniger Minuten ersetzt die KI-Auswertung die Werte, Status „Bitte prüfen"; unter `Android/data/…/files/receipts/` liegt danach keine Datei mehr.
+- S28: `ReceiptImageStore.deleteCameraTemp` (S21) kannte nur Dateipfade; die Kamera liefert aber eine FileProvider-`content://`-URI. Nachgezogen: die URI wird über Autorität und `receipt_captures`-Pfadsegment auf `cacheDir/receipts/<datei>` abgebildet. Der Screen hat bis S29 einen schlichten Übergangszweig für `Provisional`.

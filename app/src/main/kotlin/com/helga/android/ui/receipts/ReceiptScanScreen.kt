@@ -193,6 +193,23 @@ fun ReceiptScanScreen(
                     }
                 }
 
+                is ReceiptScanUiState.Provisional -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            stringResource(
+                                if (state.queuedOnServer) R.string.receipt_scan_provisional_queued
+                                else R.string.receipt_scan_provisional_offline
+                            ),
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = onSaved) { Text(stringResource(R.string.receipt_scan_open_receipt)) }
+                    }
+                }
+
                 is ReceiptScanUiState.Saved -> Unit
             }
         }

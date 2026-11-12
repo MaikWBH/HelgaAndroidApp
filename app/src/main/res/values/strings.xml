@@ -597,4 +597,8 @@
     <string name="category_haushalt">Haushalt &amp; Tierbedarf</string>
     <string name="category_sonstiges">Sonstiges</string>
     <string name="category_pfand">Pfand</string>
+    <!-- Phase 3a: Scan, vorläufige Bons -->
+    <string name="receipt_scan_provisional_offline">Vorläufig gespeichert. Die genaue Auswertung folgt, sobald der Server erreichbar ist.</string>
+    <string name="receipt_scan_provisional_queued">Vorläufig gespeichert. Die Auswertung läuft auf dem Server nach.</string>
+    <string name="receipt_scan_open_receipt">Bon ansehen</string>
 </resources>

@@ -42,13 +42,27 @@ class ReceiptImageStore @Inject constructor(
         if (file.exists() && !file.delete()) Timber.w("Bon-Foto konnte nicht gelöscht werden: %s", file.name)
     }
 
-    /** Löscht die Kamera-Temp-Datei — und nur Dateien unter `cacheDir/receipts/` (nie Galerie-Bilder). */
+    /**
+     * Löscht die Kamera-Temp-Datei — und nur Dateien unter `cacheDir/receipts/` (nie Galerie-Bilder).
+     * Die Kamera liefert eine FileProvider-URI (`content://<paket>.fileprovider/receipt_captures/<datei>`,
+     * siehe `res/xml/file_paths.xml`); `file://`-Pfade unter dem Kamera-Ordner werden ebenfalls akzeptiert.
+     */
     fun deleteCameraTemp(uri: Uri?) {
-        val path = uri?.path ?: return
-        val file = File(path)
+        uri ?: return
+        val file = cameraTempFile(uri.scheme, uri.authority, uri.pathSegments, uri.path, context.packageName)
+            ?: return
         val inCameraDir = runCatching { file.canonicalPath.startsWith(cameraDir.canonicalPath + File.separator) }
             .getOrDefault(false)
         if (inCameraDir) file.delete()
+    }
+
+    private fun cameraTempFile(
+        scheme: String?, authority: String?, segments: List<String>, path: String?, packageName: String,
+    ): File? = when {
+        scheme == "content" && authority == "$packageName.fileprovider" &&
+            segments.size == 2 && segments[0] == CAMERA_PATH_NAME -> File(cameraDir, segments[1])
+        scheme == "file" && path != null -> File(path)
+        else -> null
     }
 
     /** Entfernt Fotos in `filesDir/receipts/`, auf die kein Bon mehr verweist (verwaiste Altlasten). */
@@ -61,6 +75,8 @@ class ReceiptImageStore @Inject constructor(
     private companion object {
         const val MAX_DIM = 2000
         const val JPEG_QUALITY = 85
+        // `name` des <cache-path> in res/xml/file_paths.xml
+        const val CAMERA_PATH_NAME = "receipt_captures"
     }
 }
 

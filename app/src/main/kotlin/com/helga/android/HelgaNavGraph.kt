@@ -74,7 +74,7 @@ internal const val ROUTE_RECEIPTS = "receipts"
 internal const val ROUTE_RECEIPTS_COST_OVERVIEW = "receipts/cost-overview"
 internal const val ROUTE_RECEIPTS_PRODUCTS = "receipts/products"
 internal const val ROUTE_PRODUCT_PRICE_DETAIL = "receipts/products/{productKey}"
-internal const val ROUTE_RECEIPT_SCAN = "receipts/scan?listId={listId}"
+internal const val ROUTE_RECEIPT_SCAN = "receipts/scan?listId={listId}&reviewId={reviewId}"
 internal const val ROUTE_RECEIPT_DETAIL = "receipts/detail/{receiptId}"
 internal const val ROUTE_RECIPE_DETAIL = "recipe/{recipeId}"
 internal const val ROUTE_RECIPE_CREATE = "recipe/new"
@@ -92,8 +92,8 @@ internal fun recipeEditRoute(id: String) = "recipe/$id/edit"
 internal fun recipeCookRoute(id: String) = "recipe/$id/cook"
 internal fun recipeRemixRoute(id: String) = "recipe/$id/remix"
 internal fun weekplanPickRecipeRoute(dayId: String) = "weekplan/pick-recipe/$dayId"
-internal fun receiptScanRoute(listId: String? = null) =
-    if (listId.isNullOrBlank()) "receipts/scan?listId=" else "receipts/scan?listId=$listId"
+internal fun receiptScanRoute(listId: String? = null, reviewId: String? = null) =
+    "receipts/scan?listId=${listId.orEmpty()}&reviewId=${reviewId.orEmpty()}"
 internal fun receiptDetailRoute(receiptId: String) = "receipts/detail/$receiptId"
 internal fun productPriceDetailRoute(key: String) =
     "receipts/products/${URLEncoder.encode(key, "UTF-8").replace("+", "%20")}"
@@ -317,6 +317,10 @@ fun HelgaNavGraph(
                         route = ROUTE_RECEIPT_SCAN,
                         arguments = listOf(
                             navArgument("listId") {
+                                type = NavType.StringType
+                                defaultValue = ""
+                            },
+                            navArgument("reviewId") {
                                 type = NavType.StringType
                                 defaultValue = ""
                             },
