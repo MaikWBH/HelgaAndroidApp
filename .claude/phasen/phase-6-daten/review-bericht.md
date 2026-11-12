@@ -374,7 +374,26 @@ Punkte, die ich geprüft habe und die der Spec entsprechen:
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 5 (P1–P5); schwerster Befund: P1 und P2 (beide Niedrig mit Nutzerwirkung)
 
 ## B8 — Bon-UI (Checkliste)
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B8 — Bon-UI
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | ReceiptLexiconScreen.kt:152, ReceiptLexiconViewModel.kt:210 | Lexikon-Eintrag wird ohne Bestätigung oder Undo gelöscht (Server-Löschung, nicht umkehrbar) | ux-accessibility §6 | Mittel | ändert Verhalten |
+| S2 | ReceiptReviewComponents.kt:246-317, 478-543 | Alle TextFields in HeaderEditDialog und EditItemDialog ohne `imeAction`/`KeyboardActions` | ux-accessibility §10 | Mittel | ändert Verhalten |
+| S3 | ReceiptScanViewModel.kt:99-101 | Provisional-Zweig ohne `triggerOneShot()`. `ReceiptScanFlow.kt:57` schreibt dort `dirty = 1`. Der Trigger steht nur im Parsed-Zweig (`dirty = 0`). Folge: Push erst beim periodischen Sync (Vermutung) | sync-patterns „triggerOneShot nach Mutationen" | Mittel | ändert Verhalten |
+| S4 | ReceiptLexiconScreen.kt:100-107 | Leerzustand nur Text, keine Aktion. Pull-to-Refresh auf nicht scrollbarem Box greift wohl nicht (Vermutung). Plan S32 gibt nur „Leertext" vor (Konflikt mit der Guideline) | ux-accessibility §5 | Niedrig | Ermessensfrage, ändert Verhalten |
+| S5 | ReceiptScanViewModel.kt:103,140,249; ReceiptDetailViewModel.kt:79,98 | `catch (e: Exception)` ohne `CancellationException`-Rethrow | kotlin-quality §6 | Niedrig | – |
+| S6 | ReceiptReviewComponents.kt:413 | Klickbarer Betrags-Text deutlich kleiner als 48 dp (die Spalte daneben ist ohnehin klickbar) | ux-accessibility §1 | Niedrig | – |
+| S7 | ReceiptDetailScreen.kt:244 | Button „Erneut versuchen" schließt nur den Fehler, startet nichts neu | – | Niedrig | Ermessensfrage, ändert Verhalten |
+| S8 | ReceiptDetailViewModel.kt:3; ReceiptListScreen.kt:3-7; ReceiptDetailScreen.kt:204,423; ReceiptLexiconScreen.kt:110 | Ungenutzter Compose-Import im ViewModel; Imports unsortiert; voll qualifizierte Namen statt Import | – | Niedrig | Ermessensfrage |
+| S9 | ReceiptGrouping.kt:12-14; ReceiptDetailScreen.kt:65,134,181,221 | Status-Literale ("provisional", "review", "failed", …) verstreut, keine Konstanten | kotlin-quality §10 (sinngemäß) | Niedrig | Ermessensfrage |
+| S10 | ReceiptLexiconScreen.kt:109 | `groupBy` ohne `remember(entries)` (die Liste nutzt es) | compose-performance §3 | Niedrig | Ermessensfrage |
+
+**Beifang (Altbestand, ohne Grad):** `ReceiptListScreen.kt:71` `formatQuantity` nutzt `String.format("%.2f")` ohne Locale; der neue `EditItemDialog` rundet damit 0,512 beim Bestätigen auf 0,51.
+**Ergebnis:** 0 Blocker, 0 Hoch, 3 Mittel, 7 Niedrig; schwerster Befund: S1 (S2 und S3 gleich schwer). Checkliste (1) keine `remember { mutableStateOf`-Treffer, (2) alle drei `clickable` mit `role`, (3) alle `items(` mit `key`, (5) alle Mutable-Flows privat, Bestätigungsdialoge für Löschen und Neu-auslesen sowie die Snackbars (Nachladen, Lexikon) vorhanden, Liste-Leerzustand mit Text und Button: ohne Befund.
+
+<Spec-Antwort>
 
 ## B9 — Architektur aus Phase 1 (Checkliste)
 <Standards-Antwort> · <Spec-Antwort>
