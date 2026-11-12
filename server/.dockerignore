@@ -1,0 +1,8 @@
+**
+!requirements.txt
+!requirements-dev.txt
+!app/
+!scripts/
+!tests/
+**/__pycache__
+**/*.pyc
