@@ -1,5 +1,6 @@
 """Speicherschicht für Bons (Phase 3a). Reine DB-Logik: jede Funktion bekommt eine offene
 `db`-Verbindung (aiosqlite, row_factory=Row) und committet nicht selbst."""
+import asyncio
 import base64
 import logging
 import re
@@ -346,7 +347,7 @@ async def save_receipt_image(receipt_id: str, upload: UploadFile) -> str:
                 total += len(chunk)
                 if total > settings.MAX_RECEIPT_IMAGE_BYTES:
                     raise HTTPException(status_code=413, detail="Bild zu groß")
-                out.write(chunk)
+                await asyncio.to_thread(out.write, chunk)
     except HTTPException:
         dest.unlink(missing_ok=True)
         raise
@@ -451,7 +452,7 @@ async def mark_failed_attempt(db, receipt_id: str, image_name: str, shopping_lis
 async def _ai_parse(image_name: str, receipt_id: str) -> Optional[dict]:
     """Ruft die KI auf dem gespeicherten Foto auf; None bei Fehler oder leerem Ergebnis."""
     try:
-        data = (settings.IMAGES_DIR / image_name).read_bytes()
+        data = await asyncio.to_thread((settings.IMAGES_DIR / image_name).read_bytes)
         parsed = await ai.parse_receipt(
             base64.b64encode(data).decode("ascii"),
             IMAGE_EXTS.get(Path(image_name).suffix.lower(), "image/jpeg"),
@@ -565,8 +566,6 @@ async def process_parse_queue(limit: int = 5, db_factory=None) -> int:
 
 async def queue_loop(interval_sec: int) -> None:
     """Hintergrund-Task: arbeitet die Warteschlange alle `interval_sec` Sekunden ab."""
-    import asyncio
-
     while True:
         await asyncio.sleep(interval_sec)
         try:

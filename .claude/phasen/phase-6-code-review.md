@@ -163,7 +163,7 @@ Abschnitt „Tests").
   `server/CLAUDE.md`, Konventionen, Zeile „Rezept-Import per URL": nach „unspezifizierte Adressen" einfügen
   „sowie alles nicht global Routbare (z. B. 100.64.0.0/10)". Akzeptanz: `VS` grün mit 179 Tests;
   `test_public_address_allowed` bleibt grün.
-- [ ] **S6 Datei-I/O der Bon-Fotos aus dem Event-Loop (V11)** — Dateien: `$SA/receipts.py`, neu
+- [x] **S6 Datei-I/O der Bon-Fotos aus dem Event-Loop (V11)** — Dateien: `$SA/receipts.py`, neu
   `$ST/test_receipt_io_threads.py`. Oben `import asyncio` ergänzen, das lokale `import asyncio` in `queue_loop` löschen.
   `save_receipt_image`: `out.write(chunk)` → `await asyncio.to_thread(out.write, chunk)`. `_ai_parse`:
   `data = (settings.IMAGES_DIR / image_name).read_bytes()` → `data = await asyncio.to_thread((settings.IMAGES_DIR / image_name).read_bytes)`.
