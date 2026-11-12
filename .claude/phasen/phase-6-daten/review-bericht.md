@@ -328,7 +328,29 @@ Geprüft ohne Befund:
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 1; schwerster Befund: P1
 
 ## B7 — Auswertung und Diagramme (Checkliste)
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B7 — Auswertung und Diagramme
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | CostOverviewScreen.kt:216-223,265-266,284,308 | Kein `remember` um Balken-Mapping/`periodLabel`, `shareSlices` (Sortieren/Filtern), `filter{}.map{}` der drei Karten | compose-performance §3 | Mittel | – |
+| S2 | ProductPriceDetailScreen.kt:164,240-248 | `DateTimeFormatter.ofPattern`, Datumsformat, `reversed().map` ohne `remember` | compose-performance §3 | Mittel | – |
+| S3 | CostOverviewScreen.kt:485-486 | `text`/`warnThreshold` im `BudgetEditDialog` mit `remember`, Eingabe geht bei Rotation verloren (Zeilen unverändert, Checklistenpunkt 6; `showBudgetDialog` korrekt) | ux-accessibility §13 Zustand | Mittel | ändert Verhalten |
+| S4 | ShareDonutChart.kt:60-65 | Winkelrechnung (Lücke 1,5°, Mindest-Sweep 0,5°) im Canvas-Block statt in `ChartMath` | ux-accessibility §13 Diagramme; Plan 3b | Mittel | – |
+| S5 | ReceiptStatsTest.kt:73-74; CostOverviewViewModelTest.kt:82,103 | `!!` in Testcode, weitere Fundstelle zu V1 (`KotlinQualityRulesTest` prüft nur `src/main`) | kotlin-quality §1 | Mittel | – |
+| S6 | CostOverviewViewModel.kt:25 | `CostOverviewUiState` mit `List`-Feldern ohne `@Immutable` (in `ui/` hat keine UiState-Klasse die Annotation) | compose-performance §1 | Mittel | – |
+| S7 | CostOverviewScreen.kt:150 | `state.loaded` wird nicht ausgewertet, vor der ersten Emission erscheint der Leerzustand | ux-accessibility §4/§5 | Niedrig | ändert Verhalten, Ermessensfrage |
+| S8 | ProductPriceDetailScreen.kt:37; ProductPriceListScreen.kt:30 | Unbenutzter Import `collectAsState`; Imports unsortiert (DetailScreen:3-5,19; ListScreen:3-5,20; ListViewModel:3); voll qualifizierte Namen (CostOverviewScreen.kt:129,337; ShareDonutChart.kt:102; Test `io.mockk.coVerify`) | Kotlin-Stil | Niedrig | – |
+| S9 | ReceiptStats.kt:34; ChartMath.kt:77-78 | `"%d-W%02d".format` ohne Locale für Periodenschlüssel; zwei `Regex` pro `periodLabel`-Aufruf neu gebaut | – | Niedrig | Ermessensfrage |
+| S10 | CostOverviewViewModel.kt:84; SpendingBarChart.kt:95 | Wochenbudget `×12/52` im ViewModel und Label-Ausdünnung `bars.size > 8` im Composable statt in `ReceiptStats`/`ChartMath` | ux §13 Zahlenlogik | Niedrig | Ermessensfrage |
+
+Geprüft und ohne Befund: Checklistenpunkt 1 (grep leer), Punkt 2 (alle vier Diagramme haben `description` und `semantics`), Punkt 5 (`MutableStateFlow` in beiden ViewModels privat).
+
+**Beifang (Altbestand, ohne Grad):** keiner
+
+**Ergebnis:** 0 Blocker, 0 Hoch, 6 Mittel, 4 Niedrig; schwerster Befund: S3
+
+<Spec-Antwort>
 
 ## B8 — Bon-UI (Checkliste)
 <Standards-Antwort> · <Spec-Antwort>
