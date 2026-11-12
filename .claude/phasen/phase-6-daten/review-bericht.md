@@ -475,7 +475,19 @@ Geprüfte Checklistenpunkte, jeweils am Stand 451819d und selbst gelesen:
 Nicht gemeldet: Die zweite neue Zeile `sqlite-jdbc` unter `[libraries]` stammt aus Phase 3a S15 (132f757), nicht aus Phase 2.
 
 ## B11 — Doku-Abgleich (nur Spec)
-<Spec-Antwort>
+### Spec — B11 — Doku-Abgleich
+| # | Datei:Zeile | Art | Befund | Spec-Zitat | Grad | Markierung |
+|---|---|---|---|---|---|---|
+| P1 | `.claude/guidelines/architecture-layers.md:5-11` | a | Nennt nur repository, usecase, weekplan, local/dao, remote, receipts. Es fehlen cooking, model, preferences, shopping, sync, util, wear (7 von 13 Paketen unter `data/`). ViewModels importieren sync, preferences, model, cooking und util direkt, die Regel „nur Repositories und UseCases" wirkt daher strenger als der Ist-Stand. | Punkt (3): „nennt alle Pakete unter data/" | Niedrig | – |
+| P2 | `server/CLAUDE.md:75-89` | a | KI-Tabelle fehlt `POST /api/ai/nutrition`, `POST /api/ai/import-url`, `POST /api/receipts/reconcile`, `POST /api/receipts/{id}/image` und `/reparse`. Die Zeile „GET/PUT/DELETE /api/receipts…" deckt POST nicht ab. | Punkt (2): „KI-Endpunkt-Tabelle gegen EXPECTED_ROUTES" (`test_routes_guard.py:29,30,36,38,39`) | Niedrig | – |
+| P3 | `server/CLAUDE.md:24-49` | a | `app/__init__.py` fehlt im Struktur-Abschnitt. Alle übrigen 20 Dateien sind genannt. | Punkt (1): „nennt jede Datei unter server/app/*.py" | Niedrig | Ermessensfrage |
+| P4 | `.claude/phasen/README.md:42,44,45` | c | Phasen 2, 4, 5 stehen als „umgesetzt (Stufe B)". Ihre Phasen-Dateien haben offene Nutzer-Prüflisten (P4 Z.212,215 und P5 Z.217,220 jeweils `[ ]`; P2 Z.443 „nicht abgehakt"). Die Phase-3-Zeile nennt „Prüflisten offen", die anderen nicht. | Punkt (5): „Status der Phasen-Datei" | Niedrig | – |
+| P5 | `CLAUDE.md:5` | c | Projektziel: „alle Daten liegen lokal", Server „ausschließlich Datenlager". Das widerspricht der neuen Bon-Ausnahme (`CLAUDE.md:107`, `sync-patterns.md:109-111`: Bons vollständig auf dem Server, Handy nur Zeitfenster). | Punkt (6) | Niedrig | Ermessensfrage |
+| P6 | `CLAUDE.md:136` vs `sync-patterns.md:119` | c | CLAUDE.md erlaubt als Ausnahme nur die Cache-Verdrängung. Die Guideline erlaubt zusätzlich hartes Löschen im `ReceiptRepository` für nie hochgeladene Bons. | Punkt (6) | Niedrig | – |
+| P7 | `server/CLAUDE.md:69` | c | Beifang, nicht im Diff: „Spalten in db.py → TABLE_COLUMNS". `TABLE_COLUMNS` liegt in `sync.py:9`, und die Guideline-Checkliste nennt `sync.py`. | Punkt (6) | – | – |
+| P8 | `.claude/features/README.md:84` | c | Beifang, nicht im Diff: „115 Tests bei 131 Kotlin-Dateien" ist veraltet gegen die Stand-Zeile (181). | Punkt (4) | – | – |
+
+**Ergebnis:** 0 Blocker, 0 Hoch, 0 Mittel, 6 Niedrig, 2 Beifang; schwerster Befund: P1. Punkt (4) ist korrekt: DB v38 und 27 Entities stimmen mit `AppDatabase.kt` überein.
 
 ## Offen am Gerät/Server (Abhakliste, gebündelt aus Phase 2–5)
 
