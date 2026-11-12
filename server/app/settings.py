@@ -44,8 +44,9 @@ AI_RECEIPT_EFFORT = os.getenv("AI_RECEIPT_EFFORT", "medium")
 # Takt der Re-Parse-Warteschlange für Bons in Sekunden; 0 = Warteschlange nicht starten.
 RECEIPT_QUEUE_INTERVAL_SEC = int(os.getenv("RECEIPT_QUEUE_INTERVAL_SEC", "600"))
 
-# Obergrenze für hochgeladene Bon-Fotos.
-MAX_RECEIPT_IMAGE_BYTES = 8 * 1024 * 1024
+# Obergrenze für hochgeladene Bilder (Upload, Bon-Fotos).
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_RECEIPT_IMAGE_BYTES = MAX_IMAGE_BYTES
 
 # Obergrenze für die Seite beim Rezept-Import (Bytes).
 MAX_IMPORT_PAGE_BYTES = 5 * 1024 * 1024

@@ -164,7 +164,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   Elemente ShortText (Liste bleibt ≤ 50). Tests: je Modell ein Aufruf knapp am Limit → nicht 422; knapp darüber → 422;
   `portions=0` → 422. Akzeptanz: `V` grün (alle bestehenden Tests bleiben unverändert grün; müsste einer am Limit
   scheitern, nicht das Limit anheben, sondern melden).
-- [ ] **S11 Upload-Limit für Bilder** — Dateien: `$SA/images_api.py`, `$SA/settings.py`, `$ST/test_images.py`
+- [x] **S11 Upload-Limit für Bilder** — Dateien: `$SA/images_api.py`, `$SA/settings.py`, `$ST/test_images.py`
   (neu oder bestehende Datei erweitern). `settings.MAX_IMAGE_BYTES = 8 * 1024 * 1024`
   (`MAX_RECEIPT_IMAGE_BYTES` bleibt, wird intern `= MAX_IMAGE_BYTES`). `upload_image`: Datei in Blöcken zu 1 MiB lesen,
   bei Überschreitung `HTTPException(413, "Bild ist zu groß")` und keine Datei hinterlassen; Schreiben im Thread
