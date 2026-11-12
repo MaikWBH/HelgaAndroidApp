@@ -323,7 +323,7 @@ private fun StoreDto.toEntity(): StoreEntity = StoreEntity(
 )
 
 private fun StoreAisleDto.toEntity(): StoreAisleEntity = StoreAisleEntity(
-    id = id, storeId = storeId, aisleName = aisleName, sortOrder = sortOrder,
+    id = id, storeId = storeId, aisleName = aisleName, sortOrder = sortOrder, categoryKey = categoryKey,
     updatedAt = updatedAt, deleted = deleted, dirty = 0,
 )
 
@@ -390,7 +390,7 @@ private fun StoreEntity.toDto(): StoreDto = StoreDto(
 
 private fun StoreAisleEntity.toDto(): StoreAisleDto = StoreAisleDto(
     id = id, updatedAt = updatedAt, deleted = deleted, storeId = storeId,
-    aisleName = aisleName, sortOrder = sortOrder,
+    aisleName = aisleName, sortOrder = sortOrder, categoryKey = categoryKey,
 )
 
 private fun AisleProductEntity.toDto(): AisleProductDto = AisleProductDto(

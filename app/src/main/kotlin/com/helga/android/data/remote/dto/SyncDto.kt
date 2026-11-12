@@ -128,6 +128,7 @@ data class StoreAisleDto(
     @Json(name = "store_id") val storeId: String,
     @Json(name = "aisle_name") val aisleName: String = "",
     @Json(name = "sort_order") val sortOrder: Int = 0,
+    @Json(name = "category_key") val categoryKey: String = "",
 )
 
 @JsonClass(generateAdapter = true)

@@ -136,7 +136,7 @@ Zusätzlich:
   Server-Auswertung"). Test über `RoomMigrationHarness`: Schema 37, Gänge „Obst & Gemüse", „Drogerie & Haushalt",
   „Kasse" → Migration → `assertMatchesSchema(conn, 38)`; Schlüssel `obst_gemuese`, `drogerie`, `''`. Akzeptanz: `V`
   grün; `38.json` committet.
-- [ ] **S6 DTOs, Sync-Abbildung, API** — Dateien: `$B/data/remote/dto/SyncDto.kt`, `$B/data/sync/SyncEngine.kt`,
+- [x] **S6 DTOs, Sync-Abbildung, API** — Dateien: `$B/data/remote/dto/SyncDto.kt`, `$B/data/sync/SyncEngine.kt`,
   `$B/data/remote/SyncApi.kt`, `$T/SyncEngineTest.kt` (falls Konstruktoren betroffen), neu `$T/StoreAisleSyncTest.kt`.
   `StoreAisleDto.categoryKey` (`@Json(name = "category_key")`, Standard `""`); Mapper `StoreAisleDto.toEntity`/
   `StoreAisleEntity.toDto` (Z.341–343, 407–410) reichen ihn durch. Neue DTOs `ReceiptAggregateDto`,

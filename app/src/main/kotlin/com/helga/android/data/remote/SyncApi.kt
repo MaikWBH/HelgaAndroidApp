@@ -7,12 +7,15 @@ import com.helga.android.data.remote.dto.AiNutritionResponse
 import com.helga.android.data.remote.dto.HealthResponse
 import com.helga.android.data.remote.dto.ImageUploadResponse
 import com.helga.android.data.remote.dto.ImportedRecipeDto
+import com.helga.android.data.remote.dto.CategorizeRequest
+import com.helga.android.data.remote.dto.CategorizeResponse
 import com.helga.android.data.remote.dto.LexiconListResponse
 import com.helga.android.data.remote.dto.OffLookupBarcodeRequest
 import com.helga.android.data.remote.dto.OffLookupBarcodeResponse
 import com.helga.android.data.remote.dto.OffSearchRequest
 import com.helga.android.data.remote.dto.OffSearchResponse
 import com.helga.android.data.remote.dto.OkResponse
+import com.helga.android.data.remote.dto.ReceiptAggregatesResponse
 import com.helga.android.data.remote.dto.ReceiptImageResponse
 import com.helga.android.data.remote.dto.ReceiptListResponse
 import com.helga.android.data.remote.dto.ReceiptPutResponse
@@ -112,6 +115,12 @@ interface SyncApi {
 
     @DELETE("api/receipts/lexicon/{id}")
     suspend fun deleteLexiconEntry(@Path("id") id: String): OkResponse
+
+    @GET("api/receipts/aggregates")
+    suspend fun receiptAggregates(): ReceiptAggregatesResponse
+
+    @POST("api/ai/categorize-items")
+    suspend fun categorizeItems(@Body req: CategorizeRequest): CategorizeResponse
 
     @POST("api/off/search")
     suspend fun searchOff(@Body req: OffSearchRequest): OffSearchResponse

@@ -133,3 +133,39 @@ data class OffSearchRequest(
 data class OffSearchResponse(
     val products: List<OffProductDto> = emptyList(),
 )
+
+/** Eine Zeile der Server-Auswertung (`GET /api/receipts/aggregates`). */
+@JsonClass(generateAdapter = true)
+data class ReceiptAggregateDto(
+    val period: String,
+    val dimension: String,
+    val key: String = "",
+    val label: String = "",
+    val amount: Double = 0.0,
+    val quantity: Double = 0.0,
+    val count: Int = 0,
+    @Json(name = "avg_unit_price") val avgUnitPrice: Double = 0.0,
+    val discount: Double = 0.0,
+)
+
+@JsonClass(generateAdapter = true)
+data class ReceiptAggregatesResponse(
+    @Json(name = "generated_at") val generatedAt: Long = 0,
+    val rows: List<ReceiptAggregateDto> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class CategorizeRequest(
+    val names: List<String>,
+)
+
+@JsonClass(generateAdapter = true)
+data class CategorizeResultDto(
+    val name: String = "",
+    val category: String = "",
+)
+
+@JsonClass(generateAdapter = true)
+data class CategorizeResponse(
+    val results: List<CategorizeResultDto> = emptyList(),
+)
