@@ -36,8 +36,7 @@ class ReceiptSyncer @Inject constructor(
             try {
                 if (receipt.deleted == 1) {
                     api.deleteReceipt(receipt.id, receipt.updatedAt)
-                    receiptDao.hardDeleteItemsOf(receipt.id)
-                    receiptDao.hardDeleteReceipt(receipt.id)
+                    receiptDao.hardDeleteReceiptWithItems(receipt.id)
                 } else {
                     val items = receiptDao.itemsForReceipt(receipt.id)
                     val response = api.putReceipt(receipt.id, receipt.toUpsertDto(items))
@@ -70,8 +69,7 @@ class ReceiptSyncer @Inject constructor(
             val localWins = local != null && local.dirty == 1 && local.updatedAt >= remote.updatedAt
             if (remote.deleted == 1) {
                 if (!localWins) {
-                    receiptDao.hardDeleteItemsOf(remote.id)
-                    receiptDao.hardDeleteReceipt(remote.id)
+                    receiptDao.hardDeleteReceiptWithItems(remote.id)
                     changed++
                 }
             } else if (!localWins && local?.pendingUpload != 1) {
@@ -108,8 +106,7 @@ class ReceiptSyncer @Inject constructor(
         val cutoff = ReceiptDates.cutoffDay(today, months) ?: return 0
         val ids = receiptDao.evictableIds(ReceiptDates.dayToEpochMs(cutoff), nowMs)
         ids.forEach { id ->
-            receiptDao.hardDeleteItemsOf(id)
-            receiptDao.hardDeleteReceipt(id)
+            receiptDao.hardDeleteReceiptWithItems(id)
         }
         return ids.size
     }
@@ -143,9 +140,7 @@ class ReceiptSyncer @Inject constructor(
 
     private suspend fun writeServerReceipt(remote: ReceiptRemoteDto, local: ReceiptEntity?, cachedUntil: Long? = null) {
         val entity = remote.toEntity(local).let { if (cachedUntil != null) it.copy(cachedUntil = cachedUntil) else it }
-        receiptDao.upsertReceipt(entity)
         val items = remote.items.map { it.copy(receiptId = remote.id).toEntity() }
-        receiptDao.upsertItems(items)
-        receiptDao.hardDeleteItemsExcept(remote.id, items.map { it.id })
+        receiptDao.replaceWithServerState(entity, items)
     }
 }

@@ -63,9 +63,12 @@ class ReceiptSyncerTest {
         coEvery { api.listReceipts(any(), any(), any(), any()) } returns response(remote("a", items = listOf("i1", "i2")))
         assertEquals(1, syncer.pull(today))
         coVerify { api.listReceipts("2026-08-10", null, 7L, 1) }
-        coVerify { dao.upsertReceipt(match { it.id == "a" && it.dirty == 0 }) }
-        coVerify { dao.upsertItems(match { it.map { i -> i.id } == listOf("i1", "i2") }) }
-        coVerify { dao.hardDeleteItemsExcept("a", listOf("i1", "i2")) }
+        coVerify {
+            dao.replaceWithServerState(
+                match { it.id == "a" && it.dirty == 0 },
+                match { it.map { i -> i.id } == listOf("i1", "i2") },
+            )
+        }
         coVerify { prefs.saveReceiptSyncState(42L, "2026-08-10") }
     }
 
@@ -75,7 +78,7 @@ class ReceiptSyncerTest {
         coEvery { dao.findById("pending") } returns ReceiptEntity(id = "pending", pendingUpload = 1, updatedAt = 1)
         coEvery { api.listReceipts(any(), any(), any(), any()) } returns response(remote("dirty", 100), remote("pending", 100))
         assertEquals(0, syncer.pull(today))
-        coVerify(exactly = 0) { dao.upsertReceipt(any()) }
+        coVerify(exactly = 0) { dao.replaceWithServerState(any(), any()) }
     }
 
     @Test
@@ -83,7 +86,7 @@ class ReceiptSyncerTest {
         coEvery { dao.findById("a") } returns ReceiptEntity(id = "a", dirty = 1, updatedAt = 50)
         coEvery { api.listReceipts(any(), any(), any(), any()) } returns response(remote("a", 100))
         assertEquals(1, syncer.pull(today))
-        coVerify { dao.upsertReceipt(match { it.id == "a" && it.dirty == 0 }) }
+        coVerify { dao.replaceWithServerState(match { it.id == "a" && it.dirty == 0 }, any()) }
     }
 
     @Test
@@ -92,9 +95,8 @@ class ReceiptSyncerTest {
         coEvery { api.listReceipts(any(), any(), any(), any()) } returns
             response(remote("gone", deleted = 1), remote("keep", deleted = 1, updatedAt = 100))
         assertEquals(1, syncer.pull(today))
-        coVerify { dao.hardDeleteItemsOf("gone") }
-        coVerify { dao.hardDeleteReceipt("gone") }
-        coVerify(exactly = 0) { dao.hardDeleteReceipt("keep") }
+        coVerify { dao.hardDeleteReceiptWithItems("gone") }
+        coVerify(exactly = 0) { dao.hardDeleteReceiptWithItems("keep") }
     }
 
     @Test
@@ -124,7 +126,7 @@ class ReceiptSyncerTest {
         coEvery { api.putReceipt("a", capture(body)) } returns ReceiptPutResponse(applied = true, receipt = remote("a"))
         assertEquals(1, syncer.pushDirty())
         assertEquals(listOf("i1"), body.captured.items.map { it.id })
-        coVerify { dao.upsertReceipt(match { it.id == "a" && it.dirty == 0 }) }
+        coVerify { dao.replaceWithServerState(match { it.id == "a" && it.dirty == 0 }, any()) }
     }
 
     @Test
@@ -132,8 +134,7 @@ class ReceiptSyncerTest {
         coEvery { dao.dirtyReceiptsForPush() } returns listOf(ReceiptEntity(id = "x", deleted = 1, dirty = 1, updatedAt = 77))
         coEvery { api.deleteReceipt("x", 77L) } returns OkResponse(true)
         assertEquals(1, syncer.pushDirty())
-        coVerify { dao.hardDeleteItemsOf("x") }
-        coVerify { dao.hardDeleteReceipt("x") }
+        coVerify { dao.hardDeleteReceiptWithItems("x") }
     }
 
     @Test
@@ -146,15 +147,15 @@ class ReceiptSyncerTest {
         coEvery { dao.evictableIds(any(), any()) } returns listOf("old1", "old2")
         assertEquals(2, syncer.evict(today, 1L))
         coVerify { dao.evictableIds(1_786_320_000_000L, 1L) } // 2026-08-10 00:00 UTC
-        coVerify { dao.hardDeleteReceipt("old1") }
-        coVerify { dao.hardDeleteReceipt("old2") }
+        coVerify { dao.hardDeleteReceiptWithItems("old1") }
+        coVerify { dao.hardDeleteReceiptWithItems("old2") }
     }
 
     @Test
     fun `loadRange keeps loaded receipts in the cache for the given time`() = runTest {
         coEvery { api.listReceipts("2026-07-01", "2026-07-31", 0L, 0) } returns response(remote("a"))
         assertEquals(1, syncer.loadRange("2026-07-01", "2026-07-31", 5_000L))
-        coVerify { dao.upsertReceipt(match { it.id == "a" && it.cachedUntil == 5_000L }) }
+        coVerify { dao.replaceWithServerState(match { it.id == "a" && it.cachedUntil == 5_000L }, any()) }
     }
 
     @Test

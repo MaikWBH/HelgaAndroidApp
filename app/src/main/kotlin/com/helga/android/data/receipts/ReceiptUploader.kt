@@ -102,9 +102,7 @@ class ReceiptUploader @Inject constructor(
     }
 
     private suspend fun replaceWithServer(remote: ReceiptRemoteDto, local: ReceiptEntity) {
-        receiptDao.upsertReceipt(remote.toEntity(local).copy(pendingUpload = 0, localImageUri = ""))
         val items = remote.items.map { it.copy(receiptId = remote.id).toEntity() }
-        receiptDao.upsertItems(items)
-        receiptDao.hardDeleteItemsExcept(remote.id, items.map { it.id })
+        receiptDao.replaceWithServerState(remote.toEntity(local).copy(pendingUpload = 0, localImageUri = ""), items)
     }
 }

@@ -118,7 +118,7 @@ Abschnitt „Tests").
   `ReceiptProtocolRulesTest` neuer Test `transaktionsmethoden_tragen_transaction`: in `data/local/dao/ReceiptDao.kt`
   steht für jeden der drei Namen die Zeile `@Transaction` unmittelbar (nur Leer-/Kommentarzeilen dazwischen erlaubt)
   vor `suspend fun <Name>(`. Noch keine Aufrufer ändern. Akzeptanz: `V` grün (Room baut die DAO); `TC` = S1 + 1.
-- [ ] **S3 `ReceiptSyncer` und `ReceiptUploader` atomar (V2, Teil 2)** — Dateien:
+- [x] **S3 `ReceiptSyncer` und `ReceiptUploader` atomar (V2, Teil 2)** — Dateien:
   `$B/data/receipts/ReceiptSyncer.kt`, `$B/data/receipts/ReceiptUploader.kt`, `$T/ReceiptSyncerTest.kt`,
   `$T/ReceiptUploaderTest.kt`. `ReceiptSyncer`: jedes Paar `hardDeleteItemsOf(x)` + `hardDeleteReceipt(x)` (in
   `pushDirty`, `pull`, `evict`) → `receiptDao.hardDeleteReceiptWithItems(x)`; `writeServerReceipt` →

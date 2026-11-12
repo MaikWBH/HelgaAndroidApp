@@ -57,7 +57,7 @@ class ReceiptUploaderTest {
         coEvery { api.scanReceipt(any(), any(), any(), any(), any()) } returns scanResponse(true)
         val result = uploader.uploadPending()
         assertEquals(1, result.done); assertEquals(false, result.retry)
-        coVerify { dao.upsertReceipt(match { it.id == "p" && it.status == "review" && it.pendingUpload == 0 && it.localImageUri == "" }) }
+        coVerify { dao.replaceWithServerState(match { it.id == "p" && it.status == "review" && it.pendingUpload == 0 && it.localImageUri == "" }, any()) }
         coVerify { store.delete(file.absolutePath) }
     }
 
