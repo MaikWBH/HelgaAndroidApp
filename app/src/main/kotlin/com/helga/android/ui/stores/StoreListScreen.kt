@@ -388,7 +388,7 @@ private fun AisleRow(
     onSetCategory: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
     val category = ProductCategory.fromKey(aisle.categoryKey)
     val categoryName = stringResource(category.labelRes())
     Column(

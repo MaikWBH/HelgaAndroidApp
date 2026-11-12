@@ -173,7 +173,7 @@ Abschnitt „Tests").
   zurückgibt (`original = asyncio.to_thread` vor dem Patch sichern); nach einem Scan-Aufruf enthält die Liste
   mindestens einen Aufruf mit `func.__name__ == "write"` und einen mit `func.__name__ == "read_bytes"`; Antwort
   `parsed == true`. Akzeptanz: `VS` grün mit 180 Tests; `grep -n 'read_bytes()' $SA/receipts.py` leer.
-- [ ] **S7 `rememberSaveable` im Gang-Menü (V9)** — Datei: `$B/ui/stores/StoreListScreen.kt`. In `AisleRow`
+- [x] **S7 `rememberSaveable` im Gang-Menü (V9)** — Datei: `$B/ui/stores/StoreListScreen.kt`. In `AisleRow`
   `var menuOpen by remember { mutableStateOf(false) }` → `var menuOpen by rememberSaveable { mutableStateOf(false) }`
   (Import vorhanden). Kein Unit-Test (UI-Zustand, ohne Emulator nicht prüfbar; Wirkung über G13). Akzeptanz:
   `grep -n 'menuOpen by remember {' $B/ui/stores/StoreListScreen.kt` leer; `V` grün.
