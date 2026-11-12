@@ -430,7 +430,15 @@ Checkliste (1) und (2) leer (grep ohne Treffer). (4) alle Mutationen mit `trigge
 **Beifang (Altbestand, ohne Grad):** WeekplanViewModel.kt:202 öffentliches `MutableSharedFlow` `exportEvent` (weitere Fundstelle zu V16, K-KQ §3); WeekplanViewModel.kt:44 `@OptIn` an `DaySummary`; WeekplanViewModel.kt:483 Literal `"global"`; SettingsViewModel.kt:50,296 injiziert `AppDatabase` (`clearAllTables`), architecture-layers verlangt nur Repositories/UseCases.
 **Ergebnis:** Blocker 0, Hoch 0, Mittel 4, Niedrig 7; schwerster Befund: S1 (gleichrangig S2, S3, S4)
 
-<Spec-Antwort>
+### Spec — B9 — Architektur aus Phase 1
+| # | Datei:Zeile | Art (a/b/c/d) | Befund | Spec-Zitat (Datei, Stelle) | Grad | Markierung |
+|---|-------------|---------------|--------|----------------------------|------|------------|
+| P1 | `data/repository/AiRepository.kt:27-31`, `ui/recipes/RecipeDetailViewModel.kt:195,371` | a | `classifyRecipe`/`estimateNutrition` reichen Exceptions roh durch, die VMs zeigen `e.message` (z. B. „HTTP 500 …", IO-Rohtext). Die Block-A-Abbildung (errorBody-Detail, „Server nicht erreichbar") gilt nur in `importFromUrl` und `ServerConnectionChecker`. Vermutung: S4 verlangt nur Durchreichung, dann kein Verstoß. | phase-1, Block A: „Gemeinsame Fehlerabbildung: HttpException → errorBody, IOException → ‚Server nicht erreichbar', sonst e.message" | Niedrig | [ändert Verhalten] [Ermessensfrage] |
+| P2 | `data/weekplan/WeekplanFilters.kt:15` | c | Veralteter KDoc-Verweis `[WeekplanViewModel.applyRecipeFilters]`. Die Methode liegt jetzt privat in `WeekplanGenerator.kt:392`. | phase-1, Entscheidungen Stufe B / S16: Helfer „unverändert" in die Datenschicht verschoben | Niedrig | – |
+| P3 | `data/repository/RecipeRepository.kt:62-63,82` | c | KDoc „Speichert 👍/👎 zum Kochdatum …" hängt an `observeFeedbackForDate`. `saveFeedback` hat keine KDoc. | phase-1, S10: „`saveFeedback(...)`" | Niedrig | – |
+| P4 | `data/sync/SyncEngine.kt:85`, `ServerReachabilityMonitor.kt:24`, `ImageUploadWorker.kt:24` | a | Drei Dienste injizieren weiter `SyncApiFactory` statt `ApiProvider`. Altbestand, nicht im Diff. `SyncEngine` ist Nicht-Ziel. | phase-1, S1: „Nur Repositories/Services injizieren künftig `ApiProvider`" | – | Beifang |
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 0, Niedrig 3 (P1–P3), Beifang 1 (P4); schwerster Befund: P1.
 
 ## B10 — UI-Querschnitt aus Phase 2 (Checkliste)
 <Standards-Antwort> · <Spec-Antwort>

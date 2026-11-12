@@ -210,7 +210,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
 - [x] **S16 R6 — B5 Container (voll)**
 - [x] **S17 R7 — B7 Auswertung und Diagramme (Checkliste)**
 - [x] **S18 R8 — B8 Bon-UI (Checkliste)**
-- [ ] **S19 R9 — B9 Architektur aus Phase 1 (Checkliste)**
+- [x] **S19 R9 — B9 Architektur aus Phase 1 (Checkliste)**
 - [ ] **S20 R10 — B10 UI-Querschnitt aus Phase 2 (Checkliste)**
 - [ ] **S21 R11 — B11 Doku-Abgleich (nur Spec)** — danach Block B pushen.
 
