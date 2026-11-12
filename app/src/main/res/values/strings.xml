@@ -635,4 +635,15 @@
     <string name="receipt_list_load_older">Ältere Bons laden</string>
     <string name="receipt_list_older_hint">Auf dem Handy liegen nur die Bons der letzten Monate. Ältere werden für einen Tag nachgeladen.</string>
     <string name="receipt_list_older_failed">Ältere Bons konnten nicht geladen werden. Server erreichbar?</string>
+    <!-- Phase 3a: Bon-Detail -->
+    <string name="receipt_detail_banner_provisional">Vorläufige Werte vom Handy. Die genaue Auswertung folgt automatisch.</string>
+    <string name="receipt_detail_banner_review">Bitte prüfen</string>
+    <string name="receipt_detail_review_now">Jetzt prüfen</string>
+    <string name="receipt_detail_menu">Weitere Optionen</string>
+    <string name="receipt_detail_edit">Bearbeiten</string>
+    <string name="receipt_detail_reparse">Neu auslesen</string>
+    <string name="receipt_detail_reparse_title">Neu auslesen?</string>
+    <string name="receipt_detail_reparse_message">Die bisherigen Werte werden durch die neue Auswertung ersetzt.</string>
+    <string name="receipt_detail_reparse_failed">Neu auslesen fehlgeschlagen. Server erreichbar?</string>
+    <string name="receipt_detail_deposit_sum">Pfand %1$s</string>
 </resources>

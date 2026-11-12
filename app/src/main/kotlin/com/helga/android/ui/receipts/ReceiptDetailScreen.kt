@@ -1,30 +1,26 @@
 package com.helga.android.ui.receipts
 
-import androidx.compose.ui.res.pluralStringResource
-import com.helga.android.ui.common.asString
-import com.helga.android.R
-import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.helga.android.ui.common.formatEuro
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import com.helga.android.ui.components.LoadingIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,32 +31,45 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.helga.android.R
 import com.helga.android.data.local.ScanSource
 import com.helga.android.data.local.entity.ReceiptEntity
-import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.local.toScanSource
+import com.helga.android.data.receipts.ReceiptDates
 import com.helga.android.data.util.ImageUrls
 import com.helga.android.data.util.ReceiptItemNormalizer
+import com.helga.android.ui.common.asString
+import com.helga.android.ui.common.formatEuro
+import com.helga.android.ui.components.LoadingIndicator
+import java.io.File
+import java.time.ZoneId
+
+/** Bons, bei denen der Abgleich mit der Einkaufsliste sinnvoll ist (bestätigt oder Bestand). */
+private val RECONCILABLE_STATUS = setOf("confirmed", "scanned", "reconciled")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiptDetailScreen(
     onBack: () -> Unit,
     onProductClick: (String) -> Unit = {},
+    onReview: (String) -> Unit = {},
     viewModel: ReceiptDetailViewModel = hiltViewModel(),
 ) {
     val receipt = viewModel.receipt.collectAsStateWithLifecycle().value
@@ -68,7 +77,10 @@ fun ReceiptDetailScreen(
     val serverUrl = viewModel.serverUrl.collectAsStateWithLifecycle().value
     val reconcileEnabled = viewModel.reconcileEnabled.collectAsStateWithLifecycle().value
     val reconcileState = viewModel.reconcileState.collectAsStateWithLifecycle().value
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    val reparseState = viewModel.reparseState.collectAsStateWithLifecycle().value
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var showReparseDialog by rememberSaveable { mutableStateOf(false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -87,6 +99,23 @@ fun ReceiptDetailScreen(
         )
     }
 
+    if (showReparseDialog) {
+        AlertDialog(
+            onDismissRequest = { showReparseDialog = false },
+            title = { Text(stringResource(R.string.receipt_detail_reparse_title)) },
+            text = { Text(stringResource(R.string.receipt_detail_reparse_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showReparseDialog = false
+                    viewModel.reparse()
+                }) { Text(stringResource(R.string.receipt_detail_reparse)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReparseDialog = false }) { Text(stringResource(R.string.recipe_delete_confirm_cancel)) }
+            },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -97,8 +126,28 @@ fun ReceiptDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.recipe_delete))
+                    if (receipt != null) {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.receipt_detail_menu))
+                        }
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            if (receipt.status != "provisional") {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.receipt_detail_edit)) },
+                                    onClick = { menuExpanded = false; onReview(receipt.id) },
+                                )
+                            }
+                            if (receipt.imagePath.isNotBlank()) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.receipt_detail_reparse)) },
+                                    onClick = { menuExpanded = false; showReparseDialog = true },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.recipe_delete)) },
+                                onClick = { menuExpanded = false; showDeleteDialog = true },
+                            )
+                        }
                     }
                 },
             )
@@ -116,12 +165,20 @@ fun ReceiptDetailScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
             ) {
                 item {
-                    ReceiptPhoto(receipt = receipt, serverUrl = serverUrl)
+                    StatusBanner(
+                        receipt = receipt,
+                        reparseState = reparseState,
+                        onReview = { onReview(receipt.id) },
+                        onDismissError = viewModel::dismissReparseError,
+                    )
+                }
+                receiptPhotoModel(receipt, serverUrl)?.let { model ->
+                    item { ReceiptPhoto(model = model) }
                 }
                 item {
                     SummarySection(receipt = receipt, itemCount = items.size)
                 }
-                if (reconcileEnabled && receipt.shoppingListId.isNotBlank()) {
+                if (reconcileEnabled && receipt.shoppingListId.isNotBlank() && receipt.status in RECONCILABLE_STATUS) {
                     item {
                         ReconcileSection(
                             state = reconcileState,
@@ -132,9 +189,20 @@ fun ReceiptDetailScreen(
                 }
                 item { HorizontalDivider() }
                 items(items, key = { it.id }) { item ->
-                    ReceiptItemRow(
+                    ReviewItemRow(
                         item = item,
-                        onProductClick = onProductClick,
+                        uncertain = false,
+                        onEdit = {
+                            val key = ReceiptItemNormalizer.normalize(item.name.ifBlank { item.rawText })
+                            if (key.isNotBlank()) onProductClick(key)
+                        },
+                        onRemove = null,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        nameColor = when (item.matchStatus) {
+                            "matched" -> MaterialTheme.colorScheme.primary
+                            "unexpected" -> MaterialTheme.colorScheme.tertiary
+                            else -> androidx.compose.ui.graphics.Color.Unspecified
+                        },
                     )
                 }
             }
@@ -143,14 +211,64 @@ fun ReceiptDetailScreen(
 }
 
 @Composable
-private fun ReceiptPhoto(receipt: ReceiptEntity, serverUrl: String) {
-    val imageModel: Any? = when {
-        receipt.localImageUri.isNotBlank() -> receipt.localImageUri
-        receipt.imagePath.isNotBlank() && serverUrl.isNotBlank() ->
-            ImageUrls.serverImageUrl(serverUrl, receipt.imagePath)
-        else -> null
-    }
+private fun StatusBanner(
+    receipt: ReceiptEntity,
+    reparseState: ReparseState,
+    onReview: () -> Unit,
+    onDismissError: () -> Unit,
+) {
+    val provisional = receipt.status == "provisional"
+    val needsReview = receipt.status == "review"
+    if (!provisional && !needsReview && reparseState is ReparseState.Idle) return
 
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(
+                if (provisional) MaterialTheme.colorScheme.tertiaryContainer
+                else MaterialTheme.colorScheme.primaryContainer
+            )
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        when {
+            reparseState is ReparseState.Running -> Row(verticalAlignment = Alignment.CenterVertically) {
+                LoadingIndicator(modifier = Modifier.height(18.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.receipt_scan_reading))
+            }
+            reparseState is ReparseState.Error -> {
+                Text(reparseState.message.asString(), color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = onDismissError) { Text(stringResource(R.string.action_retry)) }
+            }
+            provisional -> Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.CloudOff, contentDescription = null)
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.receipt_detail_banner_provisional), style = MaterialTheme.typography.bodyMedium)
+            }
+            needsReview -> {
+                Text(
+                    stringResource(R.string.receipt_detail_banner_review),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Button(onClick = onReview) { Text(stringResource(R.string.receipt_detail_review_now)) }
+            }
+        }
+    }
+}
+
+/** Lokale Datei, sonst Server-Bild; ohne beides kein Foto (kein Platzhalter). */
+private fun receiptPhotoModel(receipt: ReceiptEntity, serverUrl: String): Any? = when {
+    receipt.localImageUri.isNotBlank() && File(receipt.localImageUri).exists() -> File(receipt.localImageUri)
+    receipt.imagePath.isNotBlank() && serverUrl.isNotBlank() -> ImageUrls.serverImageUrl(serverUrl, receipt.imagePath)
+    else -> null
+}
+
+@Composable
+private fun ReceiptPhoto(model: Any) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -158,37 +276,37 @@ private fun ReceiptPhoto(receipt: ReceiptEntity, serverUrl: String) {
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
-        if (imageModel != null) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(imageModel)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = stringResource(R.string.receipt_photo),
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-            )
-        } else {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
-                contentDescription = null,
-                modifier = Modifier.height(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(model)
+                .crossfade(true)
+                .build(),
+            contentDescription = stringResource(R.string.receipt_photo),
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 
 @Composable
 private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
+    val date = ReceiptDates.displayDate(receipt.purchaseDay, receipt.purchaseDate, ZoneId.systemDefault())
+        .ifEmpty { "—" }
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Text(
             receipt.storeName.ifBlank { stringResource(R.string.receipt_unknown_store) },
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
+        if (receipt.storeAddress.isNotBlank()) {
+            Text(
+                receipt.storeAddress,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
-            formatReceiptDate(receipt.purchaseDate),
+            if (receipt.purchaseTime.isNotBlank()) "$date · ${receipt.purchaseTime}" else date,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -205,11 +323,25 @@ private fun SummarySection(receipt: ReceiptEntity, itemCount: Int) {
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(androidx.compose.ui.res.pluralStringResource(R.plurals.receipt_item_count, itemCount, itemCount), style = MaterialTheme.typography.bodyLarge)
+            Text(pluralStringResource(R.plurals.receipt_item_count, itemCount, itemCount), style = MaterialTheme.typography.bodyLarge)
             Text(
                 stringResource(R.string.receipt_sum, formatEuro(receipt.totalAmount)),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
+            )
+        }
+        if (receipt.discountTotal > 0.0) {
+            Text(
+                stringResource(R.string.receipt_review_discount_receipt, formatEuro(receipt.discountTotal)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (receipt.depositTotal != 0.0) {
+            Text(
+                stringResource(R.string.receipt_detail_deposit_sum, formatEuro(receipt.depositTotal)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -274,46 +406,5 @@ private fun ReconcileResult(outcome: com.helga.android.data.repository.Reconcile
             )
             outcome.missingNames.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
         }
-    }
-}
-
-@Composable
-private fun ReceiptItemRow(
-    item: ReceiptItemEntity,
-    onProductClick: (String) -> Unit = {},
-) {
-    val accent = when (item.matchStatus) {
-        "matched" -> MaterialTheme.colorScheme.primary
-        "unexpected" -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                val key = ReceiptItemNormalizer.normalize(item.name.ifBlank { item.rawText })
-                if (key.isNotBlank()) onProductClick(key)
-            }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                item.name.ifBlank { item.rawText },
-                style = MaterialTheme.typography.bodyMedium,
-                color = accent,
-            )
-            Text(
-                "${formatQuantity(item.quantity)} × ${formatEuro(item.unitPrice)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Text(
-            formatEuro(item.totalPrice),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
     }
 }

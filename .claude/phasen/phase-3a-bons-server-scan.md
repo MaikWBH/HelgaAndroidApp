@@ -538,7 +538,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   Bons der letzten Monate. Ältere werden für einen Tag nachgeladen." `SnackbarHost` für `olderMessage`. `items(…, key
   = { it.id })`. Preview hell/dunkel. Akzeptanz: `V` grün; `G-S` regelkonform. Prüfliste (Gerät): Chips sichtbar;
   „Ältere Bons laden" holt den Vormonat, offline erscheint die Meldung; leere Liste zeigt den Leerzustand.
-- [ ] **S31 Bon-Detail** — Dateien: `$U/receipts/ReceiptDetailViewModel.kt`, `$U/receipts/ReceiptDetailScreen.kt`,
+- [x] **S31 Bon-Detail** — Dateien: `$U/receipts/ReceiptDetailViewModel.kt`, `$U/receipts/ReceiptDetailScreen.kt`,
   `$B/HelgaNavGraph.kt`, `$R/values/strings.xml`. ViewModel: `reparseState` (`Idle/Running/Error(UiText)`), `fun
   reparse()`; `delete` unverändert. Screen: Banner je Status (`provisional`: „Vorläufige Werte vom Handy. Die genaue
   Auswertung folgt automatisch."; `review`: „Bitte prüfen" mit Button „Jetzt prüfen" → `onReview(receiptId)` =
@@ -641,3 +641,4 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - S28: `ReceiptImageStore.deleteCameraTemp` (S21) kannte nur Dateipfade; die Kamera liefert aber eine FileProvider-`content://`-URI. Nachgezogen: die URI wird über Autorität und `receipt_captures`-Pfadsegment auf `cacheDir/receipts/<datei>` abgebildet. Der Screen hat bis S29 einen schlichten Übergangszweig für `Provisional`.
 - **S29 Review (Gerät):** Bon mit Rabatt und Pfand scannen → Uhrzeit, Adresse, Rabatt je Position, Pfand-Chip und Kategorien stehen im Review; Kategorie ändern, speichern, denselben Artikel im selben Markt erneut scannen → Korrektur ist übernommen; „Produkt zuordnen" zeigt Treffer; Drehen im geöffneten Dialog behält Eingaben; TalkBack liest Chips und Buttons.
 - **S30 Bon-Liste (Gerät):** Status-Chips sichtbar; „Ältere Bons laden" holt den Vormonat, offline erscheint die Meldung; leere Liste zeigt den Leerzustand.
+- **S31 Bon-Detail (Gerät):** vorläufiger Bon zeigt das lokale Foto und lässt sich nicht bearbeiten; „Neu auslesen" ersetzt die Werte; Foto eines alten Bons lädt vom Server.

@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -343,8 +344,9 @@ internal fun ReviewItemRow(
     item: ReceiptItemEntity,
     uncertain: Boolean,
     onEdit: () -> Unit,
-    onRemove: () -> Unit,
+    onRemove: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    nameColor: Color = Color.Unspecified,
 ) {
     val displayName = item.name.ifEmpty { item.rawText }
     Row(
@@ -374,7 +376,7 @@ internal fun ReviewItemRow(
                 .weight(1f)
                 .clickable(role = Role.Button, onClick = onEdit),
         ) {
-            Text(displayName)
+            Text(displayName, color = nameColor)
             if (item.rawText.isNotBlank() && !item.rawText.equals(displayName, ignoreCase = true)) {
                 Text(
                     item.rawText,
@@ -410,8 +412,10 @@ internal fun ReviewItemRow(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.clickable(role = Role.Button, onClick = onEdit),
         )
-        IconButton(onClick = onRemove) {
-            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.weekplan_remove_recipe))
+        if (onRemove != null) {
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.weekplan_remove_recipe))
+            }
         }
     }
 }

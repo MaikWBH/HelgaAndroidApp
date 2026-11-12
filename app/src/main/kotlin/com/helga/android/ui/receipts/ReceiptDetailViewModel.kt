@@ -29,6 +29,12 @@ sealed interface ReconcileState {
     data class Error(val message: UiText) : ReconcileState
 }
 
+sealed interface ReparseState {
+    data object Idle : ReparseState
+    data object Running : ReparseState
+    data class Error(val message: UiText) : ReparseState
+}
+
 @HiltViewModel
 class ReceiptDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -54,6 +60,32 @@ class ReceiptDetailViewModel @Inject constructor(
 
     private val _reconcileState = MutableStateFlow<ReconcileState>(ReconcileState.Idle)
     val reconcileState: StateFlow<ReconcileState> = _reconcileState
+
+    private val _reparseState = MutableStateFlow<ReparseState>(ReparseState.Idle)
+    val reparseState: StateFlow<ReparseState> = _reparseState
+
+    /** Liest den Bon aus dem Server-Foto neu aus; die neuen Werte ersetzen die bisherigen in Room. */
+    fun reparse() {
+        if (_reparseState.value is ReparseState.Running) return
+        viewModelScope.launch {
+            _reparseState.value = ReparseState.Running
+            _reparseState.value = try {
+                if (receiptRepository.reparse(receiptId)) {
+                    syncScheduler.triggerOneShot()
+                    ReparseState.Idle
+                } else {
+                    ReparseState.Error(UiText.Res(R.string.receipt_detail_reparse_failed))
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Receipt reparse failed")
+                ReparseState.Error(UiText.Res(R.string.receipt_detail_reparse_failed))
+            }
+        }
+    }
+
+    fun dismissReparseError() {
+        if (_reparseState.value is ReparseState.Error) _reparseState.value = ReparseState.Idle
+    }
 
     fun reconcile() {
         if (_reconcileState.value is ReconcileState.Running) return

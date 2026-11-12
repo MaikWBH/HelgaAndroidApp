@@ -296,6 +296,7 @@ fun HelgaNavGraph(
                         ReceiptDetailScreen(
                             onBack = { navController.popBackStack() },
                             onProductClick = { key -> navController.navigate(productPriceDetailRoute(key)) },
+                            onReview = { id -> navController.navigate(receiptScanRoute(reviewId = id)) },
                         )
                     }
                     composable(ROUTE_RECEIPTS_COST_OVERVIEW) {
