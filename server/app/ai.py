@@ -2,17 +2,19 @@ import json
 import re
 from datetime import date
 from typing import AsyncIterator
+from urllib.parse import urljoin
 
 import httpx
 from fastapi import HTTPException
 
-from . import ai_client, categories, receipt_text
+from . import ai_client, categories, receipt_text, settings
 from .ingredient_parser import is_header_line, parse_ingredient_line
 from .models import (
     AiGenerateRequest, AiRemixRequest, AiClassifyRequest, AiNutritionRequest,
     AiUrlImportRequest,
     AiImportResponse, ImportedIngredient, ImportedInstruction,
 )
+from .url_guard import ensure_public_http_url
 
 # Aliase auf die Anbieter-Schicht (ai_client.py). Tests patchen die Namen hier (z. B. _receipt_once),
 # und scripts/receipt_testset.py nutzt _receipt_model.
@@ -212,14 +214,41 @@ def _safe(scraper, method: str, default=""):
         return default
 
 
-async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
-    from recipe_scrapers import scrape_html
-    from recipe_scrapers._exceptions import NoSchemaFoundInWildMode, WebsiteNotImplementedError
+MAX_IMPORT_REDIRECTS = 5
+_IMPORT_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
+
+async def _read_limited(resp: httpx.Response) -> str:
+    buf = bytearray()
+    async for chunk in resp.aiter_bytes():
+        buf.extend(chunk)
+        if len(buf) > settings.MAX_IMPORT_PAGE_BYTES:
+            raise ValueError("Seite ist zu groß")
+    return bytes(buf).decode(resp.encoding or "utf-8", errors="replace")
+
+
+async def _fetch_html(url: str) -> str:
+    """Lädt die Rezeptseite. Jeder Hop (auch nach Weiterleitungen) wird vor dem Abruf geprüft.
+
+    Fehler werden als HTTPException 422 mit deutschem Text ausgegeben.
+    """
+    redirects = 0
+    current = url
     try:
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-            resp = await client.get(req.url, headers={"User-Agent": "Mozilla/5.0"})
-            resp.raise_for_status()
+        async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
+            while True:
+                await ensure_public_http_url(current)
+                async with client.stream("GET", current, headers=_IMPORT_HEADERS) as resp:
+                    if resp.is_redirect:
+                        redirects += 1
+                        if redirects > MAX_IMPORT_REDIRECTS:
+                            raise ValueError("Zu viele Weiterleitungen")
+                        current = urljoin(current, resp.headers["location"])
+                        continue
+                    resp.raise_for_status()
+                    return await _read_limited(resp)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except httpx.HTTPStatusError as e:
         raise HTTPException(
             status_code=422, detail=f"Seite antwortet mit Fehler {e.response.status_code}"
@@ -227,10 +256,17 @@ async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
     except httpx.RequestError as e:
         raise HTTPException(status_code=422, detail="Seite nicht erreichbar") from e
 
+
+async def import_url(req: AiUrlImportRequest) -> AiImportResponse:
+    from recipe_scrapers import scrape_html
+    from recipe_scrapers._exceptions import NoSchemaFoundInWildMode, WebsiteNotImplementedError
+
+    html = await _fetch_html(req.url)
+
     try:
         # supported_only=False: auch bei Seiten ohne dediziertem Scraper per generischem
         # schema.org-Parser versuchen, statt nur die feste Domain-Liste zu erlauben.
-        scraper = scrape_html(resp.text, org_url=req.url, supported_only=False)
+        scraper = scrape_html(html, org_url=req.url, supported_only=False)
     except WebsiteNotImplementedError as e:
         raise HTTPException(status_code=422, detail="Diese Seite wird nicht unterstützt") from e
     except NoSchemaFoundInWildMode as e:

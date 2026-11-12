@@ -46,3 +46,6 @@ RECEIPT_QUEUE_INTERVAL_SEC = int(os.getenv("RECEIPT_QUEUE_INTERVAL_SEC", "600"))
 
 # Obergrenze für hochgeladene Bon-Fotos.
 MAX_RECEIPT_IMAGE_BYTES = 8 * 1024 * 1024
+
+# Obergrenze für die Seite beim Rezept-Import (Bytes).
+MAX_IMPORT_PAGE_BYTES = 5 * 1024 * 1024

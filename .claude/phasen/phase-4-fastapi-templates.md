@@ -134,7 +134,7 @@ beim Bildabruf, `hmac.compare_digest` in `require_auth`, Soft-Delete/LWW im Sync
   Fehler im ersten Chunk → 502; mit Fehler nach dem ersten Chunk → 200, Body enthält den ersten Chunk, **kein**
   `[DONE]`; `parse_receipt` über `POST /api/ai/parse-receipt` → 502; `categorize` in `receipts.py` schluckt den Fehler
   weiter (bestehender Test grün). Akzeptanz: `V` grün.
-- [ ] **S9 SSRF-Schutz im Rezept-Import** — Dateien: neu `$SA/url_guard.py`, `$SA/ai.py` (`import_url`),
+- [x] **S9 SSRF-Schutz im Rezept-Import** — Dateien: neu `$SA/url_guard.py`, `$SA/ai.py` (`import_url`),
   neu `$ST/test_url_guard.py`. `url_guard.py`: `async def ensure_public_http_url(url: str) -> None` (wirft `ValueError` mit
   deutscher Meldung): Schema nur `http`/`https`, Host vorhanden; Host per `asyncio.to_thread(socket.getaddrinfo, …)`
   auflösen (Auflösung in `_resolve(host)` kapseln, damit Tests sie patchen); jede aufgelöste Adresse darf **nicht**
