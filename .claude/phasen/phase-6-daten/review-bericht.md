@@ -180,7 +180,35 @@ _Anmerkung Stufe B zum Beifang (kein Teil der Sub-Agent-Antwort):_ Nachgeprüft 
 **Ergebnis:** 0 Blocker, 0 Hoch, 0 Mittel, 3 Niedrig; schwerster Befund: P2 (Niedrig)
 
 ## B4 — Server-Sicherheit und -Struktur
-<Standards-Antwort> · <Spec-Antwort>
+_Sub-Agent-Modell: sonnet_
+
+### Standards — B4 — Server-Sicherheit und -Struktur
+| # | Datei:Zeile | Befund | Regel (Datei §) | Grad | Markierung |
+|---|-------------|--------|-----------------|------|------------|
+| S1 | models.py:429-472 (`ReceiptItemIn`, `ReceiptIn`), :399 | Bon-Archiv-Modelle haben keine Limits: `items`-Liste und alle Strings sind unbegrenzt. `ReceiptParseRequest.mime_type` ist unbegrenzt und geht ungeprüft in die KI-Nutzlast. | server/CLAUDE.md Konventionen „Eingabe-Limits in models.py" | Mittel | ändert Verhalten |
+| S2 | ai_client.py:216-243 (`_stream_anthropic`), :183-213 | Ein Anthropic-`error`-Event im Stream wird übersprungen, der Stream endet dann mit `[DONE]`. Nicht-dict-JSON-Zeilen lösen AttributeError/TypeError aus statt `AiUpstreamError` (Vermutung, nicht ausgeführt). | server/CLAUDE.md Konventionen „KI-Ausfall → 502 … unbrauchbare Antwort"; „SSE … ohne [DONE]" | Mittel | ändert Verhalten |
+| S3 | ai_api.py:90-95; tests/test_ai_errors.py:141 (Verhalten in receipts.py:699-703) | `categorize-items` schluckt KI-Ausfall und antwortet 200 mit leeren Kategorien. Der Test schreibt das fest. | server/CLAUDE.md Konventionen „KI-Ausfall → 502" | Niedrig | ändert Verhalten, Ermessensfrage (Plan-Vorgabe) |
+| S4 | tests/test_url_guard.py:73 | Die Attrappe `_Resp.is_redirect` verlangt `Location`. Echtes httpx 0.28.1 liefert `is_redirect` für jede 3xx-Antwort (gelesen). Der Test verdeckt deshalb V5; kein Test für Weiterleitung ohne `Location`. | Test-Treue zu V5 (weitere Fundstelle) | Niedrig | Ermessensfrage |
+| S5 | url_guard.py:25-26; tests/test_url_guard.py:36-46 | Der IPv4-mapped-Zweig (`::ffff:…`) hat keinen Test. `0.0.0.0` und Multicast sind ebenfalls nicht abgedeckt. | server/CLAUDE.md „SSRF-Regeln in url_guard.py" | Niedrig | – |
+| S6 | ai.py:19-28; ai_client.py:87, 118, 259-309 | Der Alias-Block in `ai.py` ist Middle Man. `_model`, `_vision_model`, `_vision_once` haben keinen Aufrufer. `vision_text`, `_vision_openai`, `_vision_anthropic`, `vision_model`, `DEFAULT_VISION_MODEL` sind seit der Umstellung von `parse_receipt` auf `_receipt_once` toter Code. | K-SM Speculative Generality / Middle Man | Niedrig | Ermessensfrage |
+| S7 | ai.py:487, 525, 585; ai.py:221 / images_api.py:20 | Duplicated Code: Markdown-Zaun entfernen, Klammern suchen, `json.loads` steht dreimal in den geänderten Funktionen. `_read_limited` gibt es zweimal mit verschiedener Signatur (zusätzlich eine Lese-Schleife in receipts.py:342-352). | K-SM Duplicated Code | Niedrig | Ermessensfrage |
+| S8 | ai_client.py:175, 260, 312 | Repeated Switches: `if AI_PROVIDER == "anthropic"` steht in drei Funktionen. Der OpenAI- und Anthropic-Bildaufbau ist in `_vision_*` und `receipt_text` doppelt. Dazu der Data Clump (`system`, `user_text`, `image_b64`, `mime_type`). | K-SM Repeated Switches / Data Clumps | Niedrig | Ermessensfrage |
+| S9 | ai.py:230-260, 330-480 | Divergent Change: `ai.py` vereint Prompts, SSRF-sicheres Abrufen (`_fetch_html`) und Bon-Normalisierung. Dazu Redundanz: `_truthy` mit totem bool-Zweig (:399), `not raw_text and not name` (:438). | K-SM Divergent Change | Niedrig | Ermessensfrage |
+| S10 | models.py:450-452, 454-500 | `ReceiptItemOut(ReceiptItemIn): pass` ist überflüssig. `ReceiptIn`/`ReceiptOut` und `ReceiptParseItem` wiederholen fast alle Felder. | K-SM Speculative Generality / Duplicated Code | Niedrig | Ermessensfrage |
+| S11 | settings.py:49 | `MAX_RECEIPT_IMAGE_BYTES = MAX_IMAGE_BYTES` ist eine Kopie zur Importzeit. Das widerspricht dem Docstring (Lesen zur Aufrufzeit). Ein Test, der `MAX_IMAGE_BYTES` patcht, wirkt nicht auf Bons. | settings.py Docstring | Niedrig | Ermessensfrage |
+| S12 | suggestions_api.py:16, 35, 48 | `q`/`item` haben kein `max_length`. Ein LIKE-Muster über 50000 Zeichen führt vermutlich zu einem SQLite-Fehler und HTTP 500 (Vermutung). | Konventionen „Eingabe-Limits" (sinngemäß) | Niedrig | ändert Verhalten, Ermessensfrage |
+| S13 | tests/test_ai_receipt_config.py:1 | Unbenutzter Import `asyncio`. | – | Niedrig | – |
+
+**Beifang (Altbestand, ohne Grad):**
+- ai.py:151 (`classify`): `json.loads` ohne try gibt bei kaputtem KI-JSON HTTP 500 statt 502.
+- images_api.py:49: `path.exists()`/`is_file()` blockieren im Event-Loop (verschoben, nicht neu).
+- receipts.py:339-352 (außerhalb des Umfangs): `dest.open("wb")` und `unlink` blockieren im Event-Loop.
+- V5 bestätigt, keine neue Fundstelle: ai.py:246 `resp.headers["location"]`.
+- „Dateitype" in images_api.py:33 ist ein Tippfehler, den der Test festschreibt.
+
+**Ergebnis:** Blocker 0, Hoch 0, Mittel 2, Niedrig 11; schwerster Befund: S2 (gleichrangig S1)
+
+<Spec-Antwort>
 
 ## B6 — Auto-Zuordnung zum Gang
 <Standards-Antwort> · <Spec-Antwort>
