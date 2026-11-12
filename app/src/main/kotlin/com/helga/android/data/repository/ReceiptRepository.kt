@@ -15,6 +15,7 @@ import com.helga.android.data.local.entity.ReceiptItemEntity
 import com.helga.android.data.receipts.ReceiptImageStore
 import com.helga.android.data.receipts.ReceiptScanFlow
 import com.helga.android.data.receipts.ReceiptScanOutcome
+import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.util.ReceiptItemNormalizer
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -83,6 +84,7 @@ class ReceiptRepository @Inject constructor(
     private val shoppingDao: ShoppingDao,
     private val apiProvider: ApiProvider,
     private val imageStore: ReceiptImageStore,
+    private val syncScheduler: SyncScheduler,
 ) {
 
     fun observeReceipts(): Flow<List<ReceiptEntity>> = receiptDao.observeReceipts()
@@ -166,6 +168,10 @@ class ReceiptRepository @Inject constructor(
                 ?: throw IllegalStateException("Bild konnte nicht geladen werden")
             val outcome = scanFlow.run(receiptId, prepared.file, prepared.bitmap, shoppingListId)
             prepared.bitmap.recycle()
+            // Foto wartet lokal: Upload einreihen, sobald Netz da ist.
+            if (outcome is ReceiptScanOutcome.Provisional && !outcome.queuedOnServer) {
+                syncScheduler.enqueueReceiptUpload()
+            }
             outcome
         } finally {
             imageStore.deleteCameraTemp(uri)

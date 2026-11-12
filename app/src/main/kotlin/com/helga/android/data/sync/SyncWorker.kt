@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.receipts.ReceiptSyncer
+import com.helga.android.data.receipts.ReceiptUploader
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import timber.log.Timber
@@ -19,6 +20,7 @@ class SyncWorker @AssistedInject constructor(
     private val statusHolder: SyncStatusHolder,
     private val preferences: AppPreferences,
     private val receiptSyncer: ReceiptSyncer,
+    private val receiptUploader: ReceiptUploader,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -66,6 +68,8 @@ class SyncWorker @AssistedInject constructor(
     /** Bon-Archiv (eigenes Protokoll): erst lokale Änderungen senden, dann Server-Stand holen. Fehler zählen nicht als Sync-Fehler. */
     private suspend fun syncReceipts() {
         try {
+            // Zuerst die Upload-Warteschlange (Offline-Scans), dann lokale Änderungen senden, dann pullen.
+            receiptUploader.uploadPending()
             receiptSyncer.pushDirty()
             receiptSyncer.pull()
         } catch (e: Exception) {

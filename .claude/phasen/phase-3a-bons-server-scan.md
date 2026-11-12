@@ -451,7 +451,7 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
   `HttpException(404)` zählt wie offline. Akzeptanz: `V` grün (die UI wird in S28 umgestellt — bis dahin hält
   `ReceiptScanViewModel.scanImage` einen kompilierenden Übergang: es ruft `scanFromUri` und behandelt beide Ergebnisse
   vorläufig wie `Saved`).
-- [ ] **S25 Upload-Warteschlange** — Dateien: neu `$B/data/receipts/ReceiptUploader.kt`, neu
+- [x] **S25 Upload-Warteschlange** — Dateien: neu `$B/data/receipts/ReceiptUploader.kt`, neu
   `$B/data/sync/ReceiptUploadWorker.kt`, `$B/data/sync/SyncScheduler.kt`, `$B/data/sync/SyncWorker.kt`, neu
   `$T/ReceiptUploaderTest.kt`. `ReceiptUploader.uploadPending(): UploadResult(done: Int, retry: Boolean)` — je Zeile
   aus `pendingUploads()`: Datei fehlt → `pendingUpload = 0`, `localImageUri = ""`, bei `status == "provisional"`
@@ -637,3 +637,4 @@ nicht, gilt der Schritt als **nicht verifiziert**: stoppen und per `grilling` me
 - S23: Zusätzlich zur Liste entfernt: `ReceiptDao.findIdsOlderThan` (nur von `purgeReceiptsOlderThan` genutzt). Die Prüfliste (zwei Geräte, Server mit Block A–C) steht unter „Prüflisten (Nutzer)".
 - **S23 Umschaltung (Gerät, Server mit Block A–C, beide Handys):** Bon auf Gerät 1 ändern → nach Sync auf Gerät 2 geändert; Bon löschen → auf Gerät 2 weg; Rezept- und Listen-Sync unverändert.
 - S24: `CONFIDENCE_THRESHOLD` wurde aus `ReceiptRepository` entfernt; die neue Konstante entsteht in S27 (`ReceiptReviewCheck`). `ReceiptScanViewModel.scanImage` ist bis S28 ein Übergang (ruft `scanFromUri`, danach `Saved`).
+- **S25 Offline-Scan (Gerät, Server mit Block A–C):** Flugmodus → Bon scannen → „vorläufig" erscheint sofort; Flugmodus aus → innerhalb weniger Minuten ersetzt die KI-Auswertung die Werte, Status „Bitte prüfen"; unter `Android/data/…/files/receipts/` liegt danach keine Datei mehr.

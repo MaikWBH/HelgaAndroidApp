@@ -68,8 +68,18 @@ class SyncScheduler @Inject constructor(
         ).then(uploadRequest).then(downloadRequest).enqueue()
     }
 
+    /** Reiht die Bon-Upload-Warteschlange ein (läuft, sobald Netz da ist; mehrfaches Einreihen ist unschädlich). */
+    fun enqueueReceiptUpload() {
+        val request = OneTimeWorkRequestBuilder<ReceiptUploadWorker>()
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+        workManager.enqueueUniqueWork(ReceiptUploadWorker.UNIQUE, ExistingWorkPolicy.KEEP, request)
+    }
+
     fun cancelAll() {
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_PERIODIC)
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_ONESHOT)
+        workManager.cancelUniqueWork(ReceiptUploadWorker.UNIQUE)
     }
 }
