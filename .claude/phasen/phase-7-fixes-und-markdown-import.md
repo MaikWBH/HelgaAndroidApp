@@ -400,7 +400,7 @@ Freitext
   Imports in `RecipeFormScreen.kt`, `RecipeDetailScreen.kt`, `RecipeListScreen.kt`, `WeekplanScreen.kt` (und jede weitere
   Fundstelle von `grep -rn "MealSlots" $B`). Akzeptanz: `V` grün; `TC` = 319;
   `grep -rn "ui.components.MealSlots" app/src` leer.
-- [ ] **S27 Parser a: Gerüst, Blöcke, Titel** — Dateien: neu `$B/data/util/RecipeMarkdownParser.kt`, neu
+- [x] **S27 Parser a: Gerüst, Blöcke, Titel** — Dateien: neu `$B/data/util/RecipeMarkdownParser.kt`, neu
   `$T/RecipeMarkdownParserTest.kt`. Typen (alle in dieser Datei):
   ```kotlin
   data class NutritionPerPortion(val kcal: Double, val protein: Double, val fat: Double, val carbs: Double)
