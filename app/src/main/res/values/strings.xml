@@ -696,4 +696,5 @@
     <string name="stores_aisle_choose_category">Kategorie wählen</string>
     <string name="stores_aisle_category_hint">Die Kategorie bestimmt, welche Artikel automatisch in diesen Gang sortiert werden.</string>
     <string name="stores_add_missing_aisles">Fehlende Standardgänge ergänzen</string>
+    <string name="receipt_decimal_invalid">Bitte eine Zahl wie 12,99 eingeben</string>
 </resources>

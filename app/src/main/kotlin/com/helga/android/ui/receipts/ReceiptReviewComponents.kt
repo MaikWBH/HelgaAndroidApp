@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.ui.common.DecimalInput
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -82,7 +83,13 @@ private fun unitLabel(unit: String): String = stringResource(
     }
 )
 
-private fun parseDecimal(value: String): Double? = value.replace(",", ".").toDoubleOrNull()
+/** Nicht leere Eingabe, die keine Zahl ist (Phase 7, F12). Leer ist erlaubt. */
+private fun decimalInvalid(text: String): Boolean = text.isNotBlank() && DecimalInput.parse(text) == null
+
+private fun decimalSupport(error: Boolean): (@Composable () -> Unit)? =
+    if (error) {
+        { Text(stringResource(R.string.receipt_decimal_invalid)) }
+    } else null
 
 private fun euroInput(value: Double): String = String.format(Locale.GERMANY, "%.2f", value)
 
@@ -234,6 +241,8 @@ internal fun HeaderEditDialog(
 
     val dateError = ReceiptDates.parseDisplayDay(dateText) == null
     val timeError = timeText.isNotEmpty() && !ReceiptDates.isValidTime(timeText)
+    val totalError = decimalInvalid(totalText)
+    val discountError = decimalInvalid(discountText)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -303,6 +312,8 @@ internal fun HeaderEditDialog(
                     value = totalText,
                     onValueChange = { totalText = it },
                     label = { Text(stringResource(R.string.receipt_scan_total)) },
+                    isError = totalError,
+                    supportingText = decimalSupport(totalError),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -311,6 +322,8 @@ internal fun HeaderEditDialog(
                     value = discountText,
                     onValueChange = { discountText = it },
                     label = { Text(stringResource(R.string.receipt_review_discount_total)) },
+                    isError = discountError,
+                    supportingText = decimalSupport(discountError),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -319,15 +332,15 @@ internal fun HeaderEditDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = !dateError && !timeError,
+                enabled = !dateError && !timeError && !totalError && !discountError,
                 onClick = {
                     onConfirm(
                         name.trim(),
                         address.trim(),
                         ReceiptDates.parseDisplayDay(dateText).orEmpty(),
                         timeText.trim(),
-                        parseDecimal(totalText) ?: 0.0,
-                        parseDecimal(discountText) ?: 0.0,
+                        DecimalInput.parse(totalText) ?: 0.0,
+                        DecimalInput.parse(discountText) ?: 0.0,
                     )
                 },
             ) { Text(stringResource(R.string.recipe_form_save)) }
@@ -445,23 +458,28 @@ internal fun EditItemDialog(
     // Solange true, folgt der Gesamtpreis automatisch Menge × Einzelpreis.
     var autoTotal by rememberSaveable { mutableStateOf(true) }
 
+    val quantityError = decimalInvalid(quantityText)
+    val unitPriceError = decimalInvalid(unitPriceText)
+    val totalError = decimalInvalid(totalText)
+    val discountError = decimalInvalid(discountText)
+
     fun recomputeTotal() {
         if (!autoTotal) return
-        val q = parseDecimal(quantityText)
-        val u = parseDecimal(unitPriceText)
+        val q = DecimalInput.parse(quantityText)
+        val u = DecimalInput.parse(unitPriceText)
         if (q != null && u != null) totalText = euroInput(q * u)
     }
 
     fun edited(): ReceiptItemEntity {
-        val q = parseDecimal(quantityText) ?: item.quantity
-        val u = parseDecimal(unitPriceText) ?: item.unitPrice
+        val q = DecimalInput.parse(quantityText) ?: item.quantity
+        val u = DecimalInput.parse(unitPriceText) ?: item.unitPrice
         return item.copy(
             name = name.trim(),
             quantity = q,
             unit = unit,
             unitPrice = u,
-            totalPrice = parseDecimal(totalText) ?: (q * u),
-            discount = (parseDecimal(discountText) ?: 0.0).coerceAtLeast(0.0),
+            totalPrice = DecimalInput.parse(totalText) ?: (q * u),
+            discount = (DecimalInput.parse(discountText) ?: 0.0).coerceAtLeast(0.0),
             isDeposit = if (deposit) 1 else 0,
             category = if (deposit) ProductCategory.PFAND.key else categoryKey,
         )
@@ -490,6 +508,8 @@ internal fun EditItemDialog(
                         value = quantityText,
                         onValueChange = { quantityText = it; recomputeTotal() },
                         label = { Text(stringResource(R.string.recipe_form_quantity)) },
+                        isError = quantityError,
+                        supportingText = decimalSupport(quantityError),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f),
@@ -521,6 +541,8 @@ internal fun EditItemDialog(
                     value = unitPriceText,
                     onValueChange = { unitPriceText = it; recomputeTotal() },
                     label = { Text(stringResource(R.string.receipt_scan_unit_price)) },
+                    isError = unitPriceError,
+                    supportingText = decimalSupport(unitPriceError),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -529,6 +551,8 @@ internal fun EditItemDialog(
                     value = totalText,
                     onValueChange = { totalText = it; autoTotal = false },
                     label = { Text(stringResource(R.string.receipt_scan_total_price)) },
+                    isError = totalError,
+                    supportingText = decimalSupport(totalError),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -537,6 +561,8 @@ internal fun EditItemDialog(
                     value = discountText,
                     onValueChange = { discountText = it },
                     label = { Text(stringResource(R.string.receipt_review_discount)) },
+                    isError = discountError,
+                    supportingText = decimalSupport(discountError),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -579,7 +605,10 @@ internal fun EditItemDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(edited()) }) {
+            TextButton(
+                enabled = !quantityError && !unitPriceError && !totalError && !discountError,
+                onClick = { onConfirm(edited()) },
+            ) {
                 Text(stringResource(R.string.weekplan_export_preview_confirm))
             }
         },

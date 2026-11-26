@@ -249,7 +249,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   („1.234,56"→1234.56, „1,234.56"→1234.56), `euro_und_leerzeichen` („ 3,99 €"→3.99), `mehrere_trenner_ungueltig`
   („1,2,3", „1.2.3" → null), `buchstaben_ungueltig` („abc", „12a" → null), `leer_und_minus` („"→null, „-0,50"→-0.5,
   „,5"→0.5). Akzeptanz: `V` grün; `TC` = 302.
-- [ ] **S11 Dialoge mit Fehleranzeige und Sperre (F12, Teil 2)** — Datei: `$B/ui/receipts/ReceiptReviewComponents.kt`,
+- [x] **S11 Dialoge mit Fehleranzeige und Sperre (F12, Teil 2)** — Datei: `$B/ui/receipts/ReceiptReviewComponents.kt`,
   `$R/values/strings.xml`. `parseDecimal` löschen, alle Aufrufe → `DecimalInput.parse`. String
   `receipt_decimal_invalid` = „Bitte eine Zahl wie 12,99 eingeben". Kopf-Dialog: `val totalError = totalText.isNotBlank()
   && DecimalInput.parse(totalText) == null`, analog `discountError`; beide Felder `isError`/`supportingText` wie beim
