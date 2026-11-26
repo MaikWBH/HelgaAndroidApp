@@ -129,7 +129,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
 - Weicht eine Testzahl ab: notieren, nicht stoppen, solange `V`/`VS` grün sind.
 
 ### Block A — Baseline
-- [ ] **S0 Baseline** — `V` und `TC` (erwartet 287), `VS` (erwartet `180 passed`), `VA` (Liste der `.so` je ABI,
+- [x] **S0 Baseline** — `V` und `TC` (erwartet 287), `VS` (erwartet `180 passed`), `VA` (Liste der `.so` je ABI,
   Ausgabe von `zipalign` und die LOAD-Ausrichtung je Datei). Alle Werte unter „Abschluss" notieren. Kein Commit nötig,
   wenn sich keine Datei ändert; die Werte werden mit S1 committet.
 
@@ -684,7 +684,7 @@ Mein Wunsch:
 - Gerätetests, Docker-Builds und echte KI-Aufrufe (Nutzer-Liste in Block E).
 
 ## Abschluss
-- [ ] Baseline S0: App `TC` … (erwartet 287), Server … passed (erwartet 180), `VA` …
+- [x] Baseline S0: App `TC` 287 (erwartet 287), Server 180 passed (erwartet 180), `VA`: `zipalign -c -P 16` „Verification successful“; vier ABIs (arm64-v8a, armeabi-v7a, x86, x86_64) mit je fünf `.so`; LOAD-Ausrichtung `0x4000` bei `libandroidx.graphics.path`, `libdatastore_shared_counter` (alle ABIs) und `libbarhopper_v3` (arm64-v8a, x86_64); `0x1000` bei `libimage_processing_util_jni`, `libmlkit_google_ocr_pipeline` (alle ABIs) und `libbarhopper_v3` (armeabi-v7a, x86)
 - [ ] Nach B1: `TC` … (erwartet 295), Server … (erwartet 184)
 - [ ] Nach B2–B4: `TC` … (erwartet 310) · nach B5: … (erwartet 319) · nach B6: `TC` … (319), Server … (erwartet 192)
 - [ ] `VA` nach S25: ABIs …, `zipalign` …, LOAD-Ausrichtung je `.so` …
