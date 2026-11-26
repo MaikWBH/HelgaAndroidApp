@@ -321,7 +321,7 @@ Screens mit `LazyColumn` dürfen keine `Column(verticalScroll(...))` als Parent 
   `UiText` für Meldungen aus ViewModels (`asString()` im Screen), `formatEuro` für Beträge.
 - **Rollen:** klickbare Zeilen mit `toggleable` (Checkbox), `selectable` (Radio) oder `clickable(role = Role.Button)`;
   Auf-/Zuklappen mit `onClickLabel`.
-- **Zustand:** Dialog-/Sheet-Sichtbarkeit und Eingabetexte mit `rememberSaveable`.
+- **Zustand:** Dialog-/Sheet-Sichtbarkeit und Eingabetexte mit `rememberSaveable`. Abgesichert: `UiConventionsTest.eingaben_mit_rememberSaveable`.
 - **Screen/Content:** kleine Screens trennen `XScreen` (ViewModel) von zustandslosem `XContent` mit Preview.
 - **Diagramme** (Phase 3b): liegen in `ui/receipts/charts/` (Canvas-Eigenbau, keine Chart-Bibliothek). Farben nur über
   `chartSeriesColors()`/`chartOtherColor()` (`ui/theme/ChartColors.kt`, aus `MaterialTheme.colorScheme` abgeleitet),

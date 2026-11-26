@@ -121,6 +121,8 @@ Bons (`Receipt`, `ReceiptItem`) liegen vollständig auf dem Server; das Handy h�
 - `pendingUpload = 1` markiert Bons, deren Foto noch auf den Upload wartet (`ReceiptUploader`); sie werden beim
   Pull nicht überschrieben und nicht verdrängt.
 - Bon und Positionen werden nur gemeinsam und atomar geschrieben bzw. gelöscht (`@Transaction`-Methoden im `ReceiptDao`).
+- Server-Antworten werden nur übernommen, wenn die lokale Zeile nicht neuer und `dirty` ist (`keepsLocalChange`).
+- `ReceiptDao.upsertReceipt(s)` ist `@Upsert`, nie `REPLACE` (CASCADE auf Positionen).
 - Schnittstelle, Felder und Regeln: `.claude/phasen/phase-3-daten/server-vertrag.md`.
 
 ---

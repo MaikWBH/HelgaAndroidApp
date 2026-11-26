@@ -194,3 +194,7 @@ _Weitere Aufgaben nach dem Interview._
 ## Phase 6 (Code-Review Phasen 1–5)
 
 - Review-Bericht mit Befunden je Block: [review-bericht](../../phasen/phase-6-daten/review-bericht.md). Behoben: V11 (Bon-Foto-I/O im Event-Loop über `asyncio.to_thread`) und V4 (SSRF-Schutz sperrt alles nicht global Routbare, u. a. 100.64.0.0/10). Offene Entscheidungen zum Bon-Protokoll (z. B. `server_seq` bei Parse-Status, Eingabe-Limits der Bon-Modelle) stehen im Bericht.
+
+## Phase 7 (Fixes aus dem Testlauf)
+
+- Phase 7 umgesetzt (Stufe B, Gerätetests offen): F3 („Letzter Sync" zeigt die echte Uhrzeit statt des Server-Zählers); Bon-Protokoll mit Lost-Update-Schutz (`keepsLocalChange`), abgelehnten Pushes und `@Upsert` statt `REPLACE`; siehe [phase-7](../../phasen/phase-7-fixes-und-markdown-import.md).

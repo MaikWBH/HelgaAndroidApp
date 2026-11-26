@@ -558,7 +558,7 @@ Freitext
   Akzeptanz: Dateien vorhanden; `V` grün. **Danach Block C pushen.**
 
 ### Block E — Abschluss
-- [ ] **S35 Doku, Status, Guidelines** — Dateien: `.claude/phasen/README.md` (Phase 7 Status „umgesetzt (Stufe B;
+- [x] **S35 Doku, Status, Guidelines** — Dateien: `.claude/phasen/README.md` (Phase 7 Status „umgesetzt (Stufe B;
   Gerätetests offen)"), `.claude/features/README.md` (Zeile Rezepte: Aufgaben-Zähler +1 erledigt; „Stand" auf das Datum),
   `.claude/features/bons-kosten/plan.md` und `.claude/features/sync/plan.md` (je Abschnitt „Phase 7" mit einer Zeile:
   F13/F11/F12 bzw. F3 und Bon-Protokoll), `.claude/guidelines/sync-patterns.md` (Abschnitt „Server-Archiv": zwei Zeilen

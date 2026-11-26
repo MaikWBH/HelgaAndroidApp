@@ -177,3 +177,7 @@ _Weitere Aufgaben nach dem Interview._
 ## Phase 6 (Code-Review Phasen 1–5)
 
 - Review-Bericht mit Befunden je Block: [review-bericht](../../phasen/phase-6-daten/review-bericht.md). Behoben: V1 (`!!` in `SpendingBarChart`/`AisleKeywordMatcher`, per `KotlinQualityRulesTest` gesperrt) und V2 (Bon und Positionen nur noch atomar über `@Transaction`-Methoden im `ReceiptDao`). Offen für Ihre Entscheidung: u. a. V3 (Foto-Race), der Verdacht auf Löschen der Positionen durch `REPLACE` mit `CASCADE`, Lexikon-Löschen ohne Bestätigung.
+
+## Phase 7 (Fixes aus dem Testlauf)
+
+- Phase 7 umgesetzt (Stufe B, Gerätetests offen): F13 (vorläufiger Bon behält On-Device-Daten, Server und App), F11 (Suche nach älteren Bons bis 12 Monate), F12 (Dezimaleingabe mit Fehlermeldung statt stiller 0,00 €), Foto-Race und Pull-Löschschutz im Bon-Protokoll; siehe [phase-7](../../phasen/phase-7-fixes-und-markdown-import.md).

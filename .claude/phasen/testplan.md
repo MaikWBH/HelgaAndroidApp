@@ -108,3 +108,19 @@ Gefunden beim Durchlauf der Abschnitte 1–3. Keine Code-Änderung im Rahmen des
 | F17 | Niedrig | Bon-Liste: der FAB „Scannen“ überdeckt am Listenende den Hinweistext und teils die letzte Zeile | Screenshots der Bon-Liste | neu, Optik |
 | F18 | Niedrig | Server: `PUT /api/receipts/{id}` akzeptiert IDs, die `/scan` und `/{id}/image` ablehnen (Regex 36 Zeichen Hex und Bindestrich) | Testlauf mit ID „testbon-lidl-0524“ | Server, Beifang |
 
+## 8 · Nachtest Phase 7
+Auf dem Gerät nach dem Rollout (Server zuerst, dann App). Ergebnisse in die letzte Spalte eintragen (✅ / ❌ + Kurzbeschreibung).
+| Nr | Prüfung | Erwartung | Ergebnis |
+|----|---------|-----------|----------|
+| 1 | Rollout: `make backup`, Server zuerst, dann App (Debug `com.helga.android.debug` neben der echten App) | Server startet, App verbindet | |
+| 2 | Galerie-Scan ohne KI (`AI_API_KEY=`) (4.2, 4.9) | Bon behält Markt, Positionen, Summe; nach Sync am Server ebenfalls | |
+| 3 | Drehen mit Budget-Dialog, Wochenplan-Notiz, Rezept-Notiz, QuickEmoji-/Marker-Dialog, Einkaufs-Bearbeiten (3.13) | Text bleibt erhalten | |
+| 4 | Gang ziehen und dabei drehen (5.6) | keine Zeile bleibt „gezogen" stehen | |
+| 5 | Bon-Kopfdialog „1,2,3" und „1.234,56" (4.5) | „1,2,3" → Fehler, Speichern gesperrt; „1.234,56" wird 1.234,56 € | |
+| 6 | Leere Bon-Liste, nur Älteres am Server; offline (4.7) | Knopf da, Snackbar „Nachgeladen aus …"; offline: Fehlermeldung | |
+| 7 | Einstellungen „Letzter Sync" | zeigt die echte Uhrzeit | |
+| 8 | Optik (3.1, 3.9, 5.1): Wochenplan-Symbole (≥ 3 : 1 inaktiv), Orange hell, Chip „Gesamt" einzeilig, X-Achse „12/25", FAB-Überdeckung (Notiz-Editor, Bon-Listenende), Label „Vorb." | alles lesbar, nichts überdeckt | |
+| 9 | Rezeptliste/-detail Dauer | „30 Min" statt „PT30M" | |
+| 10 | Kaltstart Android 16 (3.4) | kein 16-KB-Dialog; sonst: welche Bibliotheken nennt er? | |
+| 11 | Markdown-Import: FAB → „Markdown importieren" → Zwischenablage enthält die Vorlage → in Gemini mit Wunsch „zwei vegetarische Abendessen" → Antwort einfügen → Vorschau → Speichern | beide in der Liste; am Server (`GET /api/sync?since=0`) vorhanden. Fehlerfälle: Text ohne Titel, leere Eingabe, 51 Rezepte, vorhandener Name (abgewählt) | |
+| 12 | Server: `/docs`, `/openapi.json`; `PUT /api/receipts/testbon-lidl-0524`; `PUT …/a.b` | 404; 200; 400 | |
