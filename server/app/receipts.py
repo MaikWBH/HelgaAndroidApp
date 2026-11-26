@@ -380,6 +380,9 @@ def _item_payloads(parsed_items: list[dict]) -> list[dict]:
 
 
 async def _set_parse_state(db, receipt_id: str, **columns) -> None:
+    # Jeder Statuswechsel ist ein Schreibvorgang am Bon: server_seq stempeln, damit andere Geräte ihn per
+    # since_seq sehen (Phase 7, B3-P1).
+    columns = {**columns, "server_seq": await next_seq(db)}
     names = ", ".join(f"{name} = ?" for name in columns)
     await db.execute(f"UPDATE receipts SET {names} WHERE id = ?", [*columns.values(), receipt_id])
 
@@ -446,9 +449,10 @@ async def mark_failed_attempt(db, receipt_id: str, image_name: str, shopping_lis
                        "purchase_date": captured_at or now, "status": "provisional",
                        "source": "", "updated_at": stamp, "items": []}
         await put_receipt(db, payload)
-    attempts = await _attempts(db, receipt_id)
-    await _set_parse_state(db, receipt_id, image_path=image_name, parse_status="queued",
-                           parse_attempts=attempts + 1, parse_claimed_at=0)
+    attempts = await _attempts(db, receipt_id) + 1
+    await _set_parse_state(db, receipt_id, image_path=image_name,
+                           parse_status="failed" if attempts >= MAX_PARSE_ATTEMPTS else "queued",
+                           parse_attempts=attempts, parse_claimed_at=0)
     return await get_receipt(db, receipt_id, include_deleted=True)
 
 
@@ -514,8 +518,9 @@ async def reparse(db_factory, receipt_id: str) -> tuple[bool, dict]:
             receipt = await apply_parse(db, receipt_id, parsed, "", 0, image_name)
             await db.commit()
             return True, receipt
-        await _set_parse_state(db, receipt_id, parse_status="queued", parse_claimed_at=0,
-                               parse_attempts=await _attempts(db, receipt_id) + 1)
+        attempts = await _attempts(db, receipt_id) + 1
+        await _set_parse_state(db, receipt_id, parse_claimed_at=0, parse_attempts=attempts,
+                               parse_status="failed" if attempts >= MAX_PARSE_ATTEMPTS else "queued")
         receipt = await get_receipt(db, receipt_id, include_deleted=True)
         await db.commit()
         return False, receipt

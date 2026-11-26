@@ -119,3 +119,24 @@ def test_reparse_failure_keeps_values_and_queues(client, monkeypatch):
     assert after["parse_status"] == "queued"
     assert after["store_name"] == before["store_name"]
     assert [i["name"] for i in after["items"]] == [i["name"] for i in before["items"]]
+
+
+def test_parse_state_change_bumps_server_seq(client, db_path, monkeypatch):
+    FakeAi(monkeypatch)
+    scan(client)
+    before = sql(db_path, "SELECT server_seq FROM receipts WHERE id = ?", (RID,))[0][0]
+    assert run(receipts.process_parse_queue()) == 0  # zweiter Fehlversuch ändert parse_attempts
+    after = sql(db_path, "SELECT server_seq FROM receipts WHERE id = ?", (RID,))[0][0]
+    assert after > before
+    listed = client.get("/api/receipts", params={"since_seq": before}).json()
+    ids = [r["id"] for r in (listed["receipts"] if isinstance(listed, dict) else listed)]
+    assert RID in ids
+
+
+def test_reparse_marks_failed_after_max_attempts(client, monkeypatch):
+    FakeAi(monkeypatch)
+    scan(client)
+    for _ in range(5):
+        r = client.post(f"/api/receipts/{RID}/reparse")
+        assert r.status_code == 200
+    assert client.get(f"/api/receipts/{RID}").json()["parse_status"] == "failed"

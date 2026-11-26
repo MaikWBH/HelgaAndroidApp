@@ -142,7 +142,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   einer Position → Antwort `applied == True` und die Position steht im Bon) und
   `test_preliminary_uses_captured_at_as_updated_at` (KI-Fehler mit `preliminary` → `updated_at == CAPTURED`,
   Positionen aus `preliminary`). Akzeptanz: `VS` grün, 182 Tests.
-- [ ] **S2 Server: Parse-Status sichtbar und begrenzt (B3-P1, B3-P2)** — Dateien: `$SA/receipts.py`,
+- [x] **S2 Server: Parse-Status sichtbar und begrenzt (B3-P1, B3-P2)** — Dateien: `$SA/receipts.py`,
   `$ST/test_receipt_queue.py`. `_set_parse_state`: zuerst `seq = await next_seq(db)`, dann `server_seq = ?` zusätzlich
   setzen (`columns = {**columns, "server_seq": seq}`). In `reparse` (Misserfolg) und `mark_failed_attempt` den Status wie
   in `process_parse_queue` bilden: `attempts = await _attempts(db, receipt_id) + 1`,
