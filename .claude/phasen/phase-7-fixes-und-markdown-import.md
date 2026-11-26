@@ -436,7 +436,7 @@ Freitext
   `code_zaun_bom_und_crlf_werden_entfernt`, `trennlinien_und_neue_h1_teilen_rezepte` (`---`, `***`, `___`, zweite `# `),
   `fehlender_titel_ist_blockfehler_andere_bloecke_bleiben`, `titel_und_beschreibung_aus_fliesstext_und_zitat`.
   Akzeptanz: `V` grün; `TC` = 326.
-- [ ] **S28 Parser b: Schlüsselzeilen, Dauer, Vokabular, Nährwerte** — Dateien: `$B/data/util/RecipeMarkdownParser.kt`,
+- [x] **S28 Parser b: Schlüsselzeilen, Dauer, Vokabular, Nährwerte** — Dateien: `$B/data/util/RecipeMarkdownParser.kt`,
   `$T/RecipeMarkdownParserTest.kt`. Schlüsselzeile: `^\s*(?:[-*+]\s+)?\**\s*([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß .]*?)\s*\**\s*:\s*\**\s*(.+?)\s*$`,
   Schlüssel klein, getrimmt; nur bekannte Schlüssel zählen, sonst bleibt die Zeile Beschreibung. Erkannt im Kopfbereich
   und in Abschnitten `infos`/`informationen`/`details`/`eckdaten`. Schlüssel → Feld: `portionen|portion|personen` →

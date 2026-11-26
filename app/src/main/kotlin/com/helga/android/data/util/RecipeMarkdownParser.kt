@@ -67,6 +67,45 @@ object RecipeMarkdownParser {
     private val headingSection = Regex("""^#{2,3}\s+(.+)$""")
     private val boldSection = Regex("""^\*\*(.+?):?\*\*:?\s*$""")
 
+    private val keyLine = Regex(
+        """^\s*(?:[-*+]\s+)?\**\s*([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß .]*?)\s*\**\s*:\s*\**\s*(.+?)\s*$""",
+    )
+    private val number = """(\d+(?:[.,]\d+)?)"""
+    private val kcalRegex = Regex("""$number\s*kcal""", RegexOption.IGNORE_CASE)
+    private val proteinRegex = Regex("""$number\s*g\s*(?:eiweiß|eiweiss|protein)""", RegexOption.IGNORE_CASE)
+    private val fatRegex = Regex("""$number\s*g\s*fett""", RegexOption.IGNORE_CASE)
+    private val carbsRegex = Regex("""$number\s*g\s*(?:kohlenhydrate|kh)""", RegexOption.IGNORE_CASE)
+    private const val MAX_TAGS = 20
+
+    private val cuisines = setOf(
+        "deutsch", "italienisch", "asiatisch", "mexikanisch", "französisch", "mediterran",
+        "orientalisch", "amerikanisch", "indisch", "sonstige",
+    )
+    private val mealSlots = mapOf(
+        "frühstück" to MealSlots.BREAKFAST, "fruehstueck" to MealSlots.BREAKFAST, "breakfast" to MealSlots.BREAKFAST,
+        "mittag" to MealSlots.LUNCH, "mittagessen" to MealSlots.LUNCH, "lunch" to MealSlots.LUNCH,
+        "abend" to MealSlots.DINNER, "abendessen" to MealSlots.DINNER, "abendbrot" to MealSlots.DINNER,
+        "dinner" to MealSlots.DINNER,
+        "snack" to MealSlots.SNACK, "zwischenmahlzeit" to MealSlots.SNACK,
+    )
+    private val efforts = mapOf(
+        "schnell" to "schnell", "einfach" to "schnell",
+        "mittel" to "mittel", "mittelschwer" to "mittel",
+        "aufwendig" to "aufwendig", "aufwändig" to "aufwendig", "schwer" to "aufwendig",
+    )
+    private val proteinTypes = setOf("fleisch", "fisch", "vegetarisch", "vegan")
+    private val seasons = mapOf(
+        "winter" to "winter", "sommer" to "sommer",
+        "ganzjährig" to "ganzjährig", "ganzjaehrig" to "ganzjährig", "ganzes jahr" to "ganzjährig",
+    )
+    private val servingKeys = setOf("portionen", "portion", "personen")
+    private val prepKeys = setOf("vorbereitung", "vorbereitungszeit", "zubereitungszeit")
+    private val cookKeys = setOf("kochzeit", "garzeit", "backzeit")
+    private val totalKeys = setOf("gesamtzeit", "gesamt", "dauer")
+    private val tagKeys = setOf("tags", "schlagwörter", "stichwörter")
+    private val nutritionKeys = setOf("nährwerte", "naehrwerte", "nährwerte pro portion", "naehrwerte pro portion")
+    private val noteKeys = setOf("notizen", "notiz", "tipp", "tipps")
+
     private val sectionNames = setOf(
         "zutaten", "zutatenliste", "ingredients",
         "zubereitung", "schritte", "anleitung", "zubereitungsschritte", "instructions",
@@ -157,10 +196,91 @@ object RecipeMarkdownParser {
     private fun parseBlock(index: Int, title: Pair<Int, String>, lines: List<String>): ParsedRecipe {
         val (titleAt, name) = title
         val head = lines.drop(titleAt + 1).takeWhile { !isSectionStart(it) }
-        val description = head
-            .map { it.trim().removePrefix(">").trim() }
+        var recipe = ParsedRecipe(blockIndex = index, name = name)
+        val description = mutableListOf<String>()
+        for (line in head) {
+            val applied = applyKeyLine(recipe, line)
+            if (applied != null) {
+                recipe = applied
+            } else {
+                val text = line.trim().removePrefix(">").trim()
+                if (text.isNotEmpty()) description += text
+            }
+        }
+        return recipe.copy(description = description.joinToString("\n"))
+    }
+
+    /** Wendet eine Schlüsselzeile an; `null`, wenn die Zeile keine Schlüsselzeile mit bekanntem Schlüssel ist. */
+    private fun applyKeyLine(recipe: ParsedRecipe, line: String): ParsedRecipe? {
+        val match = keyLine.matchEntire(line) ?: return null
+        val key = match.groupValues[1].trim().lowercase()
+        val value = match.groupValues[2].trim().trim('*').trim()
+        if (value.isEmpty()) return null
+        return applyKey(recipe, key, value)
+    }
+
+    private fun applyKey(recipe: ParsedRecipe, key: String, value: String): ParsedRecipe? {
+        val lower = value.lowercase()
+        return when (key) {
+            in servingKeys ->
+                if (value.any { it.isDigit() }) {
+                    recipe.copy(recipeYield = value)
+                } else {
+                    recipe.warn(MarkdownWarningCode.INVALID_SERVINGS, value)
+                }
+            in prepKeys -> withDuration(recipe, value) { r, iso -> r.copy(prepTime = iso) }
+            in cookKeys -> withDuration(recipe, value) { r, iso -> r.copy(cookTime = iso) }
+            in totalKeys -> withDuration(recipe, value) { r, iso -> r.copy(totalTime = iso) }
+            "küche", "kueche" -> recipe.copy(cuisine = if (lower in cuisines) lower else "sonstige")
+            "mahlzeit", "slot" -> mealSlots[lower]?.let { recipe.copy(mealSlot = it) }
+                ?: recipe.copy(mealSlot = MealSlots.OTHER).warn(MarkdownWarningCode.UNKNOWN_VALUE, value)
+            "aufwand", "schwierigkeit" -> efforts[lower]?.let { recipe.copy(effort = it) }
+                ?: recipe.copy(effort = "").warn(MarkdownWarningCode.UNKNOWN_VALUE, value)
+            "eiweiß", "eiweiss", "protein", "proteinquelle" ->
+                if (lower in proteinTypes) {
+                    recipe.copy(proteinType = lower)
+                } else {
+                    recipe.copy(proteinType = "").warn(MarkdownWarningCode.UNKNOWN_VALUE, value)
+                }
+            "saison" -> seasons[lower]?.let { recipe.copy(seasonFit = it) }
+                ?: recipe.copy(seasonFit = "").warn(MarkdownWarningCode.UNKNOWN_VALUE, value)
+            in tagKeys -> recipe.copy(tags = parseTags(value))
+            in nutritionKeys -> applyNutrition(recipe, value)
+            in noteKeys -> recipe.copy(notes = listOf(recipe.notes, value).filter { it.isNotEmpty() }.joinToString("\n"))
+            else -> null
+        }
+    }
+
+    private fun ParsedRecipe.warn(code: MarkdownWarningCode, detail: String = ""): ParsedRecipe =
+        copy(warnings = warnings + MarkdownWarning(code, detail))
+
+    private fun withDuration(recipe: ParsedRecipe, value: String, set: (ParsedRecipe, String) -> ParsedRecipe): ParsedRecipe {
+        val minutes = RecipeDuration.parseMinutes(value)
+        return if (minutes == null) {
+            recipe.warn(MarkdownWarningCode.INVALID_DURATION, value)
+        } else {
+            set(recipe, RecipeDuration.toIso(minutes))
+        }
+    }
+
+    private fun parseTags(value: String): List<String> =
+        value.split(',', ';')
+            .map { it.trim().trimStart('#').trim() }
             .filter { it.isNotEmpty() }
-            .joinToString("\n")
-        return ParsedRecipe(blockIndex = index, name = name, description = description)
+            .distinctBy { it.lowercase() }
+            .take(MAX_TAGS)
+
+    private fun applyNutrition(recipe: ParsedRecipe, value: String): ParsedRecipe {
+        fun find(regex: Regex): Double? =
+            regex.find(value)?.groupValues?.get(1)?.replace(',', '.')?.toDoubleOrNull()
+        val kcal = find(kcalRegex)
+        val protein = find(proteinRegex)
+        val fat = find(fatRegex)
+        val carbs = find(carbsRegex)
+        return if (kcal != null && protein != null && fat != null && carbs != null) {
+            recipe.copy(nutrition = NutritionPerPortion(kcal, protein, fat, carbs))
+        } else {
+            recipe.copy(nutrition = null).warn(MarkdownWarningCode.NUTRITION_INCOMPLETE)
+        }
     }
 }

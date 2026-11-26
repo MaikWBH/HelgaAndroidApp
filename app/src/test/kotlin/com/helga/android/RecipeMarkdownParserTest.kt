@@ -1,7 +1,10 @@
 package com.helga.android
 
+import com.helga.android.data.model.MealSlots
 import com.helga.android.data.util.MarkdownErrorCode
 import com.helga.android.data.util.MarkdownFatal
+import com.helga.android.data.util.MarkdownWarningCode
+import com.helga.android.data.util.ParsedRecipe
 import com.helga.android.data.util.RecipeMarkdownParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -82,5 +85,98 @@ class RecipeMarkdownParserTest {
         assertEquals("Pfannkuchen", fallback.name)
         val long = RecipeMarkdownParser.parse("# " + "a".repeat(300)).recipes.single()
         assertEquals(200, long.name.length)
+    }
+
+    private fun parseOne(head: String): ParsedRecipe =
+        RecipeMarkdownParser.parse(recipe("Test", head)).recipes.single()
+
+    @Test
+    fun schluesselzeilen_in_drei_schreibweisen() {
+        val parsed = parseOne("- Portionen: 4\n**Küche:** italienisch\n* Tags: A\nAufwand: schnell\n**Saison**: winter")
+        assertEquals("4", parsed.recipeYield)
+        assertEquals("italienisch", parsed.cuisine)
+        assertEquals(listOf("A"), parsed.tags)
+        assertEquals("schnell", parsed.effort)
+        assertEquals("winter", parsed.seasonFit)
+        assertEquals("", parsed.description)
+        val unknown = parseOne("Schnell: und lecker\n- Farbe: rot")
+        assertEquals("Schnell: und lecker\n- Farbe: rot", unknown.description)
+    }
+
+    @Test
+    fun dauern_werden_iso() {
+        val parsed = parseOne("- Vorbereitung: 15 Min\n- Kochzeit: 1,5 h\n- Gesamtzeit: PT2H")
+        assertEquals("PT15M", parsed.prepTime)
+        assertEquals("PT1H30M", parsed.cookTime)
+        assertEquals("PT2H", parsed.totalTime)
+        assertEquals("PT1H30M", parseOne("- Garzeit: 1 Std 30 Min").cookTime)
+    }
+
+    @Test
+    fun ungueltige_dauer_ergibt_warnung() {
+        val parsed = parseOne("- Vorbereitung: bald\n- Portionen: viele")
+        assertEquals("", parsed.prepTime)
+        assertEquals("", parsed.recipeYield)
+        assertEquals(
+            listOf(MarkdownWarningCode.INVALID_DURATION, MarkdownWarningCode.INVALID_SERVINGS),
+            parsed.warnings.map { it.code },
+        )
+        assertEquals("bald", parsed.warnings[0].detail)
+    }
+
+    @Test
+    fun kueche_ausserhalb_des_vokabulars_wird_sonstige() {
+        val parsed = parseOne("- Küche: Italienisch\n")
+        assertEquals("italienisch", parsed.cuisine)
+        val other = parseOne("- Küche: Marsianisch")
+        assertEquals("sonstige", other.cuisine)
+        assertTrue(other.warnings.isEmpty())
+    }
+
+    @Test
+    fun mahlzeit_deutsch_wird_slot() {
+        val expected = mapOf(
+            "Frühstück" to MealSlots.BREAKFAST, "Mittagessen" to MealSlots.LUNCH, "Abendessen" to MealSlots.DINNER,
+            "Abendbrot" to MealSlots.DINNER, "Snack" to MealSlots.SNACK,
+        )
+        expected.forEach { (word, slot) -> assertEquals(word, slot, parseOne("- Mahlzeit: $word").mealSlot) }
+        val unknown = parseOne("- Mahlzeit: Brunch")
+        assertEquals(MealSlots.OTHER, unknown.mealSlot)
+        assertEquals(MarkdownWarningCode.UNKNOWN_VALUE, unknown.warnings.single().code)
+    }
+
+    @Test
+    fun aufwand_eiweiss_saison_vokabular_und_synonyme() {
+        val parsed = parseOne("- Schwierigkeit: einfach\n- Proteinquelle: Fisch\n- Saison: ganzes Jahr")
+        assertEquals("schnell", parsed.effort)
+        assertEquals("fisch", parsed.proteinType)
+        assertEquals("ganzjährig", parsed.seasonFit)
+        assertEquals("aufwendig", parseOne("- Aufwand: aufwändig").effort)
+        val bad = parseOne("- Aufwand: hart\n- Eiweiß: Tofu\n- Saison: Herbst")
+        assertEquals("", bad.effort)
+        assertEquals("", bad.proteinType)
+        assertEquals("", bad.seasonFit)
+        assertEquals(3, bad.warnings.count { it.code == MarkdownWarningCode.UNKNOWN_VALUE })
+    }
+
+    @Test
+    fun tags_komma_semikolon_ohne_dubletten() {
+        val parsed = parseOne("- Tags: #Pasta, schnell; Pasta ,, #Vegetarisch")
+        assertEquals(listOf("Pasta", "schnell", "Vegetarisch"), parsed.tags)
+        val many = parseOne("- Tags: " + (1..30).joinToString(",") { "t$it" })
+        assertEquals(20, many.tags.size)
+    }
+
+    @Test
+    fun naehrwerte_vollstaendig_und_unvollstaendig() {
+        val full = parseOne("- Nährwerte pro Portion: 520 kcal, 15,5 g Eiweiß, 18 g Fett, 72 g Kohlenhydrate")
+        val n = requireNotNull(full.nutrition)
+        assertEquals(520.0, n.kcal, 0.0)
+        assertEquals(15.5, n.protein, 0.0)
+        assertEquals(18.0, n.fat, 0.0)
+        assertEquals(72.0, n.carbs, 0.0)
+        val partial = parseOne("- Nährwerte: 520 kcal, 15 g Eiweiß")
+        assertNull(partial.nutrition)
+        assertEquals(MarkdownWarningCode.NUTRITION_INCOMPLETE, partial.warnings.single().code)
     }
 }
