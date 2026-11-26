@@ -223,7 +223,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   (`modified = nowMs - 1_000` → leer). Akzeptanz: `V` grün; `TC` = 295. **Danach Block B1 pushen.**
 
 ### Block B2 — Drehen (F1, F2, F10, B6-S4)
-- [ ] **S8 Eingaben aus dem Testlauf drehfest (F1, F2, F10)** — Dateien: `$B/ui/receipts/CostOverviewScreen.kt`,
+- [x] **S8 Eingaben aus dem Testlauf drehfest (F1, F2, F10)** — Dateien: `$B/ui/receipts/CostOverviewScreen.kt`,
   `$B/ui/weekplan/WeekplanScreen.kt`, `$B/ui/recipes/RecipeDetailScreen.kt`. `text`/`warnThreshold` (BudgetEditDialog)
   → `rememberSaveable { mutableStateOf(…) }`; `noteText` → `rememberSaveable(day.id) { mutableStateOf(day.note) }`
   (`DisposableEffect`/`onDone` bleiben); `draft` → `rememberSaveable(notes) { mutableStateOf(notes) }`. Imports

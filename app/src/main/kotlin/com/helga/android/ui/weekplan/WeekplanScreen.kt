@@ -655,7 +655,7 @@ private fun DayCard(
                     Spacer(Modifier.height(4.dp))
                 }
 
-                var noteText by remember(day.id) { mutableStateOf(day.note) }
+                var noteText by rememberSaveable(day.id) { mutableStateOf(day.note) }
 
                 DisposableEffect(day.id) {
                     onDispose { onNoteChange(noteText) }

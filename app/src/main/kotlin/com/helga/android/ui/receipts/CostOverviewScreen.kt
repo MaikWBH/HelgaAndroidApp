@@ -482,8 +482,8 @@ private fun BudgetEditDialog(
         currentAmount % 1.0 == 0.0 -> currentAmount.toLong().toString()
         else -> currentAmount.toString()
     }
-    var text by remember { mutableStateOf(initial) }
-    var warnThreshold by remember { mutableStateOf(currentWarnThreshold.toFloat()) }
+    var text by rememberSaveable { mutableStateOf(initial) }
+    var warnThreshold by rememberSaveable { mutableStateOf(currentWarnThreshold.toFloat()) }
     val parsed = text.replace(',', '.').toDoubleOrNull()
     val valid = text.isBlank() || (parsed != null && parsed >= 0.0)
 

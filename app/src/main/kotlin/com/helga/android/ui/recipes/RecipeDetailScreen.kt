@@ -700,7 +700,7 @@ private fun DescriptionSection(description: String) {
 @Composable
 private fun PersonalNotesSection(notes: String, onSave: (String) -> Unit) {
     var editing by rememberSaveable { mutableStateOf(false) }
-    var draft by remember(notes) { mutableStateOf(notes) }
+    var draft by rememberSaveable(notes) { mutableStateOf(notes) }
 
     Column(
         modifier = Modifier
