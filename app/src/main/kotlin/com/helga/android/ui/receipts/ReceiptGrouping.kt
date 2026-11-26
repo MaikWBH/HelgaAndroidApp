@@ -9,7 +9,7 @@ enum class ReceiptStatusKind { PROVISIONAL, REVIEW, FAILED }
 
 /** `failed` hat Vorrang vor `provisional`, dieser vor `review`; fertige Bons haben keinen Chip. */
 fun receiptStatusKind(receipt: ReceiptEntity): ReceiptStatusKind? = when {
-    receipt.parseStatus == "failed" -> ReceiptStatusKind.FAILED
+    receipt.parseStatus == "failed" || receipt.parseStatus == "rejected" -> ReceiptStatusKind.FAILED
     receipt.status == "provisional" -> ReceiptStatusKind.PROVISIONAL
     receipt.status == "review" -> ReceiptStatusKind.REVIEW
     else -> null

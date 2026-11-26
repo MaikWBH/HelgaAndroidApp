@@ -18,6 +18,11 @@ class ReceiptGroupingTest {
         ReceiptEntity(id = id, purchaseDay = day, purchaseDate = date, status = status, parseStatus = parse)
 
     @Test
+    fun `rejected push counts as failed`() {
+        assertEquals(ReceiptStatusKind.FAILED, receiptStatusKind(receipt("a", parse = "rejected")))
+    }
+
+    @Test
     fun `month key prefers the printed day and falls back to the timestamp`() {
         assertEquals("2026-11", receiptMonthKey(receipt("a", day = "2026-11-30"), utc))
         assertEquals("2026-11", receiptMonthKey(receipt("b", date = 1_794_268_800_000L), utc))

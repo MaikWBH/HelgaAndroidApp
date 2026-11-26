@@ -130,6 +130,28 @@ class ReceiptSyncerTest {
     }
 
     @Test
+    fun `pull keeps pending uploads even when the server deleted them`() = runTest {
+        coEvery { dao.findById("p") } returns ReceiptEntity(id = "p", pendingUpload = 1, updatedAt = 1)
+        coEvery { api.listReceipts(any(), any(), any(), any()) } returns response(remote("p", deleted = 1))
+        assertEquals(0, syncer.pull(today))
+        coVerify(exactly = 0) { dao.hardDeleteReceiptWithItems(any()) }
+    }
+
+    @Test
+    fun `pushDirty marks rejected receipts and stops retrying`() = runTest {
+        coEvery { dao.dirtyReceiptsForPush() } returns listOf(ReceiptEntity(id = "a", dirty = 1, updatedAt = 10))
+        coEvery { dao.itemsForReceipt("a") } returns emptyList()
+        val body = okhttp3.ResponseBody.create(null, "")
+        coEvery { api.putReceipt("a", any()) } throws retrofit2.HttpException(retrofit2.Response.error<Any>(422, body))
+        assertEquals(0, syncer.pushDirty())
+        coVerify { dao.markPushRejected("a") }
+
+        coEvery { api.putReceipt("a", any()) } throws retrofit2.HttpException(retrofit2.Response.error<Any>(401, body))
+        syncer.pushDirty()
+        coVerify(exactly = 1) { dao.markPushRejected(any()) }
+    }
+
+    @Test
     fun `pushDirty keeps a local change made during the call`() = runTest {
         val receipt = ReceiptEntity(id = "a", dirty = 1, updatedAt = 10, storeName = "REWE")
         coEvery { dao.dirtyReceiptsForPush() } returns listOf(receipt)

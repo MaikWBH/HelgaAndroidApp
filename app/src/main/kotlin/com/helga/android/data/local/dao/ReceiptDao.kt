@@ -67,6 +67,10 @@ interface ReceiptDao {
     @Query("DELETE FROM receipt_items WHERE receiptId = :receiptId")
     suspend fun hardDeleteItemsOf(receiptId: String)
 
+    /** Server hat den Bon dauerhaft abgelehnt (HTTP 400/413/422): nicht mehr senden, als Fehler anzeigen. */
+    @Query("UPDATE receipts SET dirty = 0, parseStatus = 'rejected' WHERE id = :id")
+    suspend fun markPushRejected(id: String)
+
     /** Bon und Positionen in einem Schritt schreiben (Repository, Scan). */
     @Transaction
     suspend fun upsertReceiptWithItems(receipt: ReceiptEntity, items: List<ReceiptItemEntity>) {

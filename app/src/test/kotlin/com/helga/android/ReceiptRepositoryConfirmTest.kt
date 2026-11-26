@@ -75,10 +75,12 @@ class ReceiptRepositoryConfirmTest {
     }
 
     @Test
-    fun `deleteReceipt hard deletes provisional receipts that never reached the server`() = runTest {
+    fun `deleteReceipt soft deletes provisional receipts that reached the server`() = runTest {
         coEvery { dao.findById("r1") } returns ReceiptEntity(id = "r1", status = "provisional", imagePath = "")
+        coEvery { dao.itemsForReceipt("r1") } returns emptyList()
         repo.deleteReceipt("r1")
-        coVerify { dao.hardDeleteReceiptWithItems("r1") }
+        coVerify { dao.upsertReceiptWithItems(match { it.deleted == 1 && it.dirty == 1 }, any()) }
+        coVerify(exactly = 0) { dao.hardDeleteReceiptWithItems(any()) }
     }
 
     @Test

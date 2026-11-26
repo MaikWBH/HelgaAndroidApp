@@ -54,7 +54,12 @@ class ReceiptSyncer @Inject constructor(
                 count++
             } catch (e: HttpException) {
                 if (e.code() !in 400..499) throw e
-                Timber.w(e, "Bon %s vom Server abgelehnt (HTTP %d) — bleibt lokal", receipt.id, e.code())
+                if (e.code() in REJECTED_CODES) {
+                    receiptDao.markPushRejected(receipt.id)
+                    Timber.w(e, "Bon %s vom Server abgelehnt (HTTP %d) — nicht erneut gesendet", receipt.id, e.code())
+                } else {
+                    Timber.w(e, "Bon %s vom Server abgelehnt (HTTP %d) — bleibt lokal", receipt.id, e.code())
+                }
             }
         }
         return count
@@ -76,7 +81,8 @@ class ReceiptSyncer @Inject constructor(
             val local = receiptDao.findById(remote.id)
             val localWins = local != null && local.dirty == 1 && local.updatedAt >= remote.updatedAt
             if (remote.deleted == 1) {
-                if (!localWins) {
+                // Bons mit wartendem Foto-Upload bleiben (B2-S2, Phase 7).
+                if (!localWins && local?.pendingUpload != 1) {
                     receiptDao.hardDeleteReceiptWithItems(remote.id)
                     changed++
                 }
@@ -150,5 +156,10 @@ class ReceiptSyncer @Inject constructor(
         val entity = remote.toEntity(local).let { if (cachedUntil != null) it.copy(cachedUntil = cachedUntil) else it }
         val items = remote.items.map { it.copy(receiptId = remote.id).toEntity() }
         receiptDao.replaceWithServerState(entity, items)
+    }
+
+    private companion object {
+        /** Der Server lehnt den Bon dauerhaft ab: nicht endlos neu senden (Phase 7, B2-P4). */
+        val REJECTED_CODES = setOf(400, 413, 422)
     }
 }

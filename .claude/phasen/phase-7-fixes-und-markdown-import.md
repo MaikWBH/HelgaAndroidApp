@@ -193,7 +193,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   Rückgabe 1) und `` `parsed answer does not overwrite a newer local change` `` (Uploader, `findById` liefert `dirty=1,
   updatedAt=999`, Antwort geparst mit `updatedAt=0` → `clearPendingUpload("p", "receipt_p.jpg")`, kein
   `replaceWithServerState`). Akzeptanz: `V` grün; `TC` = 291.
-- [ ] **S6 Löschen, „nie hochgeladen", abgelehnte Bons (B2-S2, B2-S3, B2-P4)** — Dateien: `$B/data/receipts/ReceiptSyncer.kt`,
+- [x] **S6 Löschen, „nie hochgeladen", abgelehnte Bons (B2-S2, B2-S3, B2-P4)** — Dateien: `$B/data/receipts/ReceiptSyncer.kt`,
   `$B/data/local/dao/ReceiptDao.kt`, `$B/data/repository/ReceiptRepository.kt`, `$B/ui/receipts/ReceiptGrouping.kt`,
   `$T/ReceiptSyncerTest.kt`, `$T/ReceiptRepositoryConfirmTest.kt`, `$T/ReceiptGroupingTest.kt`.
   (a) `pull`, Zweig `remote.deleted == 1`: Bedingung `if (!localWins && local?.pendingUpload != 1)`.

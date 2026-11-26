@@ -199,8 +199,7 @@ class ReceiptRepository @Inject constructor(
      */
     suspend fun deleteReceipt(receiptId: String) {
         val receipt = receiptDao.findById(receiptId) ?: return
-        val neverOnServer = receipt.pendingUpload == 1 ||
-            (receipt.imagePath.isBlank() && receipt.status == "provisional")
+        val neverOnServer = receipt.pendingUpload == 1
         if (neverOnServer) {
             if (receipt.localImageUri.isNotBlank()) imageStore.delete(receipt.localImageUri)
             receiptDao.hardDeleteReceiptWithItems(receiptId)
