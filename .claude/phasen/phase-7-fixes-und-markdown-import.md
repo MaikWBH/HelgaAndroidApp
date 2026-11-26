@@ -484,7 +484,7 @@ Freitext
   Tags `TagEntity(id = newId(), recipeId = id, name = …)`. Tests (4): `ids_slug_positionen_zeitstempel`,
   `naehrwerte_mal_vier_mit_quelle_ai`, `ohne_naehrwerte_bleiben_felder_leer`, `tags_und_mealslot_werden_uebernommen`.
   Akzeptanz: `V` grün; `TC` = 345.
-- [ ] **S31 KI-Vorlage und Synchron-Test** — Dateien: neu `$R/raw/recipe_md_prompt.txt` (Inhalt **wörtlich** aus Anhang A),
+- [x] **S31 KI-Vorlage und Synchron-Test** — Dateien: neu `$R/raw/recipe_md_prompt.txt` (Inhalt **wörtlich** aus Anhang A),
   neu `$T/RecipePromptSyncTest.kt`. Test (+1) `beispiel_der_vorlage_parst_fehlerfrei`: liest
   `File("src/main/res/raw/recipe_md_prompt.txt")` (UTF-8), nimmt den Text zwischen den Zeilen `=== BEISPIEL ANFANG ===`
   und `=== BEISPIEL ENDE ===`, `RecipeMarkdownParser.parse` → `fatal == null`, `errors` leer, 2 Rezepte, jedes ohne
