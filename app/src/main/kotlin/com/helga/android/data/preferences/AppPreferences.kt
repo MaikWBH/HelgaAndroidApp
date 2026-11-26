@@ -42,6 +42,8 @@ class AppPreferences @Inject constructor(
     }
 
     val lastSyncTs: Flow<Long> = ds.data.map { it[KEY_LAST_SYNC_TS] ?: 0L }
+    /** Uhrzeit (ms) des letzten erfolgreichen Voll-Syncs für die Anzeige; `lastSyncTs` ist der Server-Zähler (Cursor). */
+    val lastSyncAt: Flow<Long> = ds.data.map { it[KEY_LAST_SYNC_AT] ?: 0L }
     val weekplanDays: Flow<Int> = ds.data.map { prefs ->
         val raw = prefs[KEY_WEEKPLAN_DAYS] ?: 7
         if (raw in setOf(7, 10, 14)) raw else 7
@@ -105,6 +107,10 @@ class AppPreferences @Inject constructor(
 
     suspend fun saveLastSyncTs(ts: Long) {
         ds.edit { it[KEY_LAST_SYNC_TS] = ts }
+    }
+
+    suspend fun saveLastSyncAt(ms: Long) {
+        ds.edit { it[KEY_LAST_SYNC_AT] = ms }
     }
 
     /**
@@ -196,6 +202,7 @@ class AppPreferences @Inject constructor(
             it.remove(KEY_SERVER_URL)
             it.remove(KEY_API_KEY)
             it.remove(KEY_LAST_SYNC_TS)
+            it.remove(KEY_LAST_SYNC_AT)
             it.remove(KEY_RECEIPT_SYNC_SEQ)
             it.remove(KEY_RECEIPT_SYNC_FROM_DAY)
             it.remove(KEY_DEFAULT_SHOPPING_LIST_ID)
@@ -209,6 +216,7 @@ class AppPreferences @Inject constructor(
         val KEY_SERVER_URL = stringPreferencesKey("server_url")
         val KEY_API_KEY = stringPreferencesKey("api_key")
         val KEY_LAST_SYNC_TS = longPreferencesKey("last_sync_ts")
+        val KEY_LAST_SYNC_AT = longPreferencesKey("last_sync_at")
         val KEY_SYNC_PROTOCOL = intPreferencesKey("sync_protocol_version")
         val KEY_WEEKPLAN_DAYS = intPreferencesKey("weekplan_days")
         val KEY_SHOPPING_DAY = intPreferencesKey("shopping_day")

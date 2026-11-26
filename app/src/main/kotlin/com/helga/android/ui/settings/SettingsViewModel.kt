@@ -53,7 +53,7 @@ class SettingsViewModel @Inject constructor(
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
 
-    val lastSyncTs: StateFlow<Long> = preferences.lastSyncTs
+    val lastSyncAt: StateFlow<Long> = preferences.lastSyncAt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
 
     val syncError: StateFlow<String?> = syncStatusHolder.status

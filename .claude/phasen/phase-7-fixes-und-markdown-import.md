@@ -293,7 +293,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   je Ergebnis die passende `UiText.Res`-ID. Akzeptanz: `V` grün; `TC` = 309.
 
 ### Block B4 — Sync-Anzeige (F3)
-- [ ] **S14 „Letzter Sync" mit echter Uhrzeit** — Dateien: `$B/data/preferences/AppPreferences.kt`,
+- [x] **S14 „Letzter Sync" mit echter Uhrzeit** — Dateien: `$B/data/preferences/AppPreferences.kt`,
   `$B/data/sync/SyncEngine.kt`, `$B/ui/settings/SettingsViewModel.kt`, `$B/ui/settings/SettingsScreen.kt`,
   `$T/SyncEngineTest.kt`. `KEY_LAST_SYNC_AT = longPreferencesKey("last_sync_at")`, `val lastSyncAt: Flow<Long>` (Standard 0),
   `suspend fun saveLastSyncAt(ms: Long)`, in `clearConnection` entfernen. `SyncEngine.runFullSync` direkt nach

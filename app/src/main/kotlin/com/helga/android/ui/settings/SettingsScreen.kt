@@ -102,7 +102,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val lastSyncTs by viewModel.lastSyncTs.collectAsStateWithLifecycle()
+    val lastSyncAt by viewModel.lastSyncAt.collectAsStateWithLifecycle()
     val syncError by viewModel.syncError.collectAsStateWithLifecycle()
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
     val quickEmojis by viewModel.quickEmojis.collectAsStateWithLifecycle()
@@ -603,7 +603,7 @@ fun SettingsScreen(
                 )
 
                 Text(
-                    text = stringResource(R.string.settings_last_sync, formatTimestamp(lastSyncTs)),
+                    text = stringResource(R.string.settings_last_sync, formatTimestamp(lastSyncAt)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

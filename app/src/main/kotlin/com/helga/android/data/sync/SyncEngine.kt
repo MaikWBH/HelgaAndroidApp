@@ -102,6 +102,7 @@ class SyncEngine @Inject constructor(
 
         val newTs = maxOf(pull.serverTs, pushResponse.serverTs)
         preferences.saveLastSyncTs(newTs)
+        preferences.saveLastSyncAt(System.currentTimeMillis())
 
         return SyncOutcome(
             pulled = pull.recipes.size,

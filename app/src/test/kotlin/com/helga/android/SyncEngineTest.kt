@@ -111,6 +111,17 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `successful sync stores the wall clock time for the settings screen`() = runTest {
+        coEvery { api.pull(any()) } returns SyncPullResponse(serverTs = 17L)
+        coEvery { api.push(any()) } returns SyncPullResponse(serverTs = 17L)
+
+        engine.runFullSync()
+
+        coVerify { preferences.saveLastSyncTs(17L) }
+        coVerify { preferences.saveLastSyncAt(match { it > 1_700_000_000_000L }) }
+    }
+
+    @Test
     fun `server record strictly newer than local is applied`() = runTest {
         coEvery { syncDao.recipeTimestamps() } returns listOf(TimestampRow("r1", 100L))
         coEvery { api.pull(any()) } returns SyncPullResponse(
@@ -172,6 +183,7 @@ class SyncEngineTest {
         // ... aber der Sync-Cursor rückt nicht vor, sonst würde der nächste Versuch denselben
         // Pull-Stand nie wieder anfragen und der fehlgeschlagene Push wäre verloren.
         coVerify(exactly = 0) { preferences.saveLastSyncTs(any()) }
+        coVerify(exactly = 0) { preferences.saveLastSyncAt(any()) }
     }
 
     @Test
