@@ -490,7 +490,7 @@ Freitext
   und `=== BEISPIEL ENDE ===`, `RecipeMarkdownParser.parse` → `fatal == null`, `errors` leer, 2 Rezepte, jedes ohne
   Warnungen, mit `nutrition != null`, mindestens 3 Zutaten und 3 Schritten; Slots `dinner` und `lunch`; letzte
   nicht leere Zeile der Datei ist „Mein Wunsch:". Akzeptanz: `V` grün; `TC` = 346.
-- [ ] **S32 `MarkdownImportViewModel`** — Dateien: neu `$B/ui/recipes/MarkdownImportViewModel.kt`, neu
+- [x] **S32 `MarkdownImportViewModel`** — Dateien: neu `$B/ui/recipes/MarkdownImportViewModel.kt`, neu
   `$T/MarkdownImportViewModelTest.kt`. `@HiltViewModel class MarkdownImportViewModel @Inject constructor(private val
   repository: RecipeRepository, private val aiRepository: AiRepository, private val syncScheduler: SyncScheduler)`.
   ```kotlin
