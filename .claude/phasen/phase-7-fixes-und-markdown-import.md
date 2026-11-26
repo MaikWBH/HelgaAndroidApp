@@ -370,7 +370,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `"a.b"`, `"x" * 65` und `"a%0A"` (je Route alle drei → 400), `test_readable_ids_are_accepted` (PUT und Scan mit
   `"testbon-lidl-0524"` → 200). `test_receipt_scan.py::test_validation` bleibt grün (`"../x"` → 400). Akzeptanz: `VS` grün,
   192 Tests.
-- [ ] **S25 16-KB-Ausrichtung (F6)** — Dateien: `gradle/libs.versions.toml` (`mlkit-text-recognition = "16.0.1"`,
+- [x] **S25 16-KB-Ausrichtung (F6)** — Dateien: `gradle/libs.versions.toml` (`mlkit-text-recognition = "16.0.1"`,
   `camerax = "1.4.2"`, `datastore = "1.1.7"`, neu `graphicsPath = "1.0.1"` und
   `androidx-graphics-path = { group = "androidx.graphics", name = "graphics-path", version.ref = "graphicsPath" }`),
   `app/build.gradle.kts` (`defaultConfig { … ndk { abiFilters += listOf("arm64-v8a", "x86_64") } }`; in `dependencies`
@@ -687,6 +687,6 @@ Mein Wunsch:
 - [x] Baseline S0: App `TC` 287 (erwartet 287), Server 180 passed (erwartet 180), `VA`: `zipalign -c -P 16` „Verification successful“; vier ABIs (arm64-v8a, armeabi-v7a, x86, x86_64) mit je fünf `.so`; LOAD-Ausrichtung `0x4000` bei `libandroidx.graphics.path`, `libdatastore_shared_counter` (alle ABIs) und `libbarhopper_v3` (arm64-v8a, x86_64); `0x1000` bei `libimage_processing_util_jni`, `libmlkit_google_ocr_pipeline` (alle ABIs) und `libbarhopper_v3` (armeabi-v7a, x86)
 - [ ] Nach B1: `TC` … (erwartet 295), Server … (erwartet 184)
 - [ ] Nach B2–B4: `TC` … (erwartet 310) · nach B5: … (erwartet 319) · nach B6: `TC` … (319), Server … (erwartet 192)
-- [ ] `VA` nach S25: ABIs …, `zipalign` …, LOAD-Ausrichtung je `.so` …
+- [x] `VA` nach S25: ABIs nur `arm64-v8a` und `x86_64`; `zipalign -c -P 16`: „Verification succesful"; LOAD-Ausrichtung `0x4000` bei allen 12 `.so` (je 6 pro ABI: graphics.path, barhopper_v3, datastore_shared_counter, image_processing_util_jni, mlkit_google_ocr_pipeline, surface_util_jni). F6 behoben; `TC` unverändert 319.
 - [ ] Nach C: `TC` … (erwartet 351) · `git diff --stat 99735ec -- app/schemas` leer
 - [ ] Gemeldete Abweichungen von diesem Plan (je Schritt eine Zeile): …
