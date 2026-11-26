@@ -176,6 +176,8 @@ internal fun ReceiptListContent(
                 )
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = onScanClick) { Text(stringResource(R.string.receipt_list_scan_button)) }
+                Spacer(Modifier.height(24.dp))
+                LoadOlderFooter(loadingOlder = loadingOlder, onLoadOlder = onLoadOlder)
             }
         } else {
             val groups = remember(receipts) { groupReceiptsByMonth(receipts) }
@@ -203,27 +205,38 @@ internal fun ReceiptListContent(
                     }
                 }
                 item(key = "footer") {
-                    Column(
+                    LoadOlderFooter(
+                        loadingOlder = loadingOlder,
+                        onLoadOlder = onLoadOlder,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 72.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        TextButton(onClick = onLoadOlder, enabled = !loadingOlder) {
-                            if (loadingOlder) {
-                                LoadingIndicator()
-                                Spacer(Modifier.size(8.dp))
-                            }
-                            Text(stringResource(R.string.receipt_list_load_older))
-                        }
-                        Text(
-                            stringResource(R.string.receipt_list_older_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                    )
                 }
             }
         }
+    }
+}
+
+/** „Ältere Bons laden“ samt Hinweis: auch im Leerzustand, wenn nur Älteres auf dem Server liegt (F11, Phase 7). */
+@Composable
+private fun LoadOlderFooter(
+    loadingOlder: Boolean,
+    onLoadOlder: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        TextButton(onClick = onLoadOlder, enabled = !loadingOlder) {
+            if (loadingOlder) {
+                LoadingIndicator()
+                Spacer(Modifier.size(8.dp))
+            }
+            Text(stringResource(R.string.receipt_list_load_older))
+        }
+        Text(
+            stringResource(R.string.receipt_list_older_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

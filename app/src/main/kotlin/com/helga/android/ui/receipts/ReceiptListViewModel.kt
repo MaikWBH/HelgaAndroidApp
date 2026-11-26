@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.R
 import com.helga.android.data.local.entity.ReceiptEntity
+import com.helga.android.data.model.OlderReceiptsResult
 import com.helga.android.data.repository.ReceiptRepository
 import com.helga.android.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +17,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -32,18 +35,27 @@ class ReceiptListViewModel @Inject constructor(
     private val _olderMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
     val olderMessage: SharedFlow<UiText> = _olderMessage.asSharedFlow()
 
-    /** Lädt den nächsten älteren Monat vom Server; bei Fehler (offline) erscheint eine Meldung. */
+    /** Sucht bis zu 12 Monate zurück bis zum ersten Monat mit Bons und meldet das Ergebnis (F11, Phase 7). */
     fun loadOlder() {
         if (_loadingOlder.value) return
         viewModelScope.launch {
             _loadingOlder.value = true
             try {
-                if (receiptRepository.loadOlderMonth() is com.helga.android.data.model.OlderReceiptsResult.Failed) {
-                    _olderMessage.tryEmit(UiText.Res(R.string.receipt_list_older_failed))
+                val message = when (val result = receiptRepository.loadOlderMonth()) {
+                    is OlderReceiptsResult.Loaded -> UiText.Res(
+                        R.string.receipt_list_older_loaded, listOf(result.count, result.month.format(MONTH)),
+                    )
+                    is OlderReceiptsResult.NothingFound -> UiText.Res(
+                        R.string.receipt_list_older_none, listOf(result.before.format(MONTH)),
+                    )
+                    OlderReceiptsResult.Failed -> UiText.Res(R.string.receipt_list_older_failed)
                 }
+                _olderMessage.tryEmit(message)
             } finally {
                 _loadingOlder.value = false
             }
         }
     }
 }
+
+private val MONTH = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMAN)

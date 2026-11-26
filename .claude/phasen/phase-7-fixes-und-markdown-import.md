@@ -278,7 +278,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `oldestPurchaseDay() = null`, drei Aufrufe), `` `nothing found after twelve months` `` (immer 0 → `NothingFound(2026-11)`,
   genau 12 Aufrufe), `` `network error returns failed` ``, `` `cursor older than a day is ignored` `` (erst `NothingFound`,
   dann mit `nowMs + 25 h` beginnt die Suche wieder bei 2026-10). Akzeptanz: `V` grün; `TC` = 306.
-- [ ] **S13 „Ältere Bons laden" auch im Leerzustand, mit Rückmeldung (F11)** — Dateien:
+- [x] **S13 „Ältere Bons laden" auch im Leerzustand, mit Rückmeldung (F11)** — Dateien:
   `$B/ui/receipts/ReceiptListScreen.kt`, `$B/ui/receipts/ReceiptListViewModel.kt`, `$R/values/strings.xml`, neu
   `$T/ReceiptListViewModelTest.kt`. Fußzeile als `@Composable private fun LoadOlderFooter(loadingOlder: Boolean,
   onLoadOlder: () -> Unit, modifier: Modifier = Modifier)` (Inhalt der bisherigen Column); in der Liste
