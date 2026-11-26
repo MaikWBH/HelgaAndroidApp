@@ -80,4 +80,21 @@ class ReceiptProtocolRulesTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun bon_upsert_ohne_replace() {
+        val lines = File(root, "data/local/dao/ReceiptDao.kt").readLines()
+        listOf("upsertReceipt", "upsertReceipts").forEach { name ->
+            val index = lines.indexOfFirst { it.contains("suspend fun $name(") }
+            assertTrue("ReceiptDao.$name fehlt", index >= 0)
+            val previous = lines.subList(0, index).asReversed().firstOrNull {
+                val t = it.trim()
+                t.isNotEmpty() && !t.startsWith("//") && !t.startsWith("/*") && !t.startsWith("*")
+            }
+            assertTrue(
+                "ReceiptDao.$name muss @Upsert sein, nie REPLACE (CASCADE löscht die Positionen)",
+                previous?.trim() == "@Upsert",
+            )
+        }
+    }
 }

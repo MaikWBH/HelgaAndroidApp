@@ -177,12 +177,6 @@ class ReceiptRepository @Inject constructor(
         )
     }
 
-    suspend fun updateReceipt(receipt: ReceiptEntity) {
-        receiptDao.upsertReceipt(
-            receipt.copy(updatedAt = System.currentTimeMillis(), dirty = 1)
-        )
-    }
-
     suspend fun addItemToReceipt(receiptId: String, item: ReceiptItemEntity) {
         val now = System.currentTimeMillis()
         val items = receiptDao.itemsForReceipt(receiptId)
@@ -296,29 +290,6 @@ class ReceiptRepository @Inject constructor(
             Timber.d(e, "OFF-Vorschläge nicht verfügbar")
             emptyList()
         }
-    }
-
-    suspend fun linkReceiptToShoppingList(receiptId: String, shoppingListId: String) {
-        val receipt = receiptDao.findById(receiptId) ?: return
-        receiptDao.upsertReceipt(
-            receipt.copy(
-                shoppingListId = shoppingListId,
-                updatedAt = System.currentTimeMillis(),
-                dirty = 1,
-            )
-        )
-    }
-
-    suspend fun updateReceiptStore(receiptId: String, storeId: String, storeName: String) {
-        val receipt = receiptDao.findById(receiptId) ?: return
-        receiptDao.upsertReceipt(
-            receipt.copy(
-                storeId = storeId,
-                storeName = storeName,
-                updatedAt = System.currentTimeMillis(),
-                dirty = 1,
-            )
-        )
     }
 
     // ── Price History ─────────────────────────────────────────────────────────

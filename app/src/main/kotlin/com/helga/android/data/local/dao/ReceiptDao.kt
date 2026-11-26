@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import kotlinx.coroutines.flow.Flow
@@ -28,10 +29,11 @@ interface ReceiptDao {
     @Query("SELECT * FROM receipt_items WHERE receiptId = :receiptId AND deleted = 0 ORDER BY position ASC")
     suspend fun itemsForReceipt(receiptId: String): List<ReceiptItemEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    /** Kein REPLACE: das würde per ON DELETE CASCADE alle Positionen löschen (Phase 7, F13). */
+    @Upsert
     suspend fun upsertReceipt(receipt: ReceiptEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertReceipts(receipts: List<ReceiptEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

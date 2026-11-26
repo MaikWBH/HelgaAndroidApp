@@ -162,7 +162,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `updatedAt = now + 5_000` → `savedReceipt.updatedAt == now + 5_001`, alle `savedItems.updatedAt == now + 5_001`,
   `storeName == "Lidl"`. Bestehender Test „server side ai failure …" bleibt unverändert grün (`updatedAt = 50`).
   Akzeptanz: `V` grün; `TC` = 288.
-- [ ] **S4 `@Upsert` für Bons, tote Methoden weg (F13 Ursache A)** — Dateien: `$B/data/local/dao/ReceiptDao.kt`,
+- [x] **S4 `@Upsert` für Bons, tote Methoden weg (F13 Ursache A)** — Dateien: `$B/data/local/dao/ReceiptDao.kt`,
   `$B/data/repository/ReceiptRepository.kt`, `$T/ReceiptProtocolRulesTest.kt`. In `ReceiptDao` bei `upsertReceipt` und
   `upsertReceipts` `@Insert(onConflict = OnConflictStrategy.REPLACE)` → `@Upsert` (`import androidx.room.Upsert`;
   `upsertItem`/`upsertItems` bleiben `REPLACE`, Positionen haben keine Kinder). KDoc über `upsertReceipt`:
