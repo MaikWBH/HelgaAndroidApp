@@ -3,6 +3,8 @@ package com.helga.android.ui.receipts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -233,9 +235,14 @@ private fun SpendingCard(state: CostOverviewUiState, onGranularityChange: (Granu
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RangeChips(selected: StatsRange, onSelect: (StatsRange) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         StatsRange.entries.forEach { range ->
             FilterChip(
                 selected = selected == range,
@@ -249,7 +256,9 @@ private fun RangeChips(selected: StatsRange, onSelect: (StatsRange) -> Unit) {
                                 StatsRange.TWELVE_MONTHS -> R.string.cost_range_twelve_months
                                 StatsRange.ALL -> R.string.cost_range_all
                             }
-                        )
+                        ),
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 },
             )

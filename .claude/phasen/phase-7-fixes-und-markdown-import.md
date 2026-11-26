@@ -317,7 +317,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `$B/ui/recipes/RecipeDetailScreen.kt` (LazyColumn `contentPadding = PaddingValues(bottom = FabListBottomPadding)`),
   `$B/ui/receipts/ReceiptListScreen.kt` (`contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = FabListBottomPadding)`;
   Fußzeilen-Modifier `Modifier.fillMaxWidth().padding(top = 8.dp)`). Akzeptanz: `V` grün.
-- [ ] **S18 Zeitraum-Chips umbrechen (F14)** — Datei: `$B/ui/receipts/CostOverviewScreen.kt`. `RangeChips`: `Row` →
+- [x] **S18 Zeitraum-Chips umbrechen (F14)** — Datei: `$B/ui/receipts/CostOverviewScreen.kt`. `RangeChips`: `Row` →
   `FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth())`,
   `@OptIn(ExperimentalLayoutApi::class)` an der Funktion, Label-`Text` mit `maxLines = 1, softWrap = false`.
   Akzeptanz: `V` grün.
