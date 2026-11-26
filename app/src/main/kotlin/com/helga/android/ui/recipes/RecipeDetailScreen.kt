@@ -1,5 +1,7 @@
 package com.helga.android.ui.recipes
 
+import com.helga.android.ui.components.FabListBottomPadding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
 import com.helga.android.ui.common.asString
@@ -352,6 +354,7 @@ fun RecipeDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                contentPadding = PaddingValues(bottom = FabListBottomPadding),
             ) {
                 item {
                     HeroImage(

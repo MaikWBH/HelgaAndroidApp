@@ -312,7 +312,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `grep -c 'alpha = 0.4f' $B/ui/weekplan/WeekplanScreen.kt` = 2; `grep -c 'alpha = 0.6f'` = 6.
 - [x] **S16 Kurzes Label im Formular (F8)** — Dateien: `$R/values/strings.xml` (`recipe_form_prep_time` = „Vorb."),
   `$B/ui/recipes/RecipeFormScreen.kt` (Zeitfeld nutzt `R.string.recipe_form_prep_time`). Akzeptanz: `V` grün.
-- [ ] **S17 Freiraum unter dem FAB (F9, F17)** — Dateien: neu `$B/ui/components/FabSpacing.kt`
+- [x] **S17 Freiraum unter dem FAB (F9, F17)** — Dateien: neu `$B/ui/components/FabSpacing.kt`
   (`/** Unterer Freiraum für Listen unter einem FAB (Phase 7, F9/F17). */ val FabListBottomPadding = 96.dp`),
   `$B/ui/recipes/RecipeDetailScreen.kt` (LazyColumn `contentPadding = PaddingValues(bottom = FabListBottomPadding)`),
   `$B/ui/receipts/ReceiptListScreen.kt` (`contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = FabListBottomPadding)`;

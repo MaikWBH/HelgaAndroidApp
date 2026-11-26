@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.ui.components.FabListBottomPadding
 import com.helga.android.R
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -185,7 +186,7 @@ internal fun ReceiptListContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(12.dp),
+                contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = FabListBottomPadding),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 groups.forEach { (monthKey, monthReceipts) ->
@@ -208,7 +209,7 @@ internal fun ReceiptListContent(
                     LoadOlderFooter(
                         loadingOlder = loadingOlder,
                         onLoadOlder = onLoadOlder,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 72.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
                 }
             }
