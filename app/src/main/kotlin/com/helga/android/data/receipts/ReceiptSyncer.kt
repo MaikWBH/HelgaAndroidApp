@@ -14,6 +14,10 @@ import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** true, wenn die lokale Zeile während des Server-Aufrufs geändert wurde und neuer ist (Phase 7, B2-S1). */
+internal fun keepsLocalChange(current: ReceiptEntity?, remote: ReceiptRemoteDto): Boolean =
+    current != null && current.dirty == 1 && current.updatedAt > remote.updatedAt
+
 /**
  * Bon-weiser Abgleich mit dem Server-Archiv (Phase 3a), getrennt vom Voll-Sync.
  * Room bleibt Single Source of Truth: jede Server-Antwort wird zuerst in Room geschrieben.
@@ -41,7 +45,11 @@ class ReceiptSyncer @Inject constructor(
                     val items = receiptDao.itemsForReceipt(receipt.id)
                     val response = api.putReceipt(receipt.id, receipt.toUpsertDto(items))
                     // applied == false: der Server-Stand ist neuer und gewinnt — wird genauso übernommen.
-                    writeServerReceipt(response.receipt, receipt)
+                    // Wurde die Zeile während des Aufrufs lokal geändert, bleibt die neuere Änderung dirty.
+                    val current = receiptDao.findById(receipt.id)
+                    if (!keepsLocalChange(current, response.receipt)) {
+                        writeServerReceipt(response.receipt, current ?: receipt)
+                    }
                 }
                 count++
             } catch (e: HttpException) {

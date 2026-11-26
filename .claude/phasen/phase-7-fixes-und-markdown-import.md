@@ -173,7 +173,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `upsertReceipts` als letzte Nicht-Kommentarzeile vor `suspend fun <Name>(` genau `@Upsert` (Aufbau wie
   `transaktionsmethoden_tragen_transaction`). Akzeptanz: `V` grün (Room/KSP baut die DAO); `TC` = 289;
   `git diff --stat -- app/schemas` leer.
-- [ ] **S5 Server-Antwort nur übernehmen, wenn lokal nicht neuer (B2-S1)** — Dateien: `$B/data/receipts/ReceiptSyncer.kt`,
+- [x] **S5 Server-Antwort nur übernehmen, wenn lokal nicht neuer (B2-S1)** — Dateien: `$B/data/receipts/ReceiptSyncer.kt`,
   `$B/data/receipts/ReceiptUploader.kt`, `$T/ReceiptSyncerTest.kt`, `$T/ReceiptUploaderTest.kt`. In `ReceiptSyncer.kt`
   oberhalb der Klasse:
   ```kotlin

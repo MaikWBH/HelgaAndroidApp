@@ -63,8 +63,9 @@ class ReceiptUploader @Inject constructor(
         val file = File(receipt.localImageUri)
         val provisional = receipt.status == "provisional"
         if (receipt.localImageUri.isBlank() || !file.exists()) {
+            val current = receiptDao.findById(receipt.id) ?: receipt
             receiptDao.upsertReceipt(
-                receipt.copy(pendingUpload = 0, localImageUri = "", dirty = if (provisional) 1 else receipt.dirty)
+                current.copy(pendingUpload = 0, localImageUri = "", dirty = if (provisional) 1 else current.dirty)
             )
             return true
         }
@@ -86,8 +87,9 @@ class ReceiptUploader @Inject constructor(
             if (response.parsed) {
                 replaceWithServer(response.receipt, receipt)
             } else {
+                val current = receiptDao.findById(receipt.id) ?: receipt
                 receiptDao.upsertReceipt(
-                    receipt.copy(
+                    current.copy(
                         imagePath = response.receipt.imagePath, parseStatus = "queued",
                         pendingUpload = 0, localImageUri = "",
                     )
@@ -102,7 +104,13 @@ class ReceiptUploader @Inject constructor(
     }
 
     private suspend fun replaceWithServer(remote: ReceiptRemoteDto, local: ReceiptEntity) {
+        // Hat der Nutzer den Bon während des Server-Aufrufs geändert, bleibt seine neuere Änderung (Phase 7, B2-S1).
+        val current = receiptDao.findById(local.id) ?: local
+        if (keepsLocalChange(current, remote)) {
+            receiptDao.clearPendingUpload(current.id, remote.imagePath)
+            return
+        }
         val items = remote.items.map { it.copy(receiptId = remote.id).toEntity() }
-        receiptDao.replaceWithServerState(remote.toEntity(local).copy(pendingUpload = 0, localImageUri = ""), items)
+        receiptDao.replaceWithServerState(remote.toEntity(current).copy(pendingUpload = 0, localImageUri = ""), items)
     }
 }

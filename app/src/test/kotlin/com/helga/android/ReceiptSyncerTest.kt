@@ -130,6 +130,18 @@ class ReceiptSyncerTest {
     }
 
     @Test
+    fun `pushDirty keeps a local change made during the call`() = runTest {
+        val receipt = ReceiptEntity(id = "a", dirty = 1, updatedAt = 10, storeName = "REWE")
+        coEvery { dao.dirtyReceiptsForPush() } returns listOf(receipt)
+        coEvery { dao.itemsForReceipt("a") } returns emptyList()
+        coEvery { dao.findById("a") } returns ReceiptEntity(id = "a", dirty = 1, updatedAt = 20)
+        coEvery { api.putReceipt("a", any()) } returns
+            ReceiptPutResponse(applied = true, receipt = remote("a", updatedAt = 10))
+        assertEquals(1, syncer.pushDirty())
+        coVerify(exactly = 0) { dao.replaceWithServerState(any(), any()) }
+    }
+
+    @Test
     fun `pushDirty deletes on the server and removes the local rows hard`() = runTest {
         coEvery { dao.dirtyReceiptsForPush() } returns listOf(ReceiptEntity(id = "x", deleted = 1, dirty = 1, updatedAt = 77))
         coEvery { api.deleteReceipt("x", 77L) } returns OkResponse(true)

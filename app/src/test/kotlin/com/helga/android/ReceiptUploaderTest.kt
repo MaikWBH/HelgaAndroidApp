@@ -37,6 +37,7 @@ class ReceiptUploaderTest {
     @Before
     fun setUp() {
         coEvery { provider.api() } returns api
+        coEvery { dao.findById(any()) } returns null
         uploader = ReceiptUploader(dao, provider, store, Moshi.Builder().build())
     }
 
@@ -59,6 +60,18 @@ class ReceiptUploaderTest {
         assertEquals(1, result.done); assertEquals(false, result.retry)
         coVerify { dao.replaceWithServerState(match { it.id == "p" && it.status == "review" && it.pendingUpload == 0 && it.localImageUri == "" }, any()) }
         coVerify { store.delete(file.absolutePath) }
+    }
+
+    @Test
+    fun `parsed answer does not overwrite a newer local change`() = runTest {
+        val file = tmp.newFile("n.jpg")
+        coEvery { dao.pendingUploads() } returns listOf(receipt("p", "provisional", file))
+        coEvery { dao.itemsForReceipt("p") } returns emptyList()
+        coEvery { dao.findById("p") } returns ReceiptEntity(id = "p", dirty = 1, updatedAt = 999)
+        coEvery { api.scanReceipt(any(), any(), any(), any(), any()) } returns scanResponse(true)
+        assertEquals(1, uploader.uploadPending().done)
+        coVerify { dao.clearPendingUpload("p", "receipt_p.jpg") }
+        coVerify(exactly = 0) { dao.replaceWithServerState(any(), any()) }
     }
 
     @Test
