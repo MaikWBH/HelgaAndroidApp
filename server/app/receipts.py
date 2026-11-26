@@ -432,16 +432,19 @@ async def mark_failed_attempt(db, receipt_id: str, image_name: str, shopping_lis
     existing = await _receipt_row(db, receipt_id)
     if existing is None:
         now = now_ms()
+        # Hülle darf nicht neuer sein als der Erfassungszeitpunkt des Handys, sonst verliert dessen PUT
+        # per LWW (Phase 7, F13).
+        stamp = captured_at if captured_at and captured_at > 0 else now
         if preliminary is not None:
             payload = preliminary.model_dump()
             payload.update({"id": receipt_id, "status": "provisional", "source": "on_device",
-                            "updated_at": now, "deleted": 0})
+                            "updated_at": stamp, "deleted": 0})
             if shopping_list_id:
                 payload["shopping_list_id"] = shopping_list_id
         else:
             payload = {"id": receipt_id, "shopping_list_id": shopping_list_id,
                        "purchase_date": captured_at or now, "status": "provisional",
-                       "source": "", "updated_at": now, "items": []}
+                       "source": "", "updated_at": stamp, "items": []}
         await put_receipt(db, payload)
     attempts = await _attempts(db, receipt_id)
     await _set_parse_state(db, receipt_id, image_path=image_name, parse_status="queued",

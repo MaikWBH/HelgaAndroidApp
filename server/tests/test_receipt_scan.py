@@ -120,3 +120,26 @@ def test_empty_ai_result_counts_as_failure(client, monkeypatch):
     patch_parse(monkeypatch, parsed_result(items=[], total_amount=0.0))
     body = scan(client).json()
     assert body["parsed"] is False and body["receipt"]["parse_status"] == "queued"
+
+
+def test_shell_uses_captured_at_as_updated_at(client, monkeypatch):
+    patch_parse(monkeypatch, error=RuntimeError("KI down"))
+    r = scan(client)
+    receipt = r.json()["receipt"]
+    assert receipt["updated_at"] == CAPTURED
+    body = {"id": RID, "store_name": "Lidl", "status": "provisional", "updated_at": CAPTURED,
+            "items": [{"id": "i1", "raw_text": "BROT", "name": "Brot"}]}
+    put = client.put(f"/api/receipts/{RID}", json=body)
+    assert put.status_code == 200
+    assert put.json()["applied"] is True
+    assert [i["name"] for i in put.json()["receipt"]["items"]] == ["Brot"]
+
+
+def test_preliminary_uses_captured_at_as_updated_at(client, monkeypatch):
+    patch_parse(monkeypatch, error=RuntimeError("KI down"))
+    prelim = {"id": RID, "store_name": "Lidl", "purchase_date": 1700000000000, "total_amount": 4.5,
+              "updated_at": 1, "items": [{"id": "p1", "raw_text": "BROT", "name": "Brot", "position": 0}]}
+    r = scan(client, preliminary=json.dumps(prelim))
+    receipt = r.json()["receipt"]
+    assert receipt["updated_at"] == CAPTURED
+    assert [i["name"] for i in receipt["items"]] == ["Brot"]

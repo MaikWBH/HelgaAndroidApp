@@ -134,7 +134,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   wenn sich keine Datei ändert; die Werte werden mit S1 committet.
 
 ### Block B1 — F13 Datenverlust und Bon-Protokoll (Server zuerst)
-- [ ] **S1 Server: Hülle mit `captured_at` (F13 Ursache B)** — Dateien: `$SA/receipts.py`, `$ST/test_receipt_scan.py`.
+- [x] **S1 Server: Hülle mit `captured_at` (F13 Ursache B)** — Dateien: `$SA/receipts.py`, `$ST/test_receipt_scan.py`.
   In `mark_failed_attempt` nach `now = now_ms()` die Zeile `stamp = captured_at if captured_at and captured_at > 0 else now`
   einfügen und in **beiden** Payloads `"updated_at": now` durch `"updated_at": stamp` ersetzen (Zweig `preliminary` und
   Zweig ohne). `purchase_date` bleibt `captured_at or now`. Tests (+2): `test_shell_uses_captured_at_as_updated_at`
