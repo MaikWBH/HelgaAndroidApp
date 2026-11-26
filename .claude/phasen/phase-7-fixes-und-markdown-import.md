@@ -345,7 +345,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   („1 Std 30 Min", „1 h 30 min", „1 Stunde 30 Minuten" → 90), `dezimalstunden` („1,5 h", „1.5 Std" → 90; „2 Stunden" → 120),
   `bereich_nimmt_erste_zahl` („30-40 Min" 30, „ca. 20 – 25 Minuten" 20), `unbekannt_ist_null` („", „schnell", „PT", „abc 5x"),
   `toIso_wie_server` (0 „", 45 PT45M, 60 PT1H, 90 PT1H30M). Akzeptanz: `V` grün; `TC` = 319.
-- [ ] **S21 Orange hell abdunkeln (F5)** — Datei: `$B/ui/theme/Color.kt` (`OrangeLight` Hauptton und Eintrag in
+- [x] **S21 Orange hell abdunkeln (F5)** — Datei: `$B/ui/theme/Color.kt` (`OrangeLight` Hauptton und Eintrag in
   `accentPrimaryColors`: `0xFFE65100` → `0xFFBF360C`). `DayMarker.kt` (Marker-Palette) bleibt. Akzeptanz: `V` grün;
   `grep -c E65100 $B/ui/theme/Color.kt` = 0. **Danach Block B5 pushen.**
 

@@ -20,7 +20,7 @@ internal val GreenLight = AccentTones(Color(0xFF2E7D32), Color(0xFFFFFFFF), Colo
 internal val BlueLight = AccentTones(Color(0xFF1565C0), Color(0xFFFFFFFF), Color(0xFFBBDEFB), Color(0xFF0D47A1))
 internal val PurpleLight = AccentTones(Color(0xFF6A1B9A), Color(0xFFFFFFFF), Color(0xFFE1BEE7), Color(0xFF4A148C))
 internal val PurpleBrightLight = AccentTones(Color(0xFF8E24AA), Color(0xFFFFFFFF), Color(0xFFE1BEE7), Color(0xFF4A148C))
-internal val OrangeLight = AccentTones(Color(0xFFE65100), Color(0xFFFFFFFF), Color(0xFFFFE0B2), Color(0xFF7A2E00))
+internal val OrangeLight = AccentTones(Color(0xFFBF360C), Color(0xFFFFFFFF), Color(0xFFFFE0B2), Color(0xFF7A2E00))
 internal val RedLight = AccentTones(Color(0xFFB71C1C), Color(0xFFFFFFFF), Color(0xFFFFCDD2), Color(0xFF7F1010))
 internal val TealLight = AccentTones(Color(0xFF00695C), Color(0xFFFFFFFF), Color(0xFFB2DFDB), Color(0xFF004D40))
 internal val AmberLight = AccentTones(Color(0xFFFF8F00), Color(0xFF000000), Color(0xFFFFECB3), Color(0xFF5C3A00))
@@ -42,7 +42,7 @@ val accentPrimaryColors: List<Color> = listOf(
     Color(0xFF2E7D32),
     Color(0xFF1565C0),
     Color(0xFF6A1B9A),
-    Color(0xFFE65100),
+    Color(0xFFBF360C),
     Color(0xFFB71C1C),
     Color(0xFF00695C),
 )
