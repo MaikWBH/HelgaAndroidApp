@@ -149,3 +149,34 @@ def test_generate_success_streams_chunks_and_done(client, upstream):
     r = client.post("/api/ai/generate", json={"prompt": "Pasta"})
     assert r.status_code == 200
     assert r.text == "data: Hallo\n\ndata: [DONE]\n\n"
+
+
+def test_missing_key_is_502_without_upstream_call(client, monkeypatch):
+    calls = []
+
+    class _Recorder:
+        def __init__(self, *args, **kwargs):
+            calls.append("init")
+
+        async def __aenter__(self):
+            calls.append("enter")
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        def stream(self, *args, **kwargs):
+            calls.append("stream")
+            raise AssertionError("Anbieter darf nicht aufgerufen werden")
+
+        async def post(self, *args, **kwargs):
+            calls.append("post")
+            raise AssertionError("Anbieter darf nicht aufgerufen werden")
+
+    monkeypatch.setattr(ai_client.httpx, "AsyncClient", _Recorder)
+    monkeypatch.setattr(settings, "AI_PROVIDER", "openai")
+    monkeypatch.setattr(settings, "AI_API_KEY", "")
+    r = client.post("/api/ai/classify", json={"name": "Suppe"})
+    assert r.status_code == 502
+    assert r.json() == {"detail": "KI-Dienst hat nicht geantwortet"}
+    assert "stream" not in calls and "post" not in calls

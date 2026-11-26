@@ -157,13 +157,22 @@ def receipt_payload(model: str, system: str, content: list) -> dict:
 
 # ── Header (Basis-URL separat: _openai_base() bzw. ANTHROPIC_BASE) ────────────
 
+def _require_ai_key() -> str:
+    """Leerer KI-Schlüssel: gar nicht erst beim Anbieter anfragen (502 „KI-Dienst hat nicht geantwortet“)."""
+    key = settings.AI_API_KEY
+    if not key:
+        logger.warning("KI-Schlüssel fehlt (AI_API_KEY)")
+        raise AiUpstreamError("KI-Schlüssel fehlt")
+    return key
+
+
 def openai_headers() -> dict:
-    return {"Authorization": f"Bearer {settings.AI_API_KEY}", "Content-Type": "application/json"}
+    return {"Authorization": f"Bearer {_require_ai_key()}", "Content-Type": "application/json"}
 
 
 def anthropic_headers() -> dict:
     return {
-        "x-api-key": settings.AI_API_KEY,
+        "x-api-key": _require_ai_key(),
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
     }

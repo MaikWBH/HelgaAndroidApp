@@ -353,7 +353,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
 - [x] **S22 API-Doku abschalten (F7a, B4-P1)** — Dateien: `$SA/main.py`, `$ST/test_health_auth.py`.
   `FastAPI(title=…, version=…, lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)`. Test (+1)
   `test_docs_are_disabled` (`/docs`, `/redoc`, `/openapi.json` → 404). Akzeptanz: `VS` grün, 185 Tests.
-- [ ] **S23 Leerer KI-Schlüssel ohne Anbieter-Aufruf (F7b)** — Dateien: `$SA/ai_client.py`, `$ST/test_ai_errors.py`,
+- [x] **S23 Leerer KI-Schlüssel ohne Anbieter-Aufruf (F7b)** — Dateien: `$SA/ai_client.py`, `$ST/test_ai_errors.py`,
   `$ST/test_ai_receipt_config.py`. Neue Funktion `_require_ai_key() -> str` (leer → `raise AiUpstreamError("KI-Schlüssel fehlt")`),
   in `openai_headers()`/`anthropic_headers()` statt `settings.AI_API_KEY` verwenden. In
   `test_receipt_once_joins_text_blocks_and_sends_image` `monkeypatch.setattr(settings, "AI_API_KEY", "x")` ergänzen; weitere
