@@ -152,7 +152,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `test_reparse_marks_failed_after_max_attempts` (Bon mit Foto, KI-Attrappe schlägt fehl, fünfmal
   `POST /api/receipts/{id}/reparse` → `parse_status == "failed"`). Muster: bestehende Tests in derselben Datei und in
   `test_receipt_scan.py`. Akzeptanz: `VS` grün, 184 Tests.
-- [ ] **S3 App: lokaler Stand neuer als die Hülle (F13 Ursache B, B8-S3)** — Dateien: `$B/data/receipts/ReceiptScanFlow.kt`,
+- [x] **S3 App: lokaler Stand neuer als die Hülle (F13 Ursache B, B8-S3)** — Dateien: `$B/data/receipts/ReceiptScanFlow.kt`,
   `$B/ui/receipts/ReceiptScanViewModel.kt`, `$T/ReceiptScanFlowTest.kt`. In `run` im Zweig nach `if (response.parsed)`:
   `val stamp = maxOf(now, response.receipt.updatedAt + 1)`; an `provisional(receiptId, bitmap, shoppingListId, stamp)`
   übergeben (setzt `updatedAt` von Bon und Positionen). Kommentar: „Hülle des Servers darf nicht neuer sein als die

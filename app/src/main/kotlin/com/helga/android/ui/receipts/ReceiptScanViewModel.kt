@@ -97,6 +97,7 @@ class ReceiptScanViewModel @Inject constructor(
                         loadForReview(outcome.receiptId)
                     }
                     is ReceiptScanOutcome.Provisional -> {
+                        syncScheduler.triggerOneShot()
                         _uiState.value = ReceiptScanUiState.Provisional(outcome.receiptId, outcome.queuedOnServer)
                     }
                 }

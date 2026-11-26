@@ -52,7 +52,9 @@ class ReceiptScanFlow<B>(
             return ReceiptScanOutcome.Parsed(receiptId)
         }
 
-        val (receipt, items) = provisional(receiptId, bitmap, shoppingListId, now)
+        // Hülle des Servers darf nicht neuer sein als die OCR-Werte (Phase 7, F13).
+        val stamp = maxOf(now, response.receipt.updatedAt + 1)
+        val (receipt, items) = provisional(receiptId, bitmap, shoppingListId, stamp)
         saveLocal(
             receipt.copy(imagePath = response.receipt.imagePath, parseStatus = "queued", dirty = 1),
             items.map { it.copy(dirty = 1) },

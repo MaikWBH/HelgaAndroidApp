@@ -78,6 +78,17 @@ class ReceiptScanFlowTest {
     }
 
     @Test
+    fun `server shell newer than the device keeps the provisional values`() = runTest {
+        val shell = response(false)
+        val newer = shell.copy(receipt = shell.receipt.copy(updatedAt = now + 5_000))
+        val outcome = flow { newer }.run("r1", file, Unit, "list1")
+        assertEquals(ReceiptScanOutcome.Provisional("r1", queuedOnServer = true), outcome)
+        assertEquals(now + 5_001, savedReceipt?.updatedAt)
+        assertEquals(listOf(now + 5_001), savedItems.map { it.updatedAt }.distinct())
+        assertEquals("Lidl", savedReceipt?.storeName)
+    }
+
+    @Test
     fun `io exception means offline and keeps the photo for the upload queue`() = runTest {
         val outcome = flow { throw IOException("kein Netz") }.run("r1", file, Unit, "list1")
         assertEquals(ReceiptScanOutcome.Provisional("r1", queuedOnServer = false), outcome)
