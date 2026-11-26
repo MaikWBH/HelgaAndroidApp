@@ -76,7 +76,7 @@ import com.helga.android.R
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.util.ImageUrls
 import com.helga.android.ui.components.CreateFab
-import com.helga.android.ui.components.MealSlots
+import com.helga.android.data.model.MealSlots
 import com.helga.android.ui.components.SyncStatusIcon
 
 @OptIn(ExperimentalMaterial3Api::class)

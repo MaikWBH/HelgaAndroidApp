@@ -395,7 +395,7 @@ Beschreibung als Fließtext oder `> Zitat` (optional)
 Freitext
 ---                             ← Trenner zum nächsten Rezept (`---`, `***`, `___` oder eine neue `# `-Zeile)
 ```
-- [ ] **S26 `MealSlots` in die Datenschicht** — Dateien: neu `$B/data/model/MealSlots.kt` (Objekt unverändert, Paket
+- [x] **S26 `MealSlots` in die Datenschicht** — Dateien: neu `$B/data/model/MealSlots.kt` (Objekt unverändert, Paket
   `com.helga.android.data.model`), `$B/ui/components/MealSlot.kt` (Objekt entfernen, `import com.helga.android.data.model.MealSlots`),
   Imports in `RecipeFormScreen.kt`, `RecipeDetailScreen.kt`, `RecipeListScreen.kt`, `WeekplanScreen.kt` (und jede weitere
   Fundstelle von `grep -rn "MealSlots" $B`). Akzeptanz: `V` grün; `TC` = 319;

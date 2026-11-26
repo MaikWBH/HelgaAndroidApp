@@ -101,7 +101,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
 import com.helga.android.ui.components.DayMarkerChip
-import com.helga.android.ui.components.MealSlots
+import com.helga.android.data.model.MealSlots
 import com.helga.android.ui.components.mealSlotLabel
 import com.helga.android.ui.components.parseMarkerColor
 import com.helga.android.data.local.entity.RecipeEntity

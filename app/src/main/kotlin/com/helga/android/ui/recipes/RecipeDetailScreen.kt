@@ -84,7 +84,7 @@ import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.util.ImageUrls
 import com.helga.android.ui.components.CreateFab
-import com.helga.android.ui.components.MealSlots
+import com.helga.android.data.model.MealSlots
 import com.helga.android.ui.components.mealSlotLabel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
