@@ -20,3 +20,8 @@ def test_fresh_db_returns_empty_lists(client):
     body = r.json()
     assert body["recipes"] == []
     assert body["stores"] == []
+
+
+def test_docs_are_disabled(client):
+    for path in ("/docs", "/redoc", "/openapi.json"):
+        assert client.get(path).status_code == 404, path

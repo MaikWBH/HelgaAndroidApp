@@ -33,7 +33,10 @@ async def lifespan(app: FastAPI):
             queue_task.cancel()
 
 
-app = FastAPI(title="HelgaSyncServer", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="HelgaSyncServer", version="1.0.0", lifespan=lifespan,
+    docs_url=None, redoc_url=None, openapi_url=None,  # API-Doku ohne Schlüssel nicht öffentlich (Phase 7, F7a)
+)
 app.include_router(receipt_api.router)
 app.include_router(sync_api.router)
 app.include_router(images_api.router)

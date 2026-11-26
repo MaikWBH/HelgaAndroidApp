@@ -350,7 +350,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `grep -c E65100 $B/ui/theme/Color.kt` = 0. **Danach Block B5 pushen.**
 
 ### Block B6 — Server und Build (F7, F18, F6)
-- [ ] **S22 API-Doku abschalten (F7a, B4-P1)** — Dateien: `$SA/main.py`, `$ST/test_health_auth.py`.
+- [x] **S22 API-Doku abschalten (F7a, B4-P1)** — Dateien: `$SA/main.py`, `$ST/test_health_auth.py`.
   `FastAPI(title=…, version=…, lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)`. Test (+1)
   `test_docs_are_disabled` (`/docs`, `/redoc`, `/openapi.json` → 404). Akzeptanz: `VS` grün, 185 Tests.
 - [ ] **S23 Leerer KI-Schlüssel ohne Anbieter-Aufruf (F7b)** — Dateien: `$SA/ai_client.py`, `$ST/test_ai_errors.py`,
