@@ -72,6 +72,9 @@ object ChartMath {
         }
     }
 
+    /** Jede n-te Achsenbeschriftung wird gezeigt: ab neun Balken jede dritte, sonst alle (F15, Phase 7). */
+    fun labelStep(count: Int): Int = if (count > 8) 3 else 1
+
     /** Kurzes Achsenlabel: `2026-11` → `11/26`, `2026-W46` → `46`; sonst unverändert. */
     fun periodLabel(period: String): String = when {
         Regex("""\d{4}-\d{2}""").matches(period) -> "${period.substring(5, 7)}/${period.substring(2, 4)}"

@@ -321,7 +321,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth())`,
   `@OptIn(ExperimentalLayoutApi::class)` an der Funktion, Label-`Text` mit `maxLines = 1, softWrap = false`.
   Akzeptanz: `V` grün.
-- [ ] **S19 Achsenbeschriftung (F15)** — Dateien: `$B/ui/receipts/charts/ChartMath.kt`,
+- [x] **S19 Achsenbeschriftung (F15)** — Dateien: `$B/ui/receipts/charts/ChartMath.kt`,
   `$B/ui/receipts/charts/SpendingBarChart.kt`, `$T/ChartMathTest.kt`. `fun labelStep(count: Int): Int = if (count > 8) 3 else 1`;
   in `SpendingBarChart` `val step = ChartMath.labelStep(bars.size)`; Label-`Text`:
   `modifier = Modifier.weight(1f).wrapContentWidth(unbounded = true)`, `softWrap = false`, `overflow = TextOverflow.Visible`,

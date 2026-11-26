@@ -1,5 +1,7 @@
 package com.helga.android.ui.receipts.charts
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -92,14 +94,16 @@ fun SpendingBarChart(
             }
         }
         Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-            val step = if (bars.size > 8) 2 else 1
+            val step = ChartMath.labelStep(bars.size)
             bars.forEachIndexed { index, bar ->
                 Text(
                     if (index % step == 0) bar.label else "",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).wrapContentWidth(unbounded = true),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
+                    softWrap = false,
+                    overflow = TextOverflow.Visible,
                     maxLines = 1,
                 )
             }

@@ -71,4 +71,11 @@ class ChartMathTest {
         assertEquals("1", ChartMath.periodLabel("2027-W01"))
         assertEquals("abc", ChartMath.periodLabel("abc"))
     }
+
+    @Test
+    fun labelStep_jedes_dritte_ab_neun_balken() {
+        assertEquals(1, ChartMath.labelStep(8))
+        assertEquals(3, ChartMath.labelStep(9))
+        assertEquals(3, ChartMath.labelStep(12))
+    }
 }
