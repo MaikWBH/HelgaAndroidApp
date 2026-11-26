@@ -475,7 +475,7 @@ Freitext
   `gruppenueberschriften_werden_verworfen`, `schritte_nummeriert_klammer_schrittwort_spiegelstrich`,
   `folgezeilen_werden_angehaengt`, `abschnitts_synonyme_und_fette_ueberschriften`, `notizen_aus_abschnitt_und_schluessel`,
   `leeres_rezept_und_zu_viele_zeilen_sind_fehler`. Akzeptanz: `V` grün; `TC` = 341.
-- [ ] **S30 Parser d: Mapper auf Entities** — Dateien: neu `$B/data/util/RecipeMarkdownMapper.kt`, neu
+- [x] **S30 Parser d: Mapper auf Entities** — Dateien: neu `$B/data/util/RecipeMarkdownMapper.kt`, neu
   `$T/RecipeMarkdownMapperTest.kt`. `data class ImportedRecipeBundle(val recipe: RecipeEntity, val ingredients: List<IngredientEntity>, val instructions: List<InstructionEntity>, val tags: List<TagEntity>)`;
   `object RecipeMarkdownMapper { fun toBundle(parsed: ParsedRecipe, now: Long, newId: () -> String = { UUID.randomUUID().toString() }): ImportedRecipeBundle }`:
   `id = slug = newId()`, `createdAt = now`, Felder aus `parsed`, `personalNotes = notes`, `sourceUrl = ""`,
