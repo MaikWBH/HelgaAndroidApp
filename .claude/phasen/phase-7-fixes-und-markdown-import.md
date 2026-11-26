@@ -257,7 +257,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   Prüfung für `quantityText`, `unitPriceText`, `totalText`, `discountText` (leer = erlaubt, Fallback wie bisher);
   „Speichern" (`confirmButton`) `enabled = <keiner der vier Fehler>`. Kein Unit-Test. Akzeptanz: `V` grün;
   `grep -n parseDecimal $B -r` leer.
-- [ ] **S12 Ältere Bons gezielt suchen (F11, B2-P2)** — Dateien: neu `$B/data/model/OlderReceiptsResult.kt`,
+- [x] **S12 Ältere Bons gezielt suchen (F11, B2-P2)** — Dateien: neu `$B/data/model/OlderReceiptsResult.kt`,
   `$B/data/repository/ReceiptRepository.kt`, neu `$T/ReceiptRepositoryOlderTest.kt`.
   ```kotlin
   sealed interface OlderReceiptsResult {

@@ -38,7 +38,7 @@ class ReceiptListViewModel @Inject constructor(
         viewModelScope.launch {
             _loadingOlder.value = true
             try {
-                if (!receiptRepository.loadOlderMonth()) {
+                if (receiptRepository.loadOlderMonth() is com.helga.android.data.model.OlderReceiptsResult.Failed) {
                     _olderMessage.tryEmit(UiText.Res(R.string.receipt_list_older_failed))
                 }
             } finally {

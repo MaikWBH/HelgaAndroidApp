@@ -1,5 +1,6 @@
 package com.helga.android.data.repository
 
+import com.helga.android.data.model.OlderReceiptsResult
 import android.graphics.Bitmap
 import android.net.Uri
 import com.helga.android.data.local.ReceiptScanner
@@ -248,31 +249,41 @@ class ReceiptRepository @Inject constructor(
     }
 
     private var olderMonthCursor: YearMonth? = null
+    private var olderCursorAt: Long = 0L
 
     /**
      * Lädt den nächsten älteren Monat vom Server in den Cache (24 h gehalten). Gibt `false` bei einem Fehler
      * (offline, Server nicht erreichbar) zurück.
      */
-    suspend fun loadOlderMonth(today: LocalDate = LocalDate.now()): Boolean {
+    suspend fun loadOlderMonth(
+        today: LocalDate = LocalDate.now(),
+        nowMs: Long = System.currentTimeMillis(),
+    ): OlderReceiptsResult {
+        // Nach 24 h sind die nachgeladenen Monate wieder verdrängt: Suche beginnt neu (B2-P2, Phase 7).
+        if (nowMs - olderCursorAt > OLDER_CACHE_MS) olderMonthCursor = null
         val oldest = receiptDao.oldestPurchaseDay()?.let { runCatching { YearMonth.from(LocalDate.parse(it)) }.getOrNull() }
-        val known = listOfNotNull(oldest, olderMonthCursor, YearMonth.from(today)).min()
-        val target = known.minusMonths(1)
+        var target = listOfNotNull(oldest, olderMonthCursor, YearMonth.from(today)).min().minusMonths(1)
+        val start = target
         return try {
-            receiptSyncer.loadRange(
-                target.atDay(1).toString(), target.atEndOfMonth().toString(),
-                System.currentTimeMillis() + 24 * 60 * 60 * 1000L,
-            )
-            olderMonthCursor = target
-            true
+            repeat(OLDER_SEARCH_MONTHS) {
+                val loaded = receiptSyncer.loadRange(
+                    target.atDay(1).toString(), target.atEndOfMonth().toString(), nowMs + OLDER_CACHE_MS,
+                )
+                olderMonthCursor = target
+                olderCursorAt = nowMs
+                if (loaded > 0) return OlderReceiptsResult.Loaded(loaded, target)
+                target = target.minusMonths(1)
+            }
+            OlderReceiptsResult.NothingFound(start.plusMonths(1))
         } catch (e: IOException) {
             Timber.w(e, "Ältere Bons laden fehlgeschlagen")
-            false
+            OlderReceiptsResult.Failed
         } catch (e: HttpException) {
             Timber.w(e, "Ältere Bons laden fehlgeschlagen")
-            false
+            OlderReceiptsResult.Failed
         } catch (e: IllegalArgumentException) {
             Timber.w(e, "Ältere Bons laden: Server nicht konfiguriert")
-            false
+            OlderReceiptsResult.Failed
         }
     }
 
@@ -412,5 +423,10 @@ class ReceiptRepository @Inject constructor(
             unexpectedNames = unexpectedNames,
             missingNames = missingNames,
         )
+    }
+
+    private companion object {
+        const val OLDER_CACHE_MS = 24 * 60 * 60 * 1000L
+        const val OLDER_SEARCH_MONTHS = 12
     }
 }
