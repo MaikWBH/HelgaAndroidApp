@@ -209,7 +209,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `` `pull keeps pending uploads even when the server deleted them` `` (ReceiptSyncerTest), `` `pushDirty marks rejected receipts and stops retrying` ``
   (PUT wirft `HttpException` 422 → `coVerify { dao.markPushRejected("a") }`; bei 401 → `coVerify(exactly = 0) { dao.markPushRejected(any()) }`),
   `` `rejected push counts as failed` `` (ReceiptGroupingTest). Akzeptanz: `V` grün; `TC` = 294.
-- [ ] **S7 Foto-Race (V3)** — Dateien: `$B/data/receipts/ReceiptImageStore.kt`, `$T/ReceiptImageStoreTest.kt`.
+- [x] **S7 Foto-Race (V3)** — Dateien: `$B/data/receipts/ReceiptImageStore.kt`, `$T/ReceiptImageStoreTest.kt`.
   ```kotlin
   /** Fotos jünger als dies bleiben stehen: der Scan legt die Room-Zeile erst nach dem Server-Aufruf an (Phase 7, V3). */
   const val ORPHAN_MIN_AGE_MS = 60 * 60 * 1000L

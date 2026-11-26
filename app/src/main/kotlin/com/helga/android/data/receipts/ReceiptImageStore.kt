@@ -66,9 +66,9 @@ class ReceiptImageStore @Inject constructor(
     }
 
     /** Entfernt Fotos in `filesDir/receipts/`, auf die kein Bon mehr verweist (verwaiste Altlasten). */
-    fun cleanupOrphans(referenced: Set<String>) {
-        val existing = photoDir.listFiles()?.map { it.absolutePath }.orEmpty()
-        orphanFiles(existing, referenced.map { Uri.parse(it).path ?: it }.toSet())
+    fun cleanupOrphans(referenced: Set<String>, nowMs: Long = System.currentTimeMillis()) {
+        val existing = photoDir.listFiles()?.map { it.absolutePath to it.lastModified() }.orEmpty()
+        orphanFiles(existing, referenced.map { Uri.parse(it).path ?: it }.toSet(), nowMs)
             .forEach { File(it).delete() }
     }
 
@@ -80,6 +80,14 @@ class ReceiptImageStore @Inject constructor(
     }
 }
 
+/** Fotos jünger als dies bleiben stehen: der Scan legt die Room-Zeile erst nach dem Server-Aufruf an (Phase 7, V3). */
+const val ORPHAN_MIN_AGE_MS = 60 * 60 * 1000L
+
 /** Dateien, die vorhanden, aber nicht (mehr) von einem Bon referenziert sind. */
-fun orphanFiles(existing: List<String>, referenced: Set<String>): List<String> =
-    existing.filter { it !in referenced }
+fun orphanFiles(
+    existing: List<Pair<String, Long>>,
+    referenced: Set<String>,
+    nowMs: Long,
+    minAgeMs: Long = ORPHAN_MIN_AGE_MS,
+): List<String> =
+    existing.filter { (path, modified) -> path !in referenced && nowMs - modified >= minAgeMs }.map { it.first }
