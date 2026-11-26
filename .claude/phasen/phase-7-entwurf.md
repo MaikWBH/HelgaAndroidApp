@@ -1,3 +1,5 @@
+> **Überholt (2026-11-26):** Die verbindliche Phasendatei ist [phase-7-fixes-und-markdown-import.md](phase-7-fixes-und-markdown-import.md); Server-Härtung und App-Robustheit stehen in [phase-8-server-haertung-und-robustheit.md](phase-8-server-haertung-und-robustheit.md). Diese Datei bleibt nur als Historie.
+
 # Phase 7 — Entwurf (aus der Planungssitzung, noch nicht freigegeben)
 
 > Stand 2026-11-25. Dies ist der **Entwurf** aus dem Plan-Modus. Stufe A (Opus 5.5) macht daraus nach `_PHASE_TEMPLATE.md` die endgültige Phasendatei `phase-7-fixes-und-markdown-import.md` (Schritte S0…Sn mit Akzeptanz und Verifikation) und trägt Phase 7 in die Tabelle der `phasen/README.md` ein.

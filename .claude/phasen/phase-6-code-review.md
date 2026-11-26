@@ -272,7 +272,7 @@ den Kopfzeilen aus `prompts.md` und die Zeile „Ergebnis"; `git diff --stat` ze
 - [x] Review-Bereich `2c148ab..451819d`, `git diff --stat`: 256 Dateien, +24903/−3251 (erwartet etwa 255)
 - [x] Je Block: Sub-Agent-Modell `sonnet` (Modell-Parameter des Agent-Werkzeugs gesetzt), Anzahl Befunde je Achse siehe Tabelle „Zusammenfassung“ im Bericht (Summe Standards 0/0/23/84, Spec 0/0/9/37 als Blocker/Hoch/Mittel/Niedrig)
 - [x] Endstand `V` grün: App 287 Tests (`TC` = 287, wie erwartet), `VS` grün: Server 180 passed, `!!` in `$B`: 0
-- [x] Bericht committet (`.claude/phasen/phase-6-daten/review-bericht.md`); „An den Nutzer zur Entscheidung“ (44 Einträge) und Abhakliste G01–G29 (Spalte „Gerät“) sind offen für den Nutzer
+- [x] Bericht committet (`.claude/phasen/phase-6-daten/review-bericht.md`); „An den Nutzer zur Entscheidung“ (42 Zeilen mit 47 IDs; korrigiert in Phase 7 Stufe A) und Abhakliste G01–G29 (Spalte „Gerät“) sind offen für den Nutzer
 - [x] Gemeldete Abweichungen von diesem Plan (je Schritt eine Zeile):
   - S0–S9: keine Abweichung. S7 hat wie geplant keinen Unit-Test; S8 lässt `SyncWorker.doWork` (Altbestand) unverändert.
   - S10: `git diff --stat` zeigt 256 statt „etwa 255“ Dateien.
