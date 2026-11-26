@@ -551,7 +551,7 @@ Freitext
   `md_import_warn_nutrition` „Nährwerte unvollständig – nicht übernommen", `md_import_warn_no_ingredients` „Keine Zutaten",
   `md_import_warn_no_steps` „Keine Schritte", `md_import_warn_section` „Abschnitt „%1$s" ignoriert", `md_import_saving`
   „Speichern …". Kein Unit-Test. Akzeptanz: `V` grün; `TC` = 351; `UiConventionsTest` grün.
-- [ ] **S34 Format-Doku und Bereichsplan** — Dateien: neu `.claude/features/rezepte/markdown-format.md` (Format aus dem
+- [x] **S34 Format-Doku und Bereichsplan** — Dateien: neu `.claude/features/rezepte/markdown-format.md` (Format aus dem
   Kopf von Block C, Schlüssel und Vokabular aus S28, Abschnitte aus S29, Grenzen, Verhalten bei Fehlern/Dubletten,
   Verweis auf `$R/raw/recipe_md_prompt.txt` als einzige Quelle der Vorlage), `.claude/features/rezepte/plan.md`
   (Backlog-Eintrag **A11** „Markdown-Rezept-Import (Phase 7)" abgehakt mit Kurzbeschreibung; Zeile „Phase 7" am Ende).
