@@ -106,13 +106,22 @@ object RecipeMarkdownParser {
     private val nutritionKeys = setOf("nährwerte", "naehrwerte", "nährwerte pro portion", "naehrwerte pro portion")
     private val noteKeys = setOf("notizen", "notiz", "tipp", "tipps")
 
-    private val sectionNames = setOf(
-        "zutaten", "zutatenliste", "ingredients",
-        "zubereitung", "schritte", "anleitung", "zubereitungsschritte", "instructions",
-        "notizen", "notiz", "tipps", "tipp", "hinweise",
-        "nährwerte", "naehrwerte",
-        "infos", "informationen", "details", "eckdaten",
-    )
+    private val listMarker = Regex("""^\s*(?:[-*+•]|\d+[.)])\s+""")
+    private val checkbox = Regex("""^\[[ xX]\]\s*""")
+    private val stepMarker = Regex("""(?i)^\s*(?:\d+[.)]|schritt\s+\d+\s*:?|[-*+•])\s+(.*)$""")
+
+    private enum class Section { HEAD, INGREDIENTS, STEPS, NOTES, NUTRITION, INFO, IGNORED }
+
+    private class Header(val name: String, val raw: String, val level: Int)
+
+    private fun sectionOf(name: String): Section? = when (name) {
+        "zutaten", "zutatenliste", "ingredients" -> Section.INGREDIENTS
+        "zubereitung", "schritte", "anleitung", "zubereitungsschritte", "instructions" -> Section.STEPS
+        "notizen", "notiz", "tipps", "tipp", "hinweise" -> Section.NOTES
+        "nährwerte", "naehrwerte" -> Section.NUTRITION
+        "infos", "informationen", "details", "eckdaten" -> Section.INFO
+        else -> null
+    }
 
     fun parse(text: String): MarkdownParseResult {
         val cleaned = preprocess(text)
@@ -129,7 +138,9 @@ object RecipeMarkdownParser {
             if (title == null) {
                 errors += MarkdownBlockError(index, "", MarkdownErrorCode.MISSING_TITLE)
             } else {
-                recipes += parseBlock(index, title, lines)
+                val recipe = parseBlock(index, title, lines)
+                val code = blockError(recipe)
+                if (code == null) recipes += recipe else errors += MarkdownBlockError(index, recipe.name, code)
             }
         }
         return MarkdownParseResult(recipes, errors)
@@ -138,7 +149,7 @@ object RecipeMarkdownParser {
     private fun fatal(code: MarkdownFatal) = MarkdownParseResult(emptyList(), emptyList(), code)
 
     private fun preprocess(text: String): String =
-        text.removePrefix("﻿")
+        text.removePrefix("\uFEFF")
             .replace("\r\n", "\n")
             .replace('\r', '\n')
             .lines()
@@ -184,30 +195,120 @@ object RecipeMarkdownParser {
     private fun cleanHeading(raw: String): String =
         raw.trim(' ', '\t', '#', '*').take(MAX_TITLE).trim()
 
-    private fun isSectionName(name: String): Boolean =
-        name.trim().trimEnd(':').trim().lowercase() in sectionNames
+    private fun normalizeName(raw: String): String = raw.trim(' ', '\t', ':', '*', '#').lowercase()
 
-    private fun isSectionStart(line: String): Boolean {
-        headingSection.matchEntire(line)?.let { return true }
-        boldSection.matchEntire(line.trim())?.let { return isSectionName(it.groupValues[1]) }
-        return false
+    private fun isSectionName(name: String): Boolean = sectionOf(normalizeName(name)) != null
+
+    private fun headerOf(line: String): Header? {
+        headingSection.matchEntire(line)?.let {
+            val level = line.trimStart().takeWhile { c -> c == '#' }.length
+            return Header(normalizeName(it.groupValues[1]), it.groupValues[1].trim(' ', ':', '*', '#'), level)
+        }
+        boldSection.matchEntire(line.trim())?.let {
+            return Header(normalizeName(it.groupValues[1]), it.groupValues[1].trim(' ', ':', '*', '#'), 0)
+        }
+        return null
+    }
+
+    private fun blockError(recipe: ParsedRecipe): MarkdownErrorCode? = when {
+        recipe.ingredients.size > MAX_LINES || recipe.steps.size > MAX_LINES -> MarkdownErrorCode.TOO_MANY_LINES
+        recipe.ingredients.isEmpty() && recipe.steps.isEmpty() -> MarkdownErrorCode.EMPTY_RECIPE
+        else -> null
     }
 
     private fun parseBlock(index: Int, title: Pair<Int, String>, lines: List<String>): ParsedRecipe {
         val (titleAt, name) = title
-        val head = lines.drop(titleAt + 1).takeWhile { !isSectionStart(it) }
         var recipe = ParsedRecipe(blockIndex = index, name = name)
         val description = mutableListOf<String>()
-        for (line in head) {
-            val applied = applyKeyLine(recipe, line)
-            if (applied != null) {
-                recipe = applied
-            } else {
-                val text = line.trim().removePrefix(">").trim()
-                if (text.isNotEmpty()) description += text
+        val ingredientLines = mutableListOf<String>()
+        val stepLines = mutableListOf<String>()
+        val noteLines = mutableListOf<String>()
+        val nutritionLines = mutableListOf<String>()
+        var section = Section.HEAD
+
+        for (line in lines.drop(titleAt + 1)) {
+            val header = headerOf(line)
+            if (header != null) {
+                val known = sectionOf(header.name)
+                if (known != null) {
+                    section = known
+                    continue
+                }
+                if (header.level == 2) {
+                    recipe = recipe.warn(MarkdownWarningCode.UNKNOWN_SECTION, header.raw)
+                    section = Section.IGNORED
+                    continue
+                }
+                // `###` oder fette Zeile mit unbekanntem Namen: Gruppenüberschrift, im Kopf evtl. Schlüsselzeile
+                val keyApplied = if (section == Section.HEAD || section == Section.INFO) applyKeyLine(recipe, line) else null
+                if (keyApplied != null) recipe = keyApplied
+                continue
+            }
+            when (section) {
+                Section.HEAD, Section.INFO -> {
+                    val applied = applyKeyLine(recipe, line)
+                    if (applied != null) {
+                        recipe = applied
+                    } else if (section == Section.HEAD) {
+                        val text = line.trim().removePrefix(">").trim()
+                        if (text.isNotEmpty()) description += text
+                    }
+                }
+                Section.INGREDIENTS -> ingredientLines += line
+                Section.STEPS -> stepLines += line
+                Section.NOTES -> noteLines += line
+                Section.NUTRITION -> nutritionLines += line
+                Section.IGNORED -> Unit
             }
         }
-        return recipe.copy(description = description.joinToString("\n"))
+
+        val ingredients = ingredientLines.mapNotNull { parseIngredient(it) }
+        val steps = parseSteps(stepLines)
+        var result = recipe.copy(
+            description = description.joinToString("\n"),
+            ingredients = ingredients,
+            steps = steps,
+        )
+        val joinedNutrition = nutritionLines
+            .map { it.replace(listMarker, "").trim() }
+            .filter { it.isNotEmpty() }
+            .joinToString(", ")
+        if (joinedNutrition.isNotEmpty()) result = applyNutrition(result, joinedNutrition)
+        val sectionNotes = noteLines.joinToString("\n") { it.trimEnd() }.trim()
+        if (sectionNotes.isNotEmpty()) {
+            result = result.copy(notes = listOf(result.notes, sectionNotes).filter { it.isNotEmpty() }.joinToString("\n"))
+        }
+        if (ingredients.isEmpty() && steps.isNotEmpty()) result = result.warn(MarkdownWarningCode.NO_INGREDIENTS)
+        if (steps.isEmpty() && ingredients.isNotEmpty()) result = result.warn(MarkdownWarningCode.NO_STEPS)
+        return result
+    }
+
+    private fun parseIngredient(raw: String): ParsedIngredientLine? {
+        val line = raw.replace(listMarker, "").trim().replace(checkbox, "").trim()
+        if (line.isEmpty() || IngredientLineParser.isHeaderLine(line)) return null
+        return IngredientLineParser.parse(line).let { it.copy(food = it.food.ifBlank { line }) }
+    }
+
+    private fun parseSteps(lines: List<String>): List<String> {
+        val steps = mutableListOf<String>()
+        var afterBlank = false
+        for (raw in lines) {
+            if (raw.isBlank()) {
+                afterBlank = true
+                continue
+            }
+            val marker = stepMarker.matchEntire(raw)
+            if (marker != null) {
+                val text = marker.groupValues[1].trim()
+                if (text.isNotEmpty()) steps += text
+            } else if (steps.isNotEmpty() && !afterBlank) {
+                steps[steps.lastIndex] = steps.last() + " " + raw.trim()
+            } else {
+                steps += raw.trim()
+            }
+            afterBlank = false
+        }
+        return steps
     }
 
     /** Wendet eine Schlüsselzeile an; `null`, wenn die Zeile keine Schlüsselzeile mit bekanntem Schlüssel ist. */

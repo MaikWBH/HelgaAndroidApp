@@ -459,7 +459,7 @@ Freitext
   `ungueltige_dauer_ergibt_warnung`, `kueche_ausserhalb_des_vokabulars_wird_sonstige`, `mahlzeit_deutsch_wird_slot`,
   `aufwand_eiweiss_saison_vokabular_und_synonyme`, `tags_komma_semikolon_ohne_dubletten`,
   `naehrwerte_vollstaendig_und_unvollstaendig`. Akzeptanz: `V` grün; `TC` = 334.
-- [ ] **S29 Parser c: Abschnitte, Zutaten, Schritte, Prüfungen** — Dateien: wie S28. Abschnittskopf: `^#{2,3}\s+(.+)$`
+- [x] **S29 Parser c: Abschnitte, Zutaten, Schritte, Prüfungen** — Dateien: wie S28. Abschnittskopf: `^#{2,3}\s+(.+)$`
   oder `^\*\*(.+?):?\*\*:?\s*$`; Name klein, `:`/`*` am Rand weg. `zutaten|zutatenliste|ingredients` → Zutaten;
   `zubereitung|schritte|anleitung|zubereitungsschritte|instructions` → Schritte; `notizen|notiz|tipps|tipp|hinweise` →
   Notizen; Nährwerte/Infos wie S28. Eine fette Zeile und eine `###`-Zeile sind nur dann ein Abschnittskopf, wenn ihr Name
