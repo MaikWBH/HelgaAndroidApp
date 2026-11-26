@@ -243,7 +243,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   sind Verstöße (Meldung „Eingabe mit rememberSaveable halten (ux §13)"). Akzeptanz: `V` grün; `TC` = 296.
 
 ### Block B3 — Bon-Eingabe und Bon-Liste (F12, F11, B2-P2)
-- [ ] **S10 `DecimalInput` (F12, Teil 1)** — Dateien: neu `$B/ui/common/DecimalInput.kt`, neu `$T/DecimalInputTest.kt`.
+- [x] **S10 `DecimalInput` (F12, Teil 1)** — Dateien: neu `$B/ui/common/DecimalInput.kt`, neu `$T/DecimalInputTest.kt`.
   `object DecimalInput { fun parse(raw: String): Double? }` nach der Dezimalregel unter „Entscheidungen"; leere Eingabe →
   `null`. Tests (6): `komma_und_punkt_als_dezimalzeichen` („12,5"→12.5, „12.5"→12.5), `tausenderpunkt_mit_dezimalkomma`
   („1.234,56"→1234.56, „1,234.56"→1234.56), `euro_und_leerzeichen` („ 3,99 €"→3.99), `mehrere_trenner_ungueltig`
