@@ -361,7 +361,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   `test_missing_key_is_502_without_upstream_call` (Fixture `client`, `AI_API_KEY = ""`, `ai_client.httpx.AsyncClient`
   durch eine Attrappe ersetzen, die jeden Aufruf in einer Liste merkt; `POST /api/ai/classify` mit dem Body aus
   `test_classify_status_error_is_502_without_secret` → 502, Liste leer). Akzeptanz: `VS` grün, 186 Tests.
-- [ ] **S24 Einheitliche Bon-ID-Prüfung (F18, B3-S2)** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, neu
+- [x] **S24 Einheitliche Bon-ID-Prüfung (F18, B3-S2)** — Dateien: `$SA/receipts.py`, `$SA/receipt_api.py`, neu
   `$ST/test_receipt_ids.py`. `RECEIPT_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")`; neue Funktion
   `check_receipt_id(receipt_id: str) -> None` (`fullmatch`, sonst `HTTPException(400, "Ungültige Bon-ID")`);
   `save_receipt_image` nutzt sie; in `receipt_api.py` erste Zeile von `scan_receipt`, `get_receipt`, `put_receipt`,

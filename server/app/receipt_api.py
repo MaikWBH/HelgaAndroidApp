@@ -54,6 +54,7 @@ async def scan_receipt(
     captured_at: int = Form(default=0),
     preliminary: Optional[str] = Form(default=None),
 ):
+    receipts.check_receipt_id(receipt_id)
     image_name = await receipts.save_receipt_image(receipt_id, file)
     prelim: Optional[ReceiptIn] = None
     if preliminary:
@@ -88,6 +89,7 @@ async def get_aggregates():
 
 @router.get("/{receipt_id}", response_model=ReceiptOut)
 async def get_receipt(receipt_id: str):
+    receipts.check_receipt_id(receipt_id)
     async with get_db() as db:
         receipt = await receipts.get_receipt(db, receipt_id)
     if receipt is None:
@@ -97,6 +99,7 @@ async def get_receipt(receipt_id: str):
 
 @router.put("/{receipt_id}", response_model=ReceiptPutResponse)
 async def put_receipt(receipt_id: str, body: ReceiptIn):
+    receipts.check_receipt_id(receipt_id)
     payload = body.model_dump()
     payload["id"] = receipt_id
     async with get_db() as db:
@@ -107,6 +110,7 @@ async def put_receipt(receipt_id: str, body: ReceiptIn):
 
 @router.delete("/{receipt_id}")
 async def delete_receipt(receipt_id: str, updated_at: int = Query(default=0)):
+    receipts.check_receipt_id(receipt_id)
     async with get_db() as db:
         await receipts.delete_receipt(db, receipt_id, updated_at)
         await db.commit()
@@ -115,6 +119,7 @@ async def delete_receipt(receipt_id: str, updated_at: int = Query(default=0)):
 
 @router.post("/{receipt_id}/image")
 async def upload_receipt_image(receipt_id: str, file: UploadFile = File(...)):
+    receipts.check_receipt_id(receipt_id)
     async with get_db() as db:
         async with db.execute("SELECT 1 FROM receipts WHERE id = ?", (receipt_id,)) as cur:
             if await cur.fetchone() is None:
@@ -127,5 +132,6 @@ async def upload_receipt_image(receipt_id: str, file: UploadFile = File(...)):
 
 @router.post("/{receipt_id}/reparse", response_model=ReceiptScanResponse)
 async def reparse_receipt(receipt_id: str):
+    receipts.check_receipt_id(receipt_id)
     parsed, receipt = await receipts.reparse(get_db, receipt_id)
     return ReceiptScanResponse(parsed=parsed, receipt=receipt)

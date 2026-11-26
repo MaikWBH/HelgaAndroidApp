@@ -16,7 +16,7 @@ from .models import ReceiptIn, ReceiptItemIn
 
 logger = logging.getLogger(__name__)
 
-RECEIPT_ID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
+RECEIPT_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
 IMAGE_EXTS = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
 
 LEARNING_STATUSES = ("confirmed", "reconciled")
@@ -329,10 +329,15 @@ async def delete_lexicon_entry(db, entry_id: str) -> None:
 
 # ── Foto, Scan, Auslesen (Vertrag Abschnitt 3.1) ───────────────────────────────────────
 
+def check_receipt_id(receipt_id: str) -> None:
+    """Lesbare, dateinamen-sichere ID (A–Z, a–z, 0–9, `_`, `-`, 1–64 Zeichen), sonst 400 (Phase 7, F18)."""
+    if not RECEIPT_ID_RE.fullmatch(receipt_id or ""):
+        raise HTTPException(status_code=400, detail="Ungültige Bon-ID")
+
+
 async def save_receipt_image(receipt_id: str, upload: UploadFile) -> str:
     """Speichert das Foto als `receipt_<id><ext>` in IMAGES_DIR und gibt den Dateinamen zurück."""
-    if not RECEIPT_ID_RE.match(receipt_id or ""):
-        raise HTTPException(status_code=400, detail="Ungültige Bon-ID")
+    check_receipt_id(receipt_id)
     ext = Path(upload.filename or "").suffix.lower()
     if ext not in IMAGE_EXTS:
         raise HTTPException(status_code=400, detail=f"Dateityp nicht erlaubt: {ext}")
