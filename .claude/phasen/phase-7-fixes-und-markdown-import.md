@@ -511,7 +511,7 @@ Freitext
   (vorhandenes Rezept und Dublette im Text), `speichern_je_auswahl_und_trigger_einmal` (2 von 3 ausgewählt →
   `saveRecipe` 2-mal, `triggerOneShot` genau 1-mal; `classifyRecipe` wirft `IOException`), `ziel_detail_bei_einem_rezept_sonst_liste`,
   `fatale_eingabe_ohne_vorschau`. Akzeptanz: `V` grün; `TC` = 351; `ArchitectureRulesTest` grün (kein DAO im ViewModel).
-- [ ] **S33 Screen, Zwischenablage, FAB, Navigation** — Dateien: neu `$B/ui/recipes/MarkdownImportScreen.kt`, neu
+- [x] **S33 Screen, Zwischenablage, FAB, Navigation** — Dateien: neu `$B/ui/recipes/MarkdownImportScreen.kt`, neu
   `$B/ui/recipes/RecipePromptClipboard.kt`, `$B/ui/components/CreateFab.kt`, `$B/ui/recipes/RecipeListScreen.kt`,
   `$B/ui/recipes/RecipeDetailScreen.kt`, `$B/HelgaNavGraph.kt`, `$R/values/strings.xml`.
   `RecipePromptClipboard.kt`: `internal fun loadRecipePrompt(context: Context): String` (Raw-Ressource

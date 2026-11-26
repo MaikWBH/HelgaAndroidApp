@@ -56,6 +56,8 @@ import com.helga.android.ui.recipes.RecipeCookScreen
 import com.helga.android.ui.recipes.RecipeDetailScreen
 import com.helga.android.ui.recipes.RecipeFormScreen
 import com.helga.android.ui.recipes.RecipeListScreen
+import com.helga.android.ui.recipes.MarkdownImportScreen
+import com.helga.android.ui.recipes.MarkdownSaveTarget
 import com.helga.android.ui.recipes.UrlImportScreen
 import com.helga.android.ui.settings.SettingsScreen
 import com.helga.android.ui.shopping.ShoppingListScreen
@@ -84,6 +86,7 @@ internal const val ROUTE_RECIPE_EDIT = "recipe/{recipeId}/edit"
 internal const val ROUTE_RECIPE_COOK = "recipe/{recipeId}/cook"
 internal const val ROUTE_RECIPE_REMIX = "recipe/{recipeId}/remix"
 internal const val ROUTE_RECIPE_URL_IMPORT = "recipe/url-import"
+internal const val ROUTE_RECIPE_MD_IMPORT = "recipe/md-import"
 internal const val ROUTE_AI_GENERATE = "ai/generate"
 internal const val ROUTE_SETTINGS = "settings"
 internal const val ROUTE_STATS = "stats"
@@ -225,6 +228,7 @@ fun HelgaNavGraph(
                             onRecipeClick = { id -> navController.navigate(recipeDetailRoute(id)) },
                             onCreateClick = { navController.navigate(ROUTE_RECIPE_CREATE) },
                             onImportClick = { navController.navigate(ROUTE_RECIPE_URL_IMPORT) },
+                            onMarkdownImportClick = { navController.navigate(ROUTE_RECIPE_MD_IMPORT) },
                             onAiGenerateClick = { navController.navigate(ROUTE_AI_GENERATE) },
                             onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
                             onCookClick = { id -> navController.navigate(recipeCookRoute(id)) },
@@ -253,6 +257,19 @@ fun HelgaNavGraph(
                         UrlImportScreen(
                             onBack = { navController.popBackStack() },
                             initialUrl = initialImportUrl,
+                        )
+                    }
+                    composable(ROUTE_RECIPE_MD_IMPORT) {
+                        MarkdownImportScreen(
+                            onBack = { navController.popBackStack() },
+                            onSaved = { target ->
+                                when (target) {
+                                    is MarkdownSaveTarget.Detail ->
+                                        navController.navigate(recipeDetailRoute(target.recipeId)) { popUpTo(ROUTE_RECIPES) }
+                                    MarkdownSaveTarget.RecipeList ->
+                                        navController.popBackStack(ROUTE_RECIPES, inclusive = false)
+                                }
+                            },
                         )
                     }
                     composable(ROUTE_AI_GENERATE) {
@@ -360,6 +377,7 @@ fun HelgaNavGraph(
                             onNewRecipe = { navController.navigate(ROUTE_RECIPE_CREATE) },
                             onAiGenerate = { navController.navigate(ROUTE_AI_GENERATE) },
                             onImport = { navController.navigate(ROUTE_RECIPE_URL_IMPORT) },
+                            onMarkdownImport = { navController.navigate(ROUTE_RECIPE_MD_IMPORT) },
                             onRemix = { id -> navController.navigate(recipeRemixRoute(id)) },
                         )
                     }

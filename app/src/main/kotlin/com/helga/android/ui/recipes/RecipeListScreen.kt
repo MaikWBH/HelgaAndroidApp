@@ -85,6 +85,7 @@ fun RecipeListScreen(
     onRecipeClick: (id: String) -> Unit,
     onCreateClick: () -> Unit,
     onImportClick: () -> Unit,
+    onMarkdownImportClick: () -> Unit,
     onAiGenerateClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onCookClick: (recipeId: String) -> Unit,
@@ -177,6 +178,7 @@ fun RecipeListScreen(
                 onNewRecipe = onCreateClick,
                 onAiGenerate = onAiGenerateClick,
                 onUrlImport = onImportClick,
+                onMarkdownImport = onMarkdownImportClick,
             )
         },
     ) { padding ->

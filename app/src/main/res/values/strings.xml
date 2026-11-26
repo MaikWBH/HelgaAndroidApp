@@ -703,4 +703,39 @@
     <string name="duration_minutes">%1$d Min</string>
     <string name="duration_hours">%1$d Std</string>
     <string name="duration_hours_minutes">%1$d Std %2$d Min</string>
+
+    <!-- Phase 7: Markdown-Rezept-Import -->
+    <string name="fab_markdown_import">Markdown importieren</string>
+    <string name="md_import_title">Markdown importieren</string>
+    <string name="md_import_clip_label">Helga Rezept-Vorlage</string>
+    <string name="md_import_prompt_copied">Vorlage in die Zwischenablage kopiert</string>
+    <string name="md_import_prompt_card">Die KI-Vorlage liegt in der Zwischenablage.</string>
+    <string name="md_import_copy_again">Erneut kopieren</string>
+    <string name="md_import_step1">1. Vorlage in Gemini oder eine andere KI einfügen und hinter „Mein Wunsch:“ dein Rezept beschreiben.</string>
+    <string name="md_import_step2">2. Die Antwort komplett kopieren, hier einfügen und auswerten.</string>
+    <string name="md_import_input_label">Markdown-Text</string>
+    <string name="md_import_paste">Einfügen</string>
+    <string name="md_import_evaluate">Auswerten</string>
+    <plurals name="md_import_save_count">
+        <item quantity="one">1 Rezept speichern</item>
+        <item quantity="other">%d Rezepte speichern</item>
+    </plurals>
+    <string name="md_import_preview_counts">%1$d Zutaten · %2$d Schritte</string>
+    <string name="md_import_duplicate">Ein Rezept mit diesem Namen gibt es schon – nicht ausgewählt.</string>
+    <string name="md_import_block_error">Block %1$d (%2$s): %3$s</string>
+    <string name="md_import_untitled">ohne Titel</string>
+    <string name="md_import_error_missing_title">Kein Titel (# Titel) gefunden</string>
+    <string name="md_import_error_empty">Weder Zutaten noch Schritte</string>
+    <string name="md_import_error_too_many_lines">Mehr als 100 Zutaten oder Schritte</string>
+    <string name="md_import_fatal_empty">Bitte zuerst einen Text einfügen.</string>
+    <string name="md_import_fatal_too_long">Der Text ist zu lang (höchstens 100 000 Zeichen).</string>
+    <string name="md_import_fatal_too_many">Zu viele Rezepte (höchstens 50 auf einmal).</string>
+    <string name="md_import_warn_servings">Portionen ohne Zahl ignoriert</string>
+    <string name="md_import_warn_duration">Zeitangabe „%1$s“ nicht erkannt</string>
+    <string name="md_import_warn_value">Wert „%1$s“ nicht erkannt</string>
+    <string name="md_import_warn_nutrition">Nährwerte unvollständig – nicht übernommen</string>
+    <string name="md_import_warn_no_ingredients">Keine Zutaten</string>
+    <string name="md_import_warn_no_steps">Keine Schritte</string>
+    <string name="md_import_warn_section">Abschnitt „%1$s“ ignoriert</string>
+    <string name="md_import_saving">Speichern …</string>
 </resources>

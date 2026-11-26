@@ -100,6 +100,7 @@ fun RecipeDetailScreen(
     onNewRecipe: () -> Unit,
     onAiGenerate: () -> Unit,
     onImport: () -> Unit,
+    onMarkdownImport: () -> Unit,
     onRemix: (id: String) -> Unit,
     viewModel: RecipeDetailViewModel = hiltViewModel(),
 ) {
@@ -335,6 +336,7 @@ fun RecipeDetailScreen(
                     onNewRecipe = onNewRecipe,
                     onAiGenerate = onAiGenerate,
                     onUrlImport = onImport,
+                    onMarkdownImport = onMarkdownImport,
                     onRemix = { onRemix(it.id) },
                 )
             }

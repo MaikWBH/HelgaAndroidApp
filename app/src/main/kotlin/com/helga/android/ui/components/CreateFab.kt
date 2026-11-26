@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Shuffle
@@ -41,6 +42,7 @@ fun CreateFab(
     onNewRecipe: () -> Unit,
     onAiGenerate: () -> Unit,
     onUrlImport: () -> Unit,
+    onMarkdownImport: () -> Unit,
     onRemix: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -77,6 +79,11 @@ fun CreateFab(
                     icon = Icons.Filled.Link,
                     label = stringResource(R.string.fab_url_import),
                     onClick = { onUrlImport(); expanded = false },
+                )
+                FabMenuItem(
+                    icon = Icons.Filled.ContentPaste,
+                    label = stringResource(R.string.fab_markdown_import),
+                    onClick = { onMarkdownImport(); expanded = false },
                 )
                 FabMenuItem(
                     icon = Icons.Filled.Create,
@@ -128,7 +135,7 @@ private fun FabMenuItem(
 private fun CreateFabPreview() {
     PreviewSurface {
         Box(modifier = Modifier.padding(16.dp)) {
-            CreateFab(onNewRecipe = {}, onAiGenerate = {}, onUrlImport = {})
+            CreateFab(onNewRecipe = {}, onAiGenerate = {}, onUrlImport = {}, onMarkdownImport = {})
         }
     }
 }
