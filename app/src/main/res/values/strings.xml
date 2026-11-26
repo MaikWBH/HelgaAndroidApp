@@ -43,6 +43,7 @@
     <string name="recipe_detail_instructions">Zubereitung</string>
     <string name="recipe_detail_yield">Portionen</string>
     <string name="recipe_detail_prep_time">Vorbereitung</string>
+    <string name="recipe_form_prep_time">Vorb.</string>
     <string name="recipe_detail_cook_time">Kochzeit</string>
     <string name="recipe_detail_total_time">Gesamt</string>
     <string name="recipe_detail_cuisine">Küche</string>

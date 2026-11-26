@@ -310,7 +310,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   Stellen (⚡, 👥, 🚫, Schloss, 👍, 👎) `onSurfaceVariant.copy(alpha = 0.4f)` → `copy(alpha = 0.6f)`. Neu-Erzeugen
   (`enabled = day.isLocked == 0`) und Hintergrund (`surfaceVariant…`) bleiben. Akzeptanz: `V` grün;
   `grep -c 'alpha = 0.4f' $B/ui/weekplan/WeekplanScreen.kt` = 2; `grep -c 'alpha = 0.6f'` = 6.
-- [ ] **S16 Kurzes Label im Formular (F8)** — Dateien: `$R/values/strings.xml` (`recipe_form_prep_time` = „Vorb."),
+- [x] **S16 Kurzes Label im Formular (F8)** — Dateien: `$R/values/strings.xml` (`recipe_form_prep_time` = „Vorb."),
   `$B/ui/recipes/RecipeFormScreen.kt` (Zeitfeld nutzt `R.string.recipe_form_prep_time`). Akzeptanz: `V` grün.
 - [ ] **S17 Freiraum unter dem FAB (F9, F17)** — Dateien: neu `$B/ui/components/FabSpacing.kt`
   (`/** Unterer Freiraum für Listen unter einem FAB (Phase 7, F9/F17). */ val FabListBottomPadding = 96.dp`),

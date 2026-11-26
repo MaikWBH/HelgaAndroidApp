@@ -137,7 +137,7 @@ fun RecipeFormScreen(
                 FormField(
                     value = state.prepTime,
                     onValueChange = viewModel::setPrepTime,
-                    label = stringResource(R.string.recipe_detail_prep_time),
+                    label = stringResource(R.string.recipe_form_prep_time),
                     modifier = Modifier.weight(1f),
                 )
                 FormField(
