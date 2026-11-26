@@ -933,10 +933,10 @@ private fun QuickEmojiDialog(
     onDismiss: () -> Unit,
     onSave: (emoji: String, food: String, quantity: Double, unit: String) -> Unit,
 ) {
-    var emoji by remember(item?.id) { mutableStateOf(item?.emoji ?: "") }
-    var food by remember(item?.id) { mutableStateOf(item?.food ?: "") }
-    var quantityText by remember(item?.id) { mutableStateOf((item?.quantity ?: 1.0).toString()) }
-    var unit by remember(item?.id) { mutableStateOf(item?.unit ?: "") }
+    var emoji by rememberSaveable(item?.id) { mutableStateOf(item?.emoji ?: "") }
+    var food by rememberSaveable(item?.id) { mutableStateOf(item?.food ?: "") }
+    var quantityText by rememberSaveable(item?.id) { mutableStateOf((item?.quantity ?: 1.0).toString()) }
+    var unit by rememberSaveable(item?.id) { mutableStateOf(item?.unit ?: "") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -980,8 +980,8 @@ private fun DayMarkerDialog(
     onDismiss: () -> Unit,
     onSave: (name: String, color: String) -> Unit,
 ) {
-    var name by remember(marker?.id) { mutableStateOf(marker?.name ?: "") }
-    var color by remember(marker?.id) { mutableStateOf(marker?.color?.ifBlank { dayMarkerColors.first() } ?: dayMarkerColors.first()) }
+    var name by rememberSaveable(marker?.id) { mutableStateOf(marker?.name ?: "") }
+    var color by rememberSaveable(marker?.id) { mutableStateOf(marker?.color?.ifBlank { dayMarkerColors.first() } ?: dayMarkerColors.first()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {

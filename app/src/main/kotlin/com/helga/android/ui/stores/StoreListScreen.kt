@@ -317,7 +317,8 @@ private fun ReorderableAisleList(
     onSetCategory: (StoreAisleEntity, String) -> Unit,
 ) {
     var localOrder by remember { mutableStateOf(aisles) }
-    var draggedId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Ziehen endet mit dem Konfigurationswechsel; bewusst nicht saveable (Phase 7, B6-S4).
+    var draggedId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val itemHeights = remember { mutableStateMapOf<String, Int>() }
     val haptics = LocalHapticFeedback.current

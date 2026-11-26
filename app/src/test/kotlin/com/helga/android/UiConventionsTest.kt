@@ -65,4 +65,24 @@ class UiConventionsTest {
             found.isEmpty(),
         )
     }
+
+    // Zustand, der bewusst nicht gespeichert wird (kein Nutzer-Text, abgeleitet oder endet mit der Komposition).
+    private val rememberAllowed = setOf(
+        "skipConfirmDay", "extraSuggestions", "deleteList", "editEmoji", "editMarker", "aislePickerItem",
+        "editItem", "expanded", "suggestions", "rowWidthPx", "localOrder", "dragOffset", "draggedId",
+        "aisleSheetStore", "prefill", "now", "classifyProgress", "selectedRecipes",
+    )
+
+    @Test
+    fun eingaben_mit_rememberSaveable() {
+        val pattern = Regex("""var (\w+) by remember(\([^)]*\))? \{ mutable\w*StateOf""")
+        val found = violations { line ->
+            val name = pattern.find(line)?.groupValues?.get(1) ?: return@violations false
+            name !in rememberAllowed
+        }
+        assertTrue(
+            "Eingabe mit rememberSaveable halten (ux §13):\n" + found.joinToString("\n"),
+            found.isEmpty(),
+        )
+    }
 }

@@ -879,10 +879,10 @@ private fun EditItemDialog(
     onDismiss: () -> Unit,
     onSave: (quantity: Double, unit: String, name: String, aisle: String) -> Unit,
 ) {
-    var quantityText by remember(item.id) { mutableStateOf(item.quantity.toString()) }
-    var unit by remember(item.id) { mutableStateOf(item.unit) }
-    var name by remember(item.id) { mutableStateOf(item.name) }
-    var aisle by remember(item.id) { mutableStateOf(item.aisle) }
+    var quantityText by rememberSaveable(item.id) { mutableStateOf(item.quantity.toString()) }
+    var unit by rememberSaveable(item.id) { mutableStateOf(item.unit) }
+    var name by rememberSaveable(item.id) { mutableStateOf(item.name) }
+    var aisle by rememberSaveable(item.id) { mutableStateOf(item.aisle) }
     var showAislePicker by rememberSaveable { mutableStateOf(false) }
 
     if (showAislePicker) {

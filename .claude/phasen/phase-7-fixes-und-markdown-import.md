@@ -229,7 +229,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   (`DisposableEffect`/`onDone` bleiben); `draft` → `rememberSaveable(notes) { mutableStateOf(notes) }`. Imports
   `androidx.compose.runtime.saveable.rememberSaveable` ergänzen, wo sie fehlen. Kein Unit-Test (Geräteprüfung in E).
   Akzeptanz: `V` grün; `grep -n 'var text by remember {\|noteText by remember(\|draft by remember(' $B/ui -r` leer.
-- [ ] **S9 Restliche Eingaben, Gang-Ziehen, Regeltest (B6-S4)** — Dateien: `$B/ui/settings/SettingsScreen.kt` (`emoji`,
+- [x] **S9 Restliche Eingaben, Gang-Ziehen, Regeltest (B6-S4)** — Dateien: `$B/ui/settings/SettingsScreen.kt` (`emoji`,
   `food`, `quantityText`, `unit` mit `rememberSaveable(item?.id)`; `name`, `color` mit `rememberSaveable(marker?.id)`),
   `$B/ui/shopping/ShoppingListScreen.kt` (`quantityText`, `unit`, `name`, `aisle` mit `rememberSaveable(item.id)`),
   `$B/ui/weekplan/WeekplanScreen.kt` (`maxMeat`, `maxFish`, `minVeg`, `maxRepeat`, `maxKcal`, `preferOrganic` mit

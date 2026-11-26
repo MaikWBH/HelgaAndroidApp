@@ -80,8 +80,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -1059,7 +1057,7 @@ private fun ShoppingListPickerDialog(
     onConfirm: (String, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var servings by remember { mutableIntStateOf(2) }
+    var servings by rememberSaveable { mutableStateOf(2) }
     var selectedListId by rememberSaveable { mutableStateOf(defaultListId.ifBlank { lists.firstOrNull()?.id.orEmpty() }) }
 
     AlertDialog(
@@ -1250,12 +1248,12 @@ private fun ConstraintsEditorContent(
     allergies: List<String>,
     onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
 ) {
-    var maxMeat by remember(constraints.maxMeatPerWeek) { mutableFloatStateOf(constraints.maxMeatPerWeek.toFloat()) }
-    var maxFish by remember(constraints.maxFishPerWeek) { mutableFloatStateOf(constraints.maxFishPerWeek.toFloat()) }
-    var minVeg by remember(constraints.minVegetarianPerWeek) { mutableFloatStateOf(constraints.minVegetarianPerWeek.toFloat()) }
-    var maxRepeat by remember(constraints.maxRepeatDays) { mutableFloatStateOf(constraints.maxRepeatDays.toFloat()) }
-    var maxKcal by remember(constraints.maxKcalPerPortion) { mutableFloatStateOf(constraints.maxKcalPerPortion.toFloat()) }
-    var preferOrganic by remember(constraints.preferOrganic) { mutableStateOf(constraints.preferOrganic == 1) }
+    var maxMeat by rememberSaveable(constraints.maxMeatPerWeek) { mutableStateOf(constraints.maxMeatPerWeek.toFloat()) }
+    var maxFish by rememberSaveable(constraints.maxFishPerWeek) { mutableStateOf(constraints.maxFishPerWeek.toFloat()) }
+    var minVeg by rememberSaveable(constraints.minVegetarianPerWeek) { mutableStateOf(constraints.minVegetarianPerWeek.toFloat()) }
+    var maxRepeat by rememberSaveable(constraints.maxRepeatDays) { mutableStateOf(constraints.maxRepeatDays.toFloat()) }
+    var maxKcal by rememberSaveable(constraints.maxKcalPerPortion) { mutableStateOf(constraints.maxKcalPerPortion.toFloat()) }
+    var preferOrganic by rememberSaveable(constraints.preferOrganic) { mutableStateOf(constraints.preferOrganic == 1) }
     var selectedAllergens by remember(constraints.excludeAllergens) {
         mutableStateOf(parseAllergenJson(constraints.excludeAllergens))
     }
