@@ -566,7 +566,7 @@ Freitext
   „`ReceiptDao.upsertReceipt(s)` ist `@Upsert`, nie `REPLACE` (CASCADE auf Positionen)."), `.claude/guidelines/ux-accessibility.md`
   §13 (Satz „Abgesichert: `UiConventionsTest.eingaben_mit_rememberSaveable`."), `.claude/phasen/testplan.md` (neuer
   Abschnitt 8 „Nachtest Phase 7" mit der Nutzer-Liste aus S36 als Tabelle mit leerer Ergebnisspalte). Akzeptanz: `V`, `VS` grün.
-- [ ] **S36 Abschluss** — diese Datei, Abschnitt „Abschluss" ausfüllen (Baseline, Endstand `TC`/`VS`, `VA`-Befund,
+- [x] **S36 Abschluss** — diese Datei, Abschnitt „Abschluss" ausfüllen (Baseline, Endstand `TC`/`VS`, `VA`-Befund,
   Abweichungen je Schritt). **Danach pushen.** Die Gerätetests (Liste unten) macht der Nutzer.
 
 **Nutzer-Liste für Gerät und Homelab (Block E; nicht in der Cloud prüfbar):**
@@ -685,8 +685,16 @@ Mein Wunsch:
 
 ## Abschluss
 - [x] Baseline S0: App `TC` 287 (erwartet 287), Server 180 passed (erwartet 180), `VA`: `zipalign -c -P 16` „Verification successful“; vier ABIs (arm64-v8a, armeabi-v7a, x86, x86_64) mit je fünf `.so`; LOAD-Ausrichtung `0x4000` bei `libandroidx.graphics.path`, `libdatastore_shared_counter` (alle ABIs) und `libbarhopper_v3` (arm64-v8a, x86_64); `0x1000` bei `libimage_processing_util_jni`, `libmlkit_google_ocr_pipeline` (alle ABIs) und `libbarhopper_v3` (armeabi-v7a, x86)
-- [ ] Nach B1: `TC` … (erwartet 295), Server … (erwartet 184)
-- [ ] Nach B2–B4: `TC` … (erwartet 310) · nach B5: … (erwartet 319) · nach B6: `TC` … (319), Server … (erwartet 192)
+- [x] Nach B1: `TC` 295, Server 184 (jeweils wie erwartet)
+- [x] Nach B2–B4: `TC` 310 · nach B5: 319 · nach B6: `TC` 319, Server 192 (jeweils wie erwartet; Server-Endstand 192 passed, gemessen nach S35)
 - [x] `VA` nach S25: ABIs nur `arm64-v8a` und `x86_64`; `zipalign -c -P 16`: „Verification succesful"; LOAD-Ausrichtung `0x4000` bei allen 12 `.so` (je 6 pro ABI: graphics.path, barhopper_v3, datastore_shared_counter, image_processing_util_jni, mlkit_google_ocr_pipeline, surface_util_jni). F6 behoben; `TC` unverändert 319.
-- [ ] Nach C: `TC` … (erwartet 351) · `git diff --stat 99735ec -- app/schemas` leer
-- [ ] Gemeldete Abweichungen von diesem Plan (je Schritt eine Zeile): …
+- [x] Nach C: `TC` 351 (wie erwartet, keine fehlgeschlagenen Tests) · `git diff --stat 99735ec -- app/schemas` leer (Room-Schema unverändert)
+- [x] Gemeldete Abweichungen von diesem Plan (je Schritt eine Zeile):
+  - S9: Beim Umstellen auf `rememberSaveable` wurden `mutableFloatStateOf`/`mutableIntStateOf` zu `mutableStateOf` (sicherer Standard-Saver); ungenutzte Imports entfernt.
+  - S25: Die Ausgabe von `zipalign` schreibt „succesful" (Tippfehler des Werkzeugs); inhaltlich bestanden.
+  - S27/S29: Drei S27-Tests (`code_zaun_bom_und_crlf_werden_entfernt`, Titel-Rückfall und 300-Zeichen-Titel in `titel_und_beschreibung_aus_fliesstext_und_zitat`) hatten kein `## Zutaten`/`## Zubereitung`; mit der Prüfung `EMPTY_RECIPE` aus S29 wurden sie um diese Abschnitte ergänzt.
+  - S27: Das BOM-Zeichen steht im Quelltext als `"\uFEFF"`, nicht als Literal.
+  - S29: `isSectionStart`/`sectionNames` wurden durch `headerOf`/`sectionOf` ersetzt (gleiches Verhalten, eine Quelle der Abschnittsnamen).
+  - S32: `gleicher_name_ist_abgewaehlt` erwartet das Duplikat „SALAT" im selben Text ebenfalls als `duplicate` (so beschrieben im Plan).
+  - S33: `formatRecipeDuration` ist `@Composable` und wird daher vor `joinToString` berechnet.
+  - Offen für den Nutzer: Gerätetests (Block E, Liste in Testplan Abschnitt 8), Rollout (Server zuerst, `make backup`), Entscheidungen aus Phase 6, Freigabe von Phase 8 (Gate 0).
