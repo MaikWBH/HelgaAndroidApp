@@ -569,21 +569,21 @@ private fun DayCard(
                         Text(
                             text = "⚡",
                             color = if (day.isQuickDay == 1) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                     IconButton(onClick = onToggleGuest) {
                         Text(
                             text = "👥",
                             color = if (day.isGuestDay == 1) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                     IconButton(onClick = onToggleSkip) {
                         Text(
                             text = "🚫",
                             color = if (day.isSkipped == 1) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                     IconButton(onClick = onToggleLock) {
@@ -591,7 +591,7 @@ private fun DayCard(
                             imageVector = if (day.isLocked == 1) Icons.Filled.Lock else Icons.Filled.LockOpen,
                             contentDescription = stringResource(R.string.weekplan_lock_day),
                             tint = if (day.isLocked == 1) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                     IconButton(onClick = onExport) {
@@ -942,7 +942,7 @@ private fun RecipeItemRow(
                     Text(
                         text = "👍",
                         color = if (liked == 1) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )
                 }
                 IconButton(
@@ -951,7 +951,7 @@ private fun RecipeItemRow(
                     Text(
                         text = "👎",
                         color = if (liked == -1) MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )
                 }
             }

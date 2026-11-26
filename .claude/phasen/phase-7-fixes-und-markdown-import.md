@@ -306,7 +306,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   **Danach Blöcke B2–B4 pushen.**
 
 ### Block B5 — Optik (F4, F8, F9/F17, F14, F15, F19, F5)
-- [ ] **S15 Kontrast inaktiver Wochenplan-Symbole (F4)** — Datei: `$B/ui/weekplan/WeekplanScreen.kt`. An den sechs
+- [x] **S15 Kontrast inaktiver Wochenplan-Symbole (F4)** — Datei: `$B/ui/weekplan/WeekplanScreen.kt`. An den sechs
   Stellen (⚡, 👥, 🚫, Schloss, 👍, 👎) `onSurfaceVariant.copy(alpha = 0.4f)` → `copy(alpha = 0.6f)`. Neu-Erzeugen
   (`enabled = day.isLocked == 0`) und Hintergrund (`surfaceVariant…`) bleiben. Akzeptanz: `V` grün;
   `grep -c 'alpha = 0.4f' $B/ui/weekplan/WeekplanScreen.kt` = 2; `grep -c 'alpha = 0.6f'` = 6.
