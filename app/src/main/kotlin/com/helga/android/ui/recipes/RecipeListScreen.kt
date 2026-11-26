@@ -407,7 +407,7 @@ private fun RecipeRow(
                 if (recipe.totalTime.isNotBlank()) {
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = recipe.totalTime,
+                        text = formatRecipeDuration(recipe.totalTime),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

@@ -326,7 +326,7 @@ Erwartet für tauglich: Ausrichtung `0x4000` (oder größer) je LOAD-Segment, `z
   in `SpendingBarChart` `val step = ChartMath.labelStep(bars.size)`; Label-`Text`:
   `modifier = Modifier.weight(1f).wrapContentWidth(unbounded = true)`, `softWrap = false`, `overflow = TextOverflow.Visible`,
   `maxLines = 1`. Test (+1) `labelStep_jedes_dritte_ab_neun_balken` (8→1, 9→3, 12→3). Akzeptanz: `V` grün; `TC` = 311.
-- [ ] **S20 Dauer lesbar (F19)** — Dateien: neu `$B/data/util/RecipeDuration.kt`, neu `$B/ui/recipes/RecipeDurationText.kt`,
+- [x] **S20 Dauer lesbar (F19)** — Dateien: neu `$B/data/util/RecipeDuration.kt`, neu `$B/ui/recipes/RecipeDurationText.kt`,
   `$B/ui/recipes/RecipeListScreen.kt`, `$B/ui/recipes/RecipeDetailScreen.kt`, `$B/ui/ai/AiRemixScreen.kt`,
   `$R/values/strings.xml`, neu `$T/RecipeDurationTest.kt`.
   `object RecipeDuration { fun parseMinutes(raw: String): Int?; fun toIso(minutes: Int): String }`:

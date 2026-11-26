@@ -1,5 +1,6 @@
 package com.helga.android.ui.ai
 
+import com.helga.android.ui.recipes.formatRecipeDuration
 import com.helga.android.ui.common.asString
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -213,7 +214,7 @@ private fun AiPreviewContent(
                     HorizontalDivider()
                     if (recipe.totalTime.isNotBlank()) {
                         Text(
-                            text = "${stringResource(R.string.recipe_detail_total_time)}: ${recipe.totalTime}",
+                            text = "${stringResource(R.string.recipe_detail_total_time)}: ${formatRecipeDuration(recipe.totalTime)}",
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }

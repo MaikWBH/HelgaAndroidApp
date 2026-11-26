@@ -518,11 +518,14 @@ private fun TagsSection(tags: List<TagEntity>) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MetadataSection(recipe: RecipeEntity) {
+    val total = formatRecipeDuration(recipe.totalTime)
+    val prep = formatRecipeDuration(recipe.prepTime)
+    val cook = formatRecipeDuration(recipe.cookTime)
     val items = buildList {
         if (recipe.recipeYield.isNotBlank()) add("🍽️" to recipe.recipeYield)
-        if (recipe.totalTime.isNotBlank()) add("⏱️" to recipe.totalTime)
-        if (recipe.prepTime.isNotBlank()) add("🔪" to recipe.prepTime)
-        if (recipe.cookTime.isNotBlank()) add("🔥" to recipe.cookTime)
+        if (total.isNotBlank()) add("⏱️" to total)
+        if (prep.isNotBlank()) add("🔪" to prep)
+        if (cook.isNotBlank()) add("🔥" to cook)
         if (recipe.cuisine.isNotBlank()) add("🌍" to recipe.cuisine)
         if (recipe.mealSlot != MealSlots.OTHER) add("🍳" to mealSlotLabel(recipe.mealSlot))
         if (recipe.effort.isNotBlank()) add("💪" to recipe.effort)
