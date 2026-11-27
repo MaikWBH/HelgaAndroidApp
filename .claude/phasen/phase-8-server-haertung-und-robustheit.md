@@ -78,7 +78,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   fehlt sie → `raise ValueError("Ungültige Weiterleitung")` (der bestehende Pfad macht daraus 422). Test (+1)
   `test_redirect_without_location_is_rejected` (Attrappe wie in `test_redirect_to_private_address_is_rejected`, 302 ohne
   Header → 422). Akzeptanz: `VS` grün.
-- [ ] **S2 Längen für Vorschläge (B4-S12)** — `$SA/suggestions_api.py`, `$ST/test_suggestions.py`. `Query(default="", max_length=100)`
+- [x] **S2 Längen für Vorschläge (B4-S12)** — `$SA/suggestions_api.py`, `$ST/test_suggestions.py`. `Query(default="", max_length=100)`
   an allen drei Endpunkten. Test (+1) `test_too_long_query_is_422` (101 Zeichen → 422 je Endpunkt, ein Test mit drei
   Aufrufen). Akzeptanz: `VS` grün.
 - [ ] **S3 Limits für Bons (B3-S1)** — `$SA/models.py`, `$ST/test_request_limits.py`. `ReceiptItemIn`/`ReceiptIn`:
