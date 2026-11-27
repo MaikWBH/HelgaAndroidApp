@@ -124,3 +124,18 @@ Auf dem Gerät nach dem Rollout (Server zuerst, dann App). Ergebnisse in die let
 | 10 | Kaltstart Android 16 (3.4) | kein 16-KB-Dialog; sonst: welche Bibliotheken nennt er? | |
 | 11 | Markdown-Import: FAB → „Markdown importieren" → Zwischenablage enthält die Vorlage → in Gemini mit Wunsch „zwei vegetarische Abendessen" → Antwort einfügen → Vorschau → Speichern | beide in der Liste; am Server (`GET /api/sync?since=0`) vorhanden. Fehlerfälle: Text ohne Titel, leere Eingabe, 51 Rezepte, vorhandener Name (abgewählt) | |
 | 12 | Server: `/docs`, `/openapi.json`; `PUT /api/receipts/testbon-lidl-0524`; `PUT …/a.b` | 404; 200; 400 | |
+
+## 9 · Nachtest Phase 8
+Auf dem Gerät und am Homelab. Ergebnisse in die letzte Spalte eintragen (✅ / ❌ + Kurzbeschreibung).
+| Nr | Prüfung | Erwartung | Ergebnis |
+|----|---------|-----------|----------|
+| 1 | Server ohne Schlüssel: `curl -i -X POST -F file=@bon.jpg https://<server>/api/receipts/scan` | 401 sofort, Datei wird nicht gespeichert; mit Schlüssel läuft der Scan | |
+| 2 | Bestandsfoto groß (> 2000 px) als Bon hochladen | Upload gelingt, Foto am Server ≤ 2000 px; bei 413 bleibt kein Bon dauerhaft „wartet auf Upload" | |
+| 3 | Lexikon: Eintrag löschen, „Rückgängig" tippen; zweiter Eintrag löschen und Snackbar abwarten | erster bleibt, zweiter ist nach Ablauf gelöscht | |
+| 4 | Bon-Detail mit Fehler beim Neu-Lesen: „Erneut versuchen" | liest wirklich neu (Ladeanzeige), nicht nur Meldung weg | |
+| 5 | Bon-Dialoge (Kopf, Position): Tastatur | „Weiter" springt zum nächsten Feld, im letzten „Fertig" | |
+| 6 | Einkaufsliste: Artikel hinzufügen, abhaken oder umbenennen, während die Gang-Zuordnung läuft | abgehakter oder umbenannter Artikel behält seinen Stand; weitere neue Artikel werden danach zugeordnet | |
+| 7 | KI-Fehlertexte: Klassifizieren und Nährwerte im Flugmodus | „Keine Verbindung zum Server." statt „HTTP …" | |
+| 8 | Wochenplan: Rezept zu einem Tag hinzufügen und entfernen | Wochenbilanz (Fleisch/Fisch/Vegetarisch) aktualisiert sich sofort | |
+| 9 | Kostenübersicht kalt öffnen | kurz Ladeanzeige, kein aufblitzendes „Noch keine Auswertung" | |
+| 10 | Kochansicht mit Timer im Schritt, TalkBack an | Schrittzeile (abhaken) und Timer-Chip sind einzeln ansteuerbar | |

@@ -224,3 +224,7 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 - Bekannte Grenzen (bewusst nicht behoben): zusammengesetzte Wörter mit irreführendem Kopf (`Apfelmus`, `Gemüsemais`), nachgestellte Sorten (`Joghurt Erdbeere`), seltene Wörter (`Spülmaschinentabs`, `Leinsamen`) — diese lösen das gelernte Lexikon oder die Server-KI.
 - Die fünf Gang-Abfragen im `ShoppingListViewModel` entfallen; Zuordnung liegt im Repository.
 - Details und Geräte-Prüfliste: [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).
+
+## Phase 8 (Gang-Zuordnung)
+
+- Phase 8 umgesetzt (Stufe B, Gerätetests offen): Die KI-Zuordnung der Gänge lädt Artikel vor dem Schreiben neu und überschreibt keine zwischenzeitlich abgehakten, umbenannten oder zugeordneten Artikel; neue Läufe werden angehängt statt verworfen (`APPEND_OR_REPLACE`); siehe [phase-8](../../phasen/phase-8-server-haertung-und-robustheit.md).

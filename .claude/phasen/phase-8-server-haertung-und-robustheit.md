@@ -1,6 +1,6 @@
 # Phase 8 — Server-Härtung und App-Robustheit (Rest der Nutzerliste aus Phase 6)
 
-> Status: **freigegeben, Stufe B läuft (2026-11-27).** Gate 0 erledigt; Zeilennummern sind Stand `99735ec` und vor jeder
+> Status: **umgesetzt (Stufe B, 2026-11-27; Gerätetests offen).** Gate 0 erledigt; Zeilennummern sind Stand `99735ec` und vor jeder
 > Änderung per `grep -n` neu zu suchen (Phase 7 verschiebt viele davon).
 
 Basispfad `$B` = `app/src/main/kotlin/com/helga/android` · Testpfad `$T` = `app/src/test/kotlin/com/helga/android` ·
@@ -157,7 +157,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   Akzeptanz: Dateien geändert; `V`, `VS` grün. **Danach pushen.**
 
 ### Block E — Abschluss
-- [ ] **S13 Abschluss** — `.claude/phasen/README.md`, Feature-Index, Bereichspläne `sync`, `bons-kosten`, `einkaufsliste`,
+- [x] **S13 Abschluss** — `.claude/phasen/README.md`, Feature-Index, Bereichspläne `sync`, `bons-kosten`, `einkaufsliste`,
   `wochenplan`; Abschnitt „Abschluss" ausfüllen; Nutzer-Liste für Gerät/Homelab: Upload großer Bestandsfotos, Lexikon-Undo,
   „Erneut versuchen", Gang-Zuordnung während des KI-Laufs, KI-Fehlertexte, Server ohne Schlüssel (401 vor Upload).
   **Danach pushen.**
@@ -167,5 +167,15 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
 
 ## Abschluss
 - [x] Baseline S0: App `TC` 351, Server 192 passed (wie erwartet)
-- [ ] Endstand: App `TC` …, Server …
-- [ ] Gemeldete Abweichungen: …
+- [x] Endstand: App `TC` 360 (Baseline 351, +9), Server 201 passed (Baseline 192, +9)
+- [x] Gemeldete Abweichungen:
+  - S1: Der Test nutzt eine eigene Attrappe mit `is_redirect = True`, weil httpx eine 302 ohne `Location` gar nicht als Weiterleitung meldet (das echte `KeyError`-Risiko besteht dort nicht, die Absicherung bleibt für den Fall).
+  - S2: Der Code steckt im Commit von S1 (versehentlich gemeinsam committet); S2 hat einen eigenen Dokumentations-Commit.
+  - S3: `ReceiptItemOut` ist jetzt eine eigenständige Klasse ohne Limits (Antworten dürfen nie an Eingabe-Limits scheitern); KI-Positionen werden in `receipts.py` vor der Validierung auf 500 Zeichen gekürzt. Ein S24-Test sendet im PUT-Body nun eine gültige ID (die 65-stellige ID prüft die Route).
+  - S5: `MAX_REQUEST_BYTES` Standard **12 MiB** statt 10 MiB (das alte Endpoint `parse-receipt` erlaubt bis 11,2 MB Base64).
+  - S7: +3 Tests, ein bestehender Test (`klassifikation_fehler_wird_weitergereicht`) wurde ersetzt, Netto +2.
+  - S9: `ReceiptDetailViewModel.dismissReparseError` entfernt (nicht mehr genutzt); Lexikon bestätigt ausstehende Löschungen beim Verlassen des Screens.
+  - S10: Der Test für `Locale("ar")` ist schwach (die JDK-Standard-Locale `ar` nutzt ohnehin lateinische Ziffern); die Änderung selbst ist trotzdem sicher.
+  - S11: Eigenes `downscaleInPlace` im `ReceiptImageStore`; nicht per Unit-Test geprüft (Android-Bitmap), Prüfung steht in Testplan 9.2.
+  - S14: Das Image-Tag `python:3.12.16-slim-bookworm` ist auf Docker Hub geprüft, aber nicht gebaut (kein Docker in der Cloud); `pytest==9.2.0` entspricht der in der Cloud getesteten Version.
+  - Nutzer-Liste für Gerät und Homelab: [Testplan Abschnitt 9](testplan.md).

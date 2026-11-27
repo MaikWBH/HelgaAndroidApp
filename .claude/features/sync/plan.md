@@ -198,3 +198,7 @@ _Weitere Aufgaben nach dem Interview._
 ## Phase 7 (Fixes aus dem Testlauf)
 
 - Phase 7 umgesetzt (Stufe B, Gerätetests offen): F3 („Letzter Sync" zeigt die echte Uhrzeit statt des Server-Zählers); Bon-Protokoll mit Lost-Update-Schutz (`keepsLocalChange`), abgelehnten Pushes und `@Upsert` statt `REPLACE`; siehe [phase-7](../../phasen/phase-7-fixes-und-markdown-import.md).
+
+## Phase 8 (Server-Härtung)
+
+- Phase 8 umgesetzt (Stufe B, Gerätetests offen): `GuardMiddleware` prüft `X-Api-Key` und Größe vor dem Body (401/413), Eingabe-Limits für Bons, Stream-Fehler → 502, Weiterleitung ohne `Location` → 422, Basis-Image und `pytest` gepinnt; siehe [phase-8](../../phasen/phase-8-server-haertung-und-robustheit.md).

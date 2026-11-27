@@ -181,3 +181,7 @@ _Weitere Aufgaben nach dem Interview._
 ## Phase 7 (Fixes aus dem Testlauf)
 
 - Phase 7 umgesetzt (Stufe B, Gerätetests offen): F13 (vorläufiger Bon behält On-Device-Daten, Server und App), F11 (Suche nach älteren Bons bis 12 Monate), F12 (Dezimaleingabe mit Fehlermeldung statt stiller 0,00 €), Foto-Race und Pull-Löschschutz im Bon-Protokoll; siehe [phase-7](../../phasen/phase-7-fixes-und-markdown-import.md).
+
+## Phase 8 (Robustheit Bon-UI)
+
+- Phase 8 umgesetzt (Stufe B, Gerätetests offen): Lexikon-Löschen mit Rückgängig, „Erneut versuchen" liest neu aus, Tastatur-Aktionen in den Bon-Dialogen, Ladezustand statt Leerzustand in der Kostenübersicht, Wochenkennung unabhängig von der Gerätesprache, Bestandsfotos werden vor dem Upload verkleinert (413 beendet die Wiederholung); siehe [phase-8](../../phasen/phase-8-server-haertung-und-robustheit.md).

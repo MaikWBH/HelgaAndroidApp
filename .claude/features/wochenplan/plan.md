@@ -461,3 +461,7 @@ _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 ## Phase 2 (mobile-android-design)
 
 - Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).
+
+## Phase 8 (Wochenbilanz)
+
+- Phase 8 umgesetzt (Stufe B): Die Wochenbilanz (`weekBalance`) beobachtet die Rezepte der Tage als Flow und aktualisiert sich beim Hinzufügen und Entfernen; siehe [phase-8](../../phasen/phase-8-server-haertung-und-robustheit.md).

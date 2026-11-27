@@ -45,7 +45,7 @@ Modellwechsel: Nutzer per `/model` oder die Stufe läuft als Sub-Agent mit gewä
 | 5 | multi-stage-dockerfile | `server/Dockerfile`, Compose | Sonnet 5.5 | Haiku 5.5 | umgesetzt (Stufe B) → [phase-5](phase-5-multi-stage-dockerfile.md) |
 | 6 | code-review | Querschnitt über Phasen 1–5 | Opus 5.5 | Sonnet 5.5 | umgesetzt (Stufe B; Nutzerentscheidungen und Geräte-Abhakliste offen) → [phase-6](phase-6-code-review.md) · [Bericht](phase-6-daten/review-bericht.md) |
 | 7 | android-clean-architecture + mobile-android-design + fastapi-templates | Fixes aus dem Testlauf (F1–F19, Bon-Protokoll) + Markdown-Rezept-Import | Opus 5.5 | Sonnet 5.5 | umgesetzt (Stufe B; Gerätetests offen) → [phase-7](phase-7-fixes-und-markdown-import.md) · [Entwurf (überholt)](phase-7-entwurf.md) |
-| 8 | fastapi-templates + android-clean-architecture | Server-Härtung und App-Robustheit (Rest der Phase-6-Nutzerliste) | Opus 5.5 | offen (Gate 0) | definiert (Stufe A), noch nicht gestartet → [phase-8](phase-8-server-haertung-und-robustheit.md) |
+| 8 | fastapi-templates + android-clean-architecture | Server-Härtung und App-Robustheit (Rest der Phase-6-Nutzerliste) | Opus 5.5 | Sonnet 5.5 | umgesetzt (Stufe B; Gerätetests offen) → [phase-8](phase-8-server-haertung-und-robustheit.md) |
 
 Hilfs-Skills ohne eigene Phase: `find-skills` (Skill-Suche), `grill-me`/`grilling` (Rückfragen in
 Stufe A und B). Die Zuordnung Skill → Bereich ist eine Ableitung aus den Skill-Beschreibungen und
