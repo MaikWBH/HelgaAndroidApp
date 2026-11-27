@@ -86,10 +86,6 @@ class ReceiptDetailViewModel @Inject constructor(
         }
     }
 
-    fun dismissReparseError() {
-        if (_reparseState.value is ReparseState.Error) _reparseState.value = ReparseState.Idle
-    }
-
     fun reconcile() {
         if (_reconcileState.value is ReconcileState.Running) return
         viewModelScope.launch {

@@ -18,11 +18,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -55,6 +58,22 @@ fun ReceiptLexiconScreen(
 
     LaunchedEffect(Unit) {
         viewModel.message.collect { snackbarHostState.showSnackbar(it.asString(context)) }
+    }
+    val deletedText = stringResource(R.string.lexicon_deleted)
+    val undoText = stringResource(R.string.action_undo)
+    LaunchedEffect(Unit) {
+        viewModel.deleteRequests.collect { id ->
+            val result = snackbarHostState.showSnackbar(
+                message = deletedText,
+                actionLabel = undoText,
+                duration = SnackbarDuration.Long,
+            )
+            if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete(id) else viewModel.confirmDelete(id)
+        }
+    }
+    // Verlässt man den Screen mit offener Frist, gilt das Löschen als bestätigt.
+    DisposableEffect(Unit) {
+        onDispose { viewModel.confirmAllPending() }
     }
 
     ReceiptLexiconContent(

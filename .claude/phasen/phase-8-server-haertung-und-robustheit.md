@@ -125,7 +125,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   in `AisleAssigner`); schreiben nur, wenn `aisle.isBlank() && isChecked == 0 && name == <Name beim Aufruf>`.
   `enqueueUniqueWork(AisleCategorizeWorker.UNIQUE, ExistingWorkPolicy.APPEND_OR_REPLACE, request)`. Tests (+2): abgehakter
   bzw. umbenannter Artikel wird nicht überschrieben. Akzeptanz: `V` grün.
-- [ ] **S9 Bon-UI (B8-S1, B8-S7/P4, B8-S2)** — Lexikon-Screen + ViewModel, `$B/ui/receipts/ReceiptDetailScreen.kt`,
+- [x] **S9 Bon-UI (B8-S1, B8-S7/P4, B8-S2)** — Lexikon-Screen + ViewModel, `$B/ui/receipts/ReceiptDetailScreen.kt`,
   `$B/ui/receipts/ReceiptReviewComponents.kt`, `$R/values/strings.xml`. Lexikon: Löschen blendet den Eintrag aus und zeigt
   Snackbar `lexicon_deleted` „Eintrag gelöscht" mit Aktion `action_undo` „Rückgängig" (`SnackbarDuration.Long`); erst
   wenn die Snackbar ohne Aktion endet, ruft das ViewModel das Löschen auf. Detail: der Knopf „Erneut versuchen" ruft

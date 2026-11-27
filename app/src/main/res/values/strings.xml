@@ -569,6 +569,8 @@
     <string name="recipe_added_to_list">Zur „%1$s” hinzugefügt</string>
     <string name="recipe_added_to_weekplan">Zum Wochenplan hinzugefügt</string>
     <string name="ai_error_no_recipe">Rezept konnte nicht aus der KI-Antwort extrahiert werden</string>
+    <string name="lexicon_deleted">Eintrag gelöscht</string>
+    <string name="action_undo">Rückgängig</string>
     <string name="ai_error_unknown">Unbekannter Fehler</string>
     <string name="ai_error_offline">Keine Verbindung zum Server.</string>
     <string name="ai_error_server">Der Server hat einen Fehler gemeldet.</string>

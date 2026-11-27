@@ -169,7 +169,7 @@ fun ReceiptDetailScreen(
                         receipt = receipt,
                         reparseState = reparseState,
                         onReview = { onReview(receipt.id) },
-                        onDismissError = viewModel::dismissReparseError,
+                        onRetry = viewModel::reparse,
                     )
                 }
                 receiptPhotoModel(receipt, serverUrl)?.let { model ->
@@ -215,7 +215,7 @@ private fun StatusBanner(
     receipt: ReceiptEntity,
     reparseState: ReparseState,
     onReview: () -> Unit,
-    onDismissError: () -> Unit,
+    onRetry: () -> Unit,
 ) {
     val provisional = receipt.status == "provisional"
     val needsReview = receipt.status == "review"
@@ -241,7 +241,7 @@ private fun StatusBanner(
             }
             reparseState is ReparseState.Error -> {
                 Text(reparseState.message.asString(), color = MaterialTheme.colorScheme.error)
-                TextButton(onClick = onDismissError) { Text(stringResource(R.string.action_retry)) }
+                TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
             }
             provisional -> Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.CloudOff, contentDescription = null)

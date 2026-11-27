@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -52,9 +53,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.helga.android.R
@@ -244,6 +247,8 @@ internal fun HeaderEditDialog(
     val totalError = decimalInvalid(totalText)
     val discountError = decimalInvalid(discountText)
 
+    val focusManager = LocalFocusManager.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.receipt_review_header_title)) },
@@ -257,6 +262,7 @@ internal fun HeaderEditDialog(
                     onValueChange = { name = it },
                     label = { Text(stringResource(R.string.receipt_scan_store)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (stores.isNotEmpty()) {
@@ -282,6 +288,8 @@ internal fun HeaderEditDialog(
                     value = address,
                     onValueChange = { address = it },
                     label = { Text(stringResource(R.string.receipt_review_address)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
@@ -293,7 +301,7 @@ internal fun HeaderEditDialog(
                         { Text(stringResource(R.string.receipt_review_date_invalid)) }
                     } else null,
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
@@ -305,7 +313,7 @@ internal fun HeaderEditDialog(
                         { Text(stringResource(R.string.receipt_review_time_invalid)) }
                     } else null,
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
@@ -315,7 +323,7 @@ internal fun HeaderEditDialog(
                     isError = totalError,
                     supportingText = decimalSupport(totalError),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
@@ -325,7 +333,8 @@ internal fun HeaderEditDialog(
                     isError = discountError,
                     supportingText = decimalSupport(discountError),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -485,6 +494,8 @@ internal fun EditItemDialog(
         )
     }
 
+    val focusManager = LocalFocusManager.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.receipt_scan_edit_item)) },
@@ -498,6 +509,7 @@ internal fun EditItemDialog(
                     onValueChange = { name = it },
                     label = { Text(stringResource(R.string.receipt_scan_item_name)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedButton(onClick = { onAssignProduct(edited()) }, modifier = Modifier.fillMaxWidth()) {
@@ -511,7 +523,7 @@ internal fun EditItemDialog(
                         isError = quantityError,
                         supportingText = decimalSupport(quantityError),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         modifier = Modifier.weight(1f),
                     )
                     ExposedDropdownMenuBox(
@@ -544,7 +556,7 @@ internal fun EditItemDialog(
                     isError = unitPriceError,
                     supportingText = decimalSupport(unitPriceError),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
@@ -554,7 +566,7 @@ internal fun EditItemDialog(
                     isError = totalError,
                     supportingText = decimalSupport(totalError),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
@@ -564,7 +576,8 @@ internal fun EditItemDialog(
                     isError = discountError,
                     supportingText = decimalSupport(discountError),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
