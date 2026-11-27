@@ -1,5 +1,6 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.ui.common.formatEuro
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.repository.ProductSummary
@@ -47,5 +48,5 @@ class ProductPriceListViewModel @Inject constructor(
 
     fun setQuery(q: String) { _query.value = q }
 
-    fun formatCurrency(amount: Double): String = String.format("€%.2f", amount)
+    fun formatCurrency(amount: Double): String = formatEuro(amount)
 }

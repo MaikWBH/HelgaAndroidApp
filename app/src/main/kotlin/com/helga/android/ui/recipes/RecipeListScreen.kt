@@ -1,5 +1,9 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
@@ -18,14 +22,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Star
@@ -73,7 +76,7 @@ import com.helga.android.R
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.util.ImageUrls
 import com.helga.android.ui.components.CreateFab
-import com.helga.android.ui.components.MealSlots
+import com.helga.android.data.model.MealSlots
 import com.helga.android.ui.components.SyncStatusIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,10 +85,10 @@ fun RecipeListScreen(
     onRecipeClick: (id: String) -> Unit,
     onCreateClick: () -> Unit,
     onImportClick: () -> Unit,
+    onMarkdownImportClick: () -> Unit,
     onAiGenerateClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onCookClick: (recipeId: String) -> Unit,
-    bottomPadding: Dp = 0.dp,
     viewModel: RecipeListViewModel = hiltViewModel(),
 ) {
     val recipes by viewModel.recipes.collectAsStateWithLifecycle()
@@ -100,9 +103,9 @@ fun RecipeListScreen(
     val unclassifiedCount by viewModel.unclassifiedCount.collectAsStateWithLifecycle()
     val unclassifiedRecipes by viewModel.unclassifiedRecipes.collectAsStateWithLifecycle()
 
-    var showTagFilter by remember { mutableStateOf(false) }
-    var showOverflowMenu by remember { mutableStateOf(false) }
-    var showBulkClassifyDialog by remember { mutableStateOf(false) }
+    var showTagFilter by rememberSaveable { mutableStateOf(false) }
+    var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
+    var showBulkClassifyDialog by rememberSaveable { mutableStateOf(false) }
     var classifyProgress by remember { mutableStateOf(0 to 0) }
 
     if (showTagFilter) {
@@ -152,7 +155,7 @@ fun RecipeListScreen(
                             }
                             DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("⚡ Alle klassifizieren ($unclassifiedCount)") },
+                                    text = { Text(stringResource(R.string.recipes_classify_all, unclassifiedCount)) },
                                     onClick = {
                                         showBulkClassifyDialog = true
                                         showOverflowMenu = false
@@ -175,8 +178,7 @@ fun RecipeListScreen(
                 onNewRecipe = onCreateClick,
                 onAiGenerate = onAiGenerateClick,
                 onUrlImport = onImportClick,
-                // FAB über der Bottom-Navigation halten, sonst liegt er dahinter
-                modifier = Modifier.padding(bottom = bottomPadding),
+                onMarkdownImport = onMarkdownImportClick,
             )
         },
     ) { padding ->
@@ -250,7 +252,7 @@ fun RecipeListScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + bottomPadding),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(recipes, key = { it.id }) { recipe ->
@@ -334,11 +336,11 @@ private fun FilterBar(
 
 @Composable
 private fun SortButton(sortOrder: SortOrder, onSortSelect: (SortOrder) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                imageVector = Icons.Filled.Sort,
+                imageVector = Icons.AutoMirrored.Filled.Sort,
                 contentDescription = stringResource(R.string.recipes_sort),
             )
         }
@@ -407,7 +409,7 @@ private fun RecipeRow(
                 if (recipe.totalTime.isNotBlank()) {
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = recipe.totalTime,
+                        text = formatRecipeDuration(recipe.totalTime),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -437,7 +439,7 @@ private fun RecipeThumbnail(
     Box(
         modifier = Modifier
             .size(72.dp)
-            .clip(RoundedCornerShape(8.dp)),
+            .clip(MaterialTheme.shapes.small),
     ) {
         if (imageUrl != null) {
             AsyncImage(
@@ -506,13 +508,17 @@ private fun TagFilterDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onToggleTag(tag) }
+                                .toggleable(
+                                    value = tag in selectedTags,
+                                    role = Role.Checkbox,
+                                    onValueChange = { onToggleTag(tag) },
+                                )
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Checkbox(
                                 checked = tag in selectedTags,
-                                onCheckedChange = { onToggleTag(tag) },
+                                onCheckedChange = null,
                             )
                             Text(
                                 text = tag,
@@ -551,10 +557,10 @@ private fun BulkClassifyDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rezepte klassifizieren") },
+        title = { Text(stringResource(R.string.recipes_classify_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text("${unclassifiedRecipes.size} Rezepte sind noch nicht kategorisiert.",
+                Text(androidx.compose.ui.res.pluralStringResource(R.plurals.recipes_unclassified_count, unclassifiedRecipes.size, unclassifiedRecipes.size),
                     style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(12.dp))
                 if (isRunning) {

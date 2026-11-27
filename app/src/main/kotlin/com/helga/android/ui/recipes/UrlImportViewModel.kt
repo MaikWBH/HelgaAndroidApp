@@ -6,39 +6,32 @@ import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.TagEntity
-import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.ImportedRecipeDto
-import com.helga.android.data.remote.dto.UrlImportRequest
+import com.helga.android.data.repository.AiRepository
+import com.helga.android.data.repository.ImportOutcome
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.ui.common.UiState
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.json.JSONObject
-import retrofit2.HttpException
-import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 
-sealed interface ImportStatus {
-    data object Idle : ImportStatus
-    data object Loading : ImportStatus
-    data class Success(val recipe: ImportedRecipeDto) : ImportStatus
-    data class Error(val message: String) : ImportStatus
-}
-
 data class UrlImportState(
     val url: String = "",
-    val status: ImportStatus = ImportStatus.Idle,
+    /** null = noch kein Import gestartet (Idle). */
+    val status: UiState<ImportedRecipeDto>? = null,
     val isSaving: Boolean = false,
 )
 
 @HiltViewModel
 class UrlImportViewModel @Inject constructor(
-    private val apiFactory: SyncApiFactory,
+    private val aiRepository: AiRepository,
     private val repository: RecipeRepository,
     private val syncScheduler: SyncScheduler,
 ) : ViewModel() {
@@ -46,7 +39,7 @@ class UrlImportViewModel @Inject constructor(
     private val _state = MutableStateFlow(UrlImportState())
     val state: StateFlow<UrlImportState> = _state.asStateFlow()
 
-    fun setUrl(url: String) = _state.update { it.copy(url = url, status = ImportStatus.Idle) }
+    fun setUrl(url: String) = _state.update { it.copy(url = url, status = null) }
 
     fun prefillUrl(url: String) {
         if (_state.value.url.isBlank()) _state.update { it.copy(url = url) }
@@ -55,30 +48,14 @@ class UrlImportViewModel @Inject constructor(
     fun import() {
         val url = _state.value.url.trim()
         if (url.isBlank()) return
-        _state.update { it.copy(status = ImportStatus.Loading) }
+        _state.update { it.copy(status = UiState.Loading) }
         viewModelScope.launch {
-            try {
-                val api = apiFactory.api()
-                val result = api.importFromUrl(UrlImportRequest(url))
-                _state.update { it.copy(status = ImportStatus.Success(result)) }
-            } catch (e: HttpException) {
-                val detail = e.response()?.errorBody()?.string()?.let(::extractErrorDetail)
-                _state.update {
-                    it.copy(status = ImportStatus.Error(detail ?: "Import fehlgeschlagen (Fehler ${e.code()})"))
-                }
-            } catch (e: IOException) {
-                _state.update { it.copy(status = ImportStatus.Error("Server nicht erreichbar")) }
-            } catch (e: Exception) {
-                _state.update { it.copy(status = ImportStatus.Error(e.message ?: "Unbekannter Fehler")) }
+            val status = when (val outcome = aiRepository.importFromUrl(url)) {
+                is ImportOutcome.Success -> UiState.Success(outcome.recipe)
+                is ImportOutcome.Error -> UiState.Error(outcome.message)
             }
+            _state.update { it.copy(status = status) }
         }
-    }
-
-    /** Extrahiert das `detail`-Feld aus einer FastAPI-Fehlerantwort, z. B. `{"detail": "..."}`. */
-    private fun extractErrorDetail(body: String): String? = try {
-        JSONObject(body).optString("detail").ifBlank { null }
-    } catch (_: Exception) {
-        null
     }
 
     fun save(recipe: ImportedRecipeDto, onSuccess: () -> Unit) {
@@ -140,8 +117,7 @@ class UrlImportViewModel @Inject constructor(
     private fun classifyRecipeAsync(recipe: RecipeEntity, ingredients: List<IngredientEntity>, tags: List<TagEntity>) {
         viewModelScope.launch {
             try {
-                val api = apiFactory.api()
-                val result = api.classifyRecipe(
+                val result = aiRepository.classifyRecipe(
                     com.helga.android.data.remote.dto.AiClassifyRequest(
                         name = recipe.name,
                         description = recipe.description,
@@ -163,6 +139,8 @@ class UrlImportViewModel @Inject constructor(
                     )
                     syncScheduler.triggerOneShot()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 // Stillschweigend fehlschlagen — Rezept wurde bereits gespeichert
             }

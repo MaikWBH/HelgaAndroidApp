@@ -1,6 +1,7 @@
 package com.helga.android.data.sync
 
 import com.helga.android.data.remote.SyncApiFactory
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,6 +36,8 @@ class ServerReachabilityMonitor @Inject constructor(
         _reachable.value = try {
             apiFactory.api().health()
             true
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             false
         }

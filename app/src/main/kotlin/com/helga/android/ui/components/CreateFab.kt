@@ -1,5 +1,7 @@
 package com.helga.android.ui.components
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,11 +11,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Shuffle
@@ -40,10 +42,11 @@ fun CreateFab(
     onNewRecipe: () -> Unit,
     onAiGenerate: () -> Unit,
     onUrlImport: () -> Unit,
+    onMarkdownImport: () -> Unit,
     onRemix: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier,
@@ -78,6 +81,11 @@ fun CreateFab(
                     onClick = { onUrlImport(); expanded = false },
                 )
                 FabMenuItem(
+                    icon = Icons.Filled.ContentPaste,
+                    label = stringResource(R.string.fab_markdown_import),
+                    onClick = { onMarkdownImport(); expanded = false },
+                )
+                FabMenuItem(
                     icon = Icons.Filled.Create,
                     label = stringResource(R.string.fab_new_recipe),
                     onClick = { onNewRecipe(); expanded = false },
@@ -105,7 +113,7 @@ private fun FabMenuItem(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Surface(
-            shape = RoundedCornerShape(6.dp),
+            shape = MaterialTheme.shapes.small,
             color = MaterialTheme.colorScheme.surfaceVariant,
             tonalElevation = 2.dp,
         ) {
@@ -118,6 +126,16 @@ private fun FabMenuItem(
         }
         SmallFloatingActionButton(onClick = onClick) {
             Icon(icon, contentDescription = label)
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun CreateFabPreview() {
+    PreviewSurface {
+        Box(modifier = Modifier.padding(16.dp)) {
+            CreateFab(onNewRecipe = {}, onAiGenerate = {}, onUrlImport = {}, onMarkdownImport = {})
         }
     }
 }

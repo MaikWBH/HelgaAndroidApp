@@ -2,17 +2,17 @@ package com.helga.android.ui.recipes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.RecipeEntity
-import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.preferences.AppPreferences
-import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
+import com.helga.android.data.repository.AiRepository
 import com.helga.android.data.repository.RecipeRepository
+import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,10 +34,10 @@ enum class SortOrder { NAME, RATING, UPDATED }
 @HiltViewModel
 class RecipeListViewModel @Inject constructor(
     private val repository: RecipeRepository,
-    private val weekplanDao: WeekplanDao,
+    private val weekplanRepository: WeekplanRepository,
     syncStatusHolder: SyncStatusHolder,
     private val syncScheduler: SyncScheduler,
-    private val apiFactory: SyncApiFactory,
+    private val aiRepository: AiRepository,
     preferences: AppPreferences,
 ) : ViewModel() {
 
@@ -92,7 +92,7 @@ class RecipeListViewModel @Inject constructor(
 
     data class TodayRecipe(val recipeId: String, val recipeName: String)
 
-    val todayRecipe: StateFlow<TodayRecipe?> = weekplanDao.observeTodayRecipeId(todayDate)
+    val todayRecipe: StateFlow<TodayRecipe?> = weekplanRepository.observeTodayRecipeId(todayDate)
         .flatMapLatest { recipeId ->
             if (recipeId == null) flowOf(null)
             else repository.observeAll().map { all ->
@@ -139,7 +139,7 @@ class RecipeListViewModel @Inject constructor(
                     val ingredients = repository.ingredientsForRecipe(recipeId).map { it.food }
                     val tags = repository.tagsByRecipeId(recipeId).map { it.name }
 
-                    val result = apiFactory.api().classifyRecipe(
+                    val result = aiRepository.classifyRecipe(
                         AiClassifyRequest(
                             name = recipe.name,
                             description = recipe.description,
@@ -156,6 +156,8 @@ class RecipeListViewModel @Inject constructor(
                             seasonFit = result.seasonFit.ifBlank { recipe.seasonFit },
                         )
                     )
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Timber.w(e, "Fehler bei Klassifizierung von $recipeId")
                 }

@@ -1,6 +1,10 @@
 package com.helga.android.data.repository
 
 import com.helga.android.data.local.dao.RecipeDao
+import com.helga.android.data.local.dao.RecipeHistoryDao
+import com.helga.android.data.local.entity.RecipeHistoryEntity
+import com.helga.android.data.local.entity.RecipeFeedbackEntity
+import java.util.UUID
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
@@ -18,6 +22,7 @@ import javax.inject.Singleton
 class RecipeRepository @Inject constructor(
     private val recipeDao: RecipeDao,
     private val recipeFeedbackDao: RecipeFeedbackDao,
+    private val recipeHistoryDao: RecipeHistoryDao,
     private val shoppingRepository: ShoppingRepository,
 ) {
     fun observeAll(): Flow<List<RecipeEntity>> = recipeDao.observeAll()
@@ -32,6 +37,64 @@ class RecipeRepository @Inject constructor(
         recipeDao.observeRecipeIdsByTagOrIngredientSearch(query)
 
     suspend fun findById(id: String): RecipeEntity? = recipeDao.findById(id)
+    suspend fun findRecipe(id: String): RecipeEntity? = recipeDao.findById(id)
+    suspend fun searchIngredientNames(query: String): List<String> = recipeDao.searchIngredientNames(query)
+
+    /** Markiert ein Rezept am Datum als gekocht; legt den Verlaufseintrag an, falls keiner existiert. */
+    suspend fun markCooked(recipeId: String, date: String, now: Long) {
+        val updated = recipeHistoryDao.markCooked(recipeId, date, now)
+        if (updated == 0) {
+            recipeHistoryDao.upsertAll(
+                listOf(
+                    RecipeHistoryEntity(
+                        id = UUID.randomUUID().toString(),
+                        recipeId = recipeId,
+                        plannedDate = date,
+                        cooked = 1,
+                        updatedAt = now,
+                        dirty = 1,
+                    )
+                )
+            )
+        }
+    }
+
+    /** Speichert 👍/👎 zum Kochdatum und aktualisiert die abgeleitete Bewertung. */
+    fun observeFeedbackForDate(date: String): Flow<List<RecipeFeedbackEntity>> = recipeFeedbackDao.observeForDate(date)
+
+    /** Wie 👍/👎 im Wochenplan: erneuter gleicher Wert hebt die Bewertung auf (0). */
+    suspend fun toggleFeedback(recipeId: String, date: String, liked: Int, now: Long) {
+        val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, date)
+        val newLiked = if (existing?.liked == liked) 0 else liked
+        val entity = existing?.copy(liked = newLiked, updatedAt = now, dirty = 1)
+            ?: RecipeFeedbackEntity(
+                id = UUID.randomUUID().toString(),
+                recipeId = recipeId,
+                plannedDate = date,
+                liked = newLiked,
+                updatedAt = now,
+                dirty = 1,
+            )
+        recipeFeedbackDao.upsert(entity)
+        recalculateRating(recipeId)
+    }
+
+    suspend fun saveFeedback(recipeId: String, date: String, liked: Int, now: Long) {
+        val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, date)
+        val entity = existing?.copy(liked = liked, updatedAt = now, dirty = 1)
+            ?: RecipeFeedbackEntity(
+                id = UUID.randomUUID().toString(),
+                recipeId = recipeId,
+                plannedDate = date,
+                liked = liked,
+                updatedAt = now,
+                dirty = 1,
+            )
+        recipeFeedbackDao.upsert(entity)
+        recalculateRating(recipeId)
+    }
+    fun observeHistorySince(since: String): Flow<List<RecipeHistoryEntity>> = recipeHistoryDao.observeSince(since)
+    suspend fun recipeIdsBefore(before: String): List<String> = recipeHistoryDao.getRecipeIdsBefore(before)
     suspend fun allRecipes(): List<RecipeEntity> = recipeDao.allActive()
     suspend fun ingredientsForRecipe(id: String): List<IngredientEntity> = recipeDao.ingredientsByRecipeId(id)
     suspend fun instructionsForRecipe(id: String): List<InstructionEntity> = recipeDao.instructionsByRecipeId(id)

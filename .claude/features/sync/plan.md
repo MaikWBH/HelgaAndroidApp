@@ -178,3 +178,27 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Automatisierte Sync-Vollständigkeitsprüfung wird eingeführt | Verhindert Wiederholung des „vergessene Entity"-Musters |
 | 2026-08-30 | Bilder bekommen einen proaktiven Download-Mechanismus | Nutzer legt Wert auf Bilder auf allen Geräten, auch offline |
 | 2026-08-30 | Konflikt-Sichtbarkeit (Frage 5 aus der urspr. Liste) bleibt wie bisher still per LWW | Kein bewusster Datenverlust bekannt, kein Bedarf an sichtbarer Konfliktauflösung geäußert |
+
+**Phase 3a:** Bons (`Receipt`, `ReceiptItem`) laufen seit Phase 3a außerhalb des Voll-Syncs über ein eigenes bon-weises Protokoll (`ReceiptSyncer`, `/api/receipts`); Regeln in `.claude/guidelines/sync-patterns.md`, Abschnitt „Server-Archiv mit lokalem Cache".
+
+## Phase 4 (fastapi-templates)
+
+- Phase 4 umgesetzt (Stufe B, 2026-11-12): Sync-Endpunkte liegen in `server/app/sync_api.py`; Sync-Logik (`sync.py`) und Protokoll sind unverändert. Der Server arbeitet nicht ohne `API_KEY` (außer `ALLOW_NO_AUTH=1`): die Worker brechen mit „API_KEY fehlt …“ ab, bei mehreren Uvicorn-Workern startet der Supervisor sie neu und der Container wird `unhealthy` (siehe Phase 5). Bild-Upload mit 8-MiB-Limit (`images_api.py`). Siehe [phase-4](../../phasen/phase-4-fastapi-templates.md).
+
+## Phase 5 (multi-stage-dockerfile)
+
+- Phase 5 umgesetzt (Stufe B, 2026-11-12): `server/Dockerfile` ist mehrstufig (`builder`, `test`, `runtime`), `server/.dockerignore` begrenzt den Build-Kontext, `recipe-scrapers==15.13.0` ist gepinnt, `make docker-test` führt die Tests im Container aus. Der Prod-Compose ist gehärtet (`read_only`, `tmpfs /tmp`, `cap_drop: ALL`, `no-new-privileges`); der Healthcheck steht nur noch im Dockerfile. UID 1000 bleibt. Image 200 MB → 194 MB (Prototyp-Erwartung bestätigt).
+- Korrektur zum Startverhalten ohne `API_KEY` (siehe oben, Phase 4): Mit mehreren Uvicorn-Workern beendet sich der Container nicht. Die Worker brechen mit `API_KEY fehlt …` ab und werden neu gestartet; der Container wird `unhealthy`. Das war schon vor Phase 5 so.
+- Siehe [phase-5](../../phasen/phase-5-multi-stage-dockerfile.md).
+
+## Phase 6 (Code-Review Phasen 1–5)
+
+- Review-Bericht mit Befunden je Block: [review-bericht](../../phasen/phase-6-daten/review-bericht.md). Behoben: V11 (Bon-Foto-I/O im Event-Loop über `asyncio.to_thread`) und V4 (SSRF-Schutz sperrt alles nicht global Routbare, u. a. 100.64.0.0/10). Offene Entscheidungen zum Bon-Protokoll (z. B. `server_seq` bei Parse-Status, Eingabe-Limits der Bon-Modelle) stehen im Bericht.
+
+## Phase 7 (Fixes aus dem Testlauf)
+
+- Phase 7 umgesetzt (Stufe B, Gerätetests offen): F3 („Letzter Sync" zeigt die echte Uhrzeit statt des Server-Zählers); Bon-Protokoll mit Lost-Update-Schutz (`keepsLocalChange`), abgelehnten Pushes und `@Upsert` statt `REPLACE`; siehe [phase-7](../../phasen/phase-7-fixes-und-markdown-import.md).
+
+## Phase 8 (Server-Härtung)
+
+- Phase 8 umgesetzt (Stufe B, Gerätetests offen): `GuardMiddleware` prüft `X-Api-Key` und Größe vor dem Body (401/413), Eingabe-Limits für Bons, Stream-Fehler → 502, Weiterleitung ohne `Location` → 422, Basis-Image und `pytest` gepinnt; siehe [phase-8](../../phasen/phase-8-server-haertung-und-robustheit.md).

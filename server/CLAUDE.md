@@ -22,13 +22,31 @@ Schlankes FastAPI-Backend das ausschließlich als Datenhub für die Helga Androi
 
 ```
 app/
-├── main.py       # Alle Routen, Auth-Middleware
-├── db.py         # Schema, init_db(), get_db(), SYNC_TABLES, now_ms()
-├── models.py     # Pydantic-Modelle (SyncPayload, DTOs für KI)
-├── sync.py       # pull_since(), push_records() – LWW-Merge
-└── ai.py         # stream_generate(), stream_remix(), classify()
+├── main.py            # App, Lifespan (Start-Prüfung, Bon-Warteschlange), Logging, 502-Handler, Health
+├── settings.py        # Alle Umgebungsvariablen zentral; zur Aufrufzeit über settings.X gelesen
+├── auth.py            # require_auth
+├── guard_middleware.py # ASGI-Middleware: X-Api-Key und Content-Length vor dem Lesen des Bodys (401/413)
+├── db.py              # Schema, init_db(), get_db(), SYNC_TABLES, RECEIPT_TABLES, now_ms()
+├── models.py          # Pydantic-Modelle (Sync, KI, Bon-Archiv, OFF) mit Eingabe-Limits
+├── sync.py            # pull_since(), push_records() – LWW-Merge
+├── sync_api.py        # Router /api/sync
+├── images_api.py      # Router /api/images (Upload mit Größenlimit, Abruf)
+├── off.py             # Open-Food-Facts-Abfragen; off_api.py = Router /api/off
+├── suggestions_api.py # Router /api/suggestions (Autocomplete)
+├── ai.py              # Prompts und Aufgaben: stream_generate(), stream_remix(), classify(), import_url(), parse_receipt(), reconcile_receipt()
+├── ai_client.py       # Anbieter-Schicht: Modellwahl, HTTP zu OpenAI/Anthropic, AiUpstreamError
+├── ai_api.py          # Router KI-Endpunkte (SSE, JSON) und /api/receipts/reconcile
+├── url_guard.py       # SSRF-Schutz für den Rezept-Import
+├── ingredient_parser.py # Zutatenzeilen aus Rezept-Import
+├── categories.py      # gemeinsamer Kategorien-Katalog (Bons, Auswertung, Gänge)
+├── receipt_text.py    # Schlüssel- und Datumshilfen für Bons (reine Funktionen)
+├── receipts.py        # Bon-Speicherschicht, Scan, Anreichern, Lernen, Warteschlange
+└── receipt_api.py     # Router /api/receipts (Bon-Archiv, Lexikon)
 scripts/
-└── migrate_from_helga.py  # Einmalige Migration
+├── migrate_from_helga.py         # Einmalige Migration
+├── receipt_testset.py            # Qualitätstest des Bon-Modells auf eigenen Fotos
+└── restore_purged_receipts.py    # automatisch gelöschte Bons wiederherstellen
+tests/                            # pytest (siehe Abschnitt Tests)
 data/             # Volume-Mount (gitignored): recipes.db, images/
 ```
 
@@ -42,6 +60,10 @@ Jede Tabelle hat `updated_at` (Unix-ms) und `deleted` (0/1). Last-Write-Wins: h�
 GET  /api/sync?since=<ts>   → SyncPullResponse (alle Änderungen nach ts)
 POST /api/sync              → SyncPushRequest  → SyncPullResponse (server-wins zurück)
 ```
+
+**Alt-Clients schützen:** Neue Spalten an Sync-Tabellen in `sync.py → PRESERVE_IF_UNSET` eintragen, solange alte
+App-Versionen pushen. Der Upsert überschreibt sie dann nur, wenn der Client das Feld mitschickt (z. B.
+`store_aisles.category_key`); sonst behalten sie ihren Server-Wert.
 
 Neue Tabellen im Schema erfordern:
 1. `CREATE TABLE` in `db.py → SCHEMA`
@@ -58,20 +80,37 @@ Neue Tabellen im Schema erfordern:
 | `POST /api/ai/generate` | SSE-Stream: Rezept aus Prompt generieren |
 | `POST /api/ai/remix` | SSE-Stream: Rezept abwandeln |
 | `POST /api/ai/classify` | JSON: 5 Felder (protein_type, effort, cuisine, meal_slot, season_fit) |
-| `POST /api/ai/parse-receipt` | JSON: Kassenbon-Foto (base64) per Vision-Modell auslesen → store_name, purchase_date, total_amount, items[] |
+| `POST /api/ai/parse-receipt` | JSON: Kassenbon-Foto (base64) auslesen → Kopf (Markt, Adresse, Datum, Uhrzeit, Summe, Rabatt) und Positionen. Bleibt für alte App-Versionen |
+| `POST /api/receipts/scan` | Multipart: Bon-Foto speichern, auslesen (KI), anreichern; bei KI-Ausfall vorläufig anlegen und in die Warteschlange stellen |
+| `GET/PUT/DELETE /api/receipts…` | Bon-Archiv: bon-weises Protokoll (LWW, Cursor `server_seq`), Lexikon unter `/api/receipts/lexicon` |
+| `GET /api/receipts/aggregates` | Auswertung (Monate, Wochen, Märkte, Kategorien, Artikel), bei jedem Aufruf aus den Bons berechnet; die App hält davon einen Abzug für Offline-Diagramme |
+| `POST /api/ai/categorize-items` | JSON: bis zu 50 Artikelnamen → Kategorie aus dem gemeinsamen Katalog (erst Lernspeicher `product_categories`, Unbekanntes in einem Aufruf mit dem Bon-Modell) |
 
-**Hinweis Vision:** `parse-receipt` nutzt ein **eigenes, stärkeres** Modell als die
-günstigen Text-Defaults, weil dichte deutsche Kassenbons Mini-/Haiku-Modelle
-überfordern. Modellwahl in `_vision_model()`:
-1. `AI_VISION_MODEL` (env) – explizite Wahl, empfohlen (z. B. `claude-sonnet-4-6`).
-2. `AI_MODEL` (env) – falls bewusst gesetzt, wird es respektiert.
-3. Starker Provider-Default: OpenAI `gpt-4o`, Anthropic `claude-sonnet-4-6`.
+Vollständiger Vertrag (Schema, Endpunkte, Prompt, KI-Parameter): `.claude/phasen/phase-3-daten/server-vertrag.md`.
 
-Das Modell muss bild-fähig sein, sonst greift in der App der On-Device-OCR-Fallback.
-Bilder werden mit `detail: high` (OpenAI) bzw. in voller Auflösung (Anthropic)
-gesendet, damit kleiner Bon-Druck lesbar bleibt.
+**Bon-Modell:** Alle Bon-Aufrufe (Auslesen, Abgleich) nutzen `AI_RECEIPT_MODEL` (Standard
+`claude-haiku-5-5` bei `AI_PROVIDER=anthropic`, `gpt-4o-mini` bei `openai`). Neue Modelle bekommen
+**keine** Sampling-Parameter (`temperature` führt bei Haiku 5.5 zu HTTP 400), sondern
+`output_config.effort` (`AI_RECEIPT_EFFORT`, Standard `medium`). Es gibt keinen automatischen Rückfall
+auf ein größeres Modell; die Qualität wird mit `scripts/receipt_testset.py` auf eigenen Bon-Fotos
+(außerhalb des Repos) gegen ein Referenzmodell (`AI_VISION_MODEL`) geprüft. Das Modell muss bild-fähig
+sein, sonst greift in der App der On-Device-OCR-Fallback.
 
 SSE-Format: `data: <chunk>\n\n`, Abschluss: `data: [DONE]\n\n`. Zeilenumbrüche im Chunk als `\n` escaped.
+
+---
+
+## Tests
+
+```bash
+cd server
+pip install fastapi==0.115.5 aiosqlite==0.20.0 httpx==0.28.1 python-dotenv==1.0.1 python-multipart==0.0.20 pytest
+python3 -m pytest -q
+```
+
+`pip install -r requirements.txt` scheitert in der Cloud-Umgebung am Build von `recipe-scrapers`
+(`jstyleson`); die Tests brauchen das Paket nicht. Tests nutzen `TestClient` mit temporärer DB
+(`tests/conftest.py`) und rufen **nie** echte KI- oder OFF-Dienste auf (per `monkeypatch` ersetzen).
 
 ---
 
@@ -92,7 +131,21 @@ git tag vX.Y.Z && git push --tags
 make migrate           # Pfad zur Helga-DB im Makefile-Rezept anpassen
 ```
 
-Da die API öffentlich erreichbar ist, muss `API_KEY` in Produktion gesetzt sein. Ohne ihn ist `require_auth` offen, und `validate-env.sh` im Homelab bricht deshalb ab.
+Da die API öffentlich erreichbar ist, muss `API_KEY` in Produktion gesetzt sein. Ohne ihn startet der Server nicht (Ausnahme nur lokal: `ALLOW_NO_AUTH=1`), und `validate-env.sh` im Homelab bricht ohne `API_KEY` ab.
+
+**Image und Container (Phase 5):**
+
+- Mehrstufiges Dockerfile: Stage `builder` (Abhängigkeiten per `pip install --prefix=/install`), `test`, `runtime`.
+  Der Standard-Build (`docker build .`, letzte Stage `runtime`) führt die Tests **nicht** aus. Tests im Container:
+  `make docker-test` (= `docker build --target test -t helga-test .`, Python 3.12).
+- `WEB_CONCURRENCY` (Standard 2) bestimmt die Anzahl Uvicorn-Worker; Uvicorn liest die Variable selbst.
+- Pins (Phase 8): Basis-Image `python:3.12.16-slim-bookworm` (Patchversion, kein Digest) und `pytest==9.2.0`; Updates geschehen bewusst, nicht automatisch.
+- Pin: `recipe-scrapers==15.13.0`. `jstyleson` (über `extruct`) gibt es nur als Quellpaket: **kein** `--only-binary`
+  beim Installieren, sonst fällt pip auf eine ältere `recipe-scrapers` zurück.
+- Gehärteter Prod-Container (`docker-compose.prod.yml`): `read_only`, schreibbar sind nur `/app/data` (Volume) und
+  `/tmp` (tmpfs), `cap_drop: ALL`, `no-new-privileges`. Neue Schreibpfade im Code müssen unter `/app/data` liegen.
+- Fehlt `API_KEY`, beendet sich der Container **nicht**: die Worker brechen mit `API_KEY fehlt …` ab, Uvicorn startet
+  sie neu, der Container wird `unhealthy`. Ursache im Log suchen (`make logs`).
 
 Alle weiteren Befehle: `make help`
 
@@ -104,3 +157,12 @@ Alle weiteren Befehle: `make help`
 - Pfad-Traversal bei Bildabruf abwehren: `Path(filename).name`
 - Schema-Änderungen sind **nicht destruktiv** – nur `ALTER TABLE ... ADD COLUMN`
 - `deleted = 1` ist Soft-Delete – nie physisch löschen (würde Sync brechen)
+- Router je Bereich: `APIRouter(dependencies=[Depends(require_auth)])`, eingebunden in `main.py` per `include_router`
+- Start nur mit `API_KEY` oder mit `ALLOW_NO_AUTH=1` (nur lokale Entwicklung und Tests); sonst bricht der Lifespan mit `RuntimeError` ab
+- KI-Ausfall (Anbieter-Status, nicht erreichbar, unbrauchbare Antwort) → HTTP 502 mit `KI-Dienst hat nicht geantwortet`; Meldungen enthalten nie Schlüssel oder Antwortkörper, Details stehen im Log
+- SSE-Streams: Fehler vor dem ersten Chunk → 502; Abbruch danach → Log, Stream endet ohne `[DONE]`
+- Eingabe-Limits in `models.py`: Kurztexte 200, Langtexte 4000 Zeichen, Tag-Liste 300, Zutaten-/Schrittlisten gedeckelt, Bild-Base64 ca. 8 MiB, `portions` 1–100, OFF-`limit` 1–20
+- Rezept-Import per URL (SSRF-Schutz in `url_guard.py`): nur http/https; Loopback, Privatnetz, Link-Local, Reserviert, Multicast und unspezifizierte Adressen sowie alles nicht global Routbare (z. B. 100.64.0.0/10) werden abgelehnt, auch nach Weiterleitungen (jeder Hop geprüft, max. 5); Seite max. 5 MiB. Bekannte Grenze: DNS-Rebinding zwischen Prüfung und Abruf
+- Bild-Upload: max. 8 MiB (`settings.MAX_IMAGE_BYTES`), darüber 413 ohne Datei
+- Anfragen: `GuardMiddleware` weist `/api/*` (außer `/api/health`) ohne gültigen Schlüssel mit 401 und über `MAX_REQUEST_BYTES` (Standard 12 MiB, `Content-Length`) mit 413 ab, bevor der Body gelesen wird; `require_auth` bleibt zusätzlich
+- Neue Umgebungsvariablen: `ALLOW_NO_AUTH` (nur lokal, Standard aus), `LOG_LEVEL` (Standard `INFO`), `MAX_REQUEST_BYTES` (Standard 12 MiB). Alle übrigen Werte stehen in `settings.py`

@@ -5,7 +5,6 @@ import com.helga.android.data.local.AppDatabase
 import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
-import com.helga.android.data.local.dao.ReceiptDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
@@ -65,7 +64,6 @@ class SyncEngineTest {
     private val weekplanConstraintsDao = mockk<WeekplanConstraintsDao>(relaxed = true)
     private val recipeHistoryDao = mockk<RecipeHistoryDao>(relaxed = true)
     private val recipeFeedbackDao = mockk<RecipeFeedbackDao>(relaxed = true)
-    private val receiptDao = mockk<ReceiptDao>(relaxed = true)
     private val monthlyBudgetDao = mockk<MonthlyBudgetDao>(relaxed = true)
     private val offProductDao = mockk<OffProductDao>(relaxed = true)
     private val apiFactory = mockk<SyncApiFactory>()
@@ -88,7 +86,7 @@ class SyncEngineTest {
         engine = SyncEngine(
             database, recipeDao, syncDao, shoppingDao, storeDao, quickEmojiDao,
             weekplanDao, weekplanSettingsDao, weekplanConstraintsDao,
-            recipeHistoryDao, recipeFeedbackDao, receiptDao, monthlyBudgetDao,
+            recipeHistoryDao, recipeFeedbackDao, monthlyBudgetDao,
             offProductDao, apiFactory, preferences,
         )
     }
@@ -110,6 +108,17 @@ class SyncEngineTest {
         engine.runFullSync()
 
         coVerify(exactly = 0) { recipeDao.upsertRecipes(any()) }
+    }
+
+    @Test
+    fun `successful sync stores the wall clock time for the settings screen`() = runTest {
+        coEvery { api.pull(any()) } returns SyncPullResponse(serverTs = 17L)
+        coEvery { api.push(any()) } returns SyncPullResponse(serverTs = 17L)
+
+        engine.runFullSync()
+
+        coVerify { preferences.saveLastSyncTs(17L) }
+        coVerify { preferences.saveLastSyncAt(match { it > 1_700_000_000_000L }) }
     }
 
     @Test
@@ -174,6 +183,7 @@ class SyncEngineTest {
         // ... aber der Sync-Cursor rückt nicht vor, sonst würde der nächste Versuch denselben
         // Pull-Stand nie wieder anfragen und der fehlgeschlagene Push wäre verloren.
         coVerify(exactly = 0) { preferences.saveLastSyncTs(any()) }
+        coVerify(exactly = 0) { preferences.saveLastSyncAt(any()) }
     }
 
     @Test

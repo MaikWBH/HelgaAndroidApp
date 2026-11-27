@@ -1,8 +1,9 @@
 package com.helga.android.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,7 +30,7 @@ fun parseMarkerColor(hex: String): Color = runCatching {
 fun DayMarkerChip(name: String, color: String, modifier: Modifier = Modifier) {
     Surface(
         color = parseMarkerColor(color).copy(alpha = 0.25f),
-        shape = RoundedCornerShape(4.dp),
+        shape = MaterialTheme.shapes.extraSmall,
         modifier = modifier,
     ) {
         Text(
@@ -37,5 +38,20 @@ fun DayMarkerChip(name: String, color: String, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
         )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun DayMarkerChipPreview() {
+    PreviewSurface {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            DayMarkerChip(name = "Urlaub", color = "#2E7D32")
+            DayMarkerChip(name = "Gäste", color = "#E65100")
+            DayMarkerChip(name = "Feiertag", color = "#455A64")
+        }
     }
 }

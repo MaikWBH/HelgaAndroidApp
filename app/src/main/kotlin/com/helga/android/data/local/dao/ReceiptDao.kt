@@ -1,9 +1,12 @@
 package com.helga.android.data.local.dao
 
+
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Upsert
 import com.helga.android.data.local.entity.ReceiptEntity
 import com.helga.android.data.local.entity.ReceiptItemEntity
 import kotlinx.coroutines.flow.Flow
@@ -20,20 +23,17 @@ interface ReceiptDao {
     @Query("SELECT * FROM receipts WHERE id = :id")
     suspend fun findById(id: String): ReceiptEntity?
 
-    /** Für die automatische Bon-Löschung (bons-kosten A4) — purchaseDate liegt in epoch-ms vor. */
-    @Query("SELECT id FROM receipts WHERE deleted = 0 AND purchaseDate < :beforeEpochMillis")
-    suspend fun findIdsOlderThan(beforeEpochMillis: Long): List<String>
-
     @Query("SELECT * FROM receipt_items WHERE receiptId = :receiptId AND deleted = 0 ORDER BY position ASC")
     fun observeItems(receiptId: String): Flow<List<ReceiptItemEntity>>
 
     @Query("SELECT * FROM receipt_items WHERE receiptId = :receiptId AND deleted = 0 ORDER BY position ASC")
     suspend fun itemsForReceipt(receiptId: String): List<ReceiptItemEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    /** Kein REPLACE: das würde per ON DELETE CASCADE alle Positionen löschen (Phase 7, F13). */
+    @Upsert
     suspend fun upsertReceipt(receipt: ReceiptEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertReceipts(receipts: List<ReceiptEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -42,131 +42,81 @@ interface ReceiptDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertItems(items: List<ReceiptItemEntity>)
 
-    @Query("SELECT * FROM receipts WHERE dirty = 1")
-    suspend fun dirtyReceipts(): List<ReceiptEntity>
+    // ── Bon-Archiv: Warteschlange und Cache (Phase 3a) ───────────────────────
 
-    @Query("SELECT * FROM receipt_items WHERE dirty = 1")
-    suspend fun dirtyItems(): List<ReceiptItemEntity>
+    /** Bons, deren Foto/Scan noch nicht zum Server hochgeladen ist (lokale Warteschlange). */
+    @Query("SELECT * FROM receipts WHERE pendingUpload = 1 AND deleted = 0")
+    suspend fun pendingUploads(): List<ReceiptEntity>
 
-    @Query("UPDATE receipts SET dirty = 0 WHERE id IN (:ids)")
-    suspend fun clearReceiptDirty(ids: List<String>)
+    /** Lokale Änderungen, die per `PUT /api/receipts/{id}` an den Server gehen (Warteschlangen-Bons ausgenommen). */
+    @Query("SELECT * FROM receipts WHERE dirty = 1 AND pendingUpload = 0")
+    suspend fun dirtyReceiptsForPush(): List<ReceiptEntity>
 
-    @Query("UPDATE receipt_items SET dirty = 0 WHERE id IN (:ids)")
-    suspend fun clearItemDirty(ids: List<String>)
+    /** Alle Positionen eines Bons, auch gelöschte (für den Abgleich mit der Server-Positionsliste). */
+    @Query("SELECT * FROM receipt_items WHERE receiptId = :receiptId")
+    suspend fun allItemsForReceipt(receiptId: String): List<ReceiptItemEntity>
 
-    @Query("SELECT * FROM receipts WHERE localImageUri != '' AND deleted = 0")
-    suspend fun receiptsWithLocalImage(): List<ReceiptEntity>
+    // Cache-Verdrängung serverbestätigter Zeilen, siehe sync-patterns „Server-Archiv":
+    // Der Server behält alles; diese harten Löschungen entfernen nur den lokalen Abzug.
+    @Query("DELETE FROM receipts WHERE id = :id")
+    suspend fun hardDeleteReceipt(id: String)
 
-    /** Für den proaktiven Bild-Download (sync A4) — Bild liegt auf dem Server, aber noch nicht lokal gecacht. */
-    @Query("SELECT * FROM receipts WHERE localImageUri = '' AND imagePath != '' AND deleted = 0")
-    suspend fun receiptsNeedingImageDownload(): List<ReceiptEntity>
+    @Query("DELETE FROM receipt_items WHERE receiptId = :receiptId AND id NOT IN (:keepIds)")
+    suspend fun hardDeleteItemsExcept(receiptId: String, keepIds: List<String>)
 
-    @Query("UPDATE receipts SET imagePath = :imagePath, localImageUri = '', updatedAt = :updatedAt, dirty = 1 WHERE id = :id")
-    suspend fun setImagePathAndClearLocal(id: String, imagePath: String, updatedAt: Long)
+    @Query("DELETE FROM receipt_items WHERE receiptId = :receiptId")
+    suspend fun hardDeleteItemsOf(receiptId: String)
 
-    // ── Cost Overview Queries (Phase 2) ──────────────────────────────────────
+    /** Server hat den Bon dauerhaft abgelehnt (HTTP 400/413/422): nicht mehr senden, als Fehler anzeigen. */
+    @Query("UPDATE receipts SET dirty = 0, parseStatus = 'rejected' WHERE id = :id")
+    suspend fun markPushRejected(id: String)
 
-    /**
-     * Aggregates total spending by store (storeId).
-     * Returns (storeId, storeName, totalAmount) sorted by amount descending.
-     */
-    @Query("""
-        SELECT
-            storeId,
-            storeName,
-            SUM(totalAmount) as totalAmount,
-            COUNT(*) as receiptCount
-        FROM receipts
-        WHERE deleted = 0
-        GROUP BY storeId, storeName
-        ORDER BY totalAmount DESC
-    """)
-    suspend fun costByStore(): List<CostByStore>
+    /** Bon und Positionen in einem Schritt schreiben (Repository, Scan). */
+    @Transaction
+    suspend fun upsertReceiptWithItems(receipt: ReceiptEntity, items: List<ReceiptItemEntity>) {
+        upsertReceipt(receipt)
+        if (items.isNotEmpty()) upsertItems(items)
+    }
 
-    /** Wie costByStore, aber auf einen Zeitraum begrenzt (für die Periodenauswahl). */
-    @Query("""
-        SELECT
-            storeId,
-            storeName,
-            SUM(totalAmount) as totalAmount,
-            COUNT(*) as receiptCount
-        FROM receipts
-        WHERE deleted = 0
-            AND purchaseDate / 1000 >= :startEpochSec
-            AND purchaseDate / 1000 < :endEpochSec
-        GROUP BY storeId, storeName
-        ORDER BY totalAmount DESC
-    """)
-    suspend fun costByStoreRange(startEpochSec: Long, endEpochSec: Long): List<CostByStore>
+    /** Server-Stand übernehmen: Bon, Positionen, lokal überzählige Positionen entfernen — atomar. */
+    @Transaction
+    suspend fun replaceWithServerState(receipt: ReceiptEntity, items: List<ReceiptItemEntity>) {
+        upsertReceipt(receipt)
+        upsertItems(items)
+        hardDeleteItemsExcept(receipt.id, items.map { it.id })
+    }
 
-    /**
-     * Aggregates total spending by date (purchaseDate).
-     * purchaseDate is stored as epoch day * 86400 * 1000, convert to date string.
-     */
-    @Query("""
-        SELECT
-            datetime(purchaseDate / 1000, 'unixepoch') as date,
-            SUM(totalAmount) as totalAmount,
-            COUNT(*) as receiptCount
-        FROM receipts
-        WHERE deleted = 0
-        GROUP BY date(purchaseDate / 1000, 'unixepoch')
-        ORDER BY date DESC
-    """)
-    suspend fun costByDate(): List<CostByDate>
+    /** Bon samt Positionen hart löschen (Cache-Verdrängung, bestätigte Server-Löschung, nie hochgeladene Bons). */
+    @Transaction
+    suspend fun hardDeleteReceiptWithItems(id: String) {
+        hardDeleteItemsOf(id)
+        hardDeleteReceipt(id)
+    }
+
+    /** Bons, die älter als der Cache-Schnitt sind und sicher verdrängt werden dürfen (alles synchron, kein Upload offen). */
+    @Query(
+        "SELECT id FROM receipts WHERE purchaseDate < :cutoffMs AND dirty = 0 AND pendingUpload = 0 AND cachedUntil < :nowMs"
+    )
+    suspend fun evictableIds(cutoffMs: Long, nowMs: Long): List<String>
+
+    @Query("SELECT localImageUri FROM receipts WHERE localImageUri != ''")
+    suspend fun allLocalImageUris(): List<String>
+
+    /** Anzahl vorläufiger Bons (KI-Auswertung steht noch aus) für den Hinweis in Bon-Liste und Kostenübersicht. */
+    @Query("SELECT COUNT(*) FROM receipts WHERE status = 'provisional' AND deleted = 0")
+    fun observeProvisionalCount(): Flow<Int>
+
+    /** Ältester lokal vorhandener Kauftag (`YYYY-MM-DD`) — Grundlage für „ältere Bons vom Server laden". */
+    @Query("SELECT MIN(purchaseDay) FROM receipts WHERE purchaseDay != '' AND deleted = 0")
+    suspend fun oldestPurchaseDay(): String?
 
     /**
-     * Aggregates total spending by date within a date range.
+     * Foto hochgeladen: Server-Dateiname setzen, lokale Kopie freigeben. Bewusst weder `updatedAt` noch `dirty`
+     * ändern — der Server hat den Pfad beim Hochladen selbst gesetzt, ein lokal neuerer Zeitstempel würde sonst
+     * spätere Server-Änderungen im LWW-Vergleich unterdrücken.
      */
-    @Query("""
-        SELECT
-            datetime(purchaseDate / 1000, 'unixepoch') as date,
-            SUM(totalAmount) as totalAmount,
-            COUNT(*) as receiptCount
-        FROM receipts
-        WHERE deleted = 0
-            AND purchaseDate / 1000 >= :startEpochSec
-            AND purchaseDate / 1000 < :endEpochSec
-        GROUP BY date(purchaseDate / 1000, 'unixepoch')
-        ORDER BY date DESC
-    """)
-    suspend fun costByDateRange(startEpochSec: Long, endEpochSec: Long): List<CostByDate>
-
-    /**
-     * Total spending in a given date range.
-     */
-    @Query("""
-        SELECT
-            COALESCE(SUM(totalAmount), 0.0) as totalAmount,
-            COUNT(*) as receiptCount
-        FROM receipts
-        WHERE deleted = 0
-            AND purchaseDate / 1000 >= :startEpochSec
-            AND purchaseDate / 1000 < :endEpochSec
-    """)
-    suspend fun totalCostForRange(startEpochSec: Long, endEpochSec: Long): CostSummary
-
-    /**
-     * Receipts for a given store, ordered by date descending.
-     */
-    @Query("""
-        SELECT * FROM receipts
-        WHERE storeId = :storeId AND deleted = 0
-        ORDER BY purchaseDate DESC
-    """)
-    fun observeReceiptsForStore(storeId: String): Flow<List<ReceiptEntity>>
-
-    /**
-     * All receipts within a date range, ordered by date descending.
-     */
-    @Query("""
-        SELECT * FROM receipts
-        WHERE deleted = 0
-            AND purchaseDate / 1000 >= :startEpochSec
-            AND purchaseDate / 1000 < :endEpochSec
-        ORDER BY purchaseDate DESC
-    """)
-    suspend fun receiptsInRange(startEpochSec: Long, endEpochSec: Long): List<ReceiptEntity>
+    @Query("UPDATE receipts SET pendingUpload = 0, imagePath = :imagePath, localImageUri = '' WHERE id = :id")
+    suspend fun clearPendingUpload(id: String, imagePath: String)
 
     // ── Scan Reminder (Phase 3) ──────────────────────────────────────────────
 
@@ -200,24 +150,6 @@ interface ReceiptDao {
 }
 
 // ── Data classes for DAO queries ──────────────────────────────────────────────
-
-data class CostByStore(
-    val storeId: String,
-    val storeName: String,
-    val totalAmount: Double,
-    val receiptCount: Int,
-)
-
-data class CostByDate(
-    val date: String, // "2026-06-15 HH:MM:SS"
-    val totalAmount: Double,
-    val receiptCount: Int,
-)
-
-data class CostSummary(
-    val totalAmount: Double,
-    val receiptCount: Int,
-)
 
 data class PricePoint(
     val name: String,

@@ -453,3 +453,15 @@ _Weitere Aufgaben zu Frage 7 nach der Anschlussrunde._
 | 2026-08-22 | Export-Listenauswahl bleibt bestehen, aber mit Standardliste vorbelegt statt neutral | Interview: erst „nur Standardliste", nach Rückfrage präzisiert auf „Rückfrage behalten, nur vorbelegt" |
 | 2026-08-22 | Woche einmalig anpassen nutzt denselben Mechanismus wie der A11-Basisfall (ein `isSkipped`-Feld statt zwei getrennter Features) | Nutzerentscheidung: „Dasselbe – ein Mechanismus" |
 | 2026-08-22 | Entfernte Tage bleiben in der Wochenansicht sichtbar (nur markiert), keine Navigationslücken; bei bereits geplantem Rezept erst Warnung, dann Löschen | Nutzerentscheidung: „Warnen vor Verlust" |
+
+---
+
+**Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).
+
+## Phase 2 (mobile-android-design)
+
+- Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).
+
+## Phase 8 (Wochenbilanz)
+
+- Phase 8 umgesetzt (Stufe B): Die Wochenbilanz (`weekBalance`) beobachtet die Rezepte der Tage als Flow und aktualisiert sich beim Hinzufügen und Entfernen; siehe [phase-8](../../phasen/phase-8-server-haertung-und-robustheit.md).

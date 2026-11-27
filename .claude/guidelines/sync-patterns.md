@@ -106,6 +106,27 @@ db.execSQL("""
 
 ---
 
+## Server-Archiv mit lokalem Cache (Bons)
+
+Bons (`Receipt`, `ReceiptItem`) liegen vollständig auf dem Server; das Handy hält nur ein Zeitfenster
+(`receiptRetentionMonths`) plus die Upload-Warteschlange. Deshalb laufen sie **nicht** über `SyncEngine`:
+
+- Eigenes bon-weises Protokoll `/api/receipts…` (LWW über `updated_at`, Cursor `server_seq`), umgesetzt in
+  `ReceiptSyncer` (`data/receipts/`): `pushDirty()`, `pull()`, `evict()`, `loadRange()`. Aufruf aus `SyncWorker`.
+- Schreiben bleibt wie überall: `dirty = 1` und `updatedAt = now()` im Repository, danach `triggerOneShot()`.
+- Jede Server-Antwort wird zuerst in Room geschrieben (`dirty = 0`); die UI beobachtet nur Room.
+- **Hartes Löschen** (`hardDeleteReceipt`, `hardDeleteItems…`) nur für serverbestätigte Zeilen (`dirty = 0`,
+  `pendingUpload = 0`), also bei der Cache-Verdrängung, und nur in `data/receipts/` (Ausnahme: `ReceiptRepository`
+  für nie hochgeladene Bons). Der Server löscht Bons nie automatisch. Geprüft durch `ReceiptProtocolRulesTest`.
+- `pendingUpload = 1` markiert Bons, deren Foto noch auf den Upload wartet (`ReceiptUploader`); sie werden beim
+  Pull nicht überschrieben und nicht verdrängt.
+- Bon und Positionen werden nur gemeinsam und atomar geschrieben bzw. gelöscht (`@Transaction`-Methoden im `ReceiptDao`).
+- Server-Antworten werden nur übernommen, wenn die lokale Zeile nicht neuer und `dirty` ist (`keepsLocalChange`).
+- `ReceiptDao.upsertReceipt(s)` ist `@Upsert`, nie `REPLACE` (CASCADE auf Positionen).
+- Schnittstelle, Felder und Regeln: `.claude/phasen/phase-3-daten/server-vertrag.md`.
+
+---
+
 ## Checkliste: Neue syncbare Entity
 
 Beim Hinzufügen einer neuen Entity diese Checkliste vollständig abarbeiten:
@@ -130,9 +151,13 @@ Beim Hinzufügen einer neuen Entity diese Checkliste vollständig abarbeiten:
 - [ ] `server/app/models.py` — `MyRecord` Pydantic-Modell + SyncPayload-Felder
 - [ ] `server/app/db.py` — CREATE TABLE in SCHEMA + zu SYNC_TABLES + Indices
 - [ ] `server/app/sync.py` — TABLE_COLUMNS + PAYLOAD_FIELD Einträge
+- [ ] Neue Spalte an bestehender Sync-Tabelle: in `PRESERVE_IF_UNSET` (`server/app/sync.py`) eintragen, solange ältere
+      App-Versionen pushen — sonst setzt deren Upsert die Spalte auf den Standardwert zurück (Beispiel:
+      `store_aisles.category_key`, Phase 3b)
 
 ### Überprüfung
 - [ ] Room-Schema exportiert (schemas/X.json vorhanden)
+- [ ] Room-Migration mit Test über `RoomMigrationHarness` (`app/src/test/.../RoomMigrationHarness.kt`, Beispiel `Migration36To37Test`)
 - [ ] Bidirektionaler Sync-Test: Lokal ändern → Sync → Server prüfen → Vom Server ändern → Sync → App prüfen
 
 ---

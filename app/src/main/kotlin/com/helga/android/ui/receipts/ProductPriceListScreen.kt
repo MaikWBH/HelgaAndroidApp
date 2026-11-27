@@ -1,5 +1,8 @@
 package com.helga.android.ui.receipts
 
+import com.helga.android.R
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,10 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,17 +42,17 @@ fun ProductPriceListScreen(
     onProductClick: (String) -> Unit,
     viewModel: ProductPriceListViewModel = hiltViewModel(),
 ) {
-    val products = viewModel.products.collectAsState().value
-    val query = viewModel.query.collectAsState().value
-    val isLoading = viewModel.isLoading.collectAsState().value
+    val products = viewModel.products.collectAsStateWithLifecycle().value
+    val query = viewModel.query.collectAsStateWithLifecycle().value
+    val isLoading = viewModel.isLoading.collectAsStateWithLifecycle().value
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Preise") },
+                title = { Text(stringResource(R.string.product_prices_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.recipe_detail_back))
                     }
                 },
             )
@@ -66,9 +69,16 @@ fun ProductPriceListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                placeholder = { Text("Produkt suchen…") },
+                placeholder = { Text(stringResource(R.string.product_prices_search)) },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 singleLine = true,
+            )
+
+            Text(
+                stringResource(R.string.product_prices_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
 
             if (isLoading) {
@@ -76,7 +86,7 @@ fun ProductPriceListScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    LoadingIndicator()
                 }
             } else if (products.isEmpty()) {
                 Box(
@@ -84,8 +94,8 @@ fun ProductPriceListScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        if (query.isBlank()) "Noch keine Produkte gescannt"
-                        else "Keine Produkte gefunden",
+                        if (query.isBlank()) stringResource(R.string.product_prices_empty)
+                        else stringResource(R.string.product_prices_no_results),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -123,7 +133,11 @@ private fun ProductSummaryCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                "${product.buyCount}× gekauft · ${product.storeCount} ${if (product.storeCount == 1) "Markt" else "Märkte"}",
+                stringResource(
+                    if (product.storeCount == 1) R.string.price_buy_stores_one else R.string.price_buy_stores_other,
+                    product.buyCount,
+                    product.storeCount,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
@@ -135,11 +149,11 @@ private fun ProductSummaryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    "Zuletzt: ${formatCurrency(product.lastPrice)}",
+                    stringResource(R.string.price_last, formatCurrency(product.lastPrice)),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    "Günstigster: ${formatCurrency(product.cheapestPrice)}",
+                    stringResource(R.string.price_cheapest, formatCurrency(product.cheapestPrice)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,

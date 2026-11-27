@@ -1,16 +1,26 @@
 package com.helga.android.data.repository
 
+import com.helga.android.data.local.dao.QuickEmojiDao
 import com.helga.android.data.local.dao.ShoppingDao
+import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.model.ItemCostEstimate
+import com.helga.android.data.remote.ApiProvider
+import com.helga.android.data.remote.dto.OffLookupBarcodeRequest
+import com.helga.android.data.remote.dto.OffLookupBarcodeResponse
 import com.helga.android.data.model.ItemOrigin
 import com.helga.android.data.model.ItemOrigins
 import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.model.StoreCost
+import com.helga.android.data.shopping.AisleAssigner
+import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.util.ReceiptItemNormalizer
 import com.helga.android.data.util.ShoppingUnitConverter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withTimeoutOrNull
+import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,7 +30,15 @@ class ShoppingRepository @Inject constructor(
     private val shoppingDao: ShoppingDao,
     private val storeRepository: StoreRepository,
     private val receiptRepository: ReceiptRepository,
+    private val apiProvider: ApiProvider,
+    private val quickEmojiDao: QuickEmojiDao,
+    private val aisleAssigner: AisleAssigner,
+    private val syncScheduler: SyncScheduler,
 ) {
+
+    fun observeQuickEmojis(): Flow<List<QuickEmojiEntity>> = quickEmojiDao.observeEmojis()
+
+    suspend fun upsertQuickEmoji(emoji: QuickEmojiEntity) = quickEmojiDao.upsertEmoji(emoji)
 
     fun observeLists(): Flow<List<ShoppingListEntity>> = shoppingDao.observeLists()
 
@@ -71,6 +89,8 @@ class ShoppingRepository @Inject constructor(
         val id = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
         val origins = listOf(ItemOrigin(recipe = recipeName, quantity = quantity, unit = unit))
+        // Ohne ausdrücklich übergebenen Gang: gelernt → Stichwort (nur mit aktivem Markt)
+        val resolvedAisle = aisle.ifEmpty { resolveAisle(name) }
         shoppingDao.upsertItem(
             ShoppingItemEntity(
                 id = id,
@@ -78,7 +98,7 @@ class ShoppingRepository @Inject constructor(
                 name = name,
                 quantity = quantity,
                 unit = unit,
-                aisle = aisle,
+                aisle = resolvedAisle,
                 source = source,
                 origins = ItemOrigins.encode(origins),
                 updatedAt = now,
@@ -86,6 +106,17 @@ class ShoppingRepository @Inject constructor(
             )
         )
         return id
+    }
+
+    /**
+     * Gang für einen neuen Artikel: lokal (gelernt, Stichwort). Bleibt er bei aktivem Markt ohne Gang, wird die
+     * Server-Kategorisierung im Hintergrund eingereiht (sofort kein Warten, ohne Netz bleibt er ohne Gang).
+     */
+    private suspend fun resolveAisle(name: String): String {
+        val storeId = storeRepository.findActiveStoreId()
+        val aisle = aisleAssigner.resolveLocal(name, storeId)
+        if (aisle.isEmpty() && storeId != null) syncScheduler.enqueueAisleCategorize()
+        return aisle
     }
 
     suspend fun toggleChecked(item: ShoppingItemEntity) {
@@ -215,9 +246,7 @@ class ShoppingRepository @Inject constructor(
                 )
             )
         } else {
-            val aisle = storeRepository.findActiveStoreId()
-                ?.let { storeId -> storeRepository.findAisleForProduct(norm, storeId) }
-                ?: ""
+            val aisle = resolveAisle(norm)
             shoppingDao.upsertItem(
                 ShoppingItemEntity(
                     id = UUID.randomUUID().toString(),
@@ -234,4 +263,21 @@ class ShoppingRepository @Inject constructor(
             )
         }
     }
+
+    /** Serverseitige Artikelvorschläge; bei Timeout (1,5 s) oder Fehler eine leere Liste. */
+    suspend fun suggestItems(query: String): List<String> {
+        if (query.length < 2) return emptyList()
+        return try {
+            withTimeoutOrNull(1_500) { apiProvider.api().suggestItems(query).suggestions }.orEmpty()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.d(e, "Failed to get server suggestions")
+            emptyList()
+        }
+    }
+
+    /** Barcode-Suche bei Open Food Facts über den Sync-Server. Fehler werden an den Aufrufer weitergereicht. */
+    suspend fun lookupBarcode(req: OffLookupBarcodeRequest): OffLookupBarcodeResponse =
+        apiProvider.api().lookupBarcode(req)
 }

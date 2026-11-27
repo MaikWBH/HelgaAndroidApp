@@ -9,6 +9,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * Liefert die [SyncApi] für Repositories und Services. ViewModels nutzen diese Schnittstelle nicht.
+ */
+interface ApiProvider {
+    suspend fun api(): SyncApi
+
+    /** Einmalige API-Instanz für den Onboarding-Healthcheck mit frisch eingegebenen Daten. */
+    fun apiForOnboarding(serverUrl: String, apiKey: String): SyncApi
+}
+
+/**
  * Stellt eine [SyncApi] basierend auf der aktuellen Server-Konfiguration bereit.
  *
  * Server-URL und API-Key kommen aus [AppPreferences] und können sich nach dem
@@ -20,10 +30,10 @@ class SyncApiFactory @Inject constructor(
     private val httpClient: OkHttpClient,
     private val moshi: Moshi,
     private val preferences: AppPreferences,
-) {
+) : ApiProvider {
     @Volatile private var cached: Cached? = null
 
-    suspend fun api(): SyncApi {
+    override suspend fun api(): SyncApi {
         val conn = preferences.currentConnection()
         require(conn.isConfigured) { "Helga-Server nicht konfiguriert" }
 
@@ -55,7 +65,7 @@ class SyncApiFactory @Inject constructor(
      * Erzeugt eine einmalige API-Instanz für den Onboarding-Healthcheck –
      * unabhängig von gespeicherten Prefs.
      */
-    fun apiForOnboarding(serverUrl: String, apiKey: String): SyncApi {
+    override fun apiForOnboarding(serverUrl: String, apiKey: String): SyncApi {
         val baseUrl = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
         val client = httpClient.newBuilder()
             .addInterceptor { chain ->

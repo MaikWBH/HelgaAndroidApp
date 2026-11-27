@@ -9,7 +9,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.helga.android.data.local.dao.MonthlyBudgetDao
 import com.helga.android.data.local.dao.OffProductDao
 import com.helga.android.data.local.dao.QuickEmojiDao
+import com.helga.android.data.local.dao.ReceiptAggregateDao
 import com.helga.android.data.local.dao.ReceiptDao
+import com.helga.android.data.local.dao.ReceiptLexiconDao
 import com.helga.android.data.local.dao.RecipeFeedbackDao
 import com.helga.android.data.local.dao.RecipeDao
 import com.helga.android.data.local.dao.RecipeHistoryDao
@@ -24,6 +26,8 @@ import com.helga.android.data.local.entity.CategoryEntity
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.MonthlyBudgetEntity
+import com.helga.android.data.local.entity.ReceiptAggregateEntity
+import com.helga.android.data.local.entity.ReceiptLexiconEntity
 import com.helga.android.data.local.entity.OffProductEntity
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ReceiptEntity
@@ -46,7 +50,7 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.data.local.entity.WeekplanSettingsEntity
 
 @Database(
-    version = 36,
+    version = 38,
     exportSchema = true,
     entities = [
         RecipeEntity::class,
@@ -70,6 +74,8 @@ import com.helga.android.data.local.entity.WeekplanSettingsEntity
         RecipeFeedbackEntity::class,
         ReceiptEntity::class,
         ReceiptItemEntity::class,
+        ReceiptLexiconEntity::class,
+        ReceiptAggregateEntity::class,
         MonthlyBudgetEntity::class,
         OffProductEntity::class,
         WeekplanDayMarkerEntity::class,
@@ -89,6 +95,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recipeHistoryDao(): RecipeHistoryDao
     abstract fun recipeFeedbackDao(): RecipeFeedbackDao
     abstract fun receiptDao(): ReceiptDao
+    abstract fun receiptLexiconDao(): ReceiptLexiconDao
+    abstract fun receiptAggregateDao(): ReceiptAggregateDao
     abstract fun monthlyBudgetDao(): MonthlyBudgetDao
     abstract fun offProductDao(): OffProductDao
 
@@ -824,10 +832,93 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Phase 3a: Bons liegen künftig vollständig auf dem Server, das Handy hält nur einen Cache.
+         * - neue Spalten für Uhrzeit, Filiale, Rabatte, Pfand, Einheit, Kategorie und Warteschlange,
+         * - `receipt_lexicon` (lokaler Abzug des Server-Lexikons),
+         * - `purchaseDay` aus dem bisherigen Kaufzeitpunkt (+2 h: deutsche Ortszeit),
+         * - `pendingUpload` für Bons, deren Foto noch nicht hochgeladen ist,
+         * - Annahme 7: lokal als gelöscht markierte Bons werden entfernt (Auto-Löschung und
+         *   Handlöschung sind nicht unterscheidbar; der Server ist das Archiv und behält alles).
+         * `internal`, damit der Migrationstest sie direkt aufrufen kann.
+         */
+        internal val MIGRATION_36_37 = object : Migration(36, 37) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE receipts ADD COLUMN storeAddress TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN purchaseDay TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN purchaseTime TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN discountTotal REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN depositTotal REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN confidence REAL NOT NULL DEFAULT 1.0")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN parseStatus TEXT NOT NULL DEFAULT 'none'")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN pendingUpload INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN cachedUntil INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipts_pendingUpload ON receipts(pendingUpload)")
+
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN unit TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN discount REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN isDeposit INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN category TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN offBarcode TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN confidence REAL NOT NULL DEFAULT 1.0")
+
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `receipt_lexicon` (`id` TEXT NOT NULL, `storeKey` TEXT NOT NULL, " +
+                        "`storeName` TEXT NOT NULL, `rawText` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                        "`category` TEXT NOT NULL, `offBarcode` TEXT NOT NULL, `hits` INTEGER NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_lexicon_storeKey ON receipt_lexicon(storeKey)")
+
+                db.execSQL(
+                    "UPDATE receipts SET purchaseDay = strftime('%Y-%m-%d', purchaseDate / 1000, 'unixepoch', '+2 hours') " +
+                        "WHERE purchaseDate > 0"
+                )
+                db.execSQL("UPDATE receipts SET pendingUpload = 1 WHERE localImageUri != '' AND imagePath = ''")
+
+                db.execSQL("DELETE FROM receipt_items WHERE receiptId IN (SELECT id FROM receipts WHERE deleted = 1)")
+                db.execSQL("DELETE FROM receipts WHERE deleted = 1")
+            }
+        }
+
+        /**
+         * Phase 3b: Kategorie-Schlüssel je Gang und lokaler Abzug der Server-Auswertung.
+         * Die zehn bisherigen Standardgänge bekommen ihren Schlüssel automatisch (ohne `dirty`: der Server füllt per
+         * Backfill dieselben Werte); alle anderen Gänge ordnet der Nutzer im Gang-Editor zu. `internal` für den Test.
+         */
+        internal val MIGRATION_37_38 = object : Migration(37, 38) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE store_aisles ADD COLUMN categoryKey TEXT NOT NULL DEFAULT ''")
+                val defaults = mapOf(
+                    "Obst & Gemüse" to "obst_gemuese",
+                    "Brot & Backwaren" to "brot_backwaren",
+                    "Milchprodukte & Eier" to "milch_eier",
+                    "Fleisch & Wurst" to "fleisch_wurst",
+                    "Fisch" to "fisch",
+                    "Tiefkühl" to "tiefkuehl",
+                    "Konserven & Trockenware" to "trockenware",
+                    "Getränke" to "getraenke",
+                    "Süßes & Snacks" to "suesses_snacks",
+                    "Drogerie & Haushalt" to "drogerie",
+                )
+                defaults.forEach { (name, key) ->
+                    db.execSQL("UPDATE store_aisles SET categoryKey = '$key' WHERE aisleName = '$name' AND categoryKey = ''")
+                }
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `receipt_aggregates` (`id` TEXT NOT NULL, `period` TEXT NOT NULL, " +
+                        "`dimension` TEXT NOT NULL, `key` TEXT NOT NULL, `label` TEXT NOT NULL, `amount` REAL NOT NULL, " +
+                        "`quantity` REAL NOT NULL, `avgUnitPrice` REAL NOT NULL, `discount` REAL NOT NULL, " +
+                        "`count` INTEGER NOT NULL, PRIMARY KEY(`id`))"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_aggregates_dimension ON receipt_aggregates(dimension)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_receipt_aggregates_period ON receipt_aggregates(period)")
+            }
+        }
+
         fun build(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38)
                 .build()
     }
 }

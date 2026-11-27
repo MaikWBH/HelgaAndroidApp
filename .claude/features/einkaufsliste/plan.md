@@ -208,3 +208,23 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 | 2026-08-22 | Offline-Pflicht für die Einkaufsliste bestätigt; Sync-Effizienz (Geschwindigkeit, Datenvolumen) als Priorität festgehalten | Interview: nicht verhandelbare Anforderung |
 | 2026-08-22 | A4 umgesetzt: `LaunchedEffect(Unit)` in `HelgaNavGraph.kt` prüft jetzt zuerst `currentRoute == ROUTE_ONBOARDING`, bevor navigiert wird | Kleinster Eingriff, der die Zwangsnavigation auf den echten Erststart begrenzt, ohne Backstack-Restaurierung anzufassen |
 | 2026-08-22 | A5 umgesetzt: neue `searchItemNames`/`searchIngredientNames`-Queries in `ShoppingDao`/`RecipeDao`, `suggestItems()` kombiniert lokale Treffer mit einem auf 1,5 s begrenzten Server-Aufruf (`withTimeoutOrNull`) | Globaler OkHttp-Timeout (15 s, `NetworkModule.kt`) bewusst nicht angetastet, da er Sync/KI/Bild-Upload mitbeträfe; lokale lösung deckt den Offline-Fall vollständig ab |
+
+---
+
+**Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).
+
+## Phase 2 (mobile-android-design)
+
+- Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).
+
+## Phase 3b (automatische Gang-Zuordnung)
+
+- Neue Artikel bekommen ihren Gang automatisch (`AisleAssigner`): 1. gelernte Zuordnung des aktiven Markts (Handkorrektur gewinnt immer), 2. lokale Stichwortliste (605 Wörter, `AisleKeywords`/`AisleKeywordMatcher`) über die Gang-Kategorien mit einstufiger Ausweichkette, 3. Server-KI im Hintergrund (`AisleCategorizeWorker`, nur mit Netz, Ergebnis wird gelernt). Ohne aktiven Markt bleibt der Gang leer.
+- Gemessene Trefferquote der Stichwortliste ohne Server: Pflichtliste 150/150, unabhängige Stichprobe 55/60 (≈ 92 %).
+- Bekannte Grenzen (bewusst nicht behoben): zusammengesetzte Wörter mit irreführendem Kopf (`Apfelmus`, `Gemüsemais`), nachgestellte Sorten (`Joghurt Erdbeere`), seltene Wörter (`Spülmaschinentabs`, `Leinsamen`) — diese lösen das gelernte Lexikon oder die Server-KI.
+- Die fünf Gang-Abfragen im `ShoppingListViewModel` entfallen; Zuordnung liegt im Repository.
+- Details und Geräte-Prüfliste: [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).
+
+## Phase 8 (Gang-Zuordnung)
+
+- Phase 8 umgesetzt (Stufe B, Gerätetests offen): Die KI-Zuordnung der Gänge lädt Artikel vor dem Schreiben neu und überschreibt keine zwischenzeitlich abgehakten, umbenannten oder zugeordneten Artikel; neue Läufe werden angehängt statt verworfen (`APPEND_OR_REPLACE`); siehe [phase-8](../../phasen/phase-8-server-haertung-und-robustheit.md).

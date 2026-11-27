@@ -2,11 +2,10 @@ import os
 import time
 from contextlib import asynccontextmanager
 import aiosqlite
-from dotenv import load_dotenv
 
-load_dotenv()
+from . import settings
 
-DB_PATH = os.getenv("DB_PATH", "data/recipes.db")
+DB_PATH = settings.DB_PATH
 
 
 def now_ms() -> int:
@@ -16,8 +15,8 @@ def now_ms() -> int:
 # Alle sync-fähigen Tabellen in Reihenfolge (Fremdschlüssel-Abhängigkeiten beachten)
 # foods/units/product_units/app_settings: keine Kotlin-Entity/DAO im Client – nur
 # Server-Altlast, daher nicht (mehr) Teil des Sync-Umfangs (spart Payload+Zeit).
-# ingredient_product_mappings/product_purchases/product_prices: ebenfalls ohne
-# Client-Entity/DAO, werden client-seitig per Migration gedroppt (siehe AppDatabase.kt).
+# Die drei früheren Tabellen für Zutat-Produkt-Zuordnung, Preise und Einkäufe werden seit
+# Phase 3a nicht mehr angelegt (kein Leser/Schreiber); vorhandene Tabellen bleiben unangetastet.
 SYNC_TABLES = [
     "recipes",
     "recipe_ingredients",
@@ -39,12 +38,14 @@ SYNC_TABLES = [
     "weekplan_settings",
     "weekplan_constraints",
     "off_products",
-    "receipts",
-    "receipt_items",
     "monthly_budgets",
     "weekplan_day_markers",
     "weekplan_day_marker_assignments",
 ]
+
+# Bon-Tabellen: eigenes bon-weises Protokoll (/api/receipts, Phase 3a) statt Voll-Sync. Alte App-Versionen
+# dürfen sie weiterhin über POST /api/sync einliefern (sync.LEGACY_PUSH_TABLES), erhalten sie aber nicht mehr zurück.
+RECEIPT_TABLES = ["receipts", "receipt_items"]
 
 SCHEMA = """
 PRAGMA journal_mode=WAL;
@@ -154,6 +155,7 @@ CREATE TABLE IF NOT EXISTS store_aisles (
     store_id    TEXT NOT NULL,
     aisle_name  TEXT NOT NULL DEFAULT '',
     sort_order  INTEGER DEFAULT 0,
+    category_key TEXT NOT NULL DEFAULT '',
     updated_at  INTEGER NOT NULL DEFAULT 0,
     deleted     INTEGER NOT NULL DEFAULT 0
 );
@@ -319,40 +321,6 @@ CREATE TABLE IF NOT EXISTS off_products (
     deleted             INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS ingredient_product_mappings (
-    id                  TEXT PRIMARY KEY,
-    ingredient_name     TEXT NOT NULL DEFAULT '',
-    off_product_id      TEXT NOT NULL DEFAULT '',
-    off_barcode         TEXT NOT NULL DEFAULT '',
-    display_name        TEXT NOT NULL DEFAULT '',
-    updated_at          INTEGER NOT NULL DEFAULT 0,
-    deleted             INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS product_prices (
-    id                  TEXT PRIMARY KEY,
-    off_product_id      TEXT NOT NULL DEFAULT '',
-    store_name          TEXT NOT NULL DEFAULT '',
-    currency            TEXT NOT NULL DEFAULT 'EUR',
-    price               REAL NOT NULL DEFAULT 0.0,
-    unit                TEXT NOT NULL DEFAULT '',
-    last_checked_at     INTEGER NOT NULL DEFAULT 0,
-    updated_at          INTEGER NOT NULL DEFAULT 0,
-    deleted             INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS product_purchases (
-    id                  TEXT PRIMARY KEY,
-    shopping_item_id    TEXT NOT NULL DEFAULT '',
-    off_product_id      TEXT NOT NULL DEFAULT '',
-    quantity_purchased  REAL NOT NULL DEFAULT 1.0,
-    price_paid          REAL NOT NULL DEFAULT 0.0,
-    store_name          TEXT NOT NULL DEFAULT '',
-    purchase_date       INTEGER NOT NULL DEFAULT 0,
-    updated_at          INTEGER NOT NULL DEFAULT 0,
-    deleted             INTEGER NOT NULL DEFAULT 0
-);
-
 CREATE TABLE IF NOT EXISTS receipts (
     id                  TEXT PRIMARY KEY,
     store_id            TEXT NOT NULL DEFAULT '',
@@ -382,6 +350,30 @@ CREATE TABLE IF NOT EXISTS receipt_items (
     match_status            TEXT NOT NULL DEFAULT '',
     updated_at              INTEGER NOT NULL DEFAULT 0,
     deleted                 INTEGER NOT NULL DEFAULT 0
+);
+
+-- Phase 3a: lernendes Produkt-Lexikon je Markt (Kürzel -> Artikel) und Kategorien je Produkt.
+-- Bewusst nicht in SYNC_TABLES: nur über /api/receipts/lexicon erreichbar.
+CREATE TABLE IF NOT EXISTS receipt_lexicon (
+    id           TEXT PRIMARY KEY,
+    store_key    TEXT NOT NULL DEFAULT '',
+    store_name   TEXT NOT NULL DEFAULT '',
+    raw_key      TEXT NOT NULL DEFAULT '',
+    raw_text     TEXT NOT NULL DEFAULT '',
+    name         TEXT NOT NULL DEFAULT '',
+    category     TEXT NOT NULL DEFAULT '',
+    off_barcode  TEXT NOT NULL DEFAULT '',
+    hits         INTEGER NOT NULL DEFAULT 0,
+    updated_at   INTEGER NOT NULL DEFAULT 0,
+    deleted      INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS product_categories (
+    product_key  TEXT PRIMARY KEY,
+    product_name TEXT NOT NULL DEFAULT '',
+    category     TEXT NOT NULL DEFAULT '',
+    source       TEXT NOT NULL DEFAULT '',
+    updated_at   INTEGER NOT NULL DEFAULT 0
 );
 
 -- Gemeinsames Monatsbudget der Familie (Singleton id = 'global'). Wird wie
@@ -443,21 +435,15 @@ INDICES = [
     "CREATE INDEX IF NOT EXISTS idx_weekplan_constraints_updated ON weekplan_constraints(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_off_products_barcode ON off_products(barcode)",
     "CREATE INDEX IF NOT EXISTS idx_off_products_updated ON off_products(updated_at)",
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_ingredient_mappings_name ON ingredient_product_mappings(ingredient_name)",
-    "CREATE INDEX IF NOT EXISTS idx_ingredient_mappings_updated ON ingredient_product_mappings(updated_at)",
-    "CREATE INDEX IF NOT EXISTS idx_product_prices_off_product ON product_prices(off_product_id)",
-    "CREATE INDEX IF NOT EXISTS idx_product_prices_store ON product_prices(store_name)",
-    "CREATE INDEX IF NOT EXISTS idx_product_prices_updated ON product_prices(updated_at)",
-    "CREATE INDEX IF NOT EXISTS idx_product_purchases_shopping_item ON product_purchases(shopping_item_id)",
-    "CREATE INDEX IF NOT EXISTS idx_product_purchases_off_product ON product_purchases(off_product_id)",
-    "CREATE INDEX IF NOT EXISTS idx_product_purchases_date ON product_purchases(purchase_date)",
-    "CREATE INDEX IF NOT EXISTS idx_product_purchases_updated ON product_purchases(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_receipts_store ON receipts(store_id)",
     "CREATE INDEX IF NOT EXISTS idx_receipts_shopping_list ON receipts(shopping_list_id)",
     "CREATE INDEX IF NOT EXISTS idx_receipts_date ON receipts(purchase_date)",
     "CREATE INDEX IF NOT EXISTS idx_receipts_updated ON receipts(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_receipt ON receipt_items(receipt_id)",
     "CREATE INDEX IF NOT EXISTS idx_receipt_items_updated ON receipt_items(updated_at)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_receipt_lexicon_key ON receipt_lexicon(store_key, raw_key)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_day ON receipts(purchase_day)",
+    "CREATE INDEX IF NOT EXISTS idx_receipts_parse_status ON receipts(parse_status)",
     "CREATE INDEX IF NOT EXISTS idx_monthly_budgets_updated ON monthly_budgets(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_day_markers_updated ON weekplan_day_markers(updated_at)",
     "CREATE INDEX IF NOT EXISTS idx_weekplan_day_marker_assignments_day ON weekplan_day_marker_assignments(weekplan_day_id)",
@@ -507,6 +493,32 @@ ADDED_COLUMNS = {
     "weekplan_recipes": [
         ("meal_slot", "TEXT NOT NULL DEFAULT ''"),
     ],
+    # Phase 3b: Kategorie-Schlüssel je Gang (gemeinsamer Katalog, siehe categories.py)
+    "store_aisles": [
+        ("category_key", "TEXT NOT NULL DEFAULT ''"),
+    ],
+    # Phase 3a: Bon-Felder (Uhrzeit, Filiale, Rabatte, Pfand, Einheit, Kategorie, Warteschlange)
+    "receipts": [
+        ("store_address", "TEXT NOT NULL DEFAULT ''"),
+        ("purchase_day", "TEXT NOT NULL DEFAULT ''"),
+        ("purchase_time", "TEXT NOT NULL DEFAULT ''"),
+        ("discount_total", "REAL NOT NULL DEFAULT 0.0"),
+        ("deposit_total", "REAL NOT NULL DEFAULT 0.0"),
+        ("confidence", "REAL NOT NULL DEFAULT 1.0"),
+        ("source", "TEXT NOT NULL DEFAULT ''"),
+        ("parse_status", "TEXT NOT NULL DEFAULT 'none'"),
+        ("parse_attempts", "INTEGER NOT NULL DEFAULT 0"),
+        ("parse_claimed_at", "INTEGER NOT NULL DEFAULT 0"),
+        ("parse_model", "TEXT NOT NULL DEFAULT ''"),
+    ],
+    "receipt_items": [
+        ("unit", "TEXT NOT NULL DEFAULT ''"),
+        ("discount", "REAL NOT NULL DEFAULT 0.0"),
+        ("is_deposit", "INTEGER NOT NULL DEFAULT 0"),
+        ("category", "TEXT NOT NULL DEFAULT ''"),
+        ("off_barcode", "TEXT NOT NULL DEFAULT ''"),
+        ("confidence", "REAL NOT NULL DEFAULT 1.0"),
+    ],
 }
 
 # Einmalige Daten-Migrationen nach dem Anlegen neuer Spalten.
@@ -519,6 +531,29 @@ COLUMN_BACKFILL = {
             WHEN LOWER(meal_type) IN ('abendessen', 'dinner', 'hauptgericht', 'hauptspeise') THEN 'dinner'
             WHEN LOWER(meal_type) IN ('dessert', 'snack', 'beilage', 'side') THEN 'snack'
             ELSE 'other'
+        END
+    """,
+    # Phase 3a: +2 Stunden, weil Bestandswerte Mitternacht UTC oder der Scan-Zeitpunkt sind;
+    # so liegt der Tag in deutscher Ortszeit richtig.
+    ("receipts", "purchase_day"): """
+        UPDATE receipts SET purchase_day = CASE WHEN purchase_date > 0
+            THEN strftime('%Y-%m-%d', purchase_date / 1000, 'unixepoch', '+2 hours') ELSE '' END
+    """,
+    ("receipts", "source"): "UPDATE receipts SET source = 'legacy'",
+    # Phase 3b: die zehn bisherigen Standardgänge bekommen ihren Kategorie-Schlüssel (alle anderen bleiben leer)
+    ("store_aisles", "category_key"): """
+        UPDATE store_aisles SET category_key = CASE aisle_name
+            WHEN 'Obst & Gemüse' THEN 'obst_gemuese'
+            WHEN 'Brot & Backwaren' THEN 'brot_backwaren'
+            WHEN 'Milchprodukte & Eier' THEN 'milch_eier'
+            WHEN 'Fleisch & Wurst' THEN 'fleisch_wurst'
+            WHEN 'Fisch' THEN 'fisch'
+            WHEN 'Tiefkühl' THEN 'tiefkuehl'
+            WHEN 'Konserven & Trockenware' THEN 'trockenware'
+            WHEN 'Getränke' THEN 'getraenke'
+            WHEN 'Süßes & Snacks' THEN 'suesses_snacks'
+            WHEN 'Drogerie & Haushalt' THEN 'drogerie'
+            ELSE ''
         END
     """,
 }
@@ -553,7 +588,7 @@ async def _ensure_server_seq(db):
     Daten weiterhin in sinnvoller Reihenfolge geliefert werden. Neue Schreib-
     vorgänge erhalten ab dann eine monotone Commit-Sequenz (siehe push_records).
     """
-    for table in SYNC_TABLES:
+    for table in SYNC_TABLES + RECEIPT_TABLES:
         async with db.execute(f"PRAGMA table_info({table})") as cursor:
             existing = {row[1] for row in await cursor.fetchall()}
         if "server_seq" not in existing:
@@ -568,7 +603,7 @@ async def _ensure_server_seq(db):
     # Globalen Zähler auf das Maximum aller server_seq heben, damit die nächste
     # Commit-Sequenz garantiert über allen bestehenden Werten liegt.
     global_max = 0
-    for table in SYNC_TABLES:
+    for table in SYNC_TABLES + RECEIPT_TABLES:
         async with db.execute(f"SELECT COALESCE(MAX(server_seq), 0) FROM {table}") as cur:
             value = (await cur.fetchone())[0] or 0
             if value > global_max:

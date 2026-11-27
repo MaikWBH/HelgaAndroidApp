@@ -1,6 +1,8 @@
 package com.helga.android.di
 
 import com.helga.android.BuildConfig
+import com.helga.android.data.remote.ApiProvider
+import com.helga.android.data.remote.SyncApiFactory
 import com.squareup.moshi.Moshi
 import dagger.Module
 import dagger.Provides
@@ -20,14 +22,20 @@ object NetworkModule {
     @Singleton
     fun provideMoshi(): Moshi = Moshi.Builder().build()
 
+    /** Bindet [ApiProvider] auf [SyncApiFactory] (ein `object` kann kein `@Binds`, daher `@Provides`). */
+    @Provides
+    @Singleton
+    fun provideApiProvider(factory: SyncApiFactory): ApiProvider = factory
+
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
         val builder = OkHttpClient.Builder()
             .connectionPool(ConnectionPool(maxIdleConnections = 5, keepAliveDuration = 5, TimeUnit.MINUTES))
             .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
+            // 120 s: der Bon-Scan wartet synchron auf die KI-Auswertung (Phase 3a, Annahme 12)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .writeTimeout(120, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
 
         if (BuildConfig.DEBUG) {

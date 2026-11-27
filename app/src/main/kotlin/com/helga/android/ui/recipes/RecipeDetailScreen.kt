@@ -1,5 +1,10 @@
 package com.helga.android.ui.recipes
 
+import com.helga.android.ui.components.FabListBottomPadding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
+import com.helga.android.ui.common.asString
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -30,13 +35,13 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,7 +84,7 @@ import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.util.ImageUrls
 import com.helga.android.ui.components.CreateFab
-import com.helga.android.ui.components.MealSlots
+import com.helga.android.data.model.MealSlots
 import com.helga.android.ui.components.mealSlotLabel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -95,6 +100,7 @@ fun RecipeDetailScreen(
     onNewRecipe: () -> Unit,
     onAiGenerate: () -> Unit,
     onImport: () -> Unit,
+    onMarkdownImport: () -> Unit,
     onRemix: (id: String) -> Unit,
     viewModel: RecipeDetailViewModel = hiltViewModel(),
 ) {
@@ -103,28 +109,29 @@ fun RecipeDetailScreen(
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val recipe = uiState.recipe
     val snackbarHostState = remember { SnackbarHostState() }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var showOverflow by remember { mutableStateOf(false) }
-    var shoppingTargetDialog by remember { mutableStateOf(false) }
-    var showWeekplanPicker by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var showOverflow by rememberSaveable { mutableStateOf(false) }
+    var shoppingTargetDialog by rememberSaveable { mutableStateOf(false) }
+    var showWeekplanPicker by rememberSaveable { mutableStateOf(false) }
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
     val weekplanDays by viewModel.weekplanDays.collectAsStateWithLifecycle()
     val servings by viewModel.servings.collectAsStateWithLifecycle()
     val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
     val nutrition by viewModel.nutrition.collectAsStateWithLifecycle()
-    var showNutritionDialog by remember { mutableStateOf(false) }
+    var showNutritionDialog by rememberSaveable { mutableStateOf(false) }
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
     val weekLabel by viewModel.weekLabel.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.classifyError) {
-        uiState.classifyError?.let { snackbarHostState.showSnackbar(it) }
+        uiState.classifyError?.let { snackbarHostState.showSnackbar(it.asString(context)) }
     }
     LaunchedEffect(uiState.nutritionError) {
-        uiState.nutritionError?.let { snackbarHostState.showSnackbar(it) }
+        uiState.nutritionError?.let { snackbarHostState.showSnackbar(it.asString(context)) }
     }
     LaunchedEffect(Unit) {
-        viewModel.snackbarMessage.collect { snackbarHostState.showSnackbar(it) }
+        viewModel.snackbarMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
     }
 
     if (showDeleteDialog) {
@@ -186,7 +193,6 @@ fun RecipeDetailScreen(
         )
     }
 
-    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -218,7 +224,7 @@ fun RecipeDetailScreen(
                         }
                         if (uiState.instructions.isNotEmpty()) {
                             IconButton(onClick = { onCook(it.id) }) {
-                                Icon(Icons.Filled.MenuBook, contentDescription = stringResource(R.string.recipe_cook))
+                                Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = stringResource(R.string.recipe_cook))
                             }
                         }
                         Box {
@@ -284,7 +290,7 @@ fun RecipeDetailScreen(
                                 DropdownMenuItem(
                                     text = {
                                         if (uiState.isClassifying) {
-                                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                            LoadingIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                                         } else if (serverReachable == false) {
                                             Text(stringResource(R.string.recipe_classify_unreachable))
                                         } else {
@@ -330,6 +336,7 @@ fun RecipeDetailScreen(
                     onNewRecipe = onNewRecipe,
                     onAiGenerate = onAiGenerate,
                     onUrlImport = onImport,
+                    onMarkdownImport = onMarkdownImport,
                     onRemix = { onRemix(it.id) },
                 )
             }
@@ -342,13 +349,14 @@ fun RecipeDetailScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                contentPadding = PaddingValues(bottom = FabListBottomPadding),
             ) {
                 item {
                     HeroImage(
@@ -512,11 +520,14 @@ private fun TagsSection(tags: List<TagEntity>) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MetadataSection(recipe: RecipeEntity) {
+    val total = formatRecipeDuration(recipe.totalTime)
+    val prep = formatRecipeDuration(recipe.prepTime)
+    val cook = formatRecipeDuration(recipe.cookTime)
     val items = buildList {
         if (recipe.recipeYield.isNotBlank()) add("🍽️" to recipe.recipeYield)
-        if (recipe.totalTime.isNotBlank()) add("⏱️" to recipe.totalTime)
-        if (recipe.prepTime.isNotBlank()) add("🔪" to recipe.prepTime)
-        if (recipe.cookTime.isNotBlank()) add("🔥" to recipe.cookTime)
+        if (total.isNotBlank()) add("⏱️" to total)
+        if (prep.isNotBlank()) add("🔪" to prep)
+        if (cook.isNotBlank()) add("🔥" to cook)
         if (recipe.cuisine.isNotBlank()) add("🌍" to recipe.cuisine)
         if (recipe.mealSlot != MealSlots.OTHER) add("🍳" to mealSlotLabel(recipe.mealSlot))
         if (recipe.effort.isNotBlank()) add("💪" to recipe.effort)
@@ -553,7 +564,7 @@ private fun NutritionSection(
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Text(
-            text = "📊 Nährwerte",
+            text = stringResource(R.string.recipe_nutrition_heading),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -562,7 +573,7 @@ private fun NutritionSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small)
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
             ) {
@@ -587,7 +598,7 @@ private fun NutritionSection(
         ) {
             Button(onClick = onCalculateWithAi, enabled = !isCalculating) {
                 if (isCalculating) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    LoadingIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {
                     Text(stringResource(R.string.recipe_nutrition_calculate_ai))
                 }
@@ -605,10 +616,10 @@ private fun NutritionEditDialog(
     onDismiss: () -> Unit,
     onSave: (kcal: Double, protein: Double, fat: Double, carbs: Double) -> Unit,
 ) {
-    var kcal by remember { mutableStateOf(nutrition?.totalKcal?.takeIf { it > 0 }?.toString() ?: "") }
-    var protein by remember { mutableStateOf(nutrition?.protein?.takeIf { it > 0 }?.toString() ?: "") }
-    var fat by remember { mutableStateOf(nutrition?.fat?.takeIf { it > 0 }?.toString() ?: "") }
-    var carbs by remember { mutableStateOf(nutrition?.carbs?.takeIf { it > 0 }?.toString() ?: "") }
+    var kcal by rememberSaveable { mutableStateOf(nutrition?.totalKcal?.takeIf { it > 0 }?.toString() ?: "") }
+    var protein by rememberSaveable { mutableStateOf(nutrition?.protein?.takeIf { it > 0 }?.toString() ?: "") }
+    var fat by rememberSaveable { mutableStateOf(nutrition?.fat?.takeIf { it > 0 }?.toString() ?: "") }
+    var carbs by rememberSaveable { mutableStateOf(nutrition?.carbs?.takeIf { it > 0 }?.toString() ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -696,8 +707,8 @@ private fun DescriptionSection(description: String) {
 
 @Composable
 private fun PersonalNotesSection(notes: String, onSave: (String) -> Unit) {
-    var editing by remember { mutableStateOf(false) }
-    var draft by remember(notes) { mutableStateOf(notes) }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    var draft by rememberSaveable(notes) { mutableStateOf(notes) }
 
     Column(
         modifier = Modifier
@@ -735,7 +746,7 @@ private fun PersonalNotesSection(notes: String, onSave: (String) -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { editing = true }
+                        .clickable(role = Role.Button) { editing = true }
                         .padding(vertical = 8.dp),
                 )
             } else {

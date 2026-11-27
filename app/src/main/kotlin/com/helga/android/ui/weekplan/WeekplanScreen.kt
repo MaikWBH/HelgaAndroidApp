@@ -1,5 +1,14 @@
 package com.helga.android.ui.weekplan
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.shape.CircleShape
+import com.helga.android.data.weekplan.WeekplanGenerateStatus
+import com.helga.android.data.weekplan.parseAllergenJson
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,7 +30,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -29,8 +37,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
@@ -45,7 +51,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
@@ -74,8 +80,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -97,7 +101,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
 import com.helga.android.ui.components.DayMarkerChip
-import com.helga.android.ui.components.MealSlots
+import com.helga.android.data.model.MealSlots
 import com.helga.android.ui.components.mealSlotLabel
 import com.helga.android.ui.components.parseMarkerColor
 import com.helga.android.data.local.entity.RecipeEntity
@@ -109,7 +113,6 @@ import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.local.entity.WeekplanExtraEntity
 import com.helga.android.data.local.entity.WeekplanRecipeEntity
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -118,7 +121,6 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeekplanScreen(
-    bottomPadding: Dp = 0.dp,
     onAddRecipeForDay: (dayId: String) -> Unit,
     onNavigateToRecipe: (recipeId: String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
@@ -147,9 +149,9 @@ fun WeekplanScreen(
     val weekNutrition by viewModel.weekNutrition.collectAsStateWithLifecycle()
     val userAllergies by viewModel.userAllergies.collectAsStateWithLifecycle()
     val canExtendWeek by viewModel.canExtendWeek.collectAsStateWithLifecycle()
-    var exportPicker by remember { mutableStateOf<String?>(null) }
-    var constraintsExpanded by remember { mutableStateOf(false) }
-    var showOverflowMenu by remember { mutableStateOf(false) }
+    var exportPicker by rememberSaveable { mutableStateOf<String?>(null) }
+    var constraintsExpanded by rememberSaveable { mutableStateOf(false) }
+    var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
     var skipConfirmDay by remember { mutableStateOf<WeekplanDayEntity?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -157,11 +159,13 @@ fun WeekplanScreen(
 
     LaunchedEffect(weekOffset) { viewModel.ensureWeek() }
 
+    val exportCreatedMessage = stringResource(R.string.weekplan_export_created)
+    val exportActionLabel = stringResource(R.string.weekplan_export_to_list)
     LaunchedEffect(Unit) {
         viewModel.exportEvent.collect {
             val result = snackbarHostState.showSnackbar(
-                message = "Wochenplan erstellt",
-                actionLabel = "Zur Einkaufsliste",
+                message = exportCreatedMessage,
+                actionLabel = exportActionLabel,
             )
             if (result == SnackbarResult.ActionPerformed) {
                 exportPicker = "all"
@@ -289,7 +293,7 @@ fun WeekplanScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp + bottomPadding),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item(key = "week_nav") {
@@ -449,7 +453,7 @@ fun WeekplanScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
+                        LoadingIndicator()
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = stringResource(R.string.weekplan_ai_generating),
@@ -565,21 +569,21 @@ private fun DayCard(
                         Text(
                             text = "⚡",
                             color = if (day.isQuickDay == 1) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                     IconButton(onClick = onToggleGuest) {
                         Text(
                             text = "👥",
                             color = if (day.isGuestDay == 1) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                     IconButton(onClick = onToggleSkip) {
                         Text(
                             text = "🚫",
                             color = if (day.isSkipped == 1) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                     IconButton(onClick = onToggleLock) {
@@ -587,7 +591,7 @@ private fun DayCard(
                             imageVector = if (day.isLocked == 1) Icons.Filled.Lock else Icons.Filled.LockOpen,
                             contentDescription = stringResource(R.string.weekplan_lock_day),
                             tint = if (day.isLocked == 1) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                     IconButton(onClick = onExport) {
@@ -649,13 +653,13 @@ private fun DayCard(
                     Spacer(Modifier.height(4.dp))
                 }
 
-                var noteText by remember(day.id) { mutableStateOf(day.note) }
+                var noteText by rememberSaveable(day.id) { mutableStateOf(day.note) }
 
                 DisposableEffect(day.id) {
                     onDispose { onNoteChange(noteText) }
                 }
 
-                var extraInput by remember { mutableStateOf("") }
+                var extraInput by rememberSaveable { mutableStateOf("") }
                 var extraSuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
 
                 LaunchedEffect(extraInput) {
@@ -754,7 +758,7 @@ private fun DayCard(
                                     Box(
                                         modifier = Modifier
                                             .size(10.dp)
-                                            .clip(RoundedCornerShape(50))
+                                            .clip(CircleShape)
                                             .background(parseMarkerColor(marker.color)),
                                     )
                                 },
@@ -832,7 +836,7 @@ private fun DayCard(
  */
 @Composable
 private fun MealSlotBadge(mealSlot: String, onMealSlotChange: ((String) -> Unit)?) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     val color = when (mealSlot) {
         MealSlots.BREAKFAST -> MaterialTheme.colorScheme.tertiaryContainer
         MealSlots.LUNCH -> MaterialTheme.colorScheme.primaryContainer
@@ -845,8 +849,10 @@ private fun MealSlotBadge(mealSlot: String, onMealSlotChange: ((String) -> Unit)
     Box {
         Surface(
             color = color,
-            shape = RoundedCornerShape(4.dp),
-            modifier = if (onMealSlotChange != null) Modifier.clickable { expanded = true } else Modifier,
+            shape = MaterialTheme.shapes.extraSmall,
+            modifier = if (onMealSlotChange != null) Modifier
+                .minimumInteractiveComponentSize()
+                .clickable(role = Role.Button) { expanded = true } else Modifier,
         ) {
             Text(
                 text = label,
@@ -887,15 +893,15 @@ private fun RecipeItemRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onNavigate),
+            .clip(MaterialTheme.shapes.small)
+            .clickable(role = Role.Button, onClick = onNavigate),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .clip(RoundedCornerShape(8.dp)),
+                .clip(MaterialTheme.shapes.small),
         ) {
             if (imageUrl != null) {
                 AsyncImage(
@@ -936,7 +942,7 @@ private fun RecipeItemRow(
                     Text(
                         text = "👍",
                         color = if (liked == 1) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )
                 }
                 IconButton(
@@ -945,7 +951,7 @@ private fun RecipeItemRow(
                     Text(
                         text = "👎",
                         color = if (liked == -1) MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )
                 }
             }
@@ -971,15 +977,15 @@ private fun DayPreviewRecipeRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .clickable(onClick = onNavigate),
+            .clip(MaterialTheme.shapes.small)
+            .clickable(role = Role.Button, onClick = onNavigate),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(6.dp)),
+                .clip(MaterialTheme.shapes.small),
         ) {
             if (imageUrl != null) {
                 AsyncImage(
@@ -1051,8 +1057,8 @@ private fun ShoppingListPickerDialog(
     onConfirm: (String, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var servings by remember { mutableIntStateOf(2) }
-    var selectedListId by remember { mutableStateOf(defaultListId.ifBlank { lists.firstOrNull()?.id.orEmpty() }) }
+    var servings by rememberSaveable { mutableStateOf(2) }
+    var selectedListId by rememberSaveable { mutableStateOf(defaultListId.ifBlank { lists.firstOrNull()?.id.orEmpty() }) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1083,11 +1089,15 @@ private fun ShoppingListPickerDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { selectedListId = list.id }
+                                .selectable(
+                                    selected = list.id == selectedListId,
+                                    role = Role.RadioButton,
+                                    onClick = { selectedListId = list.id },
+                                )
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            RadioButton(selected = list.id == selectedListId, onClick = { selectedListId = list.id })
+                            RadioButton(selected = list.id == selectedListId, onClick = null)
                             Text(list.name, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
@@ -1130,11 +1140,15 @@ private fun ExportPreviewDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onToggle(item.key) }
+                                .toggleable(
+                                    value = checked,
+                                    role = Role.Checkbox,
+                                    onValueChange = { onToggle(item.key) },
+                                )
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Checkbox(checked = checked, onCheckedChange = { onToggle(item.key) })
+                            Checkbox(checked = checked, onCheckedChange = null)
                             Column {
                                 val label = buildString {
                                     if (item.quantity > 0) {
@@ -1178,14 +1192,6 @@ private fun ExportPreviewDialog(
     )
 }
 
-fun parseAllergenJson(json: String): List<String> = json
-    .trim()
-    .removePrefix("[")
-    .removeSuffix("]")
-    .split(",")
-    .map { it.trim().trim('"') }
-    .filter { it.isNotBlank() }
-
 /**
  * Direkt im Wochenplan eingebettet statt als separates `ModalBottomSheet` (wochenplan A8) — im
  * eingeklappten Zustand zeigt eine Kompaktzeile die aktiven Grenzwerte auf einen Blick, ohne
@@ -1204,7 +1210,11 @@ private fun ConstraintsPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onToggle)
+                .clickable(
+                    role = Role.Button,
+                    onClickLabel = stringResource(if (expanded) R.string.common_collapse else R.string.common_expand),
+                    onClick = onToggle,
+                )
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1238,12 +1248,12 @@ private fun ConstraintsEditorContent(
     allergies: List<String>,
     onSave: (maxMeat: Int, maxFish: Int, minVeg: Int, maxRepeat: Int, maxKcal: Int, prefOrganic: Boolean, excludeAllergies: List<String>) -> Unit,
 ) {
-    var maxMeat by remember(constraints.maxMeatPerWeek) { mutableFloatStateOf(constraints.maxMeatPerWeek.toFloat()) }
-    var maxFish by remember(constraints.maxFishPerWeek) { mutableFloatStateOf(constraints.maxFishPerWeek.toFloat()) }
-    var minVeg by remember(constraints.minVegetarianPerWeek) { mutableFloatStateOf(constraints.minVegetarianPerWeek.toFloat()) }
-    var maxRepeat by remember(constraints.maxRepeatDays) { mutableFloatStateOf(constraints.maxRepeatDays.toFloat()) }
-    var maxKcal by remember(constraints.maxKcalPerPortion) { mutableFloatStateOf(constraints.maxKcalPerPortion.toFloat()) }
-    var preferOrganic by remember(constraints.preferOrganic) { mutableStateOf(constraints.preferOrganic == 1) }
+    var maxMeat by rememberSaveable(constraints.maxMeatPerWeek) { mutableStateOf(constraints.maxMeatPerWeek.toFloat()) }
+    var maxFish by rememberSaveable(constraints.maxFishPerWeek) { mutableStateOf(constraints.maxFishPerWeek.toFloat()) }
+    var minVeg by rememberSaveable(constraints.minVegetarianPerWeek) { mutableStateOf(constraints.minVegetarianPerWeek.toFloat()) }
+    var maxRepeat by rememberSaveable(constraints.maxRepeatDays) { mutableStateOf(constraints.maxRepeatDays.toFloat()) }
+    var maxKcal by rememberSaveable(constraints.maxKcalPerPortion) { mutableStateOf(constraints.maxKcalPerPortion.toFloat()) }
+    var preferOrganic by rememberSaveable(constraints.preferOrganic) { mutableStateOf(constraints.preferOrganic == 1) }
     var selectedAllergens by remember(constraints.excludeAllergens) {
         mutableStateOf(parseAllergenJson(constraints.excludeAllergens))
     }
@@ -1311,14 +1321,14 @@ private fun ConstraintsEditorContent(
         HorizontalDivider()
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "🔥 Nährwert-Budgets",
+            text = stringResource(R.string.weekplan_nutrition_budgets),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
         )
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "Max kcal/Portion: ${maxKcal.toInt()}",
+            text = stringResource(R.string.weekplan_max_kcal, maxKcal.toInt()),
             style = MaterialTheme.typography.bodyMedium,
         )
         Slider(
@@ -1336,7 +1346,7 @@ private fun ConstraintsEditorContent(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "🌿 Bio bevorzugt",
+                text = stringResource(R.string.weekplan_prefer_organic),
                 style = MaterialTheme.typography.bodyMedium,
             )
             androidx.compose.material3.Switch(
@@ -1348,7 +1358,7 @@ private fun ConstraintsEditorContent(
         if (allergies.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "🚫 Allergene ausschließen",
+                text = stringResource(R.string.weekplan_exclude_allergens),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))
@@ -1457,7 +1467,7 @@ private fun ProposalSheet(
                             contentDescription = null,
                             modifier = Modifier
                                 .size(48.dp)
-                                .clip(RoundedCornerShape(6.dp)),
+                                .clip(MaterialTheme.shapes.small),
                             contentScale = ContentScale.Crop,
                         )
                         Spacer(Modifier.width(8.dp))

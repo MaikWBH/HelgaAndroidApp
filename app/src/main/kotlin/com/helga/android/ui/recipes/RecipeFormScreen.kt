@@ -1,5 +1,6 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -29,7 +30,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -59,7 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.helga.android.ui.components.MealSlots
+import com.helga.android.data.model.MealSlots
 import com.helga.android.ui.components.mealSlotLabel
 import com.helga.android.R
 import java.io.File
@@ -97,7 +98,7 @@ fun RecipeFormScreen(
     ) { padding ->
         if (state.isLoading) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
             return@Scaffold
         }
@@ -136,7 +137,7 @@ fun RecipeFormScreen(
                 FormField(
                     value = state.prepTime,
                     onValueChange = viewModel::setPrepTime,
-                    label = stringResource(R.string.recipe_detail_prep_time),
+                    label = stringResource(R.string.recipe_form_prep_time),
                     modifier = Modifier.weight(1f),
                 )
                 FormField(
@@ -230,7 +231,7 @@ fun RecipeFormScreen(
                 enabled = state.name.isNotBlank() && !state.isSaving,
             ) {
                 if (state.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    LoadingIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
                     Text(stringResource(R.string.recipe_form_save))
                 }
@@ -282,7 +283,7 @@ private fun MealSlotPicker(
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -356,7 +357,7 @@ private fun TagsEditor(
     onAddTag: (String) -> Unit,
     onRemoveTag: (String) -> Unit,
 ) {
-    var input by remember { mutableStateOf("") }
+    var input by rememberSaveable { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),

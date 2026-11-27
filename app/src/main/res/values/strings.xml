@@ -43,6 +43,7 @@
     <string name="recipe_detail_instructions">Zubereitung</string>
     <string name="recipe_detail_yield">Portionen</string>
     <string name="recipe_detail_prep_time">Vorbereitung</string>
+    <string name="recipe_form_prep_time">Vorb.</string>
     <string name="recipe_detail_cook_time">Kochzeit</string>
     <string name="recipe_detail_total_time">Gesamt</string>
     <string name="recipe_detail_cuisine">Küche</string>
@@ -129,8 +130,8 @@
     <string name="settings_server_section">Server</string>
     <string name="settings_sync_section">Synchronisation</string>
     <string name="settings_receipts_section">Bons</string>
-    <string name="settings_receipt_retention">Bon-Aufbewahrung</string>
-    <string name="settings_receipt_retention_never">Nie löschen</string>
+    <string name="settings_receipt_retention">Bons offline behalten</string>
+    <string name="settings_receipt_retention_never">Alle (unbegrenzt)</string>
     <string name="settings_receipt_retention_1">1 Monat</string>
     <string name="settings_receipt_retention_months">%1$d Monate</string>
     <string name="settings_receipt_retention_12">1 Jahr</string>
@@ -151,6 +152,7 @@
     <!-- Allgemein -->
     <string name="action_retry">Erneut versuchen</string>
     <string name="action_back">Zurück</string>
+    <string name="common_loading">Lädt…</string>
     <string name="action_settings">Einstellungen</string>
     <string name="action_more">Mehr</string>
     <string name="action_clear_search">Suche leeren</string>
@@ -344,6 +346,13 @@
     <string name="settings_theme_light">Hell</string>
     <string name="settings_theme_dark">Dunkel</string>
     <string name="settings_accent_color">Akzentfarbe</string>
+    <string name="settings_accent_system">System (Wallpaper)</string>
+    <string name="settings_accent_green">Grün</string>
+    <string name="settings_accent_blue">Blau</string>
+    <string name="settings_accent_purple">Lila</string>
+    <string name="settings_accent_orange">Orange</string>
+    <string name="settings_accent_red">Rot</string>
+    <string name="settings_accent_teal">Petrol</string>
     <string name="settings_notify_shopping">Einkaufstag-Erinnerung</string>
     <string name="settings_notify_cook">Koch-Erinnerung</string>
 
@@ -401,7 +410,6 @@
     <string name="product_prices_cheapest_store">Günstigster Markt</string>
     <string name="product_prices_sparkline_title">Preisverlauf</string>
     <string name="product_prices_store_comparison">Marktvergleich</string>
-    <string name="product_prices_history_title">Kaufverlauf</string>
 
     <!-- Phase 2: Kostenübersicht -->
     <string name="cost_overview_title">Kostenübersicht</string>
@@ -434,4 +442,305 @@
     <string name="settings_ai_bulk_both">Beides für alle Rezepte ausführen</string>
     <string name="settings_ai_bulk_progress">%1$d / %2$d verarbeitet</string>
     <string name="settings_ai_bulk_done">Fertig: %1$d aktualisiert, %2$d fehlgeschlagen</string>
+
+    <!-- Phase 2: Kassenbons -->
+    <string name="receipt_list_title">Einkäufe</string>
+    <string name="receipt_stats">Statistik</string>
+    <string name="receipt_scan">Scannen</string>
+    <string name="receipt_list_empty">Noch keine Kassenbons gescannt</string>
+    <string name="receipt_unknown_store">Unbekannter Markt</string>
+    <string name="receipt_delete_title">Kassenbon löschen?</string>
+    <string name="receipt_delete_message">Der Bon wird lokal gelöscht und beim nächsten Sync entfernt.</string>
+    <string name="receipt_fallback_title">Kassenbon</string>
+    <string name="receipt_not_found">Bon nicht gefunden</string>
+    <string name="receipt_photo">Kassenbon-Foto</string>
+    <string name="receipt_source_ai">Gelesen per KI-Vision</string>
+    <string name="receipt_source_ocr">Gelesen per On-Device-OCR</string>
+    <string name="receipt_sum">Summe: %1$s</string>
+    <string name="receipt_reconcile_again">Erneut mit Einkaufsliste abgleichen</string>
+    <string name="receipt_reconcile">Mit Einkaufsliste abgleichen</string>
+    <string name="receipt_reconcile_matches">✓ %1$d Treffer</string>
+    <string name="receipt_reconcile_unexpected">Ungeplant gekauft:</string>
+    <string name="receipt_reconcile_missing">Nicht gefunden (abgehakt, fehlt auf Bon):</string>
+    <string name="receipt_scan_title">Kassenzettel scannen</string>
+    <string name="receipt_scan_reading">Bon wird ausgelesen…</string>
+    <string name="receipt_scan_intro">Fotografiere deinen Kassenzettel oder wähle ein Bild aus der Galerie.</string>
+    <string name="receipt_scan_take_photo">Foto aufnehmen</string>
+    <string name="receipt_scan_gallery">Aus Galerie wählen</string>
+    <string name="receipt_scan_review_hint">Einige Angaben sind unsicher. Bitte die markierten Positionen und den Gesamtbetrag prüfen, bevor du speicherst.</string>
+    <string name="receipt_scan_source_ai">Gelesen per KI-Vision (Server)</string>
+    <string name="receipt_scan_source_ocr">Gelesen per On-Device-OCR (offline)</string>
+    <string name="receipt_scan_raw_hide">Roh-Text ausblenden</string>
+    <string name="receipt_scan_raw_show">Roh-Text anzeigen</string>
+    <string name="receipt_scan_store">Markt</string>
+    <string name="receipt_scan_total">Gesamtbetrag (€)</string>
+    <string name="receipt_scan_items">Artikel (%1$d)</string>
+    <string name="receipt_scan_edit_hint">Zum Korrigieren auf eine Position tippen.</string>
+    <string name="receipt_scan_check">Bitte prüfen</string>
+    <string name="receipt_scan_no_items">Keine Artikel erkannt. Du kannst den Bon trotzdem speichern.</string>
+    <string name="receipt_scan_rescan">Neu scannen</string>
+    <string name="receipt_scan_edit_item">Position bearbeiten</string>
+    <string name="receipt_scan_item_name">Bezeichnung</string>
+    <string name="receipt_scan_unit_price">Einzelpreis (€)</string>
+    <string name="receipt_scan_total_price">Gesamtpreis (€)</string>
+
+    <!-- Phase 2: Kosten und Preise -->
+    <string name="cost_receipts_summary">%1$d Kassenbons</string>
+    <string name="cost_bon_one">%1$d Bon</string>
+    <string name="cost_bon_other">%1$d Bons</string>
+    <string name="cost_budget_title">Monatsbudget</string>
+    <string name="cost_budget_edit">Budget bearbeiten</string>
+    <string name="cost_budget_not_set">Noch kein Budget festgelegt. Tippe auf das Stift-Symbol, um ein gemeinsames Monatsbudget zu setzen.</string>
+    <string name="cost_budget_of">%1$s von %2$s</string>
+    <string name="cost_budget_over">⚠️ %1$s über dem Budget!</string>
+    <string name="cost_budget_warn">Achtung: nur noch %1$s übrig</string>
+    <string name="cost_budget_left">Noch %1$s übrig</string>
+    <string name="cost_budget_hint">Gemeinsames Budget pro Kalendermonat in Euro. Der Wert wird mit dem anderen Gerät synchronisiert. 0 oder leer = kein Budget.</string>
+    <string name="cost_budget_amount">Betrag (€)</string>
+    <string name="cost_budget_threshold">Warnschwelle: %1$d%% des Budgets</string>
+    <string name="price_buy_stores_one">%1$d× gekauft · %2$d Markt</string>
+    <string name="price_buy_stores_other">%1$d× gekauft · %2$d Märkte</string>
+    <string name="price_last">Zuletzt: %1$s</string>
+    <string name="price_cheapest">Günstigster: %1$s</string>
+    <string name="price_product_fallback">Produkt</string>
+    <string name="price_no_data">Keine Daten gefunden</string>
+    <string name="price_stat_min">Min</string>
+    <string name="price_stat_max">Max</string>
+
+    <!-- Phase 2: Einkaufsliste -->
+    <string name="shopping_menu_receipt">Kassenzettel</string>
+    <string name="shopping_recipe_breakdown">Rezept-Aufschlüsselung</string>
+    <string name="shopping_estimate_accuracy">%1$d%% mit Preisen</string>
+    <string name="shopping_catalog_scan">Produkt scannen</string>
+    <string name="shopping_catalog_empty">Noch keine Produkte im Katalog. Scanne deine regelmäßig gekauften Artikel, um sie hier mit Nährwerten zu sammeln.</string>
+    <string name="shopping_catalog_add">Zur Liste hinzufügen</string>
+    <string name="shopping_catalog_remove">Aus Katalog entfernen</string>
+    <string name="shopping_nutrients_title">Nährwerte (pro 100 g)</string>
+    <string name="shopping_nutrient_energy">🔥 Energie</string>
+    <string name="shopping_nutrient_protein">🥚 Eiweiß</string>
+    <string name="shopping_nutrient_fat">🧈 Fett</string>
+    <string name="shopping_nutrient_carbs">🍞 Kohlenhydrate</string>
+    <string name="shopping_brand">Marke:</string>
+    <string name="shopping_vegan">🌱 Vegan</string>
+    <string name="shopping_vegetarian">🥬 Vegetarisch</string>
+    <string name="shopping_organic">🌿 Bio</string>
+    <string name="shopping_ecoscore">🌍 Eco-Score %1$s</string>
+    <string name="shopping_nova">🏭 NOVA %1$s</string>
+    <string name="shopping_additives">Zusatzstoffe:</string>
+    <string name="shopping_allergens_yours">⚠️ Enthält deine Allergene</string>
+    <string name="shopping_allergens_contained">⚠️ Allergene enthalten</string>
+    <string name="shopping_catalog_to_list">✅ Zur Liste</string>
+    <string name="shopping_source_recipes">%1$d Rezepte</string>
+    <string name="shopping_source_recipe">Rezept</string>
+    <string name="shopping_source_manual">Manuell</string>
+    <string name="shopping_macro_protein">Eiweiß %1$dg · </string>
+    <string name="shopping_macro_fat">Fett %1$dg · </string>
+    <string name="shopping_macro_carbs">KH %1$dg</string>
+    <string name="shopping_catalog_in">⭐ Im Katalog</string>
+    <string name="shopping_catalog_to">⭐ Zu meinen Produkten</string>
+
+    <!-- Phase 2: Wochenplan -->
+    <string name="weekplan_export_created">Wochenplan erstellt</string>
+    <string name="weekplan_export_to_list">Zur Einkaufsliste</string>
+    <string name="weekplan_nutrition_budgets">🔥 Nährwert-Budgets</string>
+    <string name="weekplan_max_kcal">Max kcal/Portion: %1$d</string>
+    <string name="weekplan_prefer_organic">🌿 Bio bevorzugt</string>
+    <string name="weekplan_exclude_allergens">🚫 Allergene ausschließen</string>
+
+    <!-- Phase 2: Rest -->
+    <string name="recipes_classify_all">⚡ Alle klassifizieren (%1$d)</string>
+    <string name="recipes_classify_title">Rezepte klassifizieren</string>
+    <string name="recipe_nutrition_heading">📊 Nährwerte</string>
+    <string name="url_import_placeholder">https://www.chefkoch.de/rezepte/...</string>
+    <string name="settings_emoji">Emoji</string>
+    <string name="allergen_banner_title">⚠️ Allergene gefunden</string>
+    <plurals name="receipt_item_count">
+        <item quantity="one">%1$d Artikel</item>
+        <item quantity="other">%1$d Artikel</item>
+    </plurals>
+    <plurals name="recipes_unclassified_count">
+        <item quantity="one">%1$d Rezept ist noch nicht kategorisiert.</item>
+        <item quantity="other">%1$d Rezepte sind noch nicht kategorisiert.</item>
+    </plurals>
+
+    <!-- Phase 2: Meldungen -->
+    <string name="recipe_classify_failed">Klassifikation fehlgeschlagen</string>
+    <string name="recipe_nutrition_calc_failed">Nährwertberechnung fehlgeschlagen</string>
+    <string name="recipe_added_to_list">Zur „%1$s” hinzugefügt</string>
+    <string name="recipe_added_to_weekplan">Zum Wochenplan hinzugefügt</string>
+    <string name="ai_error_no_recipe">Rezept konnte nicht aus der KI-Antwort extrahiert werden</string>
+    <string name="lexicon_deleted">Eintrag gelöscht</string>
+    <string name="action_undo">Rückgängig</string>
+    <string name="ai_error_unknown">Unbekannter Fehler</string>
+    <string name="ai_error_offline">Keine Verbindung zum Server.</string>
+    <string name="ai_error_server">Der Server hat einen Fehler gemeldet.</string>
+    <string name="ai_error_ai_down">Die KI ist gerade nicht erreichbar.</string>
+    <string name="receipt_reconcile_failed">Abgleich fehlgeschlagen (Server erreichbar?)</string>
+    <string name="receipt_scan_read_failed">Kassenzettel konnte nicht gelesen werden</string>
+    <string name="receipt_scan_save_failed">Speichern fehlgeschlagen</string>
+
+    <!-- Phase 2: Semantik -->
+    <string name="common_collapse">Einklappen</string>
+    <string name="common_expand">Ausklappen</string>
+    <string name="settings_marker_color_n">Farbe %1$d</string>
+    <!-- Phase 3a: Kategorien-Katalog (Schlüssel wie server/app/categories.py) -->
+    <string name="category_none">Ohne Kategorie</string>
+    <string name="category_obst_gemuese">Obst &amp; Gemüse</string>
+    <string name="category_brot_backwaren">Brot &amp; Backwaren</string>
+    <string name="category_milch_eier">Milchprodukte &amp; Eier</string>
+    <string name="category_fleisch_wurst">Fleisch &amp; Wurst</string>
+    <string name="category_fisch">Fisch</string>
+    <string name="category_tiefkuehl">Tiefkühl</string>
+    <string name="category_trockenware">Konserven &amp; Trockenware</string>
+    <string name="category_wuerzen_backen">Backen, Gewürze &amp; Saucen</string>
+    <string name="category_fruehstueck">Frühstück, Kaffee &amp; Tee</string>
+    <string name="category_getraenke">Getränke</string>
+    <string name="category_alkohol">Bier, Wein &amp; Spirituosen</string>
+    <string name="category_suesses_snacks">Süßes &amp; Snacks</string>
+    <string name="category_feinkost">Feinkost &amp; Fertiggerichte</string>
+    <string name="category_drogerie">Drogerie &amp; Baby</string>
+    <string name="category_haushalt">Haushalt &amp; Tierbedarf</string>
+    <string name="category_sonstiges">Sonstiges</string>
+    <string name="category_pfand">Pfand</string>
+    <!-- Phase 3a: Scan, vorläufige Bons -->
+    <string name="receipt_scan_provisional_offline">Vorläufig gespeichert. Die genaue Auswertung folgt, sobald der Server erreichbar ist.</string>
+    <string name="receipt_scan_provisional_queued">Vorläufig gespeichert. Die Auswertung läuft auf dem Server nach.</string>
+    <string name="receipt_scan_open_receipt">Bon ansehen</string>
+    <!-- Phase 3a: Review (Kopfkarte, Positionen, Produktzuordnung) -->
+    <string name="receipt_review_edit_header">Kopfdaten bearbeiten</string>
+    <string name="receipt_review_header_title">Kopfdaten</string>
+    <string name="receipt_review_address">Adresse</string>
+    <string name="receipt_review_date">Datum (TT.MM.JJJJ)</string>
+    <string name="receipt_review_time">Uhrzeit (HH:MM)</string>
+    <string name="receipt_review_discount_total">Bon-Rabatt (€)</string>
+    <string name="receipt_review_date_invalid">Bitte ein Datum wie 10.11.2026 eingeben</string>
+    <string name="receipt_review_time_invalid">Bitte eine Uhrzeit wie 17:42 eingeben</string>
+    <string name="receipt_review_date_unknown">Datum unbekannt</string>
+    <string name="receipt_review_sum_line">Positionen %1$s · Bon %2$s</string>
+    <string name="receipt_review_discount_item">− %1$s</string>
+    <string name="receipt_review_discount_receipt">Bon-Rabatt − %1$s</string>
+    <string name="receipt_review_deposit">Pfand</string>
+    <string name="receipt_review_unit">Einheit</string>
+    <string name="receipt_review_discount">Rabatt (€)</string>
+    <string name="receipt_review_category">Kategorie</string>
+    <string name="receipt_review_assign_product">Produkt zuordnen</string>
+    <string name="receipt_review_no_matches">Keine Treffer – Name anpassen und erneut suchen</string>
+    <string name="receipt_review_choose_store">Bekannter Markt</string>
+    <string name="receipt_unit_stk">Stück</string>
+    <string name="receipt_unit_kg">kg</string>
+    <string name="receipt_unit_g">g</string>
+    <string name="receipt_unit_l">l</string>
+    <string name="receipt_unit_ml">ml</string>
+    <!-- Phase 3a: Bon-Liste -->
+    <string name="receipt_status_provisional">Vorläufig</string>
+    <string name="receipt_status_review">Bitte prüfen</string>
+    <string name="receipt_status_failed">Auswertung fehlgeschlagen</string>
+    <string name="receipt_list_empty_hint">Noch keine Bons. Fotografiere deinen ersten Kassenbon.</string>
+    <string name="receipt_list_scan_button">Bon scannen</string>
+    <string name="receipt_list_load_older">Ältere Bons laden</string>
+    <string name="receipt_list_older_hint">Auf dem Handy liegen nur die Bons der letzten Monate. Ältere werden für einen Tag nachgeladen.</string>
+    <string name="receipt_list_older_failed">Ältere Bons konnten nicht geladen werden. Server erreichbar?</string>
+    <!-- Phase 3a: Bon-Detail -->
+    <string name="receipt_detail_banner_provisional">Vorläufige Werte vom Handy. Die genaue Auswertung folgt automatisch.</string>
+    <string name="receipt_detail_banner_review">Bitte prüfen</string>
+    <string name="receipt_detail_review_now">Jetzt prüfen</string>
+    <string name="receipt_detail_menu">Weitere Optionen</string>
+    <string name="receipt_detail_edit">Bearbeiten</string>
+    <string name="receipt_detail_reparse">Neu auslesen</string>
+    <string name="receipt_detail_reparse_title">Neu auslesen?</string>
+    <string name="receipt_detail_reparse_message">Die bisherigen Werte werden durch die neue Auswertung ersetzt.</string>
+    <string name="receipt_detail_reparse_failed">Neu auslesen fehlgeschlagen. Server erreichbar?</string>
+    <string name="receipt_detail_deposit_sum">Pfand %1$s</string>
+    <!-- Phase 3a: Aufbewahrung und Lexikon -->
+    <string name="settings_receipt_retention_hint">Ältere Bons bleiben auf dem Server und werden bei Bedarf geladen.</string>
+    <string name="settings_receipt_lexicon">Gelerntes Bon-Lexikon</string>
+    <string name="receipt_lexicon_title">Bon-Lexikon</string>
+    <string name="receipt_lexicon_empty">Noch nichts gelernt. Das Lexikon füllt sich, wenn du Bons im Review korrigierst.</string>
+    <string name="receipt_lexicon_no_store">Ohne Markt</string>
+    <string name="receipt_lexicon_mapping">%1$s → %2$s</string>
+    <string name="receipt_lexicon_detail">%1$s · %2$d× verwendet</string>
+    <string name="receipt_lexicon_delete">Eintrag löschen</string>
+    <string name="receipt_lexicon_unreachable">Server nicht erreichbar</string>
+    <!-- Phase 3b: Diagramme -->
+    <string name="cost_chart_budget_legend">Budget %1$s</string>
+    <string name="cost_chart_percent">%1$d %%</string>
+    <string name="chart_trend_too_few">Noch zu wenige Käufe für einen Verlauf.</string>
+    <string name="product_prices_chart_description">Preisverlauf von %1$s: zuletzt %2$s, niedrigster Preis %3$s, höchster Preis %4$s</string>
+    <!-- Phase 3b: Kostenübersicht -->
+    <plurals name="cost_provisional_hint">
+        <item quantity="one">%1$d vorläufiger Bon ist noch nicht enthalten.</item>
+        <item quantity="other">%1$d vorläufige Bons sind noch nicht enthalten.</item>
+    </plurals>
+    <string name="cost_stats_empty">Noch keine Auswertung. Sie erscheint nach dem ersten Abgleich mit dem Server.</string>
+    <string name="cost_section_spending">Ausgaben</string>
+    <string name="cost_section_stores">Märkte</string>
+    <string name="cost_section_categories">Kategorien</string>
+    <string name="cost_section_top_products">Top-Artikel</string>
+    <string name="cost_average_month">Ø %1$s je Monat</string>
+    <string name="cost_average_week">Ø %1$s je Woche</string>
+    <string name="cost_range_this_month">Dieser Monat</string>
+    <string name="cost_range_three_months">3 Monate</string>
+    <string name="cost_range_twelve_months">12 Monate</string>
+    <string name="cost_range_all">Gesamt</string>
+    <string name="cost_other">Sonstige</string>
+    <string name="cost_no_receipts_range">Keine Bons in diesem Zeitraum.</string>
+    <string name="cost_category_discount_note">Bon-Rabatte in diesem Zeitraum: %1$s</string>
+    <string name="cost_times_bought">%1$d× gekauft</string>
+    <string name="cost_all_products">Alle Artikel</string>
+    <string name="cost_chart_months_description">Ausgaben der letzten 12 Monate, zuletzt %1$s, Durchschnitt %2$s</string>
+    <string name="cost_chart_weeks_description">Ausgaben der letzten 12 Wochen, zuletzt %1$s, Durchschnitt %2$s</string>
+    <string name="cost_chart_stores_description">Anteil je Markt, größter Anteil: %1$s mit %2$s</string>
+    <string name="cost_chart_categories_description">Ausgaben je Kategorie, größte Kategorie: %1$s mit %2$s</string>
+    <string name="cost_chart_products_description">Top-Artikel nach Ausgaben, an erster Stelle: %1$s mit %2$s</string>
+    <!-- Phase 3b: Preisentwicklung -->
+    <string name="price_trend_all_months_title">Preisentwicklung (alle Monate)</string>
+    <string name="price_trend_all_months_description">Monatlicher Durchschnittspreis von %1$s über %2$d Monate, zuletzt %3$s</string>
+    <string name="price_single_purchases_title">Einzelkäufe der letzten Monate</string>
+    <string name="price_single_purchases_missing">Einzelne Käufe liegen nur für die letzten Monate auf dem Handy.</string>
+    <string name="product_prices_subtitle">Aus den Bons der letzten Monate</string>
+    <!-- Phase 3b: Gang-Kategorien -->
+    <string name="stores_aisle_choose_category">Kategorie wählen</string>
+    <string name="stores_aisle_category_hint">Die Kategorie bestimmt, welche Artikel automatisch in diesen Gang sortiert werden.</string>
+    <string name="stores_add_missing_aisles">Fehlende Standardgänge ergänzen</string>
+    <string name="receipt_decimal_invalid">Bitte eine Zahl wie 12,99 eingeben</string>
+    <string name="receipt_list_older_loaded">Nachgeladen aus %2$s: %1$d Bon(s)</string>
+    <string name="receipt_list_older_none">Keine Bons in den 12 Monaten vor %1$s gefunden</string>
+    <string name="duration_minutes">%1$d Min</string>
+    <string name="duration_hours">%1$d Std</string>
+    <string name="duration_hours_minutes">%1$d Std %2$d Min</string>
+
+    <!-- Phase 7: Markdown-Rezept-Import -->
+    <string name="fab_markdown_import">Markdown importieren</string>
+    <string name="md_import_title">Markdown importieren</string>
+    <string name="md_import_clip_label">Helga Rezept-Vorlage</string>
+    <string name="md_import_prompt_copied">Vorlage in die Zwischenablage kopiert</string>
+    <string name="md_import_prompt_card">Die KI-Vorlage liegt in der Zwischenablage.</string>
+    <string name="md_import_copy_again">Erneut kopieren</string>
+    <string name="md_import_step1">1. Vorlage in Gemini oder eine andere KI einfügen und hinter „Mein Wunsch:“ dein Rezept beschreiben.</string>
+    <string name="md_import_step2">2. Die Antwort komplett kopieren, hier einfügen und auswerten.</string>
+    <string name="md_import_input_label">Markdown-Text</string>
+    <string name="md_import_paste">Einfügen</string>
+    <string name="md_import_evaluate">Auswerten</string>
+    <plurals name="md_import_save_count">
+        <item quantity="one">1 Rezept speichern</item>
+        <item quantity="other">%d Rezepte speichern</item>
+    </plurals>
+    <string name="md_import_preview_counts">%1$d Zutaten · %2$d Schritte</string>
+    <string name="md_import_duplicate">Ein Rezept mit diesem Namen gibt es schon – nicht ausgewählt.</string>
+    <string name="md_import_block_error">Block %1$d (%2$s): %3$s</string>
+    <string name="md_import_untitled">ohne Titel</string>
+    <string name="md_import_error_missing_title">Kein Titel (# Titel) gefunden</string>
+    <string name="md_import_error_empty">Weder Zutaten noch Schritte</string>
+    <string name="md_import_error_too_many_lines">Mehr als 100 Zutaten oder Schritte</string>
+    <string name="md_import_fatal_empty">Bitte zuerst einen Text einfügen.</string>
+    <string name="md_import_fatal_too_long">Der Text ist zu lang (höchstens 100 000 Zeichen).</string>
+    <string name="md_import_fatal_too_many">Zu viele Rezepte (höchstens 50 auf einmal).</string>
+    <string name="md_import_warn_servings">Portionen ohne Zahl ignoriert</string>
+    <string name="md_import_warn_duration">Zeitangabe „%1$s“ nicht erkannt</string>
+    <string name="md_import_warn_value">Wert „%1$s“ nicht erkannt</string>
+    <string name="md_import_warn_nutrition">Nährwerte unvollständig – nicht übernommen</string>
+    <string name="md_import_warn_no_ingredients">Keine Zutaten</string>
+    <string name="md_import_warn_no_steps">Keine Schritte</string>
+    <string name="md_import_warn_section">Abschnitt „%1$s“ ignoriert</string>
+    <string name="md_import_saving">Speichern …</string>
 </resources>

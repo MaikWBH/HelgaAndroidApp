@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 import aiosqlite
 
+from . import categories
 from .db import get_db, SYNC_TABLES
 from .models import SyncPayload, SyncPullResponse, SyncPushRequest
 
@@ -29,7 +30,7 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     ],
     "stores": ["id", "name", "is_active", "updated_at", "deleted"],
     "store_aisles": [
-        "id", "store_id", "aisle_name", "sort_order", "updated_at", "deleted",
+        "id", "store_id", "aisle_name", "sort_order", "category_key", "updated_at", "deleted",
     ],
     "aisle_products": [
         "id", "aisle_name", "product_name", "store_id", "updated_at", "deleted",
@@ -97,6 +98,18 @@ TABLE_COLUMNS: Dict[str, List[str]] = {
     "weekplan_day_marker_assignments": [
         "id", "weekplan_day_id", "marker_id", "updated_at", "deleted",
     ],
+}
+
+# Bon-Tabellen, die alte App-Versionen weiter per POST /api/sync einliefern. Sie sind seit Phase 3a nicht mehr
+# in SYNC_TABLES (der Pull liefert sie nicht mehr; Bons laufen über /api/receipts), werden aber weiter angenommen:
+# nur Datensätze mit deleted = 0, nur die bisherigen Spalten, nie als server_wins (siehe server-vertrag.md, Abschnitt 7).
+LEGACY_PUSH_TABLES = ["receipts", "receipt_items"]
+
+# Spalten, die ein Client-Update nur überschreibt, wenn der Client das Feld mitschickt. Alte App-Versionen kennen neue
+# Spalten nicht; ohne diese Schutzliste würde ihr Upsert sie auf den Standardwert zurücksetzen. Neue Spalten an
+# Sync-Tabellen hier eintragen, solange alte App-Versionen pushen.
+PRESERVE_IF_UNSET: Dict[str, List[str]] = {
+    "store_aisles": ["category_key"],
 }
 
 # Mapping Tabellenname → Feldname im SyncPayload
@@ -207,9 +220,14 @@ async def push_records(payload: SyncPushRequest) -> SyncPullResponse:
                 else:
                     # Client ist neuer oder Record ist neu → upsert + server_seq stempeln
                     placeholders = ", ".join("?" * len(insert_cols))
+                    preserved = {
+                        c for c in PRESERVE_IF_UNSET.get(table, []) if c not in record.model_fields_set
+                    }
                     update_set = ", ".join(
-                        f"{c} = excluded.{c}" for c in insert_cols if c != "id"
+                        f"{c} = excluded.{c}" for c in insert_cols if c != "id" and c not in preserved
                     )
+                    if table == "store_aisles":
+                        rec_dict["category_key"] = categories.coerce(rec_dict.get("category_key"))
                     values = [rec_dict.get(c) for c in cols] + [commit_seq]
                     await db.execute(
                         f"INSERT INTO {table} ({', '.join(insert_cols)}) VALUES ({placeholders}) "
@@ -217,6 +235,49 @@ async def push_records(payload: SyncPushRequest) -> SyncPullResponse:
                         values,
                     )
 
+        await _push_legacy_receipts(db, payload, commit_seq)
         await db.commit()
 
     return SyncPullResponse(server_ts=commit_seq, **server_wins)
+
+
+async def _push_legacy_receipts(db, payload: SyncPushRequest, commit_seq: int) -> None:
+    """Nimmt Bons alter App-Versionen an, ohne das Archiv zu gefährden.
+
+    - `deleted = 1` wird ignoriert (die frühere 3-Monats-Löschung der App darf das Server-Archiv nicht leeren),
+    - nur die bisherigen Spalten werden gesetzt (neue Spalten wie `category` behalten ihren Wert),
+    - LWW über `updated_at`, nie `server_wins`,
+    - neue Bons bekommen `purchase_day` (Backfill) und `source = 'legacy'`.
+    """
+    for table in LEGACY_PUSH_TABLES:
+        records = getattr(payload, PAYLOAD_FIELD[table], [])
+        cols = TABLE_COLUMNS[table]
+        insert_cols = cols + ["server_seq"]
+        for record in records:
+            rec = record.model_dump()
+            if rec.get("deleted"):
+                continue
+            async with db.execute(f"SELECT updated_at FROM {table} WHERE id = ?", (rec["id"],)) as cursor:
+                existing = await cursor.fetchone()
+            if existing and (existing[0] or 0) > rec["updated_at"]:
+                continue
+            placeholders = ", ".join("?" * len(insert_cols))
+            update_set = ", ".join(f"{c} = excluded.{c}" for c in insert_cols if c != "id")
+            await db.execute(
+                f"INSERT INTO {table} ({', '.join(insert_cols)}) VALUES ({placeholders}) "
+                f"ON CONFLICT(id) DO UPDATE SET {update_set}",
+                [rec.get(c) for c in cols] + [commit_seq],
+            )
+            if table == "receipts":
+                await db.execute(
+                    "UPDATE receipts SET purchase_day = CASE WHEN purchase_date > 0 THEN "
+                    "strftime('%Y-%m-%d', purchase_date / 1000, 'unixepoch', '+2 hours') ELSE '' END "
+                    "WHERE id = ? AND purchase_day = ''",
+                    (rec["id"],),
+                )
+                await db.execute("UPDATE receipts SET source = 'legacy' WHERE id = ? AND source = ''", (rec["id"],))
+            else:
+                # Der Bon-Cursor von /api/receipts muss Positionsänderungen sehen.
+                await db.execute(
+                    "UPDATE receipts SET server_seq = ? WHERE id = ?", (commit_seq, rec["receipt_id"])
+                )

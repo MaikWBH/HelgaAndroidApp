@@ -1,5 +1,9 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.ui.res.stringResource
+import com.helga.android.R
+import com.helga.android.ui.common.UiText
+import com.helga.android.ui.common.aiErrorText
 import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.SavedStateHandle
@@ -11,21 +15,19 @@ import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.TagEntity
 import com.helga.android.data.local.entity.WeekplanDayEntity
-import com.helga.android.data.local.entity.WeekplanRecipeEntity
-import com.helga.android.data.local.dao.RecipeDao
-import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.model.RecipeNutrition
 import com.helga.android.data.preferences.AppPreferences
-import com.helga.android.data.remote.SyncApiFactory
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.remote.dto.AiNutritionRequest
+import com.helga.android.data.repository.AiRepository
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.ServerReachabilityMonitor
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -52,9 +54,9 @@ data class RecipeDetailUiState(
     val instructions: List<InstructionEntity> = emptyList(),
     val tags: List<TagEntity> = emptyList(),
     val isClassifying: Boolean = false,
-    val classifyError: String? = null,
+    val classifyError: UiText? = null,
     val isCalculatingNutrition: Boolean = false,
-    val nutritionError: String? = null,
+    val nutritionError: UiText? = null,
 )
 
 @HiltViewModel
@@ -63,9 +65,7 @@ class RecipeDetailViewModel @Inject constructor(
     private val repository: RecipeRepository,
     private val shoppingRepository: ShoppingRepository,
     private val weekplanRepository: WeekplanRepository,
-    private val weekplanDao: WeekplanDao,
-    private val recipeDao: RecipeDao,
-    private val apiFactory: SyncApiFactory,
+    private val aiRepository: AiRepository,
     private val preferences: AppPreferences,
     private val syncScheduler: SyncScheduler,
     private val serverReachability: ServerReachabilityMonitor,
@@ -80,8 +80,8 @@ class RecipeDetailViewModel @Inject constructor(
         serverReachability.checkAsync()
     }
 
-    private val _classifyState = MutableStateFlow(false to (null as String?))
-    private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    private val _classifyState = MutableStateFlow(false to (null as UiText?))
+    private val _snackbarMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
     val snackbarMessage = _snackbarMessage.asSharedFlow()
 
     private val _baseServings = MutableStateFlow(0)
@@ -92,7 +92,7 @@ class RecipeDetailViewModel @Inject constructor(
         if (base > 0 && s > 0) s.toFloat() / base.toFloat() else 1f
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1f)
 
-    private val _nutritionCalcState = MutableStateFlow(false to (null as String?))
+    private val _nutritionCalcState = MutableStateFlow(false to (null as UiText?))
 
     val uiState: StateFlow<RecipeDetailUiState> = combine(
         combine(
@@ -175,14 +175,13 @@ class RecipeDetailViewModel @Inject constructor(
         _classifyState.update { true to null }
         viewModelScope.launch {
             try {
-                val api = apiFactory.api()
                 val req = AiClassifyRequest(
                     name = recipe.name,
                     description = recipe.description,
                     tags = state.tags.map { it.name },
                     ingredients = state.ingredients.map { it.food },
                 )
-                val result = api.classifyRecipe(req)
+                val result = aiRepository.classifyRecipe(req)
                 repository.upsertLocal(
                     recipe.copy(
                         proteinType = result.proteinType.ifBlank { recipe.proteinType },
@@ -194,8 +193,10 @@ class RecipeDetailViewModel @Inject constructor(
                 )
                 syncScheduler.triggerOneShot()
                 _classifyState.update { false to null }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _classifyState.update { false to (e.message ?: "Klassifikation fehlgeschlagen") }
+                _classifyState.update { false to e.aiErrorText(UiText.Res(R.string.recipe_classify_failed)) }
             }
         }
     }
@@ -212,7 +213,7 @@ class RecipeDetailViewModel @Inject constructor(
             val listId = resolveDefaultListId() ?: return@launch
             repository.exportToShoppingList(recipeId, listId)
             syncScheduler.triggerOneShot()
-            _snackbarMessage.tryEmit("Zur „$listName” hinzugefügt")
+            _snackbarMessage.tryEmit(UiText.Res(R.string.recipe_added_to_list, listOf(listName)))
         }
     }
 
@@ -273,9 +274,9 @@ class RecipeDetailViewModel @Inject constructor(
                 monday.format(fmt), sunday.format(fmt)
             ).first()
             val result = days.map { day ->
-                val recipes = weekplanDao.recipesForDay(day.id)
+                val recipes = weekplanRepository.recipesForDay(day.id)
                 val names = recipes.map { wr ->
-                    recipeDao.findById(wr.recipeId)?.name ?: wr.recipeId
+                    repository.findById(wr.recipeId)?.name ?: wr.recipeId
                 }
                 WeekplanDayWithRecipes(day, names)
             }
@@ -288,7 +289,7 @@ class RecipeDetailViewModel @Inject constructor(
             weekplanRepository.addRecipe(dayId, recipeId)
             syncScheduler.triggerOneShot()
             val recipe = uiState.value.recipe
-            _snackbarMessage.tryEmit("Zum Wochenplan hinzugefügt")
+            _snackbarMessage.tryEmit(UiText.Res(R.string.recipe_added_to_weekplan))
         }
     }
 
@@ -341,7 +342,6 @@ class RecipeDetailViewModel @Inject constructor(
         _nutritionCalcState.update { true to null }
         viewModelScope.launch {
             try {
-                val api = apiFactory.api()
                 val baseServings = _baseServings.value.takeIf { it > 0 } ?: NUTRITION_BASELINE_PORTIONS
                 val scale = NUTRITION_BASELINE_PORTIONS.toDouble() / baseServings.toDouble()
                 val ingredientLines = state.ingredients.filter { it.deleted == 0 }.map { ing ->
@@ -359,7 +359,7 @@ class RecipeDetailViewModel @Inject constructor(
                     ingredients = ingredientLines,
                     portions = NUTRITION_BASELINE_PORTIONS,
                 )
-                val result = api.estimateNutrition(req)
+                val result = aiRepository.estimateNutrition(req)
                 repository.saveNutrition(
                     recipeId = recipeId,
                     kcal = result.kcal,
@@ -371,8 +371,10 @@ class RecipeDetailViewModel @Inject constructor(
                 _nutrition.value = repository.getRecipeNutrition(recipeId)
                 syncScheduler.triggerOneShot()
                 _nutritionCalcState.update { false to null }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _nutritionCalcState.update { false to (e.message ?: "Nährwertberechnung fehlgeschlagen") }
+                _nutritionCalcState.update { false to e.aiErrorText(UiText.Res(R.string.recipe_nutrition_calc_failed)) }
             }
         }
     }

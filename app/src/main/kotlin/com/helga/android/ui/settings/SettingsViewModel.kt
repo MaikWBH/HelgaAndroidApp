@@ -3,23 +3,25 @@ package com.helga.android.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.AppDatabase
-import com.helga.android.data.local.dao.QuickEmojiDao
-import com.helga.android.data.local.dao.WeekplanSettingsDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
 import com.helga.android.data.local.entity.WeekplanDayMarkerEntity
 import com.helga.android.data.model.NUTRITION_BASELINE_PORTIONS
 import com.helga.android.data.preferences.AppPreferences
-import com.helga.android.data.remote.SyncApiFactory
+import com.helga.android.data.remote.ConnectionResult
+import com.helga.android.data.remote.ServerConnectionChecker
 import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.remote.dto.AiNutritionRequest
+import com.helga.android.data.repository.AiRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
+import com.helga.android.ui.theme.ACCENT_SYSTEM
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,20 +35,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import retrofit2.HttpException
 import timber.log.Timber
-import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val preferences: AppPreferences,
-    private val apiFactory: SyncApiFactory,
+    private val aiRepository: AiRepository,
     private val syncScheduler: SyncScheduler,
+    private val connectionChecker: ServerConnectionChecker,
     private val shoppingRepository: ShoppingRepository,
     private val recipeRepository: RecipeRepository,
-    private val quickEmojiDao: QuickEmojiDao,
-    private val weekplanSettingsDao: WeekplanSettingsDao,
     private val weekplanRepository: WeekplanRepository,
     private val syncStatusHolder: SyncStatusHolder,
     private val database: AppDatabase,
@@ -55,7 +54,7 @@ class SettingsViewModel @Inject constructor(
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
 
-    val lastSyncTs: StateFlow<Long> = preferences.lastSyncTs
+    val lastSyncAt: StateFlow<Long> = preferences.lastSyncAt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
 
     val syncError: StateFlow<String?> = syncStatusHolder.status
@@ -65,7 +64,7 @@ class SettingsViewModel @Inject constructor(
     val shoppingLists: StateFlow<List<ShoppingListEntity>> = shoppingRepository.observeLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val quickEmojis: StateFlow<List<QuickEmojiEntity>> = quickEmojiDao.observeEmojis()
+    val quickEmojis: StateFlow<List<QuickEmojiEntity>> = shoppingRepository.observeQuickEmojis()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val dayMarkers: StateFlow<List<WeekplanDayMarkerEntity>> = weekplanRepository.observeMarkers()
@@ -169,28 +168,13 @@ class SettingsViewModel @Inject constructor(
         }
         _state.update { it.copy(validation = SettingsValidation.Testing) }
         viewModelScope.launch {
-            try {
-                val api = apiFactory.apiForOnboarding(url, key)
-                api.health()
-                preferences.saveConnection(url, key)
-                syncScheduler.schedulePeriodic()
-                syncScheduler.triggerOneShot()
-                _state.update { it.copy(validation = SettingsValidation.Success) }
-            } catch (e: HttpException) {
-                Timber.w(e, "Settings-Healthcheck HTTP-Fehler")
-                _state.update {
-                    it.copy(
-                        validation = if (e.code() == 401 || e.code() == 403)
-                            SettingsValidation.Unauthorized else SettingsValidation.Unreachable
-                    )
-                }
-            } catch (e: IOException) {
-                Timber.w(e, "Settings-Healthcheck offline")
-                _state.update { it.copy(validation = SettingsValidation.Unreachable) }
-            } catch (e: Exception) {
-                Timber.e(e, "Settings-Healthcheck unbekannter Fehler")
-                _state.update { it.copy(validation = SettingsValidation.Unreachable) }
+            val mapped = when (val result = connectionChecker.test(url, key)) {
+                is ConnectionResult.Success -> SettingsValidation.Success
+                is ConnectionResult.HttpError -> if (result.code == 401 || result.code == 403)
+                    SettingsValidation.Unauthorized else SettingsValidation.Unreachable
+                is ConnectionResult.Unreachable, is ConnectionResult.Other -> SettingsValidation.Unreachable
             }
+            _state.update { it.copy(validation = mapped) }
         }
     }
 
@@ -201,19 +185,10 @@ class SettingsViewModel @Inject constructor(
     fun saveFeatureSettings() {
         val state = _state.value
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
             preferences.saveWeekplanDays(state.weekplanDays)
             preferences.saveShoppingDay(state.shoppingDay)
             preferences.saveDefaultShoppingListId(state.defaultShoppingListId)
-            weekplanSettingsDao.upsert(
-                com.helga.android.data.local.entity.WeekplanSettingsEntity(
-                    id = "global",
-                    planDays = state.weekplanDays,
-                    shoppingDay = state.shoppingDay,
-                    updatedAt = now,
-                    dirty = 1,
-                )
-            )
+            weekplanRepository.saveSettings(state.weekplanDays, state.shoppingDay)
             if (state.defaultShoppingListId.isNotBlank()) {
                 shoppingRepository.setDefaultList(state.defaultShoppingListId)
             }
@@ -235,7 +210,7 @@ class SettingsViewModel @Inject constructor(
     fun addQuickEmoji(emoji: String, food: String, quantity: Double, unit: String) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
-            quickEmojiDao.upsertEmoji(
+            shoppingRepository.upsertQuickEmoji(
                 QuickEmojiEntity(
                     id = java.util.UUID.randomUUID().toString(),
                     emoji = emoji,
@@ -253,7 +228,7 @@ class SettingsViewModel @Inject constructor(
 
     fun updateQuickEmoji(item: QuickEmojiEntity, emoji: String, food: String, quantity: Double, unit: String) {
         viewModelScope.launch {
-            quickEmojiDao.upsertEmoji(
+            shoppingRepository.upsertQuickEmoji(
                 item.copy(
                     emoji = emoji,
                     food = food.trim(),
@@ -269,7 +244,7 @@ class SettingsViewModel @Inject constructor(
 
     fun deleteQuickEmoji(item: QuickEmojiEntity) {
         viewModelScope.launch {
-            quickEmojiDao.upsertEmoji(
+            shoppingRepository.upsertQuickEmoji(
                 item.copy(
                     deleted = 1,
                     updatedAt = System.currentTimeMillis(),
@@ -376,6 +351,8 @@ class SettingsViewModel @Inject constructor(
                 json.put("exportDate", System.currentTimeMillis())
                 json.put("recipeCount", recipes.size)
                 _exportJson.value = json.toString(2)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Export failed")
             }
@@ -392,7 +369,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val recipes = recipeRepository.allRecipes()
             _bulkAiState.value = BulkAiState(mode = mode, isRunning = true, total = recipes.size)
-            val api = apiFactory.api()
             var updated = 0
             var failed = 0
             recipes.forEachIndexed { index, recipe ->
@@ -400,7 +376,7 @@ class SettingsViewModel @Inject constructor(
                     if (mode == BulkAiMode.CLASSIFY || mode == BulkAiMode.BOTH) {
                         val tags = recipeRepository.tagsByRecipeId(recipe.id).map { it.name }
                         val ingredientNames = recipeRepository.ingredientsForRecipe(recipe.id).map { it.food }
-                        val classifyResult = api.classifyRecipe(
+                        val classifyResult = aiRepository.classifyRecipe(
                             AiClassifyRequest(
                                 name = recipe.name,
                                 description = recipe.description,
@@ -432,7 +408,7 @@ class SettingsViewModel @Inject constructor(
                             }
                             listOf(qtyStr, ing.unit, ing.food).filter { it.isNotBlank() }.joinToString(" ")
                         }
-                        val nutritionResult = api.estimateNutrition(
+                        val nutritionResult = aiRepository.estimateNutrition(
                             AiNutritionRequest(
                                 name = recipe.name,
                                 description = recipe.description,
@@ -450,6 +426,8 @@ class SettingsViewModel @Inject constructor(
                         )
                     }
                     updated++
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Timber.w(e, "Bulk-KI fehlgeschlagen für Rezept ${recipe.id}")
                     failed++
@@ -484,7 +462,7 @@ data class SettingsState(
     val shoppingDay: Int = 0,
     val defaultShoppingListId: String = "",
     val themeMode: String = "system",
-    val accentColor: Int = 0,
+    val accentColor: Int = ACCENT_SYSTEM,
     val checkMode: String = "keep",
     val scanReminderThreshold: Float = 0.6f,
     val receiptReconciliationEnabled: Boolean = true,

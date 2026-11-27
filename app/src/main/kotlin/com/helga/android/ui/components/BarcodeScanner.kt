@@ -1,5 +1,7 @@
 package com.helga.android.ui.components
 
+import com.helga.android.R
+import androidx.compose.ui.res.stringResource
 import android.util.Size
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
@@ -88,7 +90,7 @@ fun BarcodeScanner(
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Schließen",
+                contentDescription = stringResource(R.string.action_dismiss),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }

@@ -56,6 +56,10 @@ interface ShoppingDao {
     @Query("SELECT * FROM shopping_items WHERE listId = :listId AND isChecked = 1 AND deleted = 0")
     suspend fun checkedItems(listId: String): List<ShoppingItemEntity>
 
+    /** Offene Artikel ohne Gang (Kandidaten für die Server-Kategorisierung). */
+    @Query("SELECT * FROM shopping_items WHERE aisle = '' AND isChecked = 0 AND deleted = 0")
+    suspend fun uncheckedItemsWithoutAisle(): List<ShoppingItemEntity>
+
     @Query("SELECT * FROM shopping_items WHERE id = :id LIMIT 1")
     suspend fun findItemById(id: String): ShoppingItemEntity?
 

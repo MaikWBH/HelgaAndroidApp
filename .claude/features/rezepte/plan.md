@@ -292,6 +292,10 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
       Fähigkeit (Client müsste die Seite selbst laden), durch den serverseitigen Wild-Mode-Fix
       deckt der Server jetzt bereits den weit überwiegenden Fehlerfall ab; als Folgeaufgabe
       vermerkt statt in dieser Runde mit umgesetzt.
+- [x] **A11** — Markdown-Rezept-Import (Phase 7) · M · Impact hoch — **umgesetzt:** FAB-Eintrag „Markdown importieren",
+      KI-Vorlage (`res/raw/recipe_md_prompt.txt`) wird in die Zwischenablage kopiert, Antwort einfügen → Vorschau mit
+      Auswahl, Warnungen und Dubletten-Hinweis → Speichern mehrerer Rezepte auf einmal. Parser und Mapper laufen offline
+      (`RecipeMarkdownParser`, `RecipeMarkdownMapper`); Format und Grenzen: [markdown-format.md](markdown-format.md).
 
 ## Entscheidungen
 
@@ -301,3 +305,15 @@ Aufwand: S (< 1 h) · M (halber Tag) · L (mehrere Tage)
 | 2026-08-22 | Bewertung wird auf „nur beim Kochen bewerten" vereinheitlicht, Sterne am Rezept werden aus den Kochbewertungen abgeleitet | Interview: doppelte Bewertung war verwirrend; ein Eingabeort, Wert bleibt automatisch aktuell |
 | 2026-08-22 | Portionsskalierung wird je Rezept gemerkt, keine globale Haushaltsgröße | Interview: Skalierung ist rezeptspezifisch, nicht haushaltsweit |
 | 2026-08-22 | Timer bekommen Hintergrundlauf und Benachrichtigung statt nur Screen-Bindung | Interview: beim Kochen laufen mehrere Dinge parallel |
+
+---
+
+**Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).
+
+## Phase 2 (mobile-android-design)
+
+- Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).
+
+## Phase 7
+
+- Phase 7: Markdown-Rezept-Import (A11) und Dauern lesbar angezeigt (`formatRecipeDuration`, F19); siehe [phase-7](../../phasen/phase-7-fixes-und-markdown-import.md).

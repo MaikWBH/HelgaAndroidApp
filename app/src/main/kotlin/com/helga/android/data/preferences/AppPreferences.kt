@@ -42,6 +42,8 @@ class AppPreferences @Inject constructor(
     }
 
     val lastSyncTs: Flow<Long> = ds.data.map { it[KEY_LAST_SYNC_TS] ?: 0L }
+    /** Uhrzeit (ms) des letzten erfolgreichen Voll-Syncs für die Anzeige; `lastSyncTs` ist der Server-Zähler (Cursor). */
+    val lastSyncAt: Flow<Long> = ds.data.map { it[KEY_LAST_SYNC_AT] ?: 0L }
     val weekplanDays: Flow<Int> = ds.data.map { prefs ->
         val raw = prefs[KEY_WEEKPLAN_DAYS] ?: 7
         if (raw in setOf(7, 10, 14)) raw else 7
@@ -52,7 +54,7 @@ class AppPreferences @Inject constructor(
     }
     val defaultShoppingListId: Flow<String> = ds.data.map { it[KEY_DEFAULT_SHOPPING_LIST_ID].orEmpty() }
     val themeMode: Flow<String> = ds.data.map { it[KEY_THEME_MODE] ?: "system" }
-    val accentColor: Flow<Int> = ds.data.map { it[KEY_ACCENT_COLOR] ?: 0 }
+    val accentColor: Flow<Int> = ds.data.map { it[KEY_ACCENT_COLOR] ?: -1 } // -1 = ACCENT_SYSTEM (ui/theme/Color.kt)
     val checkMode: Flow<String> = ds.data.map { it[KEY_CHECK_MODE] ?: "keep" }
     val notifyShoppingDay: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_SHOPPING] ?: false }
     val notifyCookReminder: Flow<Boolean> = ds.data.map { it[KEY_NOTIFY_COOK] ?: false }
@@ -72,6 +74,13 @@ class AppPreferences @Inject constructor(
         val raw = prefs[KEY_RECEIPT_RETENTION_MONTHS] ?: 3
         if (raw in setOf(0, 1, 3, 6, 12)) raw else 3
     }
+
+    /** Cursor (`server_seq`) des bon-weisen Abgleichs mit dem Server-Archiv (Phase 3a, ReceiptSyncer). */
+    val receiptSyncSeq: Flow<Long> = ds.data.map { it[KEY_RECEIPT_SYNC_SEQ] ?: 0L }
+
+    /** Untergrenze des zuletzt geladenen Zeitfensters (`YYYY-MM-DD`); leer = alles (bzw. noch nie synchronisiert). */
+    val receiptSyncFromDay: Flow<String> = ds.data.map { it[KEY_RECEIPT_SYNC_FROM_DAY].orEmpty() }
+
     val allergies: Flow<List<String>> = ds.data.map { prefs ->
         val json = prefs[KEY_ALLERGIES].orEmpty()
         if (json.isBlank()) emptyList()
@@ -98,6 +107,10 @@ class AppPreferences @Inject constructor(
 
     suspend fun saveLastSyncTs(ts: Long) {
         ds.edit { it[KEY_LAST_SYNC_TS] = ts }
+    }
+
+    suspend fun saveLastSyncAt(ms: Long) {
+        ds.edit { it[KEY_LAST_SYNC_AT] = ms }
     }
 
     /**
@@ -137,7 +150,7 @@ class AppPreferences @Inject constructor(
     }
 
     suspend fun saveAccentColor(index: Int) {
-        ds.edit { it[KEY_ACCENT_COLOR] = index.coerceIn(0, 5) }
+        ds.edit { it[KEY_ACCENT_COLOR] = index.coerceIn(-1, 5) }
     }
 
     suspend fun saveCheckMode(mode: String) {
@@ -158,6 +171,13 @@ class AppPreferences @Inject constructor(
 
     suspend fun saveReceiptReconciliationEnabled(enabled: Boolean) {
         ds.edit { it[KEY_RECEIPT_RECONCILE] = enabled }
+    }
+
+    suspend fun saveReceiptSyncState(seq: Long, fromDay: String) {
+        ds.edit {
+            it[KEY_RECEIPT_SYNC_SEQ] = seq
+            it[KEY_RECEIPT_SYNC_FROM_DAY] = fromDay
+        }
     }
 
     suspend fun saveReceiptRetentionMonths(months: Int) {
@@ -182,6 +202,9 @@ class AppPreferences @Inject constructor(
             it.remove(KEY_SERVER_URL)
             it.remove(KEY_API_KEY)
             it.remove(KEY_LAST_SYNC_TS)
+            it.remove(KEY_LAST_SYNC_AT)
+            it.remove(KEY_RECEIPT_SYNC_SEQ)
+            it.remove(KEY_RECEIPT_SYNC_FROM_DAY)
             it.remove(KEY_DEFAULT_SHOPPING_LIST_ID)
         }
     }
@@ -193,6 +216,7 @@ class AppPreferences @Inject constructor(
         val KEY_SERVER_URL = stringPreferencesKey("server_url")
         val KEY_API_KEY = stringPreferencesKey("api_key")
         val KEY_LAST_SYNC_TS = longPreferencesKey("last_sync_ts")
+        val KEY_LAST_SYNC_AT = longPreferencesKey("last_sync_at")
         val KEY_SYNC_PROTOCOL = intPreferencesKey("sync_protocol_version")
         val KEY_WEEKPLAN_DAYS = intPreferencesKey("weekplan_days")
         val KEY_SHOPPING_DAY = intPreferencesKey("shopping_day")
@@ -206,5 +230,7 @@ class AppPreferences @Inject constructor(
         val KEY_SCAN_REMINDER_THRESHOLD = floatPreferencesKey("scan_reminder_threshold")
         val KEY_RECEIPT_RECONCILE = booleanPreferencesKey("receipt_reconciliation_enabled")
         val KEY_RECEIPT_RETENTION_MONTHS = intPreferencesKey("receipt_retention_months")
+        val KEY_RECEIPT_SYNC_SEQ = longPreferencesKey("receipt_sync_seq")
+        val KEY_RECEIPT_SYNC_FROM_DAY = stringPreferencesKey("receipt_sync_from_day")
     }
 }

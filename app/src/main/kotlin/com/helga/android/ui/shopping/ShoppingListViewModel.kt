@@ -2,10 +2,6 @@ package com.helga.android.ui.shopping
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.local.dao.QuickEmojiDao
-import com.helga.android.data.local.dao.ReceiptDao
-import com.helga.android.data.local.dao.RecipeDao
-import com.helga.android.data.local.dao.WeekplanDao
 import com.helga.android.data.local.entity.QuickEmojiEntity
 import com.helga.android.data.local.entity.ShoppingItemEntity
 import com.helga.android.data.local.entity.ShoppingListEntity
@@ -14,12 +10,16 @@ import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.model.ListCostEstimate
 import com.helga.android.data.preferences.AppPreferences
-import com.helga.android.data.remote.SyncApiFactory
+import com.helga.android.data.repository.ReceiptRepository
+import com.helga.android.data.usecase.ExportWeekToShoppingListUseCase
+import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.repository.ShoppingRepository
 import com.helga.android.data.repository.StoreRepository
+import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncEngine
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,14 +27,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import com.helga.android.data.local.entity.OffProductEntity
 import timber.log.Timber
 import java.time.DayOfWeek
@@ -47,11 +45,10 @@ import javax.inject.Inject
 class ShoppingListViewModel @Inject constructor(
     private val repository: ShoppingRepository,
     private val storeRepository: StoreRepository,
-    private val quickEmojiDao: QuickEmojiDao,
-    private val weekplanDao: WeekplanDao,
-    private val recipeDao: RecipeDao,
-    private val receiptDao: ReceiptDao,
-    private val apiFactory: SyncApiFactory,
+    private val weekplanRepository: WeekplanRepository,
+    private val recipeRepository: RecipeRepository,
+    private val receiptRepository: ReceiptRepository,
+    private val exportWeekUseCase: ExportWeekToShoppingListUseCase,
     private val syncScheduler: SyncScheduler,
     private val syncEngine: SyncEngine,
     private val preferences: AppPreferences,
@@ -103,7 +100,7 @@ class ShoppingListViewModel @Inject constructor(
         .map { aisles -> aisles.associate { it.aisleName to it.sortOrder } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    val quickEmojis: StateFlow<List<QuickEmojiEntity>> = quickEmojiDao.observeEmojis()
+    val quickEmojis: StateFlow<List<QuickEmojiEntity>> = repository.observeQuickEmojis()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val staples: StateFlow<List<ShoppingListStapleEntity>> = activeListId
@@ -124,15 +121,9 @@ class ShoppingListViewModel @Inject constructor(
     private val sunday = monday.plusDays(6)
     private val fmt = DateTimeFormatter.ISO_LOCAL_DATE
 
-    val weekplanHasRecipes: StateFlow<Boolean> = weekplanDao.observeDaysBetween(
+    val weekplanHasRecipes: StateFlow<Boolean> = weekplanRepository.observeHasRecipesBetween(
         monday.format(fmt), sunday.format(fmt),
-    ).flatMapLatest { days ->
-        if (days.isEmpty()) flowOf(false)
-        else {
-            val countFlows = days.map { day -> weekplanDao.observeRecipeCount(day.id) }
-            combine(countFlows) { counts -> counts.any { it > 0 } }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val currentListEmpty: StateFlow<Boolean> = itemsByAisle
         .map { it.values.flatten().isEmpty() }
@@ -151,7 +142,7 @@ class ShoppingListViewModel @Inject constructor(
     private val receiptScannedTodayForList: StateFlow<Boolean> = activeListId
         .flatMapLatest { listId ->
             if (listId == null) flowOf(false)
-            else receiptDao.observeReceiptCountForListToday(listId, todayStartMs, todayEndMs)
+            else receiptRepository.observeReceiptCountForListToday(listId, todayStartMs, todayEndMs)
                 .map { it > 0 }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -216,6 +207,8 @@ class ShoppingListViewModel @Inject constructor(
                 activeListId.value?.let { listId ->
                     _costEstimate.value = repository.estimateListCosts(listId)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Offline oder Server nicht erreichbar – lokale Liste unverändert lassen.
             } finally {
@@ -226,23 +219,7 @@ class ShoppingListViewModel @Inject constructor(
 
     fun exportWeekToShoppingList(listId: String) {
         viewModelScope.launch {
-            val days = weekplanDao.getDaysBetween(monday.format(fmt), sunday.format(fmt))
-            days.forEach { day ->
-                weekplanDao.recipesForDay(day.id).forEach { entry ->
-                    val recipeName = recipeDao.findById(entry.recipeId)?.name ?: ""
-                    val ingredients = recipeDao.ingredientsByRecipeId(entry.recipeId)
-                    ingredients.filter { it.deleted == 0 }.forEach { ingredient ->
-                        repository.addOrMergeItem(
-                            listId = listId,
-                            name = ingredient.food,
-                            quantity = ingredient.quantity,
-                            unit = ingredient.unit,
-                            source = "weekplan",
-                            recipeName = recipeName,
-                        )
-                    }
-                }
-            }
+            exportWeekUseCase(listId, monday.format(fmt), sunday.format(fmt))
             syncScheduler.triggerOneShot()
         }
     }
@@ -271,11 +248,7 @@ class ShoppingListViewModel @Inject constructor(
         viewModelScope.launch {
             val trimmed = name.trim()
             if (trimmed.isBlank()) return@launch
-            val storeId = activeStore.value?.id
-            val aisle = if (storeId != null)
-                storeRepository.findAisleForProduct(trimmed, storeId) ?: ""
-            else ""
-            repository.addItem(listId = listId, name = trimmed, aisle = aisle)
+            repository.addItem(listId = listId, name = trimmed)
             syncScheduler.triggerOneShot()
         }
     }
@@ -283,16 +256,11 @@ class ShoppingListViewModel @Inject constructor(
     fun addEmojiItem(emoji: QuickEmojiEntity) {
         val listId = activeListId.value ?: return
         viewModelScope.launch {
-            val storeId = activeStore.value?.id
-            val aisle = if (storeId != null)
-                storeRepository.findAisleForProduct(emoji.food, storeId) ?: ""
-            else ""
             repository.addItem(
                 listId = listId,
                 name = emoji.food,
                 quantity = emoji.quantity,
                 unit = emoji.unit,
-                aisle = aisle,
             )
             syncScheduler.triggerOneShot()
         }
@@ -314,16 +282,11 @@ class ShoppingListViewModel @Inject constructor(
         viewModelScope.launch {
             val stapleList = storeRepository.staplesForList(listId)
             if (stapleList.isEmpty()) return@launch
-            val storeId = activeStore.value?.id
             stapleList.forEach { staple ->
-                val aisle = if (storeId != null)
-                    storeRepository.findAisleForProduct(staple.name, storeId) ?: ""
-                else ""
                 repository.addItem(
                     listId = listId,
                     name = staple.name,
                     quantity = staple.quantity,
-                    aisle = aisle,
                     source = "staple",
                 )
             }
@@ -378,17 +341,14 @@ class ShoppingListViewModel @Inject constructor(
     suspend fun suggestItems(query: String): List<String> {
         if (query.length < 2) return emptyList()
         val local = try {
-            repository.searchItemNames(query) + recipeDao.searchIngredientNames(query)
+            repository.searchItemNames(query) + recipeRepository.searchIngredientNames(query)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.d(e, "Local suggestion lookup failed")
             emptyList()
         }
-        val remote = try {
-            withTimeoutOrNull(1_500) { apiFactory.api().suggestItems(query).suggestions }.orEmpty()
-        } catch (e: Exception) {
-            Timber.d(e, "Failed to get server suggestions")
-            emptyList()
-        }
+        val remote = repository.suggestItems(query)
         return (local + remote).distinctBy { it.lowercase() }.take(20)
     }
 
@@ -396,7 +356,7 @@ class ShoppingListViewModel @Inject constructor(
         val listId = activeListId.value ?: return
         viewModelScope.launch {
             try {
-                val dto = apiFactory.api().lookupBarcode(
+                val dto = repository.lookupBarcode(
                     com.helga.android.data.remote.dto.OffLookupBarcodeRequest(barcode)
                 )
                 val product = OffProductEntity(
@@ -424,6 +384,8 @@ class ShoppingListViewModel @Inject constructor(
                 )
                 // Zeige Produkt-Detail-Dialog statt direkt hinzuzufügen
                 _scannedProduct.value = product
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.w(e, "Barcode lookup failed: $barcode")
                 // Bei Fehler: Generisches Produkt-Dummy anzeigen
@@ -441,19 +403,16 @@ class ShoppingListViewModel @Inject constructor(
         val itemProduct = product ?: scannedProduct.value ?: return
         viewModelScope.launch {
             try {
-                val storeId = activeStore.value?.id
-                val aisle = if (storeId != null)
-                    storeRepository.findAisleForProduct(itemProduct.name, storeId) ?: ""
-                else ""
                 repository.addItem(
                     listId = listId,
                     name = itemProduct.name,
                     quantity = quantity,
                     unit = unit,
-                    aisle = aisle,
                 )
                 syncScheduler.triggerOneShot()
                 _scannedProduct.value = null
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Failed to add item from barcode")
             }
@@ -470,16 +429,13 @@ class ShoppingListViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val name = product.name.ifBlank { product.barcode }
-                val storeId = activeStore.value?.id
-                val aisle = if (storeId != null)
-                    storeRepository.findAisleForProduct(name, storeId) ?: ""
-                else ""
                 repository.addItem(
                     listId = listId,
                     name = name,
-                    aisle = aisle,
                 )
                 syncScheduler.triggerOneShot()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Failed to add catalog product to list")
             }
@@ -499,6 +455,8 @@ class ShoppingListViewModel @Inject constructor(
             try {
                 Timber.d("Saving scanned product to catalog: %s", product.id)
                 _scannedProduct.value = null
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Failed to save product to catalog")
             }

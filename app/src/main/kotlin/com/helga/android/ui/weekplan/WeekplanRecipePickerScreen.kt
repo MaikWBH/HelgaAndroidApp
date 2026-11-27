@@ -1,5 +1,6 @@
 package com.helga.android.ui.weekplan
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -59,6 +59,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.helga.android.R
+import com.helga.android.ui.components.PreviewSurface
+import com.helga.android.ui.components.ThemePreviews
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.util.ImageUrls
 import com.helga.android.ui.recipes.SortOrder
@@ -78,7 +80,44 @@ fun WeekplanRecipePickerScreen(
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
+    WeekplanRecipePickerContent(
+        recipes = recipes,
+        allTagNames = allTagNames,
+        selectedTag = selectedTag,
+        sortOrder = sortOrder,
+        serverUrl = serverUrl,
+        searchQuery = searchQuery,
+        onBack = onBack,
+        onSearchQueryChange = viewModel::setSearchQuery,
+        onTagSelect = viewModel::selectTag,
+        onSortSelect = viewModel::setSortOrder,
+        onRecipeClick = onRecipeClick,
+        onPick = { id ->
+            viewModel.addRecipe(id)
+            onRecipePicked()
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun WeekplanRecipePickerContent(
+    recipes: List<RecipeEntity>,
+    allTagNames: List<String>,
+    selectedTag: String?,
+    sortOrder: SortOrder,
+    serverUrl: String,
+    searchQuery: String,
+    onBack: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onTagSelect: (String?) -> Unit,
+    onSortSelect: (SortOrder) -> Unit,
+    onRecipeClick: (String) -> Unit,
+    onPick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.weekplan_pick_recipe)) },
@@ -101,7 +140,7 @@ fun WeekplanRecipePickerScreen(
         ) {
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = viewModel::setSearchQuery,
+                onValueChange = onSearchQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -109,7 +148,7 @@ fun WeekplanRecipePickerScreen(
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
                             Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_clear_search))
                         }
                     }
@@ -122,8 +161,8 @@ fun WeekplanRecipePickerScreen(
                 allTags = allTagNames,
                 selectedTag = selectedTag,
                 sortOrder = sortOrder,
-                onTagSelect = viewModel::selectTag,
-                onSortSelect = viewModel::setSortOrder,
+                onTagSelect = onTagSelect,
+                onSortSelect = onSortSelect,
             )
             if (recipes.isEmpty()) {
                 Box(
@@ -155,10 +194,7 @@ fun WeekplanRecipePickerScreen(
                             recipe = recipe,
                             imageUrl = imageUrl,
                             onClick = { onRecipeClick(recipe.id) },
-                            onPick = {
-                                viewModel.addRecipe(recipe.id)
-                                onRecipePicked()
-                            },
+                            onPick = { onPick(recipe.id) },
                         )
                     }
                 }
@@ -205,11 +241,11 @@ private fun PickerFilterBar(
 
 @Composable
 private fun PickerSortButton(sortOrder: SortOrder, onSortSelect: (SortOrder) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                imageVector = Icons.Filled.Sort,
+                imageVector = Icons.AutoMirrored.Filled.Sort,
                 contentDescription = stringResource(R.string.recipes_sort),
             )
         }
@@ -297,7 +333,7 @@ private fun RecipePickerThumbnail(imageUrl: String?) {
     Box(
         modifier = Modifier
             .size(64.dp)
-            .clip(RoundedCornerShape(8.dp)),
+            .clip(MaterialTheme.shapes.small),
     ) {
         if (imageUrl != null) {
             AsyncImage(
@@ -323,5 +359,29 @@ private fun RecipePickerThumbnail(imageUrl: String?) {
                 )
             }
         }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun WeekplanRecipePickerContentPreview() {
+    PreviewSurface {
+        WeekplanRecipePickerContent(
+            recipes = listOf(
+                RecipeEntity(id = "1", slug = "gemuesesuppe", name = "Gemüsesuppe"),
+                RecipeEntity(id = "2", slug = "spaghetti", name = "Spaghetti Bolognese"),
+            ),
+            allTagNames = listOf("Suppe", "Pasta"),
+            selectedTag = null,
+            sortOrder = SortOrder.NAME,
+            serverUrl = "",
+            searchQuery = "",
+            onBack = {},
+            onSearchQueryChange = {},
+            onTagSelect = {},
+            onSortSelect = {},
+            onRecipeClick = {},
+            onPick = {},
+        )
     }
 }

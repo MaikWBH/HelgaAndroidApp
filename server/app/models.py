@@ -1,5 +1,13 @@
-from typing import List, Optional
-from pydantic import BaseModel
+from typing import Annotated, List, Optional
+
+from pydantic import BaseModel, Field, StringConstraints
+
+# Eingabe-Limits (Phase 4, S10): kurze Namen, lange Freitexte und Listen sind begrenzt.
+ShortText = Annotated[str, StringConstraints(max_length=200)]
+LongText = Annotated[str, StringConstraints(max_length=4000)]
+ReceiptText = Annotated[str, StringConstraints(max_length=500)]  # Bon-Archiv (Phase 8, B3-S1)
+ReceiptId = Annotated[str, StringConstraints(max_length=64)]
+TagList = Annotated[List[ShortText], Field(max_length=300)]
 
 
 class SyncRecord(BaseModel):
@@ -70,6 +78,7 @@ class StoreAisleRecord(SyncRecord):
     store_id: str
     aisle_name: str = ""
     sort_order: int = 0
+    category_key: str = ""
 
 
 class AisleProductRecord(SyncRecord):
@@ -265,40 +274,40 @@ class SyncPushRequest(SyncPayload):
 # ── KI-Requests ─────────────────────────────────────────────────────────────
 
 class AiGenerateRequest(BaseModel):
-    prompt: str
-    available_tags: List[str] = []
-    custom_instructions: Optional[str] = None
-    exclude_allergens: List[str] = []
+    prompt: LongText
+    available_tags: TagList = []
+    custom_instructions: Optional[LongText] = None
+    exclude_allergens: List[ShortText] = Field(default=[], max_length=50)
 
 
 class AiRemixRequest(BaseModel):
-    recipe_name: str
-    recipe_description: str = ""
-    recipe_ingredients: List[str] = []
-    recipe_instructions: List[str] = []
-    remix_prompt: str
-    available_tags: List[str] = []
-    exclude_allergens: List[str] = []
+    recipe_name: ShortText
+    recipe_description: LongText = ""
+    recipe_ingredients: List[ShortText] = Field(default=[], max_length=200)
+    recipe_instructions: List[LongText] = Field(default=[], max_length=100)
+    remix_prompt: LongText
+    available_tags: TagList = []
+    exclude_allergens: List[ShortText] = Field(default=[], max_length=50)
 
 
 class AiClassifyRequest(BaseModel):
-    name: str
-    description: str = ""
-    tags: List[str] = []
-    ingredients: List[str] = []
+    name: ShortText
+    description: LongText = ""
+    tags: List[ShortText] = Field(default=[], max_length=100)
+    ingredients: List[ShortText] = Field(default=[], max_length=200)
 
 
 class AiNutritionRequest(BaseModel):
-    name: str
-    description: str = ""
+    name: ShortText
+    description: LongText = ""
     # Zutaten als Freitext-Zeilen ("200g Mehl"), bereits auf die Nährwert-Basis
     # von `portions` Portionen skaliert (siehe NUTRITION_BASELINE_PORTIONS).
-    ingredients: List[str] = []
-    portions: int = 4
+    ingredients: List[ShortText] = Field(default=[], max_length=200)
+    portions: int = Field(default=4, ge=1, le=100)
 
 
 class AiUrlImportRequest(BaseModel):
-    url: str
+    url: str = Field(max_length=2048)
 
 
 class ImportedIngredient(BaseModel):
@@ -334,7 +343,7 @@ class AiImportResponse(BaseModel):
 # ── OFF-Lookups ──────────────────────────────────────────────────────────────
 
 class OffLookupBarcodeRequest(BaseModel):
-    barcode: str
+    barcode: str = Field(max_length=32)
 
 
 class OffLookupBarcodeResponse(OffProductRecord):
@@ -342,8 +351,8 @@ class OffLookupBarcodeResponse(OffProductRecord):
 
 
 class OffSearchRequest(BaseModel):
-    query: str
-    limit: int = 5
+    query: str = Field(max_length=200)
+    limit: int = Field(default=5, ge=1, le=20)
 
 
 class OffSearchResponse(BaseModel):
@@ -367,8 +376,8 @@ class ReconcileReceiptItem(BaseModel):
 
 
 class ReceiptReconcileRequest(BaseModel):
-    checked_items: List[ReconcileShoppingItem] = []
-    receipt_items: List[ReconcileReceiptItem] = []
+    checked_items: List[ReconcileShoppingItem] = Field(default=[], max_length=300)
+    receipt_items: List[ReconcileReceiptItem] = Field(default=[], max_length=300)
 
 
 class ReconcileMatch(BaseModel):
@@ -387,21 +396,180 @@ class ReceiptReconcileResponse(BaseModel):
 # On-Device-OCR, weil das Modell Layout, Mengen und Preise direkt versteht.
 
 class ReceiptParseRequest(BaseModel):
-    image_base64: str
+    # ca. 8 MiB Binärdaten als Base64
+    image_base64: str = Field(max_length=11_200_000)
     mime_type: str = "image/jpeg"
 
 
 class ReceiptParseItem(BaseModel):
-    name: str = ""
+    name: str = ""  # lesbarer Artikelname
+    raw_text: str = ""  # Text wie auf dem Bon
     quantity: float = 1.0
+    unit: str = ""
     unit_price: float = 0.0
     total_price: float = 0.0
+    discount: float = 0.0
+    is_deposit: int = 0
+    category: str = ""
     confidence: float = 1.0  # 0.0–1.0, Modell-Sicherheit für diese Position
 
 
 class ReceiptParseResponse(BaseModel):
     store_name: str = ""
+    store_address: str = ""
     purchase_date: int = 0  # Unix-ms, 0 wenn nicht erkennbar
+    purchase_day: str = ""
+    purchase_time: str = ""
     total_amount: float = 0.0
+    discount_total: float = 0.0
     confidence: float = 1.0  # 0.0–1.0, Gesamt-Sicherheit
     items: List[ReceiptParseItem] = []
+
+
+# ── Bon-Archiv (Phase 3a): eigenes bon-weises Protokoll, siehe server-vertrag.md ─────────
+
+class ReceiptItemIn(BaseModel):
+    id: ReceiptId
+    receipt_id: ReceiptId = ""
+    position: int = 0
+    raw_text: ReceiptText = ""
+    name: ReceiptText = ""
+    quantity: float = 1.0
+    unit: ReceiptText = ""
+    unit_price: float = 0.0
+    total_price: float = 0.0
+    discount: float = 0.0
+    is_deposit: int = 0
+    category: ReceiptText = ""
+    off_barcode: ReceiptText = ""
+    confidence: float = 1.0
+    matched_shopping_item_id: ReceiptText = ""
+    match_status: ReceiptText = ""
+    updated_at: int = 0
+    deleted: int = 0
+
+
+class ReceiptItemOut(BaseModel):  # Antwort ohne Eingabe-Limits, damit alte Daten nie zu 500 führen
+    id: str
+    receipt_id: str = ""
+    position: int = 0
+    raw_text: str = ""
+    name: str = ""
+    quantity: float = 1.0
+    unit: str = ""
+    unit_price: float = 0.0
+    total_price: float = 0.0
+    discount: float = 0.0
+    is_deposit: int = 0
+    category: str = ""
+    off_barcode: str = ""
+    confidence: float = 1.0
+    matched_shopping_item_id: str = ""
+    match_status: str = ""
+    updated_at: int = 0
+    deleted: int = 0
+
+
+class ReceiptIn(BaseModel):
+    id: ReceiptId
+    store_id: ReceiptId = ""
+    store_name: ReceiptText = ""
+    store_address: ReceiptText = ""
+    shopping_list_id: ReceiptId = ""
+    purchase_date: int = 0
+    purchase_day: ReceiptText = ""
+    purchase_time: ReceiptText = ""
+    total_amount: float = 0.0
+    discount_total: float = 0.0
+    deposit_total: float = 0.0
+    currency: ReceiptText = "EUR"
+    status: ReceiptText = "scanned"
+    source: ReceiptText = ""
+    updated_at: int
+    deleted: int = 0
+    items: List[ReceiptItemIn] = Field(default_factory=list, max_length=500)  # immer die vollständige Positionsliste
+
+
+class ReceiptOut(BaseModel):
+    id: str
+    store_id: str = ""
+    store_name: str = ""
+    store_address: str = ""
+    shopping_list_id: str = ""
+    purchase_date: int = 0
+    purchase_day: str = ""
+    purchase_time: str = ""
+    total_amount: float = 0.0
+    discount_total: float = 0.0
+    deposit_total: float = 0.0
+    currency: str = "EUR"
+    image_path: str = ""
+    status: str = "scanned"
+    source: str = ""
+    confidence: float = 1.0
+    parse_status: str = "none"
+    updated_at: int = 0
+    deleted: int = 0
+    server_seq: int = 0
+    items: List[ReceiptItemOut] = []
+
+
+class ReceiptListResponse(BaseModel):
+    server_seq: int = 0
+    receipts: List[ReceiptOut] = []
+
+
+class ReceiptPutResponse(BaseModel):
+    applied: bool
+    receipt: ReceiptOut
+
+
+class ReceiptScanResponse(BaseModel):
+    parsed: bool
+    receipt: ReceiptOut
+
+
+class LexiconEntryOut(BaseModel):
+    id: str
+    store_key: str = ""
+    store_name: str = ""
+    raw_text: str = ""
+    name: str = ""
+    category: str = ""
+    off_barcode: str = ""
+    hits: int = 0
+    updated_at: int = 0
+
+
+class LexiconListResponse(BaseModel):
+    entries: List[LexiconEntryOut] = []
+
+
+class AggregateRow(BaseModel):
+    period: str
+    dimension: str
+    key: str = ""
+    label: str = ""
+    amount: float = 0.0
+    quantity: float = 0.0
+    count: int = 0
+    avg_unit_price: float = 0.0
+    discount: float = 0.0
+
+
+class AggregatesResponse(BaseModel):
+    generated_at: int = 0
+    rows: List[AggregateRow] = []
+
+
+class CategorizeRequest(BaseModel):
+    names: List[ShortText] = Field(default_factory=list, max_length=50)
+
+
+class CategorizeResult(BaseModel):
+    name: str = ""
+    category: str = ""
+
+
+class CategorizeResponse(BaseModel):
+    results: List[CategorizeResult] = []

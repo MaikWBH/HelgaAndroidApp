@@ -68,8 +68,31 @@ class SyncScheduler @Inject constructor(
         ).then(uploadRequest).then(downloadRequest).enqueue()
     }
 
+    /** Reiht die Bon-Upload-Warteschlange ein (läuft, sobald Netz da ist; mehrfaches Einreihen ist unschädlich). */
+    fun enqueueReceiptUpload() {
+        val request = OneTimeWorkRequestBuilder<ReceiptUploadWorker>()
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+        workManager.enqueueUniqueWork(ReceiptUploadWorker.UNIQUE, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+    }
+
+    /**
+     * Reiht die Server-Kategorisierung neuer Artikel ohne Gang ein (kurze Verzögerung, damit mehrere schnell
+     * hinzugefügte Artikel in einem Lauf landen; läuft schon einer, folgt ein weiterer, damit Artikel aus dem KI-Lauf nicht übrig bleiben).
+     */
+    fun enqueueAisleCategorize() {
+        val request = OneTimeWorkRequestBuilder<AisleCategorizeWorker>()
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setInitialDelay(5, TimeUnit.SECONDS)
+            .build()
+        workManager.enqueueUniqueWork(AisleCategorizeWorker.UNIQUE, ExistingWorkPolicy.KEEP, request)
+    }
+
     fun cancelAll() {
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_PERIODIC)
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_ONESHOT)
+        workManager.cancelUniqueWork(ReceiptUploadWorker.UNIQUE)
+        workManager.cancelUniqueWork(AisleCategorizeWorker.UNIQUE)
     }
 }

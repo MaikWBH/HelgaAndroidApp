@@ -1,5 +1,8 @@
 package com.helga.android.ui.components
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -65,5 +68,22 @@ fun SyncStatusIcon(status: SyncStatus, modifier: Modifier = Modifier) {
             tint = MaterialTheme.colorScheme.error,
             modifier = modifier.size(24.dp),
         )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun SyncStatusIconPreview() {
+    PreviewSurface {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            SyncStatusIcon(SyncStatus.Idle)
+            SyncStatusIcon(SyncStatus.Syncing)
+            SyncStatusIcon(SyncStatus.Success(0L))
+            SyncStatusIcon(SyncStatus.Offline)
+            SyncStatusIcon(SyncStatus.Error("Beispielfehler"))
+        }
     }
 }

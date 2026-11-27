@@ -171,3 +171,5 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Allergenwarnung bleibt nicht-blockierender Hinweis | Vorsorgliche Nutzung ohne akuten Bedarf, Blockieren wäre zu streng |
 | 2026-08-30 | Barcode-Scan bleibt unverändert | Kaum genutzt, kein Ausbau gerechtfertigt |
 | 2026-08-30 | Kalorienziel wird nicht umgesetzt | Nice-to-have ohne aktiven Bedarf |
+
+**Phase 3a:** Die serverseitige OFF-Textsuche (`/api/off/search`) wird jetzt im Bon-Review genutzt („Produkt zuordnen"); das bestätigte Produkt steht als `offBarcode` an der Bon-Position.

@@ -1,5 +1,7 @@
 package com.helga.android.ui.ai
 
+import com.helga.android.ui.recipes.formatRecipeDuration
+import com.helga.android.ui.common.asString
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +22,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -40,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
+import com.helga.android.ui.components.PreviewSurface
+import com.helga.android.ui.components.ThemePreviews
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,7 +122,7 @@ fun AiRemixScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            CircularProgressIndicator()
+                            LoadingIndicator()
                             Text(
                                 text = stringResource(R.string.ai_generating),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -130,7 +134,7 @@ fun AiRemixScreen(
 
                 if (status is AiRemixStatus.Error) {
                     Text(
-                        text = status.message,
+                        text = status.message.asString(),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -210,7 +214,7 @@ private fun AiPreviewContent(
                     HorizontalDivider()
                     if (recipe.totalTime.isNotBlank()) {
                         Text(
-                            text = "${stringResource(R.string.recipe_detail_total_time)}: ${recipe.totalTime}",
+                            text = "${stringResource(R.string.recipe_detail_total_time)}: ${formatRecipeDuration(recipe.totalTime)}",
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -245,7 +249,7 @@ private fun AiPreviewContent(
                 enabled = recipe.name.isNotBlank() && !isSaving,
             ) {
                 if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    LoadingIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
                     Text(stringResource(R.string.ai_generate_save))
                 }
@@ -262,5 +266,26 @@ private fun AiPreviewContent(
             }
         }
         item { Spacer(Modifier.height(32.dp)) }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun AiPreviewContentPreview() {
+    PreviewSurface {
+        AiPreviewContent(
+            recipe = ParsedAiRecipe(
+                name = "Linsencurry",
+                description = "Cremiges Curry mit roten Linsen.",
+                totalTime = "30 Min.",
+                ingredients = listOf("200 g rote Linsen", "1 Dose Kokosmilch"),
+                instructions = listOf("Linsen waschen.", "Alles zusammen köcheln."),
+                tags = listOf("Vegan"),
+            ),
+            isSaving = false,
+            onSave = {},
+            onNewPrompt = {},
+            onDiscard = {},
+        )
     }
 }

@@ -2,25 +2,19 @@ package com.helga.android.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.helga.android.data.preferences.AppPreferences
-import com.helga.android.data.remote.SyncApiFactory
-import com.helga.android.data.sync.SyncScheduler
+import com.helga.android.data.remote.ConnectionResult
+import com.helga.android.data.remote.ServerConnectionChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
-import timber.log.Timber
-import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
-    private val preferences: AppPreferences,
-    private val apiFactory: SyncApiFactory,
-    private val syncScheduler: SyncScheduler,
+    private val connectionChecker: ServerConnectionChecker,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OnboardingState())
@@ -38,28 +32,20 @@ class OnboardingViewModel @Inject constructor(
         }
         _state.update { it.copy(validation = Validation.Testing) }
         viewModelScope.launch {
-            try {
-                val api = apiFactory.apiForOnboarding(url, key)
-                api.health()
-                preferences.saveConnection(url, key)
-                syncScheduler.schedulePeriodic()
-                syncScheduler.triggerOneShot()
-                _state.update { it.copy(validation = Validation.Success) }
-                onSuccess()
-            } catch (e: HttpException) {
-                Timber.w(e, "Healthcheck HTTP-Fehler")
-                _state.update {
+            when (val result = connectionChecker.test(url, key)) {
+                is ConnectionResult.Success -> {
+                    _state.update { it.copy(validation = Validation.Success) }
+                    onSuccess()
+                }
+                is ConnectionResult.HttpError -> _state.update {
                     it.copy(
-                        validation = if (e.code() == 401 || e.code() == 403)
+                        validation = if (result.code == 401 || result.code == 403)
                             Validation.Unauthorized else Validation.Unreachable
                     )
                 }
-            } catch (e: IOException) {
-                Timber.w(e, "Healthcheck offline")
-                _state.update { it.copy(validation = Validation.Unreachable) }
-            } catch (e: Exception) {
-                Timber.e(e, "Healthcheck unbekannter Fehler")
-                _state.update { it.copy(validation = Validation.Unreachable) }
+                is ConnectionResult.Unreachable, is ConnectionResult.Other -> _state.update {
+                    it.copy(validation = Validation.Unreachable)
+                }
             }
         }
     }

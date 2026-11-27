@@ -1,5 +1,8 @@
 package com.helga.android.ui.receipts
 
+import androidx.compose.ui.res.stringResource
+import com.helga.android.R
+import com.helga.android.ui.common.UiText
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +13,7 @@ import com.helga.android.data.repository.ReconcileOutcome
 import com.helga.android.data.repository.ReceiptRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +27,13 @@ sealed interface ReconcileState {
     data object Idle : ReconcileState
     data object Running : ReconcileState
     data class Done(val outcome: ReconcileOutcome) : ReconcileState
-    data class Error(val message: String) : ReconcileState
+    data class Error(val message: UiText) : ReconcileState
+}
+
+sealed interface ReparseState {
+    data object Idle : ReparseState
+    data object Running : ReparseState
+    data class Error(val message: UiText) : ReparseState
 }
 
 @HiltViewModel
@@ -52,6 +62,30 @@ class ReceiptDetailViewModel @Inject constructor(
     private val _reconcileState = MutableStateFlow<ReconcileState>(ReconcileState.Idle)
     val reconcileState: StateFlow<ReconcileState> = _reconcileState
 
+    private val _reparseState = MutableStateFlow<ReparseState>(ReparseState.Idle)
+    val reparseState: StateFlow<ReparseState> = _reparseState
+
+    /** Liest den Bon aus dem Server-Foto neu aus; die neuen Werte ersetzen die bisherigen in Room. */
+    fun reparse() {
+        if (_reparseState.value is ReparseState.Running) return
+        viewModelScope.launch {
+            _reparseState.value = ReparseState.Running
+            _reparseState.value = try {
+                if (receiptRepository.reparse(receiptId)) {
+                    syncScheduler.triggerOneShot()
+                    ReparseState.Idle
+                } else {
+                    ReparseState.Error(UiText.Res(R.string.receipt_detail_reparse_failed))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.e(e, "Receipt reparse failed")
+                ReparseState.Error(UiText.Res(R.string.receipt_detail_reparse_failed))
+            }
+        }
+    }
+
     fun reconcile() {
         if (_reconcileState.value is ReconcileState.Running) return
         viewModelScope.launch {
@@ -60,9 +94,11 @@ class ReceiptDetailViewModel @Inject constructor(
                 val outcome = receiptRepository.reconcile(receiptId)
                 syncScheduler.triggerOneShot()
                 _reconcileState.value = ReconcileState.Done(outcome)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Receipt reconcile failed")
-                _reconcileState.value = ReconcileState.Error("Abgleich fehlgeschlagen (Server erreichbar?)")
+                _reconcileState.value = ReconcileState.Error(UiText.Res(R.string.receipt_reconcile_failed))
             }
         }
     }

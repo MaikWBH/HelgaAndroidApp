@@ -1,5 +1,7 @@
 package com.helga.android.ui.stores
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -19,12 +21,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -63,6 +69,8 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
+import com.helga.android.data.model.ProductCategory
+import com.helga.android.ui.receipts.labelRes
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
 import com.helga.android.data.repository.StorePrefill
@@ -76,7 +84,7 @@ fun StoreListScreen(
     val stores by viewModel.stores.collectAsStateWithLifecycle()
     val selectedStoreAisles by viewModel.selectedStoreAisles.collectAsStateWithLifecycle()
 
-    var showNewStoreDialog by remember { mutableStateOf(false) }
+    var showNewStoreDialog by rememberSaveable { mutableStateOf(false) }
     var aisleSheetStore by remember { mutableStateOf<StoreEntity?>(null) }
 
     if (showNewStoreDialog) {
@@ -101,6 +109,8 @@ fun StoreListScreen(
             onAddAisle = viewModel::addAisle,
             onDeleteAisle = viewModel::deleteAisle,
             onReorder = viewModel::reorderAisles,
+            onSetCategory = viewModel::setAisleCategory,
+            onAddMissingDefaults = viewModel::addMissingDefaultAisles,
         )
     }
 
@@ -211,9 +221,11 @@ private fun AisleEditorSheet(
     onAddAisle: (String) -> Unit,
     onDeleteAisle: (StoreAisleEntity) -> Unit,
     onReorder: (orderedIds: List<String>) -> Unit,
+    onSetCategory: (StoreAisleEntity, String) -> Unit,
+    onAddMissingDefaults: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var newAisleName by remember { mutableStateOf("") }
+    var newAisleName by rememberSaveable { mutableStateOf("") }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -265,10 +277,23 @@ private fun AisleEditorSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             )
+            Text(
+                text = stringResource(R.string.stores_aisle_category_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            TextButton(
+                onClick = onAddMissingDefaults,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            ) {
+                Text(stringResource(R.string.stores_add_missing_aisles))
+            }
             ReorderableAisleList(
                 aisles = aisles,
                 onReorder = onReorder,
                 onDeleteAisle = onDeleteAisle,
+                onSetCategory = onSetCategory,
             )
         }
     }
@@ -289,8 +314,10 @@ private fun ReorderableAisleList(
     aisles: List<StoreAisleEntity>,
     onReorder: (orderedIds: List<String>) -> Unit,
     onDeleteAisle: (StoreAisleEntity) -> Unit,
+    onSetCategory: (StoreAisleEntity, String) -> Unit,
 ) {
     var localOrder by remember { mutableStateOf(aisles) }
+    // Ziehen endet mit dem Konfigurationswechsel; bewusst nicht saveable (Phase 7, B6-S4).
     var draggedId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val itemHeights = remember { mutableStateMapOf<String, Int>() }
@@ -347,6 +374,7 @@ private fun ReorderableAisleList(
                         )
                     },
                 onDelete = { onDeleteAisle(aisle) },
+                onSetCategory = { key -> onSetCategory(aisle, key) },
             )
         }
     }
@@ -358,8 +386,12 @@ private fun AisleRow(
     isDragging: Boolean,
     dragOffsetY: Float,
     onDelete: () -> Unit,
+    onSetCategory: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
+    val category = ProductCategory.fromKey(aisle.categoryKey)
+    val categoryName = stringResource(category.labelRes())
     Column(
         modifier = Modifier
             .zIndex(if (isDragging) 1f else 0f)
@@ -368,6 +400,9 @@ private fun AisleRow(
     ) {
         ListItem(
             headlineContent = { Text(aisle.aisleName) },
+            supportingContent = {
+                Text(categoryName, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
             leadingContent = {
                 Icon(
                     imageVector = Icons.Filled.DragHandle,
@@ -376,12 +411,36 @@ private fun AisleRow(
                 )
             },
             trailingContent = {
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.recipe_delete),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box {
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(
+                                Icons.Filled.Category,
+                                contentDescription = stringResource(R.string.stores_aisle_choose_category),
+                            )
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            CategoryMenuItem(
+                                label = stringResource(R.string.category_none),
+                                selected = category == null,
+                                onClick = { menuOpen = false; onSetCategory("") },
+                            )
+                            ProductCategory.aisleCategories.forEach { option ->
+                                CategoryMenuItem(
+                                    label = stringResource(option.labelRes()),
+                                    selected = option == category,
+                                    onClick = { menuOpen = false; onSetCategory(option.key) },
+                                )
+                            }
+                        }
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = stringResource(R.string.recipe_delete),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             },
             colors = if (isDragging) {
@@ -395,12 +454,23 @@ private fun AisleRow(
 }
 
 @Composable
+private fun CategoryMenuItem(label: String, selected: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        onClick = onClick,
+        leadingIcon = {
+            if (selected) Icon(Icons.Filled.Check, contentDescription = null)
+        },
+    )
+}
+
+@Composable
 private fun NewStoreDialog(
     existingStores: List<StoreEntity>,
     onDismiss: () -> Unit,
     onCreate: (name: String, prefill: StorePrefill) -> Unit,
 ) {
-    var name by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     var prefill by remember { mutableStateOf<StorePrefill>(StorePrefill.DefaultTemplate) }
 
     AlertDialog(
@@ -460,7 +530,7 @@ private fun PrefillOption(label: String, selected: Boolean, onClick: () -> Unit)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

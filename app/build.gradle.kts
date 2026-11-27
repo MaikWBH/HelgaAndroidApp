@@ -24,6 +24,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        ndk {
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
+
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
             arg("room.incremental", "true")
@@ -90,6 +94,9 @@ android {
 }
 
 dependencies {
+    constraints {
+        implementation(libs.androidx.graphics.path)
+    }
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -102,6 +109,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material3.window.size)
     implementation(libs.androidx.compose.material.icons)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -145,6 +153,8 @@ dependencies {
     // Echte JVM-Implementierung von org.json für Unit-Tests (z. B. RecipeJsonLdParserTest) —
     // das android.jar-Stub wirft zur Laufzeit "Method not mocked" statt zu parsen.
     testImplementation(libs.org.json)
+    // Echte SQLite-Implementierung auf der JVM für Room-Migrationstests ohne Emulator (RoomMigrationHarness).
+    testImplementation(libs.sqlite.jdbc)
 
     implementation(libs.androidx.profileinstaller)
 

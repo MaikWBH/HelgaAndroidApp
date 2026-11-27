@@ -1,5 +1,7 @@
 package com.helga.android.ui.settings
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -35,9 +37,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -71,6 +74,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.helga.android.ui.components.ColorSwatch
+import com.helga.android.ui.components.ColorSwatchPicker
+import com.helga.android.ui.theme.ACCENT_SYSTEM
 import com.helga.android.ui.theme.accentPrimaryColors
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -92,10 +98,11 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLoggedOut: () -> Unit,
     onStoresClick: () -> Unit = {},
+    onReceiptLexiconClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val lastSyncTs by viewModel.lastSyncTs.collectAsStateWithLifecycle()
+    val lastSyncAt by viewModel.lastSyncAt.collectAsStateWithLifecycle()
     val syncError by viewModel.syncError.collectAsStateWithLifecycle()
     val shoppingLists by viewModel.shoppingLists.collectAsStateWithLifecycle()
     val quickEmojis by viewModel.quickEmojis.collectAsStateWithLifecycle()
@@ -103,14 +110,14 @@ fun SettingsScreen(
     val exportJson by viewModel.exportJson.collectAsStateWithLifecycle()
     val bulkAiState by viewModel.bulkAiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var showLogoutDialog by remember { mutableStateOf(false) }
-    var showResetDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
+    var showResetDialog by rememberSaveable { mutableStateOf(false) }
     var deleteList by remember { mutableStateOf<ShoppingListEntity?>(null) }
     var editEmoji by remember { mutableStateOf<QuickEmojiEntity?>(null) }
-    var showAddEmoji by remember { mutableStateOf(false) }
+    var showAddEmoji by rememberSaveable { mutableStateOf(false) }
     var editMarker by remember { mutableStateOf<WeekplanDayMarkerEntity?>(null) }
-    var showAddMarker by remember { mutableStateOf(false) }
-    var showAdvanced by remember { mutableStateOf(false) }
+    var showAddMarker by rememberSaveable { mutableStateOf(false) }
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -416,7 +423,10 @@ fun SettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showAdvanced = !showAdvanced },
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(if (showAdvanced) R.string.common_collapse else R.string.common_expand),
+                    ) { showAdvanced = !showAdvanced },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -463,33 +473,35 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    itemsIndexed(accentPrimaryColors) { index, color ->
-                        val isSelected = state.accentColor == index
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
-                                    shape = CircleShape,
-                                )
-                                .padding(if (isSelected) 3.dp else 0.dp)
-                                .clip(CircleShape),
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .clickable { viewModel.setAccentColor(index) },
-                            )
-                        }
+                val accentNames = listOf(
+                    stringResource(R.string.settings_accent_green),
+                    stringResource(R.string.settings_accent_blue),
+                    stringResource(R.string.settings_accent_purple),
+                    stringResource(R.string.settings_accent_orange),
+                    stringResource(R.string.settings_accent_red),
+                    stringResource(R.string.settings_accent_teal),
+                )
+                val systemAccentLabel = stringResource(R.string.settings_accent_system)
+                val supportsSystemAccent = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                val accentSwatches = buildList {
+                    if (supportsSystemAccent) {
+                        add(ColorSwatch(ACCENT_SYSTEM.toString(), systemAccentLabel, null, Icons.Filled.Wallpaper))
+                    }
+                    accentPrimaryColors.forEachIndexed { index, color ->
+                        add(ColorSwatch(index.toString(), accentNames[index], color))
                     }
                 }
+                val selectedAccent = if (state.accentColor == ACCENT_SYSTEM && !supportsSystemAccent) 0 else state.accentColor
+                ColorSwatchPicker(
+                    swatches = accentSwatches,
+                    selectedKey = selectedAccent.toString(),
+                    onSelect = { viewModel.setAccentColor(it.toInt()) },
+                )
+                Text(
+                    text = accentSwatches.firstOrNull { it.key == selectedAccent.toString() }?.label.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider()
@@ -571,7 +583,7 @@ fun SettingsScreen(
                         state.serverUrl.isNotBlank() && state.apiKey.isNotBlank(),
                 ) {
                     if (state.validation == SettingsValidation.Testing) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.height(20.dp),
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.onPrimary,
@@ -591,7 +603,7 @@ fun SettingsScreen(
                 )
 
                 Text(
-                    text = stringResource(R.string.settings_last_sync, formatTimestamp(lastSyncTs)),
+                    text = stringResource(R.string.settings_last_sync, formatTimestamp(lastSyncAt)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -624,6 +636,17 @@ fun SettingsScreen(
                     value = state.receiptRetentionMonths,
                     onSelected = viewModel::setReceiptRetentionMonths,
                 )
+                Text(
+                    text = stringResource(R.string.settings_receipt_retention_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = onReceiptLexiconClick,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.settings_receipt_lexicon))
+                }
 
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider()
@@ -654,7 +677,7 @@ fun SettingsScreen(
                     enabled = !bulkAiState.isRunning,
                 ) {
                     if (bulkAiState.isRunning && bulkAiState.mode == BulkAiMode.BOTH) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.height(20.dp),
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.onPrimary,
@@ -674,7 +697,7 @@ fun SettingsScreen(
                         text = stringResource(R.string.settings_ai_bulk_done, bulkAiState.updated, bulkAiState.failed),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.clickable { viewModel.dismissBulkAiResult() },
+                        modifier = Modifier.clickable(role = Role.Button) { viewModel.dismissBulkAiResult() },
                     )
                 }
 
@@ -778,7 +801,7 @@ private fun formatTimestamp(ts: Long): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsPlanDaysDropdown(value: Int, onSelected: (Int) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         OutlinedTextField(
             value = stringResource(R.string.settings_plan_days_value, value),
@@ -813,7 +836,7 @@ private fun SettingsReceiptRetentionDropdown(value: Int, onSelected: (Int) -> Un
         12 -> stringResource(R.string.settings_receipt_retention_12)
         else -> stringResource(R.string.settings_receipt_retention_months, months)
     }
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         OutlinedTextField(
             value = label(value),
@@ -848,7 +871,7 @@ private fun SettingsShoppingDayDropdown(value: Int, onSelected: (Int) -> Unit) {
                 .replaceFirstChar { it.uppercase() }
         }
     }
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         OutlinedTextField(
             value = dayNames[value.coerceIn(0, 6)],
@@ -879,7 +902,7 @@ private fun SettingsDefaultListDropdown(
     selectedId: String,
     onSelected: (String) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     val selected = lists.firstOrNull { it.id == selectedId }?.name.orEmpty()
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         OutlinedTextField(
@@ -910,10 +933,10 @@ private fun QuickEmojiDialog(
     onDismiss: () -> Unit,
     onSave: (emoji: String, food: String, quantity: Double, unit: String) -> Unit,
 ) {
-    var emoji by remember(item?.id) { mutableStateOf(item?.emoji ?: "") }
-    var food by remember(item?.id) { mutableStateOf(item?.food ?: "") }
-    var quantityText by remember(item?.id) { mutableStateOf((item?.quantity ?: 1.0).toString()) }
-    var unit by remember(item?.id) { mutableStateOf(item?.unit ?: "") }
+    var emoji by rememberSaveable(item?.id) { mutableStateOf(item?.emoji ?: "") }
+    var food by rememberSaveable(item?.id) { mutableStateOf(item?.food ?: "") }
+    var quantityText by rememberSaveable(item?.id) { mutableStateOf((item?.quantity ?: 1.0).toString()) }
+    var unit by rememberSaveable(item?.id) { mutableStateOf(item?.unit ?: "") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -924,7 +947,7 @@ private fun QuickEmojiDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = emoji, onValueChange = { emoji = it }, label = { Text("Emoji") }, singleLine = true)
+                OutlinedTextField(value = emoji, onValueChange = { emoji = it }, label = { Text(stringResource(R.string.settings_emoji)) }, singleLine = true)
                 OutlinedTextField(value = food, onValueChange = { food = it }, label = { Text(stringResource(R.string.recipe_form_food)) }, singleLine = true)
                 OutlinedTextField(
                     value = quantityText,
@@ -957,8 +980,8 @@ private fun DayMarkerDialog(
     onDismiss: () -> Unit,
     onSave: (name: String, color: String) -> Unit,
 ) {
-    var name by remember(marker?.id) { mutableStateOf(marker?.name ?: "") }
-    var color by remember(marker?.id) { mutableStateOf(marker?.color?.ifBlank { dayMarkerColors.first() } ?: dayMarkerColors.first()) }
+    var name by rememberSaveable(marker?.id) { mutableStateOf(marker?.name ?: "") }
+    var color by rememberSaveable(marker?.id) { mutableStateOf(marker?.color?.ifBlank { dayMarkerColors.first() } ?: dayMarkerColors.first()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -980,25 +1003,13 @@ private fun DayMarkerDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    dayMarkerColors.forEach { hex ->
-                        val isSelected = color == hex
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                                    shape = CircleShape,
-                                )
-                                .padding(if (isSelected) 3.dp else 0.dp)
-                                .clip(CircleShape)
-                                .background(parseMarkerColor(hex))
-                                .clickable { color = hex },
-                        )
-                    }
-                }
+                ColorSwatchPicker(
+                    swatches = dayMarkerColors.mapIndexed { i, hex ->
+                        ColorSwatch(hex, stringResource(R.string.settings_marker_color_n, i + 1), parseMarkerColor(hex))
+                    },
+                    selectedKey = color,
+                    onSelect = { color = it },
+                )
             }
         },
         confirmButton = {

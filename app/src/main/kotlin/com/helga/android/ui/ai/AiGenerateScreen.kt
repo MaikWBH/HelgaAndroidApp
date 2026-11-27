@@ -1,5 +1,7 @@
 package com.helga.android.ui.ai
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.helga.android.ui.common.asString
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +25,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -146,7 +148,7 @@ fun AiGenerateScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                CircularProgressIndicator()
+                                LoadingIndicator()
                                 Text(
                                     text = stringResource(R.string.ai_generating),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -159,7 +161,7 @@ fun AiGenerateScreen(
                 if (status is AiGenerateStatus.Error) {
                     item {
                         Text(
-                            text = status.message,
+                            text = status.message.asString(),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -289,7 +291,7 @@ private fun QuestionDropdown(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     ExposedDropdownMenuBox(
         expanded = expanded && enabled,
         onExpandedChange = { if (enabled) expanded = it },
@@ -511,7 +513,7 @@ private fun AiPreviewContent(
                 enabled = recipe.name.isNotBlank() && !isSaving,
             ) {
                 if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    LoadingIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
                     Text(stringResource(R.string.ai_generate_save))
                 }

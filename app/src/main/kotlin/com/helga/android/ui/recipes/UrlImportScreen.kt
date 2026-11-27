@@ -1,5 +1,6 @@
 package com.helga.android.ui.recipes
 
+import com.helga.android.ui.common.UiState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.helga.android.R
+import com.helga.android.ui.components.PreviewSurface
+import com.helga.android.ui.components.ThemePreviews
 import com.helga.android.data.remote.dto.ImportedRecipeDto
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,7 +59,27 @@ fun UrlImportScreen(
         if (initialUrl != null) viewModel.prefillUrl(initialUrl)
     }
 
+    UrlImportContent(
+        state = state,
+        onBack = onBack,
+        onUrlChange = viewModel::setUrl,
+        onImport = { viewModel.import() },
+        onSave = { recipe -> viewModel.save(recipe, onBack) },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun UrlImportContent(
+    state: UrlImportState,
+    onBack: () -> Unit,
+    onUrlChange: (String) -> Unit,
+    onImport: () -> Unit,
+    onSave: (ImportedRecipeDto) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.import_url_title)) },
@@ -78,26 +101,26 @@ fun UrlImportScreen(
         ) {
             OutlinedTextField(
                 value = state.url,
-                onValueChange = viewModel::setUrl,
+                onValueChange = onUrlChange,
                 label = { Text(stringResource(R.string.import_url_label)) },
-                placeholder = { Text("https://www.chefkoch.de/rezepte/...") },
+                placeholder = { Text(stringResource(R.string.url_import_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
                     imeAction = ImeAction.Go,
                 ),
-                keyboardActions = KeyboardActions(onGo = { viewModel.import() }),
+                keyboardActions = KeyboardActions(onGo = { onImport() }),
                 leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
             )
 
             Button(
-                onClick = { viewModel.import() },
+                onClick = onImport,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = state.url.isNotBlank() && state.status !is ImportStatus.Loading,
+                enabled = state.url.isNotBlank() && state.status !is UiState.Loading,
             ) {
-                if (state.status is ImportStatus.Loading) {
-                    CircularProgressIndicator(
+                if (state.status is UiState.Loading) {
+                    LoadingIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
@@ -108,7 +131,7 @@ fun UrlImportScreen(
             }
 
             when (val status = state.status) {
-                is ImportStatus.Error -> {
+                is UiState.Error -> {
                     Text(
                         text = status.message,
                         color = MaterialTheme.colorScheme.error,
@@ -116,11 +139,11 @@ fun UrlImportScreen(
                     )
                 }
 
-                is ImportStatus.Success -> {
+                is UiState.Success -> {
                     ImportPreview(
-                        recipe = status.recipe,
+                        recipe = status.data,
                         isSaving = state.isSaving,
-                        onSave = { viewModel.save(status.recipe, onBack) },
+                        onSave = { onSave(status.data) },
                     )
                 }
 
@@ -183,7 +206,7 @@ private fun ImportPreview(
         enabled = recipe.name.isNotBlank() && !isSaving,
     ) {
         if (isSaving) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+            LoadingIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
         } else {
             Text(stringResource(R.string.recipe_form_save))
         }
@@ -196,5 +219,29 @@ private fun MetaChip(text: String) {
         modifier = Modifier.padding(horizontal = 0.dp),
     ) {
         Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun UrlImportContentPreview() {
+    PreviewSurface {
+        UrlImportContent(
+            state = UrlImportState(
+                url = "https://www.example.de/rezept",
+                status = UiState.Success(
+                    ImportedRecipeDto(
+                        name = "Gemüsesuppe",
+                        description = "Eine einfache Suppe für kalte Tage.",
+                        totalTime = "45 Min.",
+                        tags = listOf("Suppe", "Vegan"),
+                    ),
+                ),
+            ),
+            onBack = {},
+            onUrlChange = {},
+            onImport = {},
+            onSave = {},
+        )
     }
 }

@@ -5,13 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.cooking.ActiveCookingTimer
 import com.helga.android.data.cooking.CookingTimerManager
-import com.helga.android.data.local.dao.RecipeFeedbackDao
-import com.helga.android.data.local.dao.RecipeHistoryDao
 import com.helga.android.data.local.entity.IngredientEntity
 import com.helga.android.data.local.entity.InstructionEntity
 import com.helga.android.data.local.entity.RecipeEntity
 import com.helga.android.data.local.entity.RecipeFeedbackEntity
-import com.helga.android.data.local.entity.RecipeHistoryEntity
 import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,7 +24,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 import javax.inject.Inject
 
 data class RecipeCookUiState(
@@ -41,8 +37,6 @@ data class RecipeCookUiState(
 class RecipeCookViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: RecipeRepository,
-    private val recipeHistoryDao: RecipeHistoryDao,
-    private val recipeFeedbackDao: RecipeFeedbackDao,
     private val syncScheduler: SyncScheduler,
     private val timerManager: CookingTimerManager,
 ) : ViewModel() {
@@ -115,35 +109,8 @@ class RecipeCookViewModel @Inject constructor(
         viewModelScope.launch {
             val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
             val now = System.currentTimeMillis()
-            val updated = recipeHistoryDao.markCooked(recipeId, today, now)
-            if (updated == 0) {
-                recipeHistoryDao.upsertAll(
-                    listOf(
-                        RecipeHistoryEntity(
-                            id = UUID.randomUUID().toString(),
-                            recipeId = recipeId,
-                            plannedDate = today,
-                            cooked = 1,
-                            updatedAt = now,
-                            dirty = 1,
-                        )
-                    )
-                )
-            }
-            if (liked != 0) {
-                val existing = recipeFeedbackDao.findByRecipeAndDate(recipeId, today)
-                val entity = existing?.copy(liked = liked, updatedAt = now, dirty = 1)
-                    ?: RecipeFeedbackEntity(
-                        id = UUID.randomUUID().toString(),
-                        recipeId = recipeId,
-                        plannedDate = today,
-                        liked = liked,
-                        updatedAt = now,
-                        dirty = 1,
-                    )
-                recipeFeedbackDao.upsert(entity)
-                repository.recalculateRating(recipeId)
-            }
+            repository.markCooked(recipeId, today, now)
+            if (liked != 0) repository.saveFeedback(recipeId, today, liked, now)
             syncScheduler.triggerOneShot()
         }
     }

@@ -19,6 +19,8 @@ data class StoreAisleEntity(
     val storeId: String,
     val aisleName: String = "",
     val sortOrder: Int = 0,
+    /** Schlüssel aus dem gemeinsamen Kategorien-Katalog (`ProductCategory.key`); leer = keiner Kategorie zugeordnet. */
+    val categoryKey: String = "",
     val updatedAt: Long = 0L,
     val deleted: Int = 0,
     val dirty: Int = 0,

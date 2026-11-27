@@ -5,6 +5,7 @@ import com.helga.android.data.local.entity.AisleProductEntity
 import com.helga.android.data.local.entity.ShoppingListStapleEntity
 import com.helga.android.data.local.entity.StoreAisleEntity
 import com.helga.android.data.local.entity.StoreEntity
+import com.helga.android.data.model.ProductCategory
 import com.helga.android.data.util.AisleProductKey
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
@@ -17,12 +18,6 @@ sealed interface StorePrefill {
     data object DefaultTemplate : StorePrefill
     data class CopyFrom(val storeId: String) : StorePrefill
 }
-
-private val DEFAULT_AISLE_TEMPLATE = listOf(
-    "Obst & Gemüse", "Brot & Backwaren", "Milchprodukte & Eier", "Fleisch & Wurst",
-    "Fisch", "Tiefkühl", "Konserven & Trockenware", "Getränke", "Süßes & Snacks",
-    "Drogerie & Haushalt",
-)
 
 @Singleton
 class StoreRepository @Inject constructor(
@@ -45,19 +40,23 @@ class StoreRepository @Inject constructor(
         storeDao.upsertStore(
             StoreEntity(id = id, name = name, isActive = 0, updatedAt = ts, dirty = 1)
         )
-        val aisleNames = when (prefill) {
+        // Paare aus Gangname und Kategorie-Schlüssel (Vorlage: gemeinsamer Katalog, Kopie: Quellmarkt)
+        val aisles: List<Pair<String, String>> = when (prefill) {
             StorePrefill.None -> emptyList()
-            StorePrefill.DefaultTemplate -> DEFAULT_AISLE_TEMPLATE
-            is StorePrefill.CopyFrom -> storeDao.aislesForStore(prefill.storeId).map { it.aisleName }
+            StorePrefill.DefaultTemplate ->
+                ProductCategory.aisleCategories.map { it.defaultAisleName to it.key }
+            is StorePrefill.CopyFrom ->
+                storeDao.aislesForStore(prefill.storeId).map { it.aisleName to it.categoryKey }
         }
-        if (aisleNames.isNotEmpty()) {
+        if (aisles.isNotEmpty()) {
             storeDao.upsertAisles(
-                aisleNames.mapIndexed { index, aisleName ->
+                aisles.mapIndexed { index, (aisleName, categoryKey) ->
                     StoreAisleEntity(
                         id = UUID.randomUUID().toString(),
                         storeId = id,
                         aisleName = aisleName,
                         sortOrder = index,
+                        categoryKey = categoryKey,
                         updatedAt = ts,
                         dirty = 1,
                     )
@@ -81,22 +80,66 @@ class StoreRepository @Inject constructor(
         storeDao.upsertStore(store.copy(deleted = 1, updatedAt = now(), dirty = 1))
     }
 
-    suspend fun addAisle(storeId: String, aisleName: String): String {
+    /**
+     * Legt einen Gang am Ende an. Ohne Kategorie-Schlüssel und mit einem Namen, der (ohne Groß-/Kleinschreibung)
+     * einem Standard-Gangnamen entspricht, wird dessen Kategorie automatisch gesetzt.
+     */
+    suspend fun addAisle(storeId: String, aisleName: String, categoryKey: String = ""): String {
         val existing = storeDao.aislesForStore(storeId)
         val nextOrder = (existing.maxOfOrNull { it.sortOrder } ?: -1) + 1
         val id = UUID.randomUUID().toString()
+        val name = aisleName.trim()
+        val key = categoryKey.ifEmpty {
+            ProductCategory.aisleCategories
+                .firstOrNull { it.defaultAisleName.equals(name, ignoreCase = true) }?.key.orEmpty()
+        }
         storeDao.upsertAisle(
             StoreAisleEntity(
                 id = id,
                 storeId = storeId,
-                aisleName = aisleName.trim(),
+                aisleName = name,
                 sortOrder = nextOrder,
+                categoryKey = key,
                 updatedAt = now(),
                 dirty = 1,
             )
         )
         return id
     }
+
+    /** Ordnet einem Gang eine Kategorie zu (`""` = keine). */
+    suspend fun setAisleCategory(aisle: StoreAisleEntity, categoryKey: String) {
+        storeDao.upsertAisle(aisle.copy(categoryKey = categoryKey, updatedAt = now(), dirty = 1))
+    }
+
+    /**
+     * Hängt für jede Gang-Kategorie, die der Markt noch nicht hat, einen Standardgang ans Ende an.
+     * @return Anzahl der ergänzten Gänge
+     */
+    suspend fun addMissingDefaultAisles(storeId: String): Int {
+        val existing = storeDao.aislesForStore(storeId)
+        val present = existing.map { it.categoryKey }.toSet()
+        val missing = ProductCategory.aisleCategories.filter { it.key !in present }
+        if (missing.isEmpty()) return 0
+        val ts = now()
+        val start = (existing.maxOfOrNull { it.sortOrder } ?: -1) + 1
+        storeDao.upsertAisles(
+            missing.mapIndexed { index, category ->
+                StoreAisleEntity(
+                    id = UUID.randomUUID().toString(),
+                    storeId = storeId,
+                    aisleName = category.defaultAisleName,
+                    sortOrder = start + index,
+                    categoryKey = category.key,
+                    updatedAt = ts,
+                    dirty = 1,
+                )
+            }
+        )
+        return missing.size
+    }
+
+    suspend fun aislesForStore(storeId: String): List<StoreAisleEntity> = storeDao.aislesForStore(storeId)
 
     suspend fun deleteAisle(aisle: StoreAisleEntity) {
         storeDao.upsertAisle(aisle.copy(deleted = 1, updatedAt = now(), dirty = 1))

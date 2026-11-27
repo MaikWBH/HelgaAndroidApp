@@ -1,5 +1,8 @@
 package com.helga.android.ui.recipes
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,14 +32,14 @@ import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.helga.android.ui.components.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -115,11 +118,15 @@ private fun IngredientCheckRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
+            .toggleable(
+                value = checked,
+                role = Role.Checkbox,
+                onValueChange = { onToggle() },
+            )
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = { onToggle() })
+        Checkbox(checked = checked, onCheckedChange = null)
         val label = buildString {
             if (ingredient.quantity > 0) {
                 val q = ingredient.quantity * scaleFactor
@@ -153,11 +160,11 @@ fun RecipeCookScreen(
     val servings by viewModel.servings.collectAsStateWithLifecycle()
     val baseServings by viewModel.baseServings.collectAsStateWithLifecycle()
     val scaleFactor by viewModel.scaleFactor.collectAsStateWithLifecycle()
-    var ingredientsExpanded by remember { mutableStateOf(false) }
+    var ingredientsExpanded by rememberSaveable { mutableStateOf(false) }
     val activeTimers by viewModel.activeTimers.collectAsStateWithLifecycle()
-    var selectedTimerId by remember { mutableStateOf<String?>(null) }
-    var focusMode by remember { mutableStateOf(false) }
-    var showRatingPrompt by remember { mutableStateOf(false) }
+    var selectedTimerId by rememberSaveable { mutableStateOf<String?>(null) }
+    var focusMode by rememberSaveable { mutableStateOf(false) }
+    var showRatingPrompt by rememberSaveable { mutableStateOf(false) }
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val onStartTimer: (DetectedTimer) -> Unit = { timer -> viewModel.startTimer(timer.label, timer.totalSeconds) }
 
@@ -204,7 +211,7 @@ fun RecipeCookScreen(
                     if (instructions.isNotEmpty() && !isLandscape) {
                         IconButton(onClick = { focusMode = !focusMode }) {
                             Icon(
-                                imageVector = if (focusMode) Icons.Filled.FormatListBulleted else Icons.Filled.ViewCarousel,
+                                imageVector = if (focusMode) Icons.AutoMirrored.Filled.FormatListBulleted else Icons.Filled.ViewCarousel,
                                 contentDescription = stringResource(
                                     if (focusMode) R.string.cook_focus_mode_off else R.string.cook_focus_mode_on
                                 ),
@@ -221,7 +228,7 @@ fun RecipeCookScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 if (uiState.recipe == null) {
-                    CircularProgressIndicator()
+                    LoadingIndicator()
                 } else {
                     Text(
                         stringResource(R.string.cook_no_steps),
@@ -314,7 +321,10 @@ fun RecipeCookScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { ingredientsExpanded = !ingredientsExpanded }
+                            .clickable(
+                                role = Role.Button,
+                                onClickLabel = stringResource(if (ingredientsExpanded) R.string.common_collapse else R.string.common_expand),
+                            ) { ingredientsExpanded = !ingredientsExpanded }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -391,13 +401,20 @@ fun RecipeCookScreen(
                 val done = index in completedSteps
                 val timers = remember(instruction.text) { extractTimers(instruction.text) }
 
+                // Zeile (abhaken) und Timer-Chips sind getrennte Flächen, damit TalkBack beide einzeln erreicht (Phase 8, B10-S4).
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { viewModel.toggleStep(index) }
                         .padding(vertical = 8.dp),
                 ) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = done,
+                                role = Role.Checkbox,
+                                onValueChange = { viewModel.toggleStep(index) },
+                            ),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(
@@ -641,12 +658,19 @@ private fun CookFocusView(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable { onToggleStep(page) }
                     .padding(24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = done,
+                            role = Role.Checkbox,
+                            onValueChange = { onToggleStep(page) },
+                        )
+                        .padding(vertical = 16.dp),
                     text = instruction.text,
                     style = MaterialTheme.typography.headlineSmall.copy(
                         textDecoration = if (done) TextDecoration.LineThrough else TextDecoration.None,

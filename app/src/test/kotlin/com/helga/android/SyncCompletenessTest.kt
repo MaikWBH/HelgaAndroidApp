@@ -16,7 +16,15 @@ class SyncCompletenessTest {
     // Entities, die absichtlich NICHT synchronisiert werden – mit Begründung als Kommentar.
     // Jede neue Entity muss entweder hier eingetragen sein oder ein toDto()/toEntity()-Mapper-
     // Paar in SyncEngine.kt haben, sonst schlägt der Test fehl.
-    private val intentionallyLocalOnly = emptySet<String>()
+    private val intentionallyLocalOnly = setOf(
+        // reiner Abzug des Server-Lexikons (Phase 3a), Quelle der Wahrheit ist /api/receipts/lexicon
+        "ReceiptLexicon",
+        // Abzug der Server-Auswertung (Phase 3b), wird nach jedem Bon-Abgleich ersetzt
+        "ReceiptAggregate",
+        // Bons laufen über ein eigenes bon-weises Protokoll (ReceiptSyncer), nicht über den Voll-Sync.
+        "Receipt",
+        "ReceiptItem",
+    )
 
     private fun projectRoot(): File {
         var dir = File("").absoluteFile

@@ -14,7 +14,8 @@ bisherigen Dokumentation auftauchte.
 | DAO | `app/src/main/kotlin/com/helga/android/data/local/dao/ReceiptDao.kt`, `MonthlyBudgetDao.kt` |
 | Repository | `app/src/main/kotlin/com/helga/android/data/repository/ReceiptRepository.kt` |
 | Hilfsklassen | `app/src/main/kotlin/com/helga/android/data/util/ReceiptImagePreprocessor.kt`, `ReceiptItemNormalizer.kt` |
-| Server | `/api/ai/parse-receipt`, `/api/receipts/reconcile` in `server/app/main.py` |
+| Bon-Archiv (Phase 3a) | `app/src/main/kotlin/com/helga/android/data/receipts/` — `ReceiptSyncer`, `ReceiptUploader`, `ReceiptImageStore`, `ReceiptScanFlow`, `ReceiptReviewCheck`, `ReceiptMapping`, `ReceiptDates`; `ReceiptLexiconEntity`/`ReceiptLexiconDao`, `ReceiptLexiconRepository` |
+| Server | `/api/ai/parse-receipt`, `/api/receipts/reconcile` in `server/app/main.py`; Bon-Archiv: `server/app/receipt_api.py`, `receipts.py`, `receipt_text.py`, `categories.py`, `settings.py`, `auth.py` (`/api/receipts…`) |
 | Routen | 6 der 21 Navigationsrouten in `app/src/main/kotlin/com/helga/android/HelgaNavGraph.kt` |
 
 ## Ist-Analyse
@@ -83,6 +84,8 @@ String-Verarbeitung — ohne Tests ist jede Änderung daran riskant.
    Antwort: Ja, aber einstellbar — Startwert 3 Monate.
 8. **Braucht der Scan einen Offline-Weg?**
    Antwort: Server-Pflicht ist akzeptabel, kein Offline-Weg nötig.
+   **Überholt durch Phase 3 (Entscheidung 4):** Offline wird gepuffert; bis der Server erreichbar ist, zeigt die App
+   vorläufige ML-Kit-Werte, die Auswertung wird nachgeholt.
 9. **Nachfrage — wo soll der Ein-Klick-Zugang liegen?**
    Antwort: Eigener Bottom-Nav-Tab (viertes Icon neben Einkaufsliste/Rezepte/Wochenplan), führt
    auf `ReceiptListScreen` — die bietet bereits Scan/Kostenüberblick/Preisverlauf als
@@ -140,4 +143,45 @@ _Weitere Aufgaben nach dem Interview._
 | 2026-08-30 | Vierter Bottom-Nav-Tab statt App-Shortcut oder TopBar-Icon | Nutzer bevorzugt den klassischen, immer sichtbaren Weg gegenüber weniger entdeckbaren Alternativen |
 | 2026-08-30 | Bestehende Einstiege (Menüpunkt, Erinnerungs-Banner) bleiben zusätzlich bestehen | Kein Grund zum Entfernen, der neue Tab ergänzt statt ersetzt |
 | 2026-08-30 | Automatische Bon-Löschung wird einstellbar, nicht fest | Nutzer will Kontrolle über die Aufbewahrungsdauer, Startwert 3 Monate |
-| 2026-08-30 | Preiswarnung, Budget-Granularität, Offline-Scan bleiben unverändert | Im Interview kein Bedarf geäußert |
+| 2026-08-30 | Preiswarnung und Budget-Granularität bleiben unverändert | Im Interview kein Bedarf geäußert |
+| 2026-11-11 | Bons liegen als Archiv nur auf dem Server; das Handy hält die letzten Monate plus eine Upload-Warteschlange | Handy soll nicht zugemüllt werden; eigenes bon-weises Protokoll statt Voll-Sync (Phase 3) |
+| 2026-11-11 | Alle Bon-KI-Aufrufe laufen mit Haiku 5.5 (`AI_RECEIPT_MODEL`), Qualität per Testset geprüft | Kosten gering halten; kein automatischer Rückfall auf ein größeres Modell |
+| 2026-11-11 | Lernendes Produkt-Lexikon je Markt (Kürzel → Artikel), lernt automatisch aus Korrekturen im Review | Gleicher Bon-Artikel soll künftig ohne Nachkorrektur stimmen |
+
+---
+
+**Phase 1 umgesetzt** (android-clean-architecture): ViewModels nutzen nur Repositories/UseCases; Details in [phasen/phase-1](../../phasen/phase-1-android-clean-architecture.md).
+
+## Phase 2 (mobile-android-design)
+
+- Phase 2 umgesetzt (2026-11-11): Theme, Insets, Strings, Rollen und Zustandserhalt für diesen Bereich angeglichen; siehe [phase-2](../../phasen/phase-2-mobile-android-design.md).
+- Leer-/Fehlerzustände und Layout der Bon-Screens folgen in Phase 3.
+
+## Phase 3a (Bons, Server-Archiv, Scan, Review)
+
+- Server: `/api/receipts…` (Liste, PUT/DELETE, Scan, Foto, Re-Parse, Lexikon), Warteschlange für fehlgeschlagene KI-Auswertung, Bon-Modell Haiku 5.5, Testset-Skript, Wiederherstellungs-Skript.
+- Room v37: Uhrzeit, Filiale, Rabatte, Pfand, Einheit, Kategorie, `pendingUpload`, `cachedUntil`; `receipt_lexicon`.
+- Scan: Foto verkleinert zum Server, KI liest aus; ohne Server vorläufige ML-Kit-Werte und Upload-Warteschlange (WorkManager).
+- Review-Ansicht mit Kopfkarte, Rabatt je Position, Pfand, Kategorie und OFF-Produktzuordnung; Bon-Liste mit Monatsgruppen, Status-Chips und „Ältere Bons laden"; Detail mit Neu-auslesen.
+- Einstellungen: „Bons offline behalten" (Server löscht nie), Lexikon-Ansicht.
+- Details und Prüflisten: [phase-3a](../../phasen/phase-3a-bons-server-scan.md). Auswertung, Diagramme und Gang-Kategorien folgen in [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).
+
+## Phase 3b (Auswertung, Diagramme)
+
+- Server rechnet die Auswertung auf Abruf: `GET /api/receipts/aggregates` (Gesamt, Woche, Markt, Kategorie, Artikel) und `POST /api/ai/categorize-items`; die App hält einen Abzug (`receipt_aggregates`, Room v38) und ersetzt ihn nach jedem Bon-Abgleich vollständig. Diagramme lesen nur aus diesem Abzug und bleiben offline erhalten.
+- Neu im Umfang: `ui/receipts/charts/` (`SpendingBarChart`, `ShareDonutChart`, `HorizontalBarChart`, `TrendLineChart`, `ChartMath`), `data/receipts/ReceiptStats.kt`, `ReceiptStatsRepository`, `ReceiptAggregateEntity`/`ReceiptAggregateDao`.
+- Kostenübersicht: Ausgaben je Monat/Woche mit Budgetlinie und Durchschnitt, Zeitraum-Chips, Märkte als Ring, Kategorien und Top-Artikel als Querbalken; Hinweis auf vorläufige Bons, die noch fehlen. Preisentwicklung eines Artikels über alle Monate, Einzelkäufe nur für den lokalen Zeitraum.
+- Alte Kostenabfragen (`costByStore`, `costByDate`, `totalCostForRange` u. a.) entfernt.
+- Details und Geräte-Prüfliste: [phase-3b](../../phasen/phase-3b-auswertung-gang-kategorien.md).
+
+## Phase 6 (Code-Review Phasen 1–5)
+
+- Review-Bericht mit Befunden je Block: [review-bericht](../../phasen/phase-6-daten/review-bericht.md). Behoben: V1 (`!!` in `SpendingBarChart`/`AisleKeywordMatcher`, per `KotlinQualityRulesTest` gesperrt) und V2 (Bon und Positionen nur noch atomar über `@Transaction`-Methoden im `ReceiptDao`). Offen für Ihre Entscheidung: u. a. V3 (Foto-Race), der Verdacht auf Löschen der Positionen durch `REPLACE` mit `CASCADE`, Lexikon-Löschen ohne Bestätigung.
+
+## Phase 7 (Fixes aus dem Testlauf)
+
+- Phase 7 umgesetzt (Stufe B, Gerätetests offen): F13 (vorläufiger Bon behält On-Device-Daten, Server und App), F11 (Suche nach älteren Bons bis 12 Monate), F12 (Dezimaleingabe mit Fehlermeldung statt stiller 0,00 €), Foto-Race und Pull-Löschschutz im Bon-Protokoll; siehe [phase-7](../../phasen/phase-7-fixes-und-markdown-import.md).
+
+## Phase 8 (Robustheit Bon-UI)
+
+- Phase 8 umgesetzt (Stufe B, Gerätetests offen): Lexikon-Löschen mit Rückgängig, „Erneut versuchen" liest neu aus, Tastatur-Aktionen in den Bon-Dialogen, Ladezustand statt Leerzustand in der Kostenübersicht, Wochenkennung unabhängig von der Gerätesprache, Bestandsfotos werden vor dem Upload verkleinert (413 beendet die Wiederholung); siehe [phase-8](../../phasen/phase-8-server-haertung-und-robustheit.md).
