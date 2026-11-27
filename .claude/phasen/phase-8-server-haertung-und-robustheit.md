@@ -141,7 +141,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   `$T/ReceiptUploaderTest.kt`. Vor `uploadReceiptImage` `imageStore.downscaleInPlace(file)` (gleiche Grenzen wie `prepare`:
   längste Seite 2000 px, JPEG 85; Datei unter 2000 px bleibt unverändert). 413 trotzdem → `pendingUpload = 0` und
   `parseStatus = "rejected"` (Muster Phase 7 S6). Test (+1): 413 beendet die Wiederholung. Akzeptanz: `V` grün.
-- [ ] **S15 Timer-Chip erreichbar (B10-S4, Nachtrag 2026-11-27)** — Kochansicht (`$B/ui/recipes/RecipeCookScreen.kt`,
+- [x] **S15 Timer-Chip erreichbar (B10-S4, Nachtrag 2026-11-27)** — Kochansicht (`$B/ui/recipes/RecipeCookScreen.kt`,
   `toggleable`-Zeile mit `SuggestionChip`): Zeile und Chip semantisch trennen (Chip außerhalb der `toggleable`-Fläche,
   z. B. `Row` mit eigener `toggleable`-Fläche für Text/Checkbox und danach der Chip), Verhalten und Optik unverändert.
   Kein Unit-Test; TalkBack-Prüfung steht in der Nutzer-Liste (S13). Akzeptanz: `V` grün; `UiConventionsTest` grün.

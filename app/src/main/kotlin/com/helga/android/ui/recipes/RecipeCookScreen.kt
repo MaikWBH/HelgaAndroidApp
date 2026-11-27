@@ -401,17 +401,20 @@ fun RecipeCookScreen(
                 val done = index in completedSteps
                 val timers = remember(instruction.text) { extractTimers(instruction.text) }
 
+                // Zeile (abhaken) und Timer-Chips sind getrennte Flächen, damit TalkBack beide einzeln erreicht (Phase 8, B10-S4).
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .toggleable(
-                            value = done,
-                            role = Role.Checkbox,
-                            onValueChange = { viewModel.toggleStep(index) },
-                        )
                         .padding(vertical = 8.dp),
                 ) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = done,
+                                role = Role.Checkbox,
+                                onValueChange = { viewModel.toggleStep(index) },
+                            ),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(
@@ -655,16 +658,19 @@ private fun CookFocusView(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .toggleable(
-                        value = done,
-                        role = Role.Checkbox,
-                        onValueChange = { onToggleStep(page) },
-                    )
                     .padding(24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = done,
+                            role = Role.Checkbox,
+                            onValueChange = { onToggleStep(page) },
+                        )
+                        .padding(vertical = 16.dp),
                     text = instruction.text,
                     style = MaterialTheme.typography.headlineSmall.copy(
                         textDecoration = if (done) TextDecoration.LineThrough else TextDecoration.None,
