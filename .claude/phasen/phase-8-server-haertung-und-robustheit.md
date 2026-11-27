@@ -91,7 +91,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   `dict` oder fehlende Schlüssel → `AiUpstreamError("Unerwartete Stream-Antwort")` statt `TypeError`/`AttributeError`
   (Log ohne Body). Tests (+2) `test_anthropic_error_event_is_502` (Fehler vor dem ersten Chunk → 502),
   `test_null_frame_ends_stream_without_done` (nach erstem Chunk → Stream ohne `[DONE]`). Akzeptanz: `VS` grün.
-- [ ] **S5 Schlüssel und Größe vor dem Body (B4-P3)** — `$SA/settings.py` (`MAX_REQUEST_BYTES = int(os.getenv("MAX_REQUEST_BYTES", str(10 * 1024 * 1024)))`),
+- [x] **S5 Schlüssel und Größe vor dem Body (B4-P3)** — `$SA/settings.py` (`MAX_REQUEST_BYTES = int(os.getenv("MAX_REQUEST_BYTES", str(10 * 1024 * 1024)))`),
   neu `$SA/guard_middleware.py` (reine ASGI-Middleware: für `scope["type"] == "http"` und Pfad mit Präfix `/api/` außer
   `/api/health`: ist `settings.API_KEY` gesetzt und der Header `x-api-key` nicht gleich (`hmac.compare_digest`) → 401
   JSON `{"detail": "Nicht autorisiert"}`; `content-length` > `MAX_REQUEST_BYTES` → 413; sonst weiterreichen — liest den

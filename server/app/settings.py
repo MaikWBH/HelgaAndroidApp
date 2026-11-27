@@ -48,5 +48,9 @@ RECEIPT_QUEUE_INTERVAL_SEC = int(os.getenv("RECEIPT_QUEUE_INTERVAL_SEC", "600"))
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 MAX_RECEIPT_IMAGE_BYTES = MAX_IMAGE_BYTES
 
+# Obergrenze für die Größe einer Anfrage (Content-Length), geprüft vor dem Lesen des Bodys (Phase 8, S5).
+# Größer als das Base64-Limit von parse-receipt (11,2 MB) und das Bild-Limit, damit Rahmen und Felder Platz haben.
+MAX_REQUEST_BYTES = int(os.getenv("MAX_REQUEST_BYTES", str(12 * 1024 * 1024)))
+
 # Obergrenze für die Seite beim Rezept-Import (Bytes).
 MAX_IMPORT_PAGE_BYTES = 5 * 1024 * 1024

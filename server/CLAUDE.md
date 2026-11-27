@@ -25,6 +25,7 @@ app/
 ├── main.py            # App, Lifespan (Start-Prüfung, Bon-Warteschlange), Logging, 502-Handler, Health
 ├── settings.py        # Alle Umgebungsvariablen zentral; zur Aufrufzeit über settings.X gelesen
 ├── auth.py            # require_auth
+├── guard_middleware.py # ASGI-Middleware: X-Api-Key und Content-Length vor dem Lesen des Bodys (401/413)
 ├── db.py              # Schema, init_db(), get_db(), SYNC_TABLES, RECEIPT_TABLES, now_ms()
 ├── models.py          # Pydantic-Modelle (Sync, KI, Bon-Archiv, OFF) mit Eingabe-Limits
 ├── sync.py            # pull_since(), push_records() – LWW-Merge
@@ -162,4 +163,5 @@ Alle weiteren Befehle: `make help`
 - Eingabe-Limits in `models.py`: Kurztexte 200, Langtexte 4000 Zeichen, Tag-Liste 300, Zutaten-/Schrittlisten gedeckelt, Bild-Base64 ca. 8 MiB, `portions` 1–100, OFF-`limit` 1–20
 - Rezept-Import per URL (SSRF-Schutz in `url_guard.py`): nur http/https; Loopback, Privatnetz, Link-Local, Reserviert, Multicast und unspezifizierte Adressen sowie alles nicht global Routbare (z. B. 100.64.0.0/10) werden abgelehnt, auch nach Weiterleitungen (jeder Hop geprüft, max. 5); Seite max. 5 MiB. Bekannte Grenze: DNS-Rebinding zwischen Prüfung und Abruf
 - Bild-Upload: max. 8 MiB (`settings.MAX_IMAGE_BYTES`), darüber 413 ohne Datei
-- Neue Umgebungsvariablen: `ALLOW_NO_AUTH` (nur lokal, Standard aus), `LOG_LEVEL` (Standard `INFO`). Alle übrigen Werte stehen in `settings.py`
+- Anfragen: `GuardMiddleware` weist `/api/*` (außer `/api/health`) ohne gültigen Schlüssel mit 401 und über `MAX_REQUEST_BYTES` (Standard 12 MiB, `Content-Length`) mit 413 ab, bevor der Body gelesen wird; `require_auth` bleibt zusätzlich
+- Neue Umgebungsvariablen: `ALLOW_NO_AUTH` (nur lokal, Standard aus), `LOG_LEVEL` (Standard `INFO`), `MAX_REQUEST_BYTES` (Standard 12 MiB). Alle übrigen Werte stehen in `settings.py`

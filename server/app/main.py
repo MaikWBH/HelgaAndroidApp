@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from .ai_client import AiUpstreamError
 from .db import init_db, now_ms
+from .guard_middleware import GuardMiddleware
 from . import (
     ai_api, images_api, off_api, receipt_api, receipts, settings, suggestions_api, sync_api,
 )
@@ -37,6 +38,7 @@ app = FastAPI(
     title="HelgaSyncServer", version="1.0.0", lifespan=lifespan,
     docs_url=None, redoc_url=None, openapi_url=None,  # API-Doku ohne Schlüssel nicht öffentlich (Phase 7, F7a)
 )
+app.add_middleware(GuardMiddleware)
 app.include_router(receipt_api.router)
 app.include_router(sync_api.router)
 app.include_router(images_api.router)
