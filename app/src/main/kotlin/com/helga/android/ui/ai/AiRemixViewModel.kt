@@ -3,6 +3,7 @@ package com.helga.android.ui.ai
 import androidx.compose.ui.res.stringResource
 import com.helga.android.R
 import com.helga.android.ui.common.UiText
+import com.helga.android.ui.common.aiErrorText
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -124,7 +125,7 @@ class AiRemixViewModel @Inject constructor(
                 _state.update { it.copy(status = AiRemixStatus.Error(
                     when {
                         e is NoRecipeInAiRemixResponseException -> UiText.Res(R.string.ai_error_no_recipe)
-                        else -> e.message?.let(UiText::Raw) ?: UiText.Res(R.string.ai_error_unknown)
+                        else -> e.aiErrorText(UiText.Res(R.string.ai_error_unknown))
                     }
                 )) }
             }

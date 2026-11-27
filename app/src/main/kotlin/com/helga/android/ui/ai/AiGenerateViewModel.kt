@@ -3,6 +3,7 @@ package com.helga.android.ui.ai
 import androidx.compose.ui.res.stringResource
 import com.helga.android.R
 import com.helga.android.ui.common.UiText
+import com.helga.android.ui.common.aiErrorText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.helga.android.data.local.entity.IngredientEntity
@@ -113,7 +114,7 @@ class AiGenerateViewModel @Inject constructor(
                 _state.update { it.copy(status = AiGenerateStatus.Error(
                     when {
                         e is NoRecipeInAiResponseException -> UiText.Res(R.string.ai_error_no_recipe)
-                        else -> e.message?.let(UiText::Raw) ?: UiText.Res(R.string.ai_error_unknown)
+                        else -> e.aiErrorText(UiText.Res(R.string.ai_error_unknown))
                     }
                 )) }
             }

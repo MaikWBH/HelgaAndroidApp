@@ -113,7 +113,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   mit `import kotlinx.coroutines.CancellationException`. Regeltest (+1) `abbrueche_werden_weitergeworfen` in
   `KotlinQualityRulesTest`: für jede Datei außerhalb der Ausnahmeliste gilt Anzahl
   `catch (e: CancellationException) { throw e }` ≥ Anzahl `catch (\w+: Exception)`. Akzeptanz: `V` grün; `TC` +1.
-- [ ] **S7 Verständliche KI-Fehler (B9-P1)** — `$B/data/repository/AiRepository.kt`, betroffene ViewModels
+- [x] **S7 Verständliche KI-Fehler (B9-P1)** — `$B/data/repository/AiRepository.kt`, betroffene ViewModels
   (`grep -rn "e.message" $B/ui`), `$R/values/strings.xml`, `$T/AiRepositoryTest.kt`. `classifyRecipe`/`estimateNutrition`
   fangen `HttpException`/`IOException` und werfen `AiUnavailableException(kind)` (neu in `data/repository/`,
   `kind` = `OFFLINE`, `SERVER`, `AI_DOWN` für 502); ViewModels zeigen `UiText.Res` je Art (Strings `ai_error_offline`

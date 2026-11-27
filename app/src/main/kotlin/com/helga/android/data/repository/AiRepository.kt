@@ -26,10 +26,20 @@ class AiRepository @Inject constructor(
     private val apiProvider: ApiProvider,
 ) {
     suspend fun classifyRecipe(req: AiClassifyRequest): AiClassifyResponse =
-        apiProvider.api().classifyRecipe(req)
+        unavailableAsException { apiProvider.api().classifyRecipe(req) }
 
     suspend fun estimateNutrition(req: AiNutritionRequest): AiNutritionResponse =
-        apiProvider.api().estimateNutrition(req)
+        unavailableAsException { apiProvider.api().estimateNutrition(req) }
+
+    /** Netz- und HTTP-Fehler werden zu [AiUnavailableException]; 502 heißt: der Server erreicht die KI nicht. */
+    private suspend fun <T> unavailableAsException(call: suspend () -> T): T = try {
+        call()
+    } catch (e: HttpException) {
+        val kind = if (e.code() == 502) AiUnavailableException.Kind.AI_DOWN else AiUnavailableException.Kind.SERVER
+        throw AiUnavailableException(kind, e)
+    } catch (e: IOException) {
+        throw AiUnavailableException(AiUnavailableException.Kind.OFFLINE, e)
+    }
 
     suspend fun importFromUrl(url: String): ImportOutcome = try {
         ImportOutcome.Success(apiProvider.api().importFromUrl(UrlImportRequest(url)))

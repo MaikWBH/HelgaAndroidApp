@@ -3,6 +3,7 @@ package com.helga.android.ui.recipes
 import androidx.compose.ui.res.stringResource
 import com.helga.android.R
 import com.helga.android.ui.common.UiText
+import com.helga.android.ui.common.aiErrorText
 import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.SavedStateHandle
@@ -195,7 +196,7 @@ class RecipeDetailViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _classifyState.update { false to (e.message?.let(UiText::Raw) ?: UiText.Res(R.string.recipe_classify_failed)) }
+                _classifyState.update { false to e.aiErrorText(UiText.Res(R.string.recipe_classify_failed)) }
             }
         }
     }
@@ -373,7 +374,7 @@ class RecipeDetailViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _nutritionCalcState.update { false to (e.message?.let(UiText::Raw) ?: UiText.Res(R.string.recipe_nutrition_calc_failed)) }
+                _nutritionCalcState.update { false to e.aiErrorText(UiText.Res(R.string.recipe_nutrition_calc_failed)) }
             }
         }
     }

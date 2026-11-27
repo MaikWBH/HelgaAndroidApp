@@ -7,13 +7,18 @@ import com.helga.android.data.remote.dto.AiClassifyResponse
 import com.helga.android.data.remote.dto.AiNutritionRequest
 import com.helga.android.data.remote.dto.AiNutritionResponse
 import com.helga.android.data.repository.AiRepository
+import com.helga.android.data.repository.AiUnavailableException
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertNotNull
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
+import retrofit2.HttpException
+import retrofit2.Response
 import java.io.IOException
 
 class AiRepositoryTest {
@@ -42,17 +47,33 @@ class AiRepositoryTest {
         coVerify(exactly = 1) { api.classifyRecipe(classifyReq) }
     }
 
-    @Test
-    fun klassifikation_fehler_wird_weitergereicht() = runTest {
-        coEvery { api.classifyRecipe(classifyReq) } throws IOException("offline")
+    private suspend fun kindOf(block: suspend () -> Unit): AiUnavailableException.Kind? = try {
+        block()
+        null
+    } catch (e: AiUnavailableException) {
+        e.kind
+    }
 
-        val thrown = try {
-            repo.classifyRecipe(classifyReq)
-            null
-        } catch (e: IOException) {
-            e
-        }
-        assertNotNull(thrown)
+    private fun httpError(code: Int) = HttpException(
+        Response.error<Any>(code, "{}".toResponseBody("application/json".toMediaType())),
+    )
+
+    @Test
+    fun klassifikation_ohne_netz_ist_offline() = runTest {
+        coEvery { api.classifyRecipe(classifyReq) } throws IOException("offline")
+        assertEquals(AiUnavailableException.Kind.OFFLINE, kindOf { repo.classifyRecipe(classifyReq) })
+    }
+
+    @Test
+    fun klassifikation_http_500_ist_server() = runTest {
+        coEvery { api.classifyRecipe(classifyReq) } throws httpError(500)
+        assertEquals(AiUnavailableException.Kind.SERVER, kindOf { repo.classifyRecipe(classifyReq) })
+    }
+
+    @Test
+    fun naehrwerte_http_502_ist_ki_nicht_erreichbar() = runTest {
+        coEvery { api.estimateNutrition(nutritionReq) } throws httpError(502)
+        assertEquals(AiUnavailableException.Kind.AI_DOWN, kindOf { repo.estimateNutrition(nutritionReq) })
     }
 
     @Test
