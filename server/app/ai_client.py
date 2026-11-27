@@ -189,6 +189,53 @@ async def stream_text(system: str, user: str) -> AsyncIterator[str]:
             yield chunk
 
 
+def _bad_frame() -> AiUpstreamError:
+    logger.warning("Unerwarteter KI-Stream-Frame")
+    return AiUpstreamError("Unerwartete Stream-Antwort")
+
+
+def _openai_delta(data: str) -> str:
+    """Text eines OpenAI-Frames; kein JSON (Keep-Alive) → leer, falsche Form → AiUpstreamError."""
+    try:
+        obj = json.loads(data)
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(obj, dict):
+        raise _bad_frame()
+    choices = obj.get("choices")
+    if not isinstance(choices, list):
+        raise _bad_frame()
+    if not choices:
+        return ""
+    first = choices[0]
+    delta = first.get("delta") if isinstance(first, dict) else None
+    if not isinstance(delta, dict):
+        raise _bad_frame()
+    text = delta.get("content") or ""
+    return text if isinstance(text, str) else ""
+
+
+def _anthropic_delta(data: str) -> str:
+    """Text eines Anthropic-Frames; `error`-Event und falsche Form → AiUpstreamError."""
+    try:
+        obj = json.loads(data)
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(obj, dict):
+        raise _bad_frame()
+    kind = obj.get("type")
+    if kind == "error":
+        logger.warning("Anbieter meldet Fehler im KI-Stream")
+        raise AiUpstreamError("Anbieter meldet Fehler im Stream")
+    if kind != "content_block_delta":
+        return ""
+    delta = obj.get("delta")
+    if not isinstance(delta, dict):
+        raise _bad_frame()
+    text = delta.get("text") or ""
+    return text if isinstance(text, str) else ""
+
+
 async def _stream_openai(system: str, user: str) -> AsyncIterator[str]:
     base = _openai_base()
     headers = openai_headers()
@@ -209,13 +256,9 @@ async def _stream_openai(system: str, user: str) -> AsyncIterator[str]:
                     data = line[5:].strip()
                     if data == "[DONE]":
                         break
-                    try:
-                        obj = json.loads(data)
-                        delta = obj["choices"][0]["delta"].get("content", "")
-                        if delta:
-                            yield delta
-                    except (json.JSONDecodeError, KeyError, IndexError):
-                        continue
+                    delta = _openai_delta(data)
+                    if delta:
+                        yield delta
         except httpx.HTTPStatusError as exc:
             raise _status_error(exc) from None
         except httpx.RequestError as exc:
@@ -241,14 +284,9 @@ async def _stream_anthropic(system: str, user: str) -> AsyncIterator[str]:
                     if not line.startswith("data:"):
                         continue
                     data = line[5:].strip()
-                    try:
-                        obj = json.loads(data)
-                        if obj.get("type") == "content_block_delta":
-                            delta = obj.get("delta", {}).get("text", "")
-                            if delta:
-                                yield delta
-                    except (json.JSONDecodeError, KeyError):
-                        continue
+                    delta = _anthropic_delta(data)
+                    if delta:
+                        yield delta
         except httpx.HTTPStatusError as exc:
             raise _status_error(exc) from None
         except httpx.RequestError as exc:

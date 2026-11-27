@@ -48,6 +48,18 @@ class _StreamBody:
         yield "data: [DONE]"
 
 
+class _Lines(_StreamBody):
+    """Antwort mit frei vorgegebenen SSE-Zeilen."""
+
+    def __init__(self, lines):
+        super().__init__()
+        self.lines = lines
+
+    async def aiter_lines(self):
+        for line in self.lines:
+            yield line
+
+
 class _StreamCtx:
     def __init__(self, behaviour):
         self.behaviour = behaviour
@@ -180,3 +192,25 @@ def test_missing_key_is_502_without_upstream_call(client, monkeypatch):
     assert r.status_code == 502
     assert r.json() == {"detail": "KI-Dienst hat nicht geantwortet"}
     assert "stream" not in calls and "post" not in calls
+
+
+def test_anthropic_error_event_is_502(client, upstream, monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "anthropic")
+    upstream.stream_result = _Lines(['data: {"type":"error","error":{"type":"overloaded_error"}}'])
+    r = client.post("/api/ai/generate", json={"prompt": "Pasta"})
+    assert r.status_code == 502
+    assert r.json() == {"detail": "KI-Dienst hat nicht geantwortet"}
+
+
+def test_null_frame_ends_stream_without_done(client, upstream, caplog):
+    upstream.stream_result = _Lines([
+        'data: {"choices":[{"delta":{"content":"Hallo"}}]}',
+        "data: null",
+        "data: [DONE]",
+    ])
+    with caplog.at_level("WARNING"):
+        r = client.post("/api/ai/generate", json={"prompt": "Pasta"})
+    assert r.status_code == 200
+    assert "data: Hallo" in r.text
+    assert "[DONE]" not in r.text
+    assert "KI-Stream abgebrochen" in caplog.text

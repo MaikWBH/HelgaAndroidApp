@@ -86,7 +86,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   `items: list[ReceiptItemIn] = Field(default_factory=list, max_length=500)`. Bestehende Tests müssen grün bleiben (sonst
   stoppen: ein Limit ist zu knapp). Test (+2) `test_receipt_text_limit` (501 Zeichen in `store_name` → 422),
   `test_receipt_item_count_limit` (501 Positionen → 422). Akzeptanz: `VS` grün.
-- [ ] **S4 Stream-Fehler (B4-S2, B4-P2)** — `$SA/ai_client.py`, `$ST/test_ai_errors.py`. Anthropic-Stream: Event mit
+- [x] **S4 Stream-Fehler (B4-S2, B4-P2)** — `$SA/ai_client.py`, `$ST/test_ai_errors.py`. Anthropic-Stream: Event mit
   `type == "error"` → `raise AiUpstreamError("Anbieter meldet Fehler im Stream")`; beide Streams: `json.loads` liefert kein
   `dict` oder fehlende Schlüssel → `AiUpstreamError("Unerwartete Stream-Antwort")` statt `TypeError`/`AttributeError`
   (Log ohne Body). Tests (+2) `test_anthropic_error_event_is_502` (Fehler vor dem ersten Chunk → 502),
