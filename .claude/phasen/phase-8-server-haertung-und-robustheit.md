@@ -120,7 +120,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   „Keine Verbindung zum Server.", `ai_error_server` „Der Server hat einen Fehler gemeldet.", `ai_error_ai_down`
   „Die KI ist gerade nicht erreichbar."). Tests (+3, je Art). Akzeptanz: `V` grün; `grep -n "e.message" $B/ui -r` nur noch
   in Log-Aufrufen.
-- [ ] **S8 Gang-Zuordnung ohne Lost Update (V6, B6-P1)** — `$B/data/shopping/AisleAssigner.kt`, `$B/data/sync/SyncScheduler.kt`,
+- [x] **S8 Gang-Zuordnung ohne Lost Update (V6, B6-P1)** — `$B/data/shopping/AisleAssigner.kt`, `$B/data/sync/SyncScheduler.kt`,
   `$T/AisleAssignerTest.kt`. Nach dem KI-Aufruf je Artikel frisch laden (`findById` des DAO über das Repository-Muster
   in `AisleAssigner`); schreiben nur, wenn `aisle.isBlank() && isChecked == 0 && name == <Name beim Aufruf>`.
   `enqueueUniqueWork(AisleCategorizeWorker.UNIQUE, ExistingWorkPolicy.APPEND_OR_REPLACE, request)`. Tests (+2): abgehakter

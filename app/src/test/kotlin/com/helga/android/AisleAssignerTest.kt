@@ -49,6 +49,7 @@ class AisleAssignerTest {
         coEvery { storeDao.findAisleProductEntry(any(), any()) } returns null
         coEvery { storeDao.upsertAisleProduct(any()) } answers { learned += firstArg<AisleProductEntity>() }
         coEvery { shoppingDao.upsertItem(any()) } answers { updated += firstArg<ShoppingItemEntity>() }
+        coEvery { shoppingDao.findItemById(any()) } answers { stored[firstArg()] }
         coEvery { apiProvider.api() } returns api
         assigner = AisleAssigner(storeDao, shoppingDao, apiProvider)
     }
@@ -57,8 +58,11 @@ class AisleAssignerTest {
     private val learned = mutableListOf<AisleProductEntity>()
     private val updated = mutableListOf<ShoppingItemEntity>()
 
+    /** Stand der Artikel in „Room“: `findItemById` liest daraus, Tests können ihn nach dem Start ändern. */
+    private val stored = mutableMapOf<String, ShoppingItemEntity>()
+
     private fun open(vararg names: String) = names.mapIndexed { i, n ->
-        ShoppingItemEntity(id = "i$i", listId = "L", name = n)
+        ShoppingItemEntity(id = "i$i", listId = "L", name = n).also { stored[it.id] = it }
     }
 
     @Test
@@ -110,6 +114,32 @@ class AisleAssignerTest {
         assertEquals(1, request.captured.names.size)
         assertEquals(2, updated.size)
         assertEquals(1, learned.size)
+    }
+
+    @Test
+    fun `waehrend des KI-Laufs abgehakter Artikel wird nicht ueberschrieben`() = runTest {
+        coEvery { shoppingDao.uncheckedItemsWithoutAisle() } returns open("Geschenkpapier")
+        coEvery { api.categorizeItems(any()) } answers {
+            stored["i0"] = stored.getValue("i0").copy(isChecked = 1)
+            CategorizeResponse(listOf(CategorizeResultDto("Geschenkpapier", "haushalt")))
+        }
+
+        assertEquals(0, assigner.assignRemote())
+        assertTrue(updated.isEmpty())
+        assertTrue(learned.isEmpty())
+    }
+
+    @Test
+    fun `waehrend des KI-Laufs umbenannter oder zugeordneter Artikel wird nicht ueberschrieben`() = runTest {
+        coEvery { shoppingDao.uncheckedItemsWithoutAisle() } returns open("Geschenkpapier", "Geschenkpapier ")
+        coEvery { api.categorizeItems(any()) } answers {
+            stored["i0"] = stored.getValue("i0").copy(name = "Geschenkband")
+            stored["i1"] = stored.getValue("i1").copy(aisle = "Kasse")
+            CategorizeResponse(listOf(CategorizeResultDto("Geschenkpapier", "haushalt")))
+        }
+
+        assertEquals(0, assigner.assignRemote())
+        assertTrue(updated.isEmpty())
     }
 
     @Test

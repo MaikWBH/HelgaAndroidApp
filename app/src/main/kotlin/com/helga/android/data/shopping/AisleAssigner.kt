@@ -86,9 +86,16 @@ class AisleAssigner @Inject constructor(
             val key = AisleProductKey.normalize(result.name)
             val matching = unresolved.filter { AisleProductKey.normalize(it.name) == key }
             if (matching.isEmpty()) continue
-            matching.forEach { shoppingDao.upsertItem(it.copy(aisle = aisle, updatedAt = now, dirty = 1)) }
-            changed += matching.size
-            learn(key, aisle, storeId, now)
+            // Während des KI-Aufrufs kann der Artikel geändert worden sein: frisch laden, nur unverändert Offene schreiben.
+            var written = 0
+            for (item in matching) {
+                val current = shoppingDao.findItemById(item.id) ?: continue
+                if (current.aisle.isNotBlank() || current.isChecked != 0 || current.name != item.name) continue
+                shoppingDao.upsertItem(current.copy(aisle = aisle, updatedAt = now, dirty = 1))
+                written++
+            }
+            changed += written
+            if (written > 0) learn(key, aisle, storeId, now)
         }
         return changed
     }
