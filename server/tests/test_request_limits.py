@@ -94,3 +94,22 @@ def test_limit_boundary(client, fakes, path, field, ok, bad):
     assert client.post(path, json=body).status_code == 200
     body[field] = bad
     assert client.post(path, json=body).status_code == 422
+
+
+def _receipt_body(**extra):
+    body = {"id": "limit-test", "store_name": "Lidl", "status": "review", "updated_at": 1, "items": []}
+    body.update(extra)
+    return body
+
+
+def test_receipt_text_limit(client):
+    assert client.put("/api/receipts/limit-test", json=_receipt_body(store_name="x" * 500)).status_code == 200
+    assert client.put("/api/receipts/limit-test", json=_receipt_body(store_name="x" * 501)).status_code == 422
+
+
+def test_receipt_item_count_limit(client):
+    def items(n):
+        return [{"id": f"i{k}", "name": "Milch"} for k in range(n)]
+
+    assert client.put("/api/receipts/limit-test", json=_receipt_body(items=items(500))).status_code == 200
+    assert client.put("/api/receipts/limit-test", json=_receipt_body(items=items(501))).status_code == 422

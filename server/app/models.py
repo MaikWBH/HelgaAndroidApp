@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field, StringConstraints
 # Eingabe-Limits (Phase 4, S10): kurze Namen, lange Freitexte und Listen sind begrenzt.
 ShortText = Annotated[str, StringConstraints(max_length=200)]
 LongText = Annotated[str, StringConstraints(max_length=4000)]
+ReceiptText = Annotated[str, StringConstraints(max_length=500)]  # Bon-Archiv (Phase 8, B3-S1)
+ReceiptId = Annotated[str, StringConstraints(max_length=64)]
 TagList = Annotated[List[ShortText], Field(max_length=300)]
 
 
@@ -427,6 +429,27 @@ class ReceiptParseResponse(BaseModel):
 # ── Bon-Archiv (Phase 3a): eigenes bon-weises Protokoll, siehe server-vertrag.md ─────────
 
 class ReceiptItemIn(BaseModel):
+    id: ReceiptId
+    receipt_id: ReceiptId = ""
+    position: int = 0
+    raw_text: ReceiptText = ""
+    name: ReceiptText = ""
+    quantity: float = 1.0
+    unit: ReceiptText = ""
+    unit_price: float = 0.0
+    total_price: float = 0.0
+    discount: float = 0.0
+    is_deposit: int = 0
+    category: ReceiptText = ""
+    off_barcode: ReceiptText = ""
+    confidence: float = 1.0
+    matched_shopping_item_id: ReceiptText = ""
+    match_status: ReceiptText = ""
+    updated_at: int = 0
+    deleted: int = 0
+
+
+class ReceiptItemOut(BaseModel):  # Antwort ohne Eingabe-Limits, damit alte Daten nie zu 500 führen
     id: str
     receipt_id: str = ""
     position: int = 0
@@ -447,28 +470,24 @@ class ReceiptItemIn(BaseModel):
     deleted: int = 0
 
 
-class ReceiptItemOut(ReceiptItemIn):
-    pass
-
-
 class ReceiptIn(BaseModel):
-    id: str
-    store_id: str = ""
-    store_name: str = ""
-    store_address: str = ""
-    shopping_list_id: str = ""
+    id: ReceiptId
+    store_id: ReceiptId = ""
+    store_name: ReceiptText = ""
+    store_address: ReceiptText = ""
+    shopping_list_id: ReceiptId = ""
     purchase_date: int = 0
-    purchase_day: str = ""
-    purchase_time: str = ""
+    purchase_day: ReceiptText = ""
+    purchase_time: ReceiptText = ""
     total_amount: float = 0.0
     discount_total: float = 0.0
     deposit_total: float = 0.0
-    currency: str = "EUR"
-    status: str = "scanned"
-    source: str = ""
+    currency: ReceiptText = "EUR"
+    status: ReceiptText = "scanned"
+    source: ReceiptText = ""
     updated_at: int
     deleted: int = 0
-    items: List[ReceiptItemIn] = []  # immer die vollständige Positionsliste
+    items: List[ReceiptItemIn] = Field(default_factory=list, max_length=500)  # immer die vollständige Positionsliste
 
 
 class ReceiptOut(BaseModel):

@@ -13,7 +13,7 @@ def _call(client, route, rid):
     if route == "get":
         return client.get(url)
     if route == "put":
-        return client.put(url, json={"id": rid, "store_name": "Lidl", "status": "review", "updated_at": 1, "items": []})
+        return client.put(url, json={"id": "ok", "store_name": "Lidl", "status": "review", "updated_at": 1, "items": []})
     if route == "delete":
         return client.delete(url)
     if route == "image":

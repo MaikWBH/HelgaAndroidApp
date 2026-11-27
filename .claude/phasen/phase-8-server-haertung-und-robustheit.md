@@ -81,7 +81,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
 - [x] **S2 Längen für Vorschläge (B4-S12)** — `$SA/suggestions_api.py`, `$ST/test_suggestions.py`. `Query(default="", max_length=100)`
   an allen drei Endpunkten. Test (+1) `test_too_long_query_is_422` (101 Zeichen → 422 je Endpunkt, ein Test mit drei
   Aufrufen). Akzeptanz: `VS` grün.
-- [ ] **S3 Limits für Bons (B3-S1)** — `$SA/models.py`, `$ST/test_request_limits.py`. `ReceiptItemIn`/`ReceiptIn`:
+- [x] **S3 Limits für Bons (B3-S1)** — `$SA/models.py`, `$ST/test_request_limits.py`. `ReceiptItemIn`/`ReceiptIn`:
   alle `str`-Felder `Field(default=…, max_length=500)`, `id`/`receipt_id`/`store_id`/`shopping_list_id` `max_length=64`,
   `items: list[ReceiptItemIn] = Field(default_factory=list, max_length=500)`. Bestehende Tests müssen grün bleiben (sonst
   stoppen: ein Limit ist zu knapp). Test (+2) `test_receipt_text_limit` (501 Zeichen in `store_name` → 422),

@@ -126,7 +126,8 @@ async def put_receipt(db, payload: dict) -> tuple[bool, dict]:
     # Positionen bereinigen
     clean_items = []
     for index, item in enumerate(items):
-        item = ReceiptItemIn(**{"position": index, **dict(item)}).model_dump()  # fehlende Felder → Standardwerte
+        item = {k: (v[:500] if isinstance(v, str) else v) for k, v in dict(item).items()}  # KI-Text nie über dem Limit
+        item = ReceiptItemIn(**{"position": index, **item}).model_dump()  # fehlende Felder → Standardwerte
         item["receipt_id"] = receipt_id
         item["category"] = categories.coerce(item.get("category"))
         item["updated_at"] = item.get("updated_at") or updated_at
