@@ -326,3 +326,14 @@ die bisherigen Spalten aus `TABLE_COLUMNS` setzen (neue Spalten behalten ihren W
 Bons mit leerem `purchase_day` den Backfill-Ausdruck anwenden und `source = 'legacy'` setzen, wenn leer. Datensätze mit
 `deleted = 1` werden **ignoriert** (Archivschutz gegen die Auto-Löschung alter App-Versionen). Für diese Tabellen gibt es
 keine `server_wins`.
+
+## Hinweise (Phase 8, entschieden 2026-11-26)
+
+- **KI-Ausfall bei Bons ergibt 200, nicht 502.** `_ai_parse` (Scan), `categorize` und `reparse` fangen `AiUpstreamError`
+  ab: der Scan antwortet mit `parsed: false` (vorläufiger Bon, Warteschlange), `reparse` ebenso, `categorize` mit leerer
+  Liste. Das ist gewollt, weil die App daraus den Offline-Pfad (ML-Kit-Fallback, später Wiederholung) steuert. Die
+  übrigen KI-Endpunkte (`classify`, `generate`, `remix`, …) antworten bei Ausfall mit 502.
+- **Anzeige „Positionen":** Der Bon-Kopf zeigt die erwartete Summe (`expectedTotal`), nicht die Summe der Positionen.
+- **Schutz vor dem Body:** `GuardMiddleware` prüft `X-Api-Key` und `Content-Length` (Standard 12 MiB,
+  `MAX_REQUEST_BYTES`) für `/api/*` außer `/api/health`, bevor der Body gelesen wird (401/413).
+- **Eingabe-Limits Bon-Archiv:** Texte ≤ 500 Zeichen, IDs ≤ 64 Zeichen (`[A-Za-z0-9_-]`), höchstens 500 Positionen je Bon.

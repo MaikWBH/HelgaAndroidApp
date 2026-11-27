@@ -279,3 +279,12 @@ fun SearchBar(onSearch: (String) -> Unit) {
 
 `mutableIntStateOf`, `mutableLongStateOf`, `mutableFloatStateOf` für primitive Typen
 (performance-optimiert gegenüber `mutableStateOf<Int>`).
+
+---
+
+### Ausnahme zu §9 (Phase 8, V10)
+
+Pflichtobjekte in **Antwort**-DTOs dürfen ohne Standardwert bleiben (`receipt`, `period`, `dimension` in den
+Bon-Antworten). Ein Standardobjekt würde bei einer unvollständigen Antwort einen leeren Datensatz in Room schreiben;
+dann ist ein Deserialisierungsfehler (nicht-fataler Netzwerkfehler) das bessere Verhalten. Alle übrigen Felder behalten
+Defaults.

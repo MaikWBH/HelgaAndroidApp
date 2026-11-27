@@ -646,3 +646,12 @@ S12) und der Zwei-Geräte-Abgleich. Die Logik dahinter ist durch Unit- bzw. Serv
 - **S31 Bon-Detail (Gerät):** vorläufiger Bon zeigt das lokale Foto und lässt sich nicht bearbeiten; „Neu auslesen" ersetzt die Werte; Foto eines alten Bons lädt vom Server.
 - **S32 Lexikon (Gerät):** Eintrag erscheint nach einer Review-Korrektur, Löschen entfernt ihn und die Korrektur greift beim nächsten Scan nicht mehr.
 - **S33 Ausrollen (Nutzer):** Reihenfolge = zuerst die Server-Version mit dieser Phase deployen, dann die neue App auf **beiden** Handys installieren. Bis dahin bleiben alte App-Versionen funktionsfähig (sie liefern Bons weiter über `POST /api/sync` ein; Löschungen werden ignoriert), sehen aber keine Bons anderer Geräte mehr. Vorher einmal `make backup` und `python scripts/restore_purged_receipts.py --db data/recipes.db` (nur Liste) ansehen.
+
+## Akzeptierte Abweichungen (Phase 8, entschieden 2026-11-26)
+
+- **Migration 36→37 löscht bewusst:** `DELETE` auf lokal gelöschte Bons (`deleted = 1`) samt Positionen, auch mit
+  `dirty = 1` (Plan-Annahme 7). Ihre Löschung ist nie beim Server angekommen; die Bons können beim nächsten Pull aus dem
+  Archiv zurückkehren. Das Soft-Delete-Prinzip gilt für Bons nur eingeschränkt (Archiv liegt auf dem Server).
+- **B8-S4:** Der Lexikon-Leerzustand zeigt nur Text ohne Aktion (Plan S32 verlangt nur den Leertext).
+- **B7-P1:** Die Budget-Karte steht vor dem Leerzustand der Kostenübersicht.
+- **B1-P2:** Die drei zusätzlichen `@Transaction`-Methoden im `ReceiptDao` (Phase 6 S2) bleiben.

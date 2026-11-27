@@ -148,7 +148,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   **Danach Block C pushen.**
 
 ### Block D — Doku statt Code
-- [ ] **S12 Spec und Guidelines anpassen** — `.claude/phasen/phase-3-daten/server-vertrag.md` (B3-S4/B4-S3: KI-Ausfall bei
+- [x] **S12 Spec und Guidelines anpassen** — `.claude/phasen/phase-3-daten/server-vertrag.md` (B3-S4/B4-S3: KI-Ausfall bei
   `_ai_parse`, `categorize`, `reparse` ergibt 200 mit `parsed:false` bzw. leer — gewollt; B8-P3: „Positionen" zeigt die
   erwartete Summe), `.claude/guidelines/kotlin-quality.md` §9 (V10: Pflichtobjekte von Antwort-DTOs ohne Standardwert
   sind erlaubt, weil ein Standardobjekt leere Datensätze in Room schreiben würde), `.claude/phasen/phase-3a-bons-server-scan.md`
