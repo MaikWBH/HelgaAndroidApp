@@ -1,7 +1,6 @@
 # Phase 8 — Server-Härtung und App-Robustheit (Rest der Nutzerliste aus Phase 6)
 
-> Status: **definiert (Stufe A), noch nicht gestartet.** Startet erst nach Abschluss von Phase 7. Vor dem Start: Gate 0
-> (Modellwahl) laut [README](README.md) und Freigabe dieser Datei; Zeilennummern sind Stand `99735ec` und vor jeder
+> Status: **freigegeben, Stufe B läuft (2026-11-27).** Gate 0 erledigt; Zeilennummern sind Stand `99735ec` und vor jeder
 > Änderung per `grep -n` neu zu suchen (Phase 7 verschiebt viele davon).
 
 Basispfad `$B` = `app/src/main/kotlin/com/helga/android` · Testpfad `$T` = `app/src/test/kotlin/com/helga/android` ·
@@ -11,7 +10,7 @@ Quellen: Nutzerliste in [phase-6-daten/review-bericht.md](phase-6-daten/review-b
 Entscheidung"); Entscheidungen der Fragerunden aus Phase 7 Stufe A (2026-11-26).
 
 ## Modelle
-- Definition: Opus 5.5 · Umsetzung: offen (Gate 0; Vorschlag Sonnet 5.5) · Datum: 2026-11-26
+- Definition: Opus 5.5 · Umsetzung: Sonnet 5.5 (Gate 0, 2026-11-27) · Datum: 2026-11-26
 
 ## Ziel und Bereich
 Die in Phase 7 zurückgestellten, vom Nutzer freigegebenen Einträge der Phase-6-Nutzerliste umsetzen: Härtung des
@@ -72,7 +71,7 @@ Vorgehen, Verifikation `V`/`TC`/`VS`, Regeln und Push je Block: wie in
 Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nennt den Zuwachs.
 
 ### Block A — Baseline
-- [ ] **S0 Baseline** — `V`, `TC`, `VS` notieren (erwartet: Endstand Phase 7, App 351, Server 192).
+- [x] **S0 Baseline** — `V`, `TC`, `VS` notieren (erwartet: Endstand Phase 7, App 351, Server 192).
 
 ### Block B — Server-Härtung
 - [ ] **S1 Weiterleitung ohne `Location` (V5)** — `$SA/ai.py`, `$ST/test_url_guard.py`. `location = resp.headers.get("location")`;
@@ -100,7 +99,10 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   (Struktur-Liste und `.env.example`-Hinweis), neu `$ST/test_guard_middleware.py`. Tests (+3): 401 ohne Schlüssel auf
   `POST /api/receipts/scan` **ohne** dass `save_receipt_image` aufgerufen wird (per `monkeypatch` Zähler), 413 bei
   `Content-Length` über der Grenze, `/api/health` ohne Schlüssel 200. Akzeptanz: `VS` grün; `test_health_auth.py` grün.
-  **Danach Block B pushen.** (Rollout-Hinweis für den Nutzer: Server vor App, `make backup`.)
+- [ ] **S14 Pinning (B5-S6, Nachtrag 2026-11-27)** — `server/requirements-dev.txt` (`pytest==9.2.0`, die in der Cloud
+  verwendete Version), `server/Dockerfile` (`ARG PYTHON_IMAGE=python:3.12.16-slim-bookworm`, Tag auf Docker Hub
+  geprüft), `server/CLAUDE.md` (Satz: Updates von Basis-Image und `pytest` geschehen bewusst). Kein Docker-Build in der
+  Cloud. Akzeptanz: `VS` grün. **Danach Block B pushen.** (Rollout-Hinweis für den Nutzer: Server vor App, `make backup`.)
 
 ### Block C — App-Robustheit
 - [ ] **S6 Abbrüche weiterwerfen (B6-S1, B9-S6)** — alle Dateien aus
@@ -139,6 +141,10 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   `$T/ReceiptUploaderTest.kt`. Vor `uploadReceiptImage` `imageStore.downscaleInPlace(file)` (gleiche Grenzen wie `prepare`:
   längste Seite 2000 px, JPEG 85; Datei unter 2000 px bleibt unverändert). 413 trotzdem → `pendingUpload = 0` und
   `parseStatus = "rejected"` (Muster Phase 7 S6). Test (+1): 413 beendet die Wiederholung. Akzeptanz: `V` grün.
+- [ ] **S15 Timer-Chip erreichbar (B10-S4, Nachtrag 2026-11-27)** — Kochansicht (`$B/ui/recipes/RecipeCookScreen.kt`,
+  `toggleable`-Zeile mit `SuggestionChip`): Zeile und Chip semantisch trennen (Chip außerhalb der `toggleable`-Fläche,
+  z. B. `Row` mit eigener `toggleable`-Fläche für Text/Checkbox und danach der Chip), Verhalten und Optik unverändert.
+  Kein Unit-Test; TalkBack-Prüfung steht in der Nutzer-Liste (S13). Akzeptanz: `V` grün; `UiConventionsTest` grün.
   **Danach Block C pushen.**
 
 ### Block D — Doku statt Code
@@ -157,9 +163,9 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   **Danach pushen.**
 
 ## Nicht-Ziele
-- B5-S6 (Pinning), neue Endpunkte, Room-Schema-Änderungen, Docker-Builds und echte KI-Aufrufe.
+- Neue Endpunkte, Room-Schema-Änderungen, Docker-Builds und echte KI-Aufrufe.
 
 ## Abschluss
-- [ ] Baseline S0: App `TC` …, Server …
+- [x] Baseline S0: App `TC` 351, Server 192 passed (wie erwartet)
 - [ ] Endstand: App `TC` …, Server …
 - [ ] Gemeldete Abweichungen: …
