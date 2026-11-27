@@ -74,7 +74,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
 - [x] **S0 Baseline** — `V`, `TC`, `VS` notieren (erwartet: Endstand Phase 7, App 351, Server 192).
 
 ### Block B — Server-Härtung
-- [ ] **S1 Weiterleitung ohne `Location` (V5)** — `$SA/ai.py`, `$ST/test_url_guard.py`. `location = resp.headers.get("location")`;
+- [x] **S1 Weiterleitung ohne `Location` (V5)** — `$SA/ai.py`, `$ST/test_url_guard.py`. `location = resp.headers.get("location")`;
   fehlt sie → `raise ValueError("Ungültige Weiterleitung")` (der bestehende Pfad macht daraus 422). Test (+1)
   `test_redirect_without_location_is_rejected` (Attrappe wie in `test_redirect_to_private_address_is_rejected`, 302 ohne
   Header → 422). Akzeptanz: `VS` grün.

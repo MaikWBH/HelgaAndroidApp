@@ -243,7 +243,10 @@ async def _fetch_html(url: str) -> str:
                         redirects += 1
                         if redirects > MAX_IMPORT_REDIRECTS:
                             raise ValueError("Zu viele Weiterleitungen")
-                        current = urljoin(current, resp.headers["location"])
+                        location = resp.headers.get("location")
+                        if not location:
+                            raise ValueError("Ungültige Weiterleitung")
+                        current = urljoin(current, location)
                         continue
                     resp.raise_for_status()
                     return await _read_limited(resp)

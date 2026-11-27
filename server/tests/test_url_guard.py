@@ -135,6 +135,15 @@ def test_redirect_to_private_address_is_rejected(dns, monkeypatch):
     assert _fetch_error("http://93.184.216.34/") == "Diese Adresse ist nicht erlaubt"
 
 
+def test_redirect_without_location_is_rejected(dns, monkeypatch):
+    class _RedirectWithoutLocation(_Resp):
+        # httpx selbst meldet ohne Location kein is_redirect; die Absicherung gilt für jede Antwort, die es doch tut.
+        is_redirect = True
+
+    _client_with(monkeypatch, {"http://93.184.216.34/": _RedirectWithoutLocation(302)})
+    assert _fetch_error("http://93.184.216.34/") == "Ungültige Weiterleitung"
+
+
 def test_five_redirects_allowed_six_rejected(dns, monkeypatch):
     base = "http://93.184.216.34/r{}"
     pages = {base.format(i): _Resp(302, headers={"Location": base.format(i + 1)}) for i in range(5)}

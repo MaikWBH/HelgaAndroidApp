@@ -63,3 +63,11 @@ def test_aisles_and_units_unchanged(client):
     assert client.get("/api/suggestions/units", params={"item": "Tomate"}).json() == {"units": ["Stück"]}
     assert client.get("/api/suggestions/units", params={"item": "Unbekannt"}).json() == {"units": []}
     assert client.get("/api/suggestions/units").json() == {"units": []}
+
+
+def test_too_long_query_is_422(client):
+    too_long = "x" * 101
+    assert client.get("/api/suggestions/items", params={"q": too_long}).status_code == 422
+    assert client.get("/api/suggestions/aisles", params={"item": too_long}).status_code == 422
+    assert client.get("/api/suggestions/units", params={"item": too_long}).status_code == 422
+    assert client.get("/api/suggestions/items", params={"q": "x" * 100}).status_code == 200

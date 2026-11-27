@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, Query
 from .auth import require_auth
 from .db import get_db
 
+MAX_QUERY = 100
+
 router = APIRouter(dependencies=[Depends(require_auth)])
 
 
@@ -13,7 +15,7 @@ def _escape_like(text: str) -> str:
 
 
 @router.get("/api/suggestions/items")
-async def suggest_items(q: str = Query(default="")):
+async def suggest_items(q: str = Query(default="", max_length=MAX_QUERY)):
     if not q:
         return {"suggestions": []}
     pattern = f"%{_escape_like(q)}%"
@@ -32,7 +34,7 @@ async def suggest_items(q: str = Query(default="")):
 
 
 @router.get("/api/suggestions/aisles")
-async def suggest_aisle(item: str = Query(default="")):
+async def suggest_aisle(item: str = Query(default="", max_length=MAX_QUERY)):
     if not item:
         return {"aisle": ""}
     async with get_db() as db:
@@ -45,7 +47,7 @@ async def suggest_aisle(item: str = Query(default="")):
 
 
 @router.get("/api/suggestions/units")
-async def suggest_units(item: str = Query(default="")):
+async def suggest_units(item: str = Query(default="", max_length=MAX_QUERY)):
     if not item:
         return {"units": []}
     async with get_db() as db:
