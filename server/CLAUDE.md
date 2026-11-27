@@ -139,6 +139,7 @@ Da die API öffentlich erreichbar ist, muss `API_KEY` in Produktion gesetzt sein
   Der Standard-Build (`docker build .`, letzte Stage `runtime`) führt die Tests **nicht** aus. Tests im Container:
   `make docker-test` (= `docker build --target test -t helga-test .`, Python 3.12).
 - `WEB_CONCURRENCY` (Standard 2) bestimmt die Anzahl Uvicorn-Worker; Uvicorn liest die Variable selbst.
+- Pins (Phase 8): Basis-Image `python:3.12.16-slim-bookworm` (Patchversion, kein Digest) und `pytest==9.2.0`; Updates geschehen bewusst, nicht automatisch.
 - Pin: `recipe-scrapers==15.13.0`. `jstyleson` (über `extruct`) gibt es nur als Quellpaket: **kein** `--only-binary`
   beim Installieren, sonst fällt pip auf eine ältere `recipe-scrapers` zurück.
 - Gehärteter Prod-Container (`docker-compose.prod.yml`): `read_only`, schreibbar sind nur `/app/data` (Volume) und

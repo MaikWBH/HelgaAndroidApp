@@ -1,4 +1,4 @@
-ARG PYTHON_IMAGE=python:3.12-slim-bookworm
+ARG PYTHON_IMAGE=python:3.12.16-slim-bookworm
 
 # ── builder: Abhängigkeiten installieren (jstyleson liegt nur als Quellpaket vor) ──
 FROM ${PYTHON_IMAGE} AS builder

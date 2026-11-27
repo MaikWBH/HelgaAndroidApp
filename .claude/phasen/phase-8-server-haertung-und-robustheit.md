@@ -99,7 +99,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   (Struktur-Liste und `.env.example`-Hinweis), neu `$ST/test_guard_middleware.py`. Tests (+3): 401 ohne Schlüssel auf
   `POST /api/receipts/scan` **ohne** dass `save_receipt_image` aufgerufen wird (per `monkeypatch` Zähler), 413 bei
   `Content-Length` über der Grenze, `/api/health` ohne Schlüssel 200. Akzeptanz: `VS` grün; `test_health_auth.py` grün.
-- [ ] **S14 Pinning (B5-S6, Nachtrag 2026-11-27)** — `server/requirements-dev.txt` (`pytest==9.2.0`, die in der Cloud
+- [x] **S14 Pinning (B5-S6, Nachtrag 2026-11-27)** — `server/requirements-dev.txt` (`pytest==9.2.0`, die in der Cloud
   verwendete Version), `server/Dockerfile` (`ARG PYTHON_IMAGE=python:3.12.16-slim-bookworm`, Tag auf Docker Hub
   geprüft), `server/CLAUDE.md` (Satz: Updates von Basis-Image und `pytest` geschehen bewusst). Kein Docker-Build in der
   Cloud. Akzeptanz: `VS` grün. **Danach Block B pushen.** (Rollout-Hinweis für den Nutzer: Server vor App, `make backup`.)
