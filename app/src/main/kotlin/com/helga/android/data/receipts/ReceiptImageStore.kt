@@ -2,9 +2,11 @@ package com.helga.android.data.receipts
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import com.helga.android.data.util.ReceiptImagePreprocessor
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -33,6 +35,35 @@ class ReceiptImageStore @Inject constructor(
         val file = File(photoDir, "$receiptId.jpg")
         file.outputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out) }
         PreparedImage(file, bitmap)
+    }
+
+    /**
+     * Verkleinert ein vorhandenes Foto (Bestand ohne Verkleinerung) auf höchstens [MAX_DIM] px, JPEG [JPEG_QUALITY].
+     * Dateien, die schon klein genug sind, bleiben unverändert; bei Fehlern bleibt die Datei, wie sie ist.
+     */
+    suspend fun downscaleInPlace(file: File) = withContext(Dispatchers.IO) {
+        try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, bounds)
+            val longest = maxOf(bounds.outWidth, bounds.outHeight)
+            if (longest <= MAX_DIM) return@withContext
+            var sample = 1
+            while (longest / (sample * 2) >= MAX_DIM) sample *= 2
+            val decoded = BitmapFactory.decodeFile(
+                file.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample },
+            ) ?: return@withContext
+            val scale = MAX_DIM.toFloat() / maxOf(decoded.width, decoded.height)
+            val scaled = if (scale < 1f) {
+                Bitmap.createScaledBitmap(decoded, (decoded.width * scale).toInt(), (decoded.height * scale).toInt(), true)
+            } else decoded
+            val tmp = File(file.parentFile, file.name + ".tmp")
+            tmp.outputStream().use { out -> scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out) }
+            if (!tmp.renameTo(file)) tmp.delete()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "Foto konnte nicht verkleinert werden: %s", file.name)
+        }
     }
 
     /** Löscht die Foto-Datei (Pfad oder `file://`-URI); fehlende Dateien sind kein Fehler. */

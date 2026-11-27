@@ -132,4 +132,16 @@ class ReceiptUploaderTest {
         coEvery { api.uploadReceiptImage("b", any()) } throws HttpException(Response.error<Any>(503, "".toResponseBody(null)))
         assertEquals(true, uploader.uploadPending().retry)
     }
+
+    @Test
+    fun `413 ends the retry loop and marks the receipt as rejected`() = runTest {
+        val file = tmp.newFile("big.jpg")
+        coEvery { dao.pendingUploads() } returns listOf(receipt("p", "scanned", file))
+        coEvery { api.uploadReceiptImage("p", any()) } throws
+            HttpException(Response.error<Any>(413, "{}".toResponseBody()))
+        val result = uploader.uploadPending()
+        assertEquals(false, result.retry)
+        coVerify { dao.upsertReceipt(match { it.id == "p" && it.pendingUpload == 0 && it.parseStatus == "rejected" }) }
+        coVerify { store.downscaleInPlace(file) }
+    }
 }

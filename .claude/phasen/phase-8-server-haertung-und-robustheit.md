@@ -137,7 +137,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   `$B/ui/weekplan/WeekplanViewModel.kt` (`weekBalance` aus `combine(days, allRecipes, <Flow aus observeRecipesForDays(dayIds)>)`
   per `flatMapLatest` statt `recipesForDay`-Snapshot). Tests (+2): `ReceiptStatsTest` mit `Locale.setDefault(Locale("ar"))`
   liefert `2026-W46`; Wochenbilanz aktualisiert sich nach neuem Rezept (Flow-Emission). Akzeptanz: `V` grün.
-- [ ] **S11 Bestandsfotos verkleinern (B2-P3)** — `$B/data/receipts/ReceiptUploader.kt`, `$B/data/receipts/ReceiptImageStore.kt`,
+- [x] **S11 Bestandsfotos verkleinern (B2-P3)** — `$B/data/receipts/ReceiptUploader.kt`, `$B/data/receipts/ReceiptImageStore.kt`,
   `$T/ReceiptUploaderTest.kt`. Vor `uploadReceiptImage` `imageStore.downscaleInPlace(file)` (gleiche Grenzen wie `prepare`:
   längste Seite 2000 px, JPEG 85; Datei unter 2000 px bleibt unverändert). 413 trotzdem → `pendingUpload = 0` und
   `parseStatus = "rejected"` (Muster Phase 7 S6). Test (+1): 413 beendet die Wiederholung. Akzeptanz: `V` grün.

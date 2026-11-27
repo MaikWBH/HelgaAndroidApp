@@ -51,7 +51,12 @@ class ReceiptUploader @Inject constructor(
                 Timber.w(e, "Bon-Upload offline: %s", receipt.id)
                 retry = true
             } catch (e: HttpException) {
-                if (e.code() >= 500) retry = true
+                if (e.code() == 413) {
+                    rejectUpload(receipt) // Foto zu groß: nicht endlos wiederholen (Phase 8, B2-P3)
+                    done++
+                } else if (e.code() >= 500) {
+                    retry = true
+                }
                 Timber.w(e, "Bon-Upload abgelehnt (HTTP %d): %s", e.code(), receipt.id)
             }
         }
@@ -70,6 +75,7 @@ class ReceiptUploader @Inject constructor(
             return true
         }
 
+        imageStore.downscaleInPlace(file)
         val part = MultipartBody.Part.createFormData(
             "file", file.name, file.asRequestBody("image/jpeg".toMediaType()),
         )
@@ -101,6 +107,12 @@ class ReceiptUploader @Inject constructor(
         }
         imageStore.delete(file.absolutePath)
         return true
+    }
+
+    private suspend fun rejectUpload(receipt: ReceiptEntity) {
+        val current = receiptDao.findById(receipt.id) ?: receipt
+        receiptDao.upsertReceipt(current.copy(pendingUpload = 0, parseStatus = "rejected", localImageUri = ""))
+        imageStore.delete(receipt.localImageUri)
     }
 
     private suspend fun replaceWithServer(remote: ReceiptRemoteDto, local: ReceiptEntity) {
