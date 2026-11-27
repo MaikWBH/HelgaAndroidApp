@@ -135,4 +135,15 @@ class ReceiptStatsTest {
         assertEquals(0.0, ReceiptStats.currentMonthTotal(emptyList(), today), 1e-9)
         assertEquals(12, ReceiptStats.monthSeries(emptyList(), today).size)
     }
+
+    @Test
+    fun wochenkennung_ist_unabhaengig_von_der_geraetesprache() {
+        val before = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("ar"))
+            assertEquals("2026-W46", ReceiptStats.weekPeriods(LocalDate.of(2026, 11, 11), 1).single())
+        } finally {
+            java.util.Locale.setDefault(before)
+        }
+    }
 }

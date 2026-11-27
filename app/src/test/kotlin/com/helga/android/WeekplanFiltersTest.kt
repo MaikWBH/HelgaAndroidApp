@@ -6,6 +6,7 @@ import com.helga.android.data.local.entity.WeekplanRecipeEntity
 import com.helga.android.ui.weekplan.WeekBalance
 import com.helga.android.ui.weekplan.computeWeekBalance
 import com.helga.android.data.weekplan.filterCandidateRecipes
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -170,5 +171,20 @@ class WeekplanFiltersTest {
     @Test
     fun `empty week yields an all-zero balance`() {
         assertEquals(WeekBalance(), computeWeekBalance(emptyMap(), emptyMap()))
+    }
+
+    @Test
+    fun `week balance flow follows added recipes`() = kotlinx.coroutines.test.runTest {
+        val days = kotlinx.coroutines.flow.flowOf(listOf(com.helga.android.data.local.entity.WeekplanDayEntity(id = "d1")))
+        val entries = kotlinx.coroutines.flow.MutableStateFlow(emptyList<WeekplanRecipeEntity>())
+        val recipes = kotlinx.coroutines.flow.flowOf(mapOf("r1" to recipe("r1", proteinType = "fisch")))
+        val values = mutableListOf<WeekBalance>()
+        val job = launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            com.helga.android.ui.weekplan.weekBalanceFlow(days, { entries }, recipes).collect { values += it }
+        }
+        entries.value = listOf(weekplanRecipe("w1", "d1", "r1"))
+        job.cancel()
+        assertEquals(WeekBalance(), values.first())
+        assertEquals(WeekBalance(fish = 1), values.last())
     }
 }

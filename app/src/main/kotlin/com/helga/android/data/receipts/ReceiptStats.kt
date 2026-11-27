@@ -8,6 +8,7 @@ import com.helga.android.data.model.TrendPoint
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.IsoFields
+import java.util.Locale
 
 /**
  * Auswertung auf dem lokalen Abzug der Server-Aggregate (`receipt_aggregates`). Reines Kotlin, ohne Android:
@@ -31,7 +32,7 @@ object ReceiptStats {
     fun weekPeriods(today: LocalDate, n: Int): List<String> =
         (n - 1 downTo 0).map {
             val date = today.minusWeeks(it.toLong())
-            "%d-W%02d".format(date.get(IsoFields.WEEK_BASED_YEAR), date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))
+            String.format(Locale.ROOT, "%d-W%02d", date.get(IsoFields.WEEK_BASED_YEAR), date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))
         }
 
     fun monthSeries(rows: List<ReceiptAggregateEntity>, today: LocalDate, n: Int = 12): List<PeriodAmount> =

@@ -132,7 +132,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   `viewModel.reparse()` (vorher `dismissReparseError()`). Dialoge: einzeilige Felder `ImeAction.Next`, letztes Feld
   `ImeAction.Done` mit `KeyboardActions(onDone = { focusManager.clearFocus() })`. Test (+1) im Lexikon-ViewModel-Test:
   Löschen erst nach `confirmDelete`, nicht nach `undo`. Akzeptanz: `V` grün.
-- [ ] **S10 Kleinkram (B7-S7/P2, B7-P4, B9-S3)** — `$B/ui/receipts/CostOverviewScreen.kt` (solange `!state.loaded`
+- [x] **S10 Kleinkram (B7-S7/P2, B7-P4, B9-S3)** — `$B/ui/receipts/CostOverviewScreen.kt` (solange `!state.loaded`
   `LoadingIndicator` statt Leerzustand), `$B/data/receipts/ReceiptStats.kt` (`String.format(Locale.ROOT, "%d-W%02d", …)`),
   `$B/ui/weekplan/WeekplanViewModel.kt` (`weekBalance` aus `combine(days, allRecipes, <Flow aus observeRecipesForDays(dayIds)>)`
   per `flatMapLatest` statt `recipesForDay`-Snapshot). Tests (+2): `ReceiptStatsTest` mit `Locale.setDefault(Locale("ar"))`

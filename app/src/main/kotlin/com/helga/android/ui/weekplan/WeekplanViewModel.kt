@@ -21,6 +21,7 @@ import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -65,6 +66,23 @@ fun computeWeekBalance(
         }
     }
     return WeekBalance(meat, fish, veg, other)
+}
+
+/**
+ * Wochenbilanz als Flow: reagiert auf neue und entfernte Rezepte der Tage (Phase 8, B9-S3).
+ * Die Rezepte der Tage kommen als Flow (`observeRecipesForDays`), nicht als einmaliger Snapshot.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+fun weekBalanceFlow(
+    days: Flow<List<WeekplanDayEntity>>,
+    recipesForDays: (List<String>) -> Flow<List<WeekplanRecipeEntity>>,
+    allRecipes: Flow<Map<String, RecipeEntity>>,
+): Flow<WeekBalance> {
+    val byDay = days.flatMapLatest { dayList ->
+        if (dayList.isEmpty()) flowOf(emptyMap())
+        else recipesForDays(dayList.map { it.id }).map { list -> list.groupBy { it.weekplanDayId } }
+    }
+    return combine(byDay, allRecipes) { recipesByDay, recipesMap -> computeWeekBalance(recipesByDay, recipesMap) }
 }
 
 /**
@@ -188,10 +206,8 @@ class WeekplanViewModel @Inject constructor(
         .map { list -> list.associateBy { it.id } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    val weekBalance: StateFlow<WeekBalance> = combine(days, allRecipes) { dayList, recipesMap ->
-        val recipesByDay = dayList.associate { it.id to repository.recipesForDay(it.id) }
-        computeWeekBalance(recipesByDay, recipesMap)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekBalance())
+    val weekBalance: StateFlow<WeekBalance> = weekBalanceFlow(days, repository::observeRecipesForDays, allRecipes)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekBalance())
 
     val weekNutrition: StateFlow<WeekplanNutrition?> = combine(days, weekRecipes) { dayList, _ ->
         if (dayList.isEmpty()) null

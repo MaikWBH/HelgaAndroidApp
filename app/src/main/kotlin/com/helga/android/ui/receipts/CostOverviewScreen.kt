@@ -58,6 +58,7 @@ import com.helga.android.data.model.KeyAmount
 import com.helga.android.data.model.ProductCategory
 import com.helga.android.data.model.StatsRange
 import com.helga.android.ui.common.formatEuro
+import com.helga.android.ui.components.LoadingIndicator
 import com.helga.android.ui.components.PreviewSurface
 import com.helga.android.ui.components.ThemePreviews
 import com.helga.android.ui.receipts.charts.ChartBar
@@ -149,7 +150,13 @@ internal fun CostOverviewContent(
                         onEdit = { showBudgetDialog = true },
                     )
                 }
-                if (state.empty) {
+                if (!state.loaded) {
+                    item(key = "loading") {
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            LoadingIndicator()
+                        }
+                    }
+                } else if (state.empty) {
                     item(key = "empty") { EmptyStats() }
                 } else {
                     item(key = "spending") {
