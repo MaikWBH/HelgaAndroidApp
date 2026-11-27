@@ -19,6 +19,7 @@ import com.helga.android.data.repository.StoreRepository
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -101,6 +102,8 @@ class ReceiptScanViewModel @Inject constructor(
                         _uiState.value = ReceiptScanUiState.Provisional(outcome.receiptId, outcome.queuedOnServer)
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Receipt scan failed")
                 _uiState.value = ReceiptScanUiState.Error(UiText.Res(R.string.receipt_scan_read_failed))
@@ -138,6 +141,8 @@ class ReceiptScanViewModel @Inject constructor(
                     needsReview = ReceiptReviewCheck.needsReview(receipt, items),
                     source = receipt.source.toScanSource(),
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Receipt load for review failed")
                 _uiState.value = ReceiptScanUiState.Error(UiText.Res(R.string.receipt_scan_read_failed))
@@ -247,6 +252,8 @@ class ReceiptScanViewModel @Inject constructor(
                 receiptRepository.confirmReceipt(receipt, current.items)
                 syncScheduler.triggerOneShot()
                 _uiState.value = ReceiptScanUiState.Saved
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Receipt save failed")
                 _uiState.value = ReceiptScanUiState.Error(UiText.Res(R.string.receipt_scan_save_failed))

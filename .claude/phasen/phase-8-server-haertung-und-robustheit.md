@@ -105,7 +105,7 @@ Commit-Präfix „Phase 8 S<n>:". Testzahlen: Baseline aus S0, jeder Schritt nen
   Cloud. Akzeptanz: `VS` grün. **Danach Block B pushen.** (Rollout-Hinweis für den Nutzer: Server vor App, `make backup`.)
 
 ### Block C — App-Robustheit
-- [ ] **S6 Abbrüche weiterwerfen (B6-S1, B9-S6)** — alle Dateien aus
+- [x] **S6 Abbrüche weiterwerfen (B6-S1, B9-S6)** — alle Dateien aus
   `grep -rln "catch (e: Exception)\|catch (_: Exception)" $B`, außer den nicht-suspendierenden Fundstellen
   `data/preferences/AppPreferences.kt`, `data/remote/ApiErrorMapping.kt`, `data/util/ReceiptImagePreprocessor.kt`,
   `ui/ai/RecipeJsonLdParser.kt`, `ui/components/BarcodeScanner.kt` (in Stufe B per Blick auf die Stelle bestätigen; ist eine

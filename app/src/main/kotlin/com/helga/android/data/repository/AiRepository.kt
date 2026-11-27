@@ -8,6 +8,7 @@ import com.helga.android.data.remote.dto.AiClassifyRequest
 import com.helga.android.data.remote.dto.AiClassifyResponse
 import com.helga.android.data.remote.dto.AiNutritionRequest
 import com.helga.android.data.remote.dto.AiNutritionResponse
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
@@ -37,6 +38,8 @@ class AiRepository @Inject constructor(
         ImportOutcome.Error(detail ?: "Import fehlgeschlagen (Fehler ${e.code()})")
     } catch (e: IOException) {
         ImportOutcome.Error("Server nicht erreichbar")
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         ImportOutcome.Error(e.message ?: "Unbekannter Fehler")
     }

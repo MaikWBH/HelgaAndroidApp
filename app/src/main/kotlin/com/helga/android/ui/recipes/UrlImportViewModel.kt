@@ -13,6 +13,7 @@ import com.helga.android.data.repository.RecipeRepository
 import com.helga.android.ui.common.UiState
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -138,6 +139,8 @@ class UrlImportViewModel @Inject constructor(
                     )
                     syncScheduler.triggerOneShot()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 // Stillschweigend fehlschlagen — Rezept wurde bereits gespeichert
             }

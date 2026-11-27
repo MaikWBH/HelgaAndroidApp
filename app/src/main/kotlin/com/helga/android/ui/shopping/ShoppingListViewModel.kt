@@ -19,6 +19,7 @@ import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.SyncEngine
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -206,6 +207,8 @@ class ShoppingListViewModel @Inject constructor(
                 activeListId.value?.let { listId ->
                     _costEstimate.value = repository.estimateListCosts(listId)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Offline oder Server nicht erreichbar – lokale Liste unverändert lassen.
             } finally {
@@ -339,6 +342,8 @@ class ShoppingListViewModel @Inject constructor(
         if (query.length < 2) return emptyList()
         val local = try {
             repository.searchItemNames(query) + recipeRepository.searchIngredientNames(query)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.d(e, "Local suggestion lookup failed")
             emptyList()
@@ -379,6 +384,8 @@ class ShoppingListViewModel @Inject constructor(
                 )
                 // Zeige Produkt-Detail-Dialog statt direkt hinzuzufügen
                 _scannedProduct.value = product
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.w(e, "Barcode lookup failed: $barcode")
                 // Bei Fehler: Generisches Produkt-Dummy anzeigen
@@ -404,6 +411,8 @@ class ShoppingListViewModel @Inject constructor(
                 )
                 syncScheduler.triggerOneShot()
                 _scannedProduct.value = null
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Failed to add item from barcode")
             }
@@ -425,6 +434,8 @@ class ShoppingListViewModel @Inject constructor(
                     name = name,
                 )
                 syncScheduler.triggerOneShot()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Failed to add catalog product to list")
             }
@@ -444,6 +455,8 @@ class ShoppingListViewModel @Inject constructor(
             try {
                 Timber.d("Saving scanned product to catalog: %s", product.id)
                 _scannedProduct.value = null
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Failed to save product to catalog")
             }

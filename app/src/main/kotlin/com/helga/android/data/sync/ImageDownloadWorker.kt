@@ -12,6 +12,7 @@ import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.util.ImageUrls
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
 /**
@@ -46,6 +47,8 @@ class ImageDownloadWorker @AssistedInject constructor(
                 val request = ImageRequest.Builder(applicationContext).data(url).build()
                 val result = loader.execute(request)
                 if (result !is SuccessResult) allOk = false
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.w(e, "ImageDownload fehlgeschlagen: $imagePath")
                 allOk = false

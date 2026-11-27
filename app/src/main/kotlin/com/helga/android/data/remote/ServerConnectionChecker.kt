@@ -2,6 +2,7 @@ package com.helga.android.data.remote
 
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.sync.SyncScheduler
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 import timber.log.Timber
 import java.io.IOException
@@ -38,6 +39,8 @@ class ServerConnectionChecker @Inject constructor(
     } catch (e: IOException) {
         Timber.w(e, "Healthcheck offline")
         ConnectionResult.Unreachable
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         Timber.e(e, "Healthcheck unbekannter Fehler")
         ConnectionResult.Other(e.message ?: "Unbekannter Fehler")

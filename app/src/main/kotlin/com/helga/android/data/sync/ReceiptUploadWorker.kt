@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.helga.android.data.receipts.ReceiptUploader
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
 /**
@@ -24,6 +25,8 @@ class ReceiptUploadWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val result = try {
             uploader.uploadPending()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.w(e, "Bon-Upload fehlgeschlagen")
             return Result.retry()

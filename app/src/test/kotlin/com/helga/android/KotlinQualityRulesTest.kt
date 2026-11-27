@@ -31,4 +31,26 @@ class KotlinQualityRulesTest {
             violations.isEmpty(),
         )
     }
+
+    /** Nicht-suspendierende Fundstellen: dort ist ein Coroutine-Abbruch nicht möglich. */
+    private val keineCoroutine = setOf(
+        "AppPreferences.kt", "ApiErrorMapping.kt", "ReceiptImagePreprocessor.kt", "RecipeJsonLdParser.kt", "BarcodeScanner.kt",
+    )
+
+    @Test
+    fun abbrueche_werden_weitergeworfen() {
+        val rethrow = Regex("""catch \(e: CancellationException\) \{\s*throw e\s*\}""")
+        val generic = Regex("""catch \(\w+: Exception\)""")
+        val violations = sources().filter { it.name !in keineCoroutine }.mapNotNull { file ->
+            val text = file.readText()
+            val caught = generic.findAll(text).count()
+            val rethrown = rethrow.findAll(text).count()
+            if (rethrown < caught) "${file.name}: $caught x catch (Exception), $rethrown x Rethrow" else null
+        }
+        assertTrue(
+            "`catch (e: Exception)` ohne `catch (e: CancellationException) { throw e }` davor (kotlin-quality):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty(),
+        )
+    }
 }

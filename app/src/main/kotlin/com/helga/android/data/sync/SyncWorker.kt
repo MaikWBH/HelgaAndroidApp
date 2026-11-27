@@ -43,6 +43,8 @@ class SyncWorker @AssistedInject constructor(
             Timber.w(io, "Sync offline")
             statusHolder.update(SyncStatus.Offline)
             Result.retry()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.e(e, "Sync error")
             statusHolder.update(SyncStatus.Error(e.message ?: e.javaClass.simpleName))

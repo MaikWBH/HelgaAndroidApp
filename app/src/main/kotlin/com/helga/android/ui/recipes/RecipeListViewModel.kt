@@ -12,6 +12,7 @@ import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -155,6 +156,8 @@ class RecipeListViewModel @Inject constructor(
                             seasonFit = result.seasonFit.ifBlank { recipe.seasonFit },
                         )
                     )
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Timber.w(e, "Fehler bei Klassifizierung von $recipeId")
                 }

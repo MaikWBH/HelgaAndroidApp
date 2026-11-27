@@ -11,6 +11,7 @@ import com.helga.android.data.local.entity.WeekplanDayEntity
 import com.helga.android.data.preferences.AppPreferences
 import com.helga.android.data.remote.dto.WeekplanAssignmentDto
 import com.helga.android.data.repository.WeekplanRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -189,6 +190,8 @@ class WeekplanGenerator @Inject constructor(
             }
 
             WeekplanGenerateStatus.Proposal(assignments, warnings)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             WeekplanGenerateStatus.Error(e.message ?: "Fehler bei der Generierung")
         }
@@ -383,6 +386,8 @@ class WeekplanGenerator @Inject constructor(
                 return WeekplanGenerateStatus.Error("Vorwoche hat keine Rezepte")
             }
             WeekplanGenerateStatus.Proposal(assignments, emptyList())
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             WeekplanGenerateStatus.Error(e.message ?: "Fehler")
         }

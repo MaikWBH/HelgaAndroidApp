@@ -13,6 +13,7 @@ import com.helga.android.data.repository.ReconcileOutcome
 import com.helga.android.data.repository.ReceiptRepository
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -76,6 +77,8 @@ class ReceiptDetailViewModel @Inject constructor(
                 } else {
                     ReparseState.Error(UiText.Res(R.string.receipt_detail_reparse_failed))
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Receipt reparse failed")
                 ReparseState.Error(UiText.Res(R.string.receipt_detail_reparse_failed))
@@ -95,6 +98,8 @@ class ReceiptDetailViewModel @Inject constructor(
                 val outcome = receiptRepository.reconcile(receiptId)
                 syncScheduler.triggerOneShot()
                 _reconcileState.value = ReconcileState.Done(outcome)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Receipt reconcile failed")
                 _reconcileState.value = ReconcileState.Error(UiText.Res(R.string.receipt_reconcile_failed))

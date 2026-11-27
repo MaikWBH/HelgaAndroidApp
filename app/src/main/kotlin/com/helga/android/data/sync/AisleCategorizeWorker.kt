@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.helga.android.data.shopping.AisleAssigner
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
 /**
@@ -24,6 +25,8 @@ class AisleCategorizeWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val changed = try {
             assigner.assignRemote()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.w(e, "Gang-Kategorisierung fehlgeschlagen")
             0

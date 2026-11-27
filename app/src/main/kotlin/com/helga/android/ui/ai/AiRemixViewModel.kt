@@ -19,6 +19,7 @@ import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.util.IngredientLineParser
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -117,6 +118,8 @@ class AiRemixViewModel @Inject constructor(
                 val parsed = RecipeJsonLdParser.parse(html)
                     ?: throw NoRecipeInAiRemixResponseException()
                 _state.update { it.copy(status = AiRemixStatus.Preview(parsed)) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _state.update { it.copy(status = AiRemixStatus.Error(
                     when {

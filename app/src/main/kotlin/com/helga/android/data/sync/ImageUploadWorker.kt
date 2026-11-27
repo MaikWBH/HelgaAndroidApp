@@ -10,6 +10,7 @@ import com.helga.android.data.remote.SyncApi
 import com.helga.android.data.remote.SyncApiFactory
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -30,6 +31,8 @@ class ImageUploadWorker @AssistedInject constructor(
 
         val api = try {
             apiFactory.api()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.w(e, "ImageUploadWorker: Server nicht konfiguriert")
             return Result.retry()
@@ -55,6 +58,8 @@ class ImageUploadWorker @AssistedInject constructor(
                 val response = api.uploadImage(part)
                 recipeDao.setImagePathAndClearLocal(recipe.id, response.filename, System.currentTimeMillis())
                 Timber.d("ImageUpload Rezept ok: ${recipe.id} → ${response.filename}")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.w(e, "ImageUpload Rezept fehlgeschlagen: ${recipe.id}")
                 ok = false

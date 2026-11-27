@@ -26,6 +26,7 @@ import com.helga.android.data.repository.WeekplanRepository
 import com.helga.android.data.sync.ServerReachabilityMonitor
 import com.helga.android.data.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -191,6 +192,8 @@ class RecipeDetailViewModel @Inject constructor(
                 )
                 syncScheduler.triggerOneShot()
                 _classifyState.update { false to null }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _classifyState.update { false to (e.message?.let(UiText::Raw) ?: UiText.Res(R.string.recipe_classify_failed)) }
             }
@@ -367,6 +370,8 @@ class RecipeDetailViewModel @Inject constructor(
                 _nutrition.value = repository.getRecipeNutrition(recipeId)
                 syncScheduler.triggerOneShot()
                 _nutritionCalcState.update { false to null }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _nutritionCalcState.update { false to (e.message?.let(UiText::Raw) ?: UiText.Res(R.string.recipe_nutrition_calc_failed)) }
             }

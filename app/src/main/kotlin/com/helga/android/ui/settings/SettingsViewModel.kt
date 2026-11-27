@@ -21,6 +21,7 @@ import com.helga.android.data.sync.SyncStatus
 import com.helga.android.data.sync.SyncStatusHolder
 import com.helga.android.ui.theme.ACCENT_SYSTEM
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -350,6 +351,8 @@ class SettingsViewModel @Inject constructor(
                 json.put("exportDate", System.currentTimeMillis())
                 json.put("recipeCount", recipes.size)
                 _exportJson.value = json.toString(2)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Export failed")
             }
@@ -423,6 +426,8 @@ class SettingsViewModel @Inject constructor(
                         )
                     }
                     updated++
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Timber.w(e, "Bulk-KI fehlgeschlagen für Rezept ${recipe.id}")
                     failed++

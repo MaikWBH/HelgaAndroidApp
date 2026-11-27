@@ -17,6 +17,7 @@ import com.helga.android.data.shopping.AisleAssigner
 import com.helga.android.data.sync.SyncScheduler
 import com.helga.android.data.util.ReceiptItemNormalizer
 import com.helga.android.data.util.ShoppingUnitConverter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
@@ -268,6 +269,8 @@ class ShoppingRepository @Inject constructor(
         if (query.length < 2) return emptyList()
         return try {
             withTimeoutOrNull(1_500) { apiProvider.api().suggestItems(query).suggestions }.orEmpty()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.d(e, "Failed to get server suggestions")
             emptyList()
