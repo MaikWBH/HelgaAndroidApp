@@ -35,7 +35,10 @@ Robustheit der App (Abbrüche, Lost Update bei der Gang-Zuordnung, Bon-UI, klein
   Antwort-DTOs ohne Standardwert), B1-S1 (Migration 36→37 löscht lokal gelöschte Bons; Plan-Annahme 7), B8-P3
   („Positionen" zeigt `expectedTotal`, gewollt), B8-S4 (Lexikon-Leerzustand nur Text), B7-P1 (Budget-Karte vor dem
   Leerzustand), B1-P2 (drei `@Transaction`-Methoden bleiben).
-- **Offen gelassen:** B5-S6 (Pinning von `pytest` und Basis-Image).
+- **Nachträglich entschieden (2026-11-27):** B5-S6 `pytest` auf feste Version und Basis-Image auf Patchversion pinnen ·
+  B10-S4 Timer-Chip in der `toggleable`-Zeile semantisch trennen (Prüfung mit TalkBack bleibt Gerätetest).
+  **Hinweis für Gate 0 / Stufe-A-Nachtrag:** Für diese beiden Punkte gibt es noch keine Schritte in diesem Plan; sie
+  werden vor dem Start von Stufe B als eigene Schritte ergänzt (Server-Block bzw. App-Block).
 - **Festgelegt in Stufe A:** Limits so großzügig, dass bisherige App-Daten durchgehen (Phase 7 S6 setzt abgelehnte Bons
   auf `rejected`, eine Ablehnung ist also nicht mehr endlos). Middleware lässt `/api/health` ohne Schlüssel durch und
   antwortet mit 401 bzw. 413 **bevor** der Body gelesen wird; Grenzwert = `settings.MAX_REQUEST_BYTES` (neu, Standard
